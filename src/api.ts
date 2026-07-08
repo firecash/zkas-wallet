@@ -1,0 +1,103 @@
+// Thin client for the firecash-walletd daemon.
+//
+// Default: the HOSTED daemon, reached same-origin at `<origin>/daemon` (nginx
+// proxies it to 127.0.0.1:8501). This lets anyone use the wallet with just a
+// browser — no node, no local install — connected to FireCash's public node.
+// Each browser owns a random wallet token so wallets stay separate on the server.
+//
+// Self-hosted (fully non-custodial): override the daemon URL to your own local
+// firecash-walletd (e.g. http://127.0.0.1:8501) — then the seed never leaves your
+// machine.
+
+function defaultBase(): string {
+  // Same-origin hosted daemon in the browser; sensible fallback elsewhere.
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin + "/daemon";
+  }
+  return "http://127.0.0.1:8501";
+}
+
+export function getBase(): string {
+  return localStorage.getItem("walletd_base") || defaultBase();
+}
+export function setBase(url: string) {
+  if (!url.trim()) localStorage.removeItem("walletd_base");
+  else localStorage.setItem("walletd_base", url.replace(/\/$/, ""));
+}
+
+// A random per-browser wallet token. On the hosted daemon this selects THIS
+// browser's wallet; losing it (clearing storage) means restoring from seed.
+export function getToken(): string {
+  let t = localStorage.getItem("wallet_token");
+  if (!t) {
+    const b = new Uint8Array(16);
+    crypto.getRandomValues(b);
+    t = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+    localStorage.setItem("wallet_token", t);
+  }
+  return t;
+}
+
+export interface Status {
+  has_wallet: boolean;
+  address: string | null;
+  network: string;
+  node_connected: boolean;
+  daa_score: number;
+  synced: boolean;
+  scanned_blocks: number;
+  chain_len: number;
+  balance_sompi: string;
+  balance_fc: string;
+  note_count: number;
+  updated_unix: number;
+  error: string | null;
+}
+
+export interface Balance {
+  balance_sompi: string;
+  balance_fc: string;
+  synced: boolean;
+  scanned_blocks: number;
+  chain_len: number;
+  notes: { position: number; value: number }[];
+  updated_unix: number;
+  error: string | null;
+}
+
+async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
+  let res: Response;
+  const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
+  if (body) headers["Content-Type"] = "application/json";
+  try {
+    res = await fetch(getBase() + path, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    throw new Error("Cannot reach the wallet daemon. (" + (e as Error).message + ")");
+  }
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!res.ok) throw new Error(data.error || `${res.status} ${res.statusText}`);
+  return data as T;
+}
+
+export const api = {
+  status: () => req<Status>("GET", "/api/status"),
+  balance: () => req<Balance>("GET", "/api/wallet/balance"),
+  create: () => req<{ address: string; seed_hex: string; network: string; warning: string }>("POST", "/api/wallet/create", {}),
+  reveal: () => req<{ address: string; seed_hex: string; network: string }>("GET", "/api/wallet/reveal"),
+  import: (seed_hex: string, birthday?: number) =>
+    req<{ address: string; seed_hex: string; network: string; warning: string }>("POST", "/api/wallet/import", {
+      seed_hex,
+      birthday: birthday && birthday > 0 ? Math.floor(birthday) : 0,
+    }),
+  send: (to: string, amount_fc: number, fee?: number) =>
+    req<{ txid: string; amount_sompi: number; fee_sompi: number }>("POST", "/api/wallet/send", { to, amount_fc, fee }),
+  sign: (message: string) =>
+    req<{ address: string; message: string; signature: string; note: string }>("POST", "/api/wallet/sign", { message }),
+  verify: (address: string, message: string, signature: string) =>
+    req<{ valid: boolean; reason: string | null }>("POST", "/api/verify", { address, message, signature }),
+};
