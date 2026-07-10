@@ -102,7 +102,7 @@ function BalanceHero({ status }: { status: Status }) {
     <div className="card balance">
       <div className="amt">
         {trimFc(status.balance_fc)}
-        <span className="unit">FC</span>
+        <span className="unit">$firecash</span>
       </div>
       <div className="sub">
         {status.note_count} shielded note{status.note_count === 1 ? "" : "s"}
@@ -374,7 +374,7 @@ function Send({ onSent }: { onSent: () => void }) {
       <h2>Send</h2>
       <label>Recipient shielded address</label>
       <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="firecash:…" className="mono" />
-      <label>Amount (FC)</label>
+      <label>Amount ($firecash)</label>
       <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" inputMode="decimal" />
       <div className="msg warn small">
         Spends prove into a matured anchor (~10&nbsp;min old), then build a real Halo&nbsp;2 proof on your machine — sending
