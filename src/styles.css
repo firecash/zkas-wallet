@@ -181,6 +181,8 @@ textarea { min-height: 84px; resize: vertical; font-family: var(--mono); font-si
 .notegrid .v { text-align: right; font-family: var(--mono); }
 
 .footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; line-height: 1.6; }
+.footer .ghlink { color: var(--muted); text-decoration: none; border-bottom: 1px solid currentColor; }
+.footer .ghlink:hover { color: var(--fg, #eee); }
 
 .setup ol { line-height: 1.8; padding-left: 20px; }
 .setup code { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; font-family: var(--mono); font-size: 12px; }

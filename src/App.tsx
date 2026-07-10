@@ -69,6 +69,10 @@ export default function App() {
         <br />
         Daemon: <span className="mono">{getBase()}</span>
         {getBase().includes("127.0.0.1") || getBase().includes("localhost") ? " · self-hosted (non-custodial)" : " · hosted"}
+        <br />
+        <a href="https://github.com/firecash/firecash-wallet" target="_blank" rel="noreferrer" className="ghlink">
+          GitHub
+        </a>
       </div>
     </div>
   );
