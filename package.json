@@ -2,6 +2,13 @@
   "name": "firecash-wallet",
   "private": true,
   "version": "0.1.0",
+  "description": "Shielded web wallet for FireCash — a thin React/Vite SPA over the firecash-walletd daemon.",
+  "license": "ISC",
+  "homepage": "https://wallet.firecash.info",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/firecash/firecash-wallet.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
