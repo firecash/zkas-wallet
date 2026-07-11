@@ -10,8 +10,12 @@
 // machine.
 
 function defaultBase(): string {
-  // Same-origin hosted daemon in the browser; sensible fallback elsewhere.
-  if (typeof window !== "undefined" && window.location?.origin) {
+  // Native mobile (Capacitor) loads the bundle from the device, so there is no
+  // same-origin server to proxy `/daemon` to — reach the hosted daemon directly.
+  const cap = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  if (cap?.isNativePlatform?.()) return "https://wallet.firecash.info/daemon";
+  // Same-origin hosted daemon in a normal web page; sensible fallback elsewhere.
+  if (typeof window !== "undefined" && window.location?.origin?.startsWith("http")) {
     return window.location.origin + "/daemon";
   }
   return "http://127.0.0.1:8501";

@@ -1,10 +1,11 @@
 # firecash-wallet
 
-A lightweight web wallet for **[FireCash](https://github.com/firecash/firecash-rusty)** —
-the private-by-default, shielded (Orchard / Halo 2) rusty-kaspa fork. Create a wallet,
-receive to a shielded address, and send private payments straight from the browser.
+A lightweight web **and mobile** wallet for
+**[FireCash](https://github.com/firecash/firecash-rusty)** — the private-by-default,
+shielded (Orchard / Halo 2) rusty-kaspa fork. Create a wallet, receive to a shielded
+address, and send private payments straight from the browser or a native iOS/Android app.
 
-**Live:** https://wallet.firecash.info
+**Live:** https://wallet.firecash.info · **Mobile:** see [`MOBILE.md`](./MOBILE.md)
 
 This is a static React + Vite single-page app. It holds no keys itself — it is a thin
 UI over a **[`firecash-walletd`](https://github.com/firecash/firecash-rusty)** daemon,

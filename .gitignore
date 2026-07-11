@@ -5,3 +5,8 @@ build/
 .env.*
 *.log
 .DS_Store
+
+# Capacitor native projects (generated locally with `npx cap add`)
+/android/
+/ios/
+.gradle/
