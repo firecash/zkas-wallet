@@ -7,6 +7,12 @@ address, and send private payments straight from the browser or a native iOS/And
 
 **Live:** https://wallet.firecash.info · **Mobile:** see [`MOBILE.md`](./MOBILE.md)
 
+> **⚠️ The hosted web wallet is not fully secure.** In hosted mode a remote daemon
+> holds your seed and can spend your funds, and any browser wallet is exposed to
+> page-tampering/XSS. Use it only if you have no better option, and only for small
+> amounts. For real security, run your own daemon (self-hosted), use the mobile app,
+> or keep funds in a **paper wallet** (cold). See [Custody model](#custody-model).
+
 This is a static React + Vite single-page app. It holds no keys itself — it is a thin
 UI over a **[`firecash-walletd`](https://github.com/firecash/firecash-rusty)** daemon,
 which owns the seed, scans the chain, builds Orchard proofs, and submits transactions.

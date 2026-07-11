@@ -38,6 +38,7 @@ export default function App() {
   return (
     <div className="wrap">
       <Header status={status} reachable={reachable} />
+      {isHosted() && <HostedWarning />}
       {reachable === false && <Setup />}
       {/* Seed backup takes priority and stays until dismissed — independent of has_wallet. */}
       {reachable && freshSeed && (
@@ -73,6 +74,29 @@ export default function App() {
         <a href="https://github.com/firecash/firecash-wallet" target="_blank" rel="noreferrer" className="ghlink">
           GitHub
         </a>
+      </div>
+    </div>
+  );
+}
+
+/** True when the wallet is talking to a remote/hosted daemon rather than a local one. */
+function isHosted(): boolean {
+  const base = getBase();
+  return !(base.includes("127.0.0.1") || base.includes("localhost"));
+}
+
+function HostedWarning() {
+  return (
+    <div className="warnbar" role="alert">
+      <span className="warnbar-icon" aria-hidden="true">⚠️</span>
+      <div>
+        <b>The hosted web wallet is not fully secure.</b> In this mode a remote server
+        holds your seed and can spend your funds, and any browser-based wallet is exposed
+        to page-tampering and XSS. Use it only if you have no other option, and only for
+        small amounts. For real security, prefer{" "}
+        <a href="https://github.com/firecash/firecash-rusty#firecash-walletd--wallet-daemon-rest-powers-the-web-wallet"
+           target="_blank" rel="noreferrer">running your own daemon (self-hosted)</a>,
+        the mobile app, or a <b>paper wallet</b> for cold storage.
       </div>
     </div>
   );

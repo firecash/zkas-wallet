@@ -203,3 +203,20 @@ textarea { min-height: 84px; resize: vertical; font-family: var(--mono); font-si
   border-radius: 999px;
   transition: width 0.6s ease;
 }
+
+/* Hosted-mode security warning banner */
+.warnbar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--bad);
+  border-radius: var(--radius);
+  background: rgba(242, 96, 74, 0.08);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.warnbar-icon { font-size: 18px; line-height: 1.4; flex: none; }
+.warnbar a { color: var(--ember); text-decoration: underline; }
