@@ -225,6 +225,41 @@ export function address_from_seed(seed_hex, network) {
 }
 
 /**
+ * Device half of a **non-custodial payment**. Given the wallet seed and, from the
+ * server's `prepare` response, a spend's `alpha` randomizer and the payment `sighash`,
+ * returns the 64-byte RedPallas spend-auth signature (hex). The seed never leaves the
+ * device; the server applies this signature and broadcasts. No proving circuit.
+ * @param {string} seed_hex
+ * @param {string} alpha_hex
+ * @param {string} sighash_hex
+ * @returns {string}
+ */
+export function sign_spend_auth(seed_hex, alpha_hex, sighash_hex) {
+    let deferred5_0;
+    let deferred5_1;
+    try {
+        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(alpha_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(sighash_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.sign_spend_auth(ptr0, len0, ptr1, len1, ptr2, len2);
+        var ptr4 = ret[0];
+        var len4 = ret[1];
+        if (ret[3]) {
+            ptr4 = 0; len4 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred5_0 = ptr4;
+        deferred5_1 = len4;
+        return getStringFromWasm0(ptr4, len4);
+    } finally {
+        wasm.__wbindgen_free(deferred5_0, deferred5_1, 1);
+    }
+}
+
+/**
  * Generate a brand-new wallet: a random 32-byte seed (browser CSPRNG) and its
  * `firecash:` address. Retries the negligibly-rare case where a random seed is
  * not a valid Orchard spending key.
@@ -239,6 +274,34 @@ export function new_wallet(network) {
         throw takeFromExternrefTable0(ret[1]);
     }
     return Wallet.__wrap(ret[0]);
+}
+
+/**
+ * The wallet's full viewing key (`ak ‖ nk ‖ rivk`, 96 bytes) as hex, derived from
+ * the seed on-device. Send this to the daemon's non-custodial `/prepare` endpoint so
+ * it can scan watch-only and build the payment proof. Grants viewing, not spend.
+ * @param {string} seed_hex
+ * @returns {string}
+ */
+export function fvk_hex(seed_hex) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fvk_hex(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
 }
 
 /**
@@ -1046,7 +1109,7 @@ async function __wbg_init(module_or_path) {
     }
 
     if (typeof module_or_path === 'undefined') {
-        throw new Error('firecash-signer: wasm bytes must be supplied');
+        module_or_path = new URL('firecash_signer_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 

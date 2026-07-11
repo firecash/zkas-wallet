@@ -69,6 +69,15 @@ export interface Balance {
   error: string | null;
 }
 
+export interface PrepareResp {
+  session: string;
+  sighash: string;
+  value_balance: number;
+  amount_sompi: number;
+  fee_sompi: number;
+  spend_auth: { index: number; alpha: string }[];
+}
+
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response;
   const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
@@ -100,6 +109,12 @@ export const api = {
     }),
   send: (to: string, amount_fc: number, fee?: number) =>
     req<{ txid: string; amount_sompi: number; fee_sompi: number }>("POST", "/api/wallet/send", { to, amount_fc, fee }),
+  // Non-custodial payment (mobile / hardened): the daemon builds the proof from the
+  // FVK and returns per-spend randomizers to sign on-device; see noncustodial.ts.
+  prepare: (fvk_hex: string, to: string, amount_fc: number, fee?: number) =>
+    req<PrepareResp>("POST", "/api/wallet/prepare", { fvk_hex, to, amount_fc, fee }),
+  submit: (session: string, sigs: { index: number; sig: string }[]) =>
+    req<{ txid: string; amount_sompi: number; fee_sompi: number }>("POST", "/api/wallet/submit", { session, sigs }),
   sign: (message: string) =>
     req<{ address: string; message: string; signature: string; note: string }>("POST", "/api/wallet/sign", { message }),
   verify: (address: string, message: string, signature: string) =>

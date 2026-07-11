@@ -7,7 +7,14 @@
 // asset to fetch and it works identically in the hosted web app and the Capacitor
 // native build.
 
-import init, { new_wallet, address_from_seed, sign as _sign, verify as _verify } from "./firecash_signer.js";
+import init, {
+  new_wallet,
+  address_from_seed,
+  sign as _sign,
+  verify as _verify,
+  fvk_hex as _fvk_hex,
+  sign_spend_auth as _sign_spend_auth,
+} from "./firecash_signer.js";
 import { WASM_B64 } from "./wasm-base64.js";
 
 export type Network = "mainnet" | "testnet";
@@ -60,4 +67,24 @@ export async function signLocal(seedHex: string, network: Network, message: stri
 export async function verifyLocal(address: string, message: string, signatureHex: string): Promise<boolean> {
   await ensureSigner();
   return _verify(address.trim(), message, signatureHex.trim());
+}
+
+/**
+ * The wallet's 96-byte full viewing key (hex), derived on-device. Sent to the
+ * daemon's non-custodial `/prepare` so it can scan watch-only and build the proof.
+ * Grants viewing, not spend — the seed stays on this device.
+ */
+export async function fvkHex(seedHex: string): Promise<string> {
+  await ensureSigner();
+  return _fvk_hex(seedHex.trim());
+}
+
+/**
+ * Device half of a non-custodial payment: sign one spend's `alpha` randomizer over
+ * the payment `sighash` (both hex, from `/prepare`), returning the 64-byte RedPallas
+ * spend-auth signature (hex). The seed never leaves the device.
+ */
+export async function signSpendAuth(seedHex: string, alphaHex: string, sighashHex: string): Promise<string> {
+  await ensureSigner();
+  return _sign_spend_auth(seedHex.trim(), alphaHex.trim(), sighashHex.trim());
 }

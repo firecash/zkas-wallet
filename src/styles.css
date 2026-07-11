@@ -222,3 +222,20 @@ select { appearance: none; cursor: pointer; }
 }
 .warnbar-icon { font-size: 18px; line-height: 1.4; flex: none; }
 .warnbar a { color: var(--ember); text-decoration: underline; }
+
+/* Non-custodial "secure mode" toggle in the Send card. */
+.secure-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 4px;
+  font-size: 0.86rem;
+  color: var(--muted, #a0a0b0);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.secure-toggle input {
+  width: auto;
+  margin-top: 2px;
+  flex: 0 0 auto;
+}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { api, getBase, setBase, type Status } from "./api";
 import { generateWallet, signLocal, verifyLocal, type Network } from "./signer";
+import { sendNonCustodial } from "./noncustodial";
 import logo from "./assets/firecash-logo.jpg";
 
 type Tab = "receive" | "send" | "sign" | "verify" | "local";
@@ -378,16 +379,22 @@ function Send({ onSent }: { onSent: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [txid, setTxid] = useState("");
+  // Non-custodial mode: sign on-device with a seed the server never sees.
+  const [secure, setSecure] = useState(false);
+  const [seed, setSeed] = useState("");
 
   const submit = async () => {
     setBusy(true);
     setError("");
     setTxid("");
     try {
-      const r = await api.send(to.trim(), parseFloat(amount));
+      const r = secure
+        ? await sendNonCustodial(seed.trim(), to.trim(), parseFloat(amount))
+        : await api.send(to.trim(), parseFloat(amount));
       setTxid(r.txid);
       setTo("");
       setAmount("");
+      setSeed("");
       onSent();
     } catch (e) {
       setError((e as Error).message);
@@ -403,9 +410,31 @@ function Send({ onSent }: { onSent: () => void }) {
       <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="firecash:…" className="mono" />
       <label>Amount ($firecash)</label>
       <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" inputMode="decimal" />
+      <label className="secure-toggle">
+        <input type="checkbox" checked={secure} onChange={(e) => setSecure(e.target.checked)} />
+        Secure mode (non-custodial): sign on this device — the server never sees your seed
+      </label>
+      {secure && (
+        <>
+          <label>Your seed (used only on this device, never sent)</label>
+          <input
+            value={seed}
+            onChange={(e) => setSeed(e.target.value)}
+            placeholder="64-hex seed"
+            className="mono"
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <div className="msg ok small">
+            In secure mode the daemon builds the proof from your <b>viewing key</b> only and sends back randomizers; your
+            spend signatures are produced here on-device. Your seed never leaves this page.
+          </div>
+        </>
+      )}
       <div className="msg warn small">
-        Spends prove into a matured anchor (~10&nbsp;min old), then build a real Halo&nbsp;2 proof on your machine — sending
-        can take a few seconds.
+        Spends prove into a matured anchor (~10&nbsp;min old), then build a real Halo&nbsp;2 proof — sending can take a few
+        seconds.
       </div>
       {error && <div className="msg err">{error}</div>}
       {txid && (
@@ -415,11 +444,13 @@ function Send({ onSent }: { onSent: () => void }) {
           <span className="mono">{txid}</span>
         </div>
       )}
-      <button className="btn" disabled={busy || !to || !amount} onClick={submit}>
+      <button className="btn" disabled={busy || !to || !amount || (secure && !seed)} onClick={submit}>
         {busy ? (
           <>
             <span className="spin" /> Building proof…
           </>
+        ) : secure ? (
+          "Send privately (non-custodial)"
         ) : (
           "Send privately"
         )}
