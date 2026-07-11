@@ -31,10 +31,18 @@ overridable in the UI):
 |---|---|---|---|
 | **Hosted** (default) | same-origin `/<origin>/daemon` → `firecash-walletd` on the server | the hosted daemon, keyed by a **random per-browser token** | zero-install; clearing browser storage loses the token — restore from seed |
 | **Self-hosted** | your own `http://127.0.0.1:8501` | **only your machine** | fully non-custodial; the seed never leaves localhost |
+| **Mobile** (native app) | hosted daemon by default, or your own | same as the mode you point it at | Capacitor wrap of this SPA — see [`MOBILE.md`](./MOBILE.md) |
 
 To go self-hosted, run `firecash-walletd` locally (see the
 [core repo](https://github.com/firecash/firecash-rusty#firecash-walletd--wallet-daemon-rest-powers-the-web-wallet))
 and set the daemon URL to `http://127.0.0.1:8501`.
+
+> **🔑 Non-custodial roadmap.** In the default hosted mode the daemon holds the seed and
+> *can* spend — convenient, but trusted. The seed never has to be on the server: Orchard
+> splits a spend into **prove** (needs only the viewing key) and **sign** (the only step
+> that needs the spend key). We are moving the seed onto the device so the server proves
+> but **cannot** spend (Route A), then to fully local prove+sign (Route B). Details and
+> status in [`MOBILE.md`](./MOBILE.md) and the core repo's `docs/NON_CUSTODIAL_WALLET.md`.
 
 > **⚠️ Testnet.** FireCash is currently a test network — coins have no value and the chain
 > may be reset. Your **recovery seed is the only way to restore a wallet**: back it up offline.
@@ -92,8 +100,10 @@ Requests carry `X-Wallet-Token`. See `src/api.ts` for the typed client.
 
 ## Security notes
 
-- The seed is generated and stored **by the daemon**, never by this page. In self-hosted
-  mode it never leaves your machine.
+- Today the seed is generated and stored **by the daemon**, never by this page. In
+  self-hosted mode it never leaves your machine; in hosted mode the daemon is trusted.
+  The [non-custodial roadmap](#custody-model) moves the seed onto the device so even the
+  hosted server cannot spend.
 - `firecash-walletd` is hardened: CORS is locked to `--allow-origin`, the wallet token is
   required, and seeds can be encrypted at rest with `--wallet-secret`. Always launch it
   with the exact origin you serve this app from.
