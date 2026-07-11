@@ -40,9 +40,15 @@ com.firecash.wallet`).
 
 ## Custody today vs. the non-custodial roadmap
 
-Right now the mobile app inherits the **web wallet's custody model**: it points at a
-hosted `firecash-walletd` that holds the seed. That is convenient (zero-config) but the
-server can spend. A self-hoster who runs their own daemon is already fully non-custodial.
+**Already on-device:** the app's **Local** tab runs entirely in WebAssembly
+([`firecash-signer`](https://github.com/firecash/firecash-signer)) — generate a cold
+wallet, derive an address, and sign messages / pool-claims with the seed **never leaving
+the phone**. Message **verification** is also fully local. This ships today.
+
+**Still hosted — balance and *sending*:** for those the app points at a `firecash-walletd`
+that holds the seed, because a shielded spend needs a Halo 2 proof. That is convenient
+(zero-config) but the server can spend. A self-hoster who runs their own daemon is already
+fully non-custodial. The plan below moves *sending* on-device too.
 
 The goal for mobile is **the server cannot spend, ever** — the seed lives on the phone.
 This is possible on a shielded chain because Orchard splits a spend into two independent
