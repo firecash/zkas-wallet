@@ -119,7 +119,7 @@ a { color: var(--ember); }
 
 /* Forms */
 label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
-input, textarea {
+input, textarea, select {
   width: 100%;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -129,8 +129,10 @@ input, textarea {
   font-size: 14px;
   font-family: inherit;
 }
-input:focus, textarea:focus { outline: none; border-color: var(--ember); }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--ember); }
 textarea { min-height: 84px; resize: vertical; font-family: var(--mono); font-size: 13px; }
+select { appearance: none; cursor: pointer; }
+.card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink); margin: 20px 0 4px; font-weight: 600; }
 .mono { font-family: var(--mono); }
 
 /* Buttons */

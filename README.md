@@ -43,12 +43,15 @@ To go self-hosted, run `firecash-walletd` locally (see the
 [core repo](https://github.com/firecash/firecash-rusty#firecash-walletd--wallet-daemon-rest-powers-the-web-wallet))
 and set the daemon URL to `http://127.0.0.1:8501`.
 
-> **🔑 Non-custodial roadmap.** In the default hosted mode the daemon holds the seed and
-> *can* spend — convenient, but trusted. The seed never has to be on the server: Orchard
-> splits a spend into **prove** (needs only the viewing key) and **sign** (the only step
-> that needs the spend key). We are moving the seed onto the device so the server proves
-> but **cannot** spend (Route A), then to fully local prove+sign (Route B). Details and
-> status in [`MOBILE.md`](./MOBILE.md) and the core repo's `docs/NON_CUSTODIAL_WALLET.md`.
+> **🔑 On-device keys — partly live.** The **Local** tab now runs entirely in your browser
+> (WebAssembly, [`firecash-signer`](https://github.com/firecash/firecash-signer)): generate a
+> cold wallet, derive an address, and sign messages **without the seed ever leaving your
+> device**. **Verify** is also fully client-side. What still uses the daemon is **balance and
+> sending**, because a shielded spend needs a zero-knowledge proof. The seed never has to be on
+> the server: Orchard splits a spend into **prove** (viewing key only) and **sign** (spend key
+> only), so the next step is server-proves / device-signs (Route A), then fully local
+> prove+sign (Route B). Details in [`MOBILE.md`](./MOBILE.md) and the core repo's
+> `docs/NON_CUSTODIAL_WALLET.md`.
 
 > **⚠️ Testnet.** FireCash is currently a test network — coins have no value and the chain
 > may be reset. Your **recovery seed is the only way to restore a wallet**: back it up offline.
