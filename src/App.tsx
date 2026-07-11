@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { api, getBase, setBase, type Status } from "./api";
+import { generateWallet, signLocal, verifyLocal, type Network } from "./signer";
 import logo from "./assets/firecash-logo.jpg";
 
-type Tab = "receive" | "send" | "sign" | "verify";
+type Tab = "receive" | "send" | "sign" | "verify" | "local";
 const TAB_LABEL: Record<Tab, string> = {
   receive: "Receive",
   send: "Send",
   sign: "Sign",
   verify: "Verify",
+  local: "Local",
 };
 
 export default function App() {
@@ -51,7 +53,7 @@ export default function App() {
         <>
           <BalanceHero status={status} />
           <div className="tabs">
-            {(["receive", "send", "sign", "verify"] as Tab[]).map((t) => (
+            {(["receive", "send", "sign", "verify", "local"] as Tab[]).map((t) => (
               <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
                 {TAB_LABEL[t]}
               </button>
@@ -61,6 +63,7 @@ export default function App() {
           {tab === "send" && <Send onSent={refresh} />}
           {tab === "sign" && <Sign />}
           {tab === "verify" && <Verify />}
+          {tab === "local" && <LocalTools />}
         </>
       )}
       <div className="footer">
@@ -492,7 +495,8 @@ function Verify() {
     setError("");
     setResult(null);
     try {
-      setResult(await api.verify(address.trim(), message, signature.trim()));
+      const valid = await verifyLocal(address.trim(), message, signature.trim());
+      setResult({ valid, reason: valid ? null : "signature does not verify for this address/message" });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -503,6 +507,9 @@ function Verify() {
   return (
     <div className="card">
       <h2>Verify message</h2>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Runs entirely in your browser — no server involved.
+      </p>
       <label>Signer's address</label>
       <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="firecash:…" className="mono" />
       <label>Message</label>
@@ -518,6 +525,143 @@ function Verify() {
       <button className="btn" disabled={busy || !address || !signature} onClick={submit}>
         {busy ? <span className="spin" /> : "Verify"}
       </button>
+    </div>
+  );
+}
+
+// Fully client-side, server-independent key tools. Everything here runs in this
+// page's WebAssembly — no daemon, and the seed never leaves the device.
+function LocalTools() {
+  const [network, setNetwork] = useState<Network>("mainnet");
+
+  // Cold wallet generator
+  const [gen, setGen] = useState<{ seedHex: string; address: string } | null>(null);
+  const [revealSeed, setRevealSeed] = useState(false);
+  const [genBusy, setGenBusy] = useState(false);
+
+  // Sign with a seed
+  const [seedIn, setSeedIn] = useState("");
+  const [message, setMessage] = useState("");
+  const [sig, setSig] = useState<{ address: string; signatureHex: string } | null>(null);
+  const [signBusy, setSignBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const doGenerate = async () => {
+    setGenBusy(true);
+    setErr("");
+    setRevealSeed(false);
+    try {
+      setGen(await generateWallet(network));
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setGenBusy(false);
+    }
+  };
+
+  const doSign = async () => {
+    setSignBusy(true);
+    setErr("");
+    setSig(null);
+    try {
+      setSig(await signLocal(seedIn, network, message));
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSignBusy(false);
+    }
+  };
+
+  return (
+    <div className="card">
+      <h2>Local tools (self-custody)</h2>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        These run <b>entirely in this page</b> (WebAssembly) — no server, and your seed
+        never leaves this device. Use them to create a cold wallet or to sign without
+        trusting the daemon. Balance and sending still use the daemon (a shielded spend
+        needs a zero-knowledge proof).
+      </p>
+
+      <label>Network</label>
+      <select
+        className="mono"
+        value={network}
+        onChange={(e) => setNetwork(e.target.value as Network)}
+      >
+        <option value="mainnet">mainnet (firecash:)</option>
+        <option value="testnet">testnet (firecashtest:)</option>
+      </select>
+
+      <h3 style={{ marginBottom: 6 }}>Generate a cold wallet</h3>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Creates a fresh seed + address on-device. Back up the seed offline — it is the
+        only way to restore, and anyone who sees it can spend.
+      </p>
+      <button className="btn" disabled={genBusy} onClick={doGenerate}>
+        {genBusy ? <span className="spin" /> : "Generate new wallet"}
+      </button>
+      {gen && (
+        <>
+          <label>Address (safe to share)</label>
+          <div className="addr">{gen.address}</div>
+          <label>Recovery seed — SECRET</label>
+          {revealSeed ? (
+            <div className="addr">{gen.seedHex}</div>
+          ) : (
+            <button className="btn ghost small" onClick={() => setRevealSeed(true)}>
+              Reveal seed
+            </button>
+          )}
+          {revealSeed && (
+            <button
+              className="btn ghost small"
+              style={{ marginTop: 8 }}
+              onClick={() => navigator.clipboard.writeText(gen.seedHex)}
+            >
+              Copy seed
+            </button>
+          )}
+        </>
+      )}
+
+      <h3 style={{ marginBottom: 6, marginTop: 22 }}>Sign with a seed</h3>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Prove control of an address (e.g. to claim a mining-pool payout) without spending.
+        The seed is used locally and never transmitted.
+      </p>
+      <label>Seed (64 hex chars)</label>
+      <input
+        className="mono"
+        value={seedIn}
+        onChange={(e) => setSeedIn(e.target.value)}
+        placeholder="your 32-byte seed, hex…"
+        autoComplete="off"
+        spellCheck={false}
+      />
+      <label>Message</label>
+      <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Message to sign…" />
+      <button className="btn" disabled={signBusy || !seedIn || !message} onClick={doSign}>
+        {signBusy ? <span className="spin" /> : "Sign locally"}
+      </button>
+      {sig && (
+        <>
+          <label>Address</label>
+          <div className="addr">{sig.address}</div>
+          <label>Signature (fvk‖sig, hex)</label>
+          <div className="addr" style={{ maxHeight: 120, overflow: "auto" }}>
+            {sig.signatureHex}
+          </div>
+          <button
+            className="btn ghost small"
+            style={{ marginTop: 12 }}
+            onClick={() => navigator.clipboard.writeText(sig.signatureHex)}
+          >
+            Copy signature
+          </button>
+        </>
+      )}
+
+      {err && <div className="msg err">{err}</div>}
     </div>
   );
 }
