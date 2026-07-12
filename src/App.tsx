@@ -83,6 +83,20 @@ export default function App() {
   );
 }
 
+/// The signing seed kept on THIS device (localStorage, scoped to the wallet
+/// token). Stored at create/import so sends sign silently on-device — the user
+/// is never asked to re-type it. Clearing site data forgets it; Send then asks
+/// once and re-remembers.
+function deviceSeedKey(): string {
+  return `device_seed_${localStorage.getItem("wallet_token") || "default"}`;
+}
+export function getDeviceSeed(): string {
+  return localStorage.getItem(deviceSeedKey()) || "";
+}
+export function setDeviceSeed(seed: string) {
+  if (seed) localStorage.setItem(deviceSeedKey(), seed);
+}
+
 function HostedNotice() {
   return (
     <div className="warnbar" role="note">
@@ -211,6 +225,7 @@ function Onboard({
     setError("");
     try {
       const r = await api.create();
+      setDeviceSeed(r.seed_hex);
       onCreated(r.seed_hex, r.address);
     } catch (e) {
       setError((e as Error).message);
@@ -224,6 +239,7 @@ function Onboard({
     setError("");
     try {
       await api.import(importHex.trim(), birthday.trim() ? Number(birthday.trim()) : undefined);
+      setDeviceSeed(importHex.trim());
       onImported();
     } catch (e) {
       setError((e as Error).message);
@@ -372,8 +388,9 @@ function Send({ onSent }: { onSent: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [txid, setTxid] = useState("");
-  // Every send is non-custodial: signed on-device with a seed the server never sees.
-  const [seed, setSeed] = useState("");
+  // Every send is non-custodial: signed on-device. The seed comes from this
+  // device's storage (saved at create/import); we only ask if it's missing.
+  const [seed, setSeed] = useState(getDeviceSeed());
 
   const submit = async () => {
     setBusy(true);
@@ -381,10 +398,10 @@ function Send({ onSent }: { onSent: () => void }) {
     setTxid("");
     try {
       const r = await sendNonCustodial(seed.trim(), to.trim(), parseFloat(amount));
+      setDeviceSeed(seed.trim());
       setTxid(r.txid);
       setTo("");
       setAmount("");
-      setSeed("");
       onSent();
     } catch (e) {
       setError((e as Error).message);
@@ -400,19 +417,23 @@ function Send({ onSent }: { onSent: () => void }) {
       <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="firecash:…" className="mono" />
       <label>Amount ($firecash)</label>
       <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" inputMode="decimal" />
-      <label>Your seed (used only on this device, never sent)</label>
-      <input
-        value={seed}
-        onChange={(e) => setSeed(e.target.value)}
-        placeholder="64-hex seed"
-        className="mono"
-        type="password"
-        autoComplete="off"
-        spellCheck={false}
-      />
+      {!getDeviceSeed() && (
+        <>
+          <label>Recovery seed (asked once — remembered on this device only)</label>
+          <input
+            value={seed}
+            onChange={(e) => setSeed(e.target.value)}
+            placeholder="64-hex seed"
+            className="mono"
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </>
+      )}
       <div className="msg ok small">
-        Sends are signed <b>on this device</b>: the server only ever sees your viewing key and builds the proof — it never
-        holds spend authority. Spends use a matured anchor (~10&nbsp;min old), so sending can take a few seconds.
+        Sends are signed <b>on this device</b> — the server never holds spend authority. Spends use a matured anchor
+        (~10&nbsp;min old), so sending can take a few seconds.
       </div>
       {error && <div className="msg err">{error}</div>}
       {txid && (
