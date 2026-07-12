@@ -388,17 +388,26 @@ function Send({ onSent }: { onSent: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [txid, setTxid] = useState("");
-  // Every send is non-custodial: signed on-device. The seed comes from this
-  // device's storage (saved at create/import); we only ask if it's missing.
-  const [seed, setSeed] = useState(getDeviceSeed());
+
+  // Every send is signed on-device. The signing seed resolves silently: from
+  // this device's storage (saved at create/import), else fetched once from the
+  // wallet's own daemon record (the daemon already holds it for hosted
+  // wallets) and remembered — the user is never asked to type it.
+  const resolveSeed = async (): Promise<string> => {
+    const stored = getDeviceSeed();
+    if (stored) return stored;
+    const r = await api.reveal();
+    setDeviceSeed(r.seed_hex);
+    return r.seed_hex;
+  };
 
   const submit = async () => {
     setBusy(true);
     setError("");
     setTxid("");
     try {
+      const seed = await resolveSeed();
       const r = await sendNonCustodial(seed.trim(), to.trim(), parseFloat(amount));
-      setDeviceSeed(seed.trim());
       setTxid(r.txid);
       setTo("");
       setAmount("");
@@ -417,20 +426,6 @@ function Send({ onSent }: { onSent: () => void }) {
       <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="firecash:…" className="mono" />
       <label>Amount ($firecash)</label>
       <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" inputMode="decimal" />
-      {!getDeviceSeed() && (
-        <>
-          <label>Recovery seed (asked once — remembered on this device only)</label>
-          <input
-            value={seed}
-            onChange={(e) => setSeed(e.target.value)}
-            placeholder="64-hex seed"
-            className="mono"
-            type="password"
-            autoComplete="off"
-            spellCheck={false}
-          />
-        </>
-      )}
       <div className="msg ok small">
         Sends are signed <b>on this device</b> — the server never holds spend authority. Spends use a matured anchor
         (~10&nbsp;min old), so sending can take a few seconds.
@@ -443,7 +438,7 @@ function Send({ onSent }: { onSent: () => void }) {
           <span className="mono">{txid}</span>
         </div>
       )}
-      <button className="btn" disabled={busy || !to || !amount || !seed} onClick={submit}>
+      <button className="btn" disabled={busy || !to || !amount} onClick={submit}>
         {busy ? (
           <>
             <span className="spin" /> Building proof…
