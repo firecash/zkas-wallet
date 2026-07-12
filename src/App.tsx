@@ -41,7 +41,7 @@ export default function App() {
   return (
     <div className="wrap">
       <Header status={status} reachable={reachable} />
-      {isHosted() && <HostedWarning />}
+      <HostedNotice />
       {reachable === false && <Setup />}
       {/* Seed backup takes priority and stays until dismissed — independent of has_wallet. */}
       {reachable && freshSeed && (
@@ -83,24 +83,14 @@ export default function App() {
   );
 }
 
-/** True when the wallet is talking to a remote/hosted daemon rather than a local one. */
-function isHosted(): boolean {
-  const base = getBase();
-  return !(base.includes("127.0.0.1") || base.includes("localhost"));
-}
-
-function HostedWarning() {
+function HostedNotice() {
   return (
-    <div className="warnbar" role="alert">
-      <span className="warnbar-icon" aria-hidden="true">⚠️</span>
+    <div className="warnbar" role="note">
+      <span className="warnbar-icon" aria-hidden="true">🔒</span>
       <div>
-        <b>The hosted web wallet is not fully secure.</b> In this mode a remote server
-        holds your seed and can spend your funds, and any browser-based wallet is exposed
-        to page-tampering and XSS. Use it only if you have no other option, and only for
-        small amounts. For real security, prefer{" "}
+        Sends are signed on your device — <b>your seed never leaves it</b>. Still, for maximum security prefer{" "}
         <a href="https://github.com/firecash/firecash-rusty#firecash-walletd--wallet-daemon-rest-powers-the-web-wallet"
-           target="_blank" rel="noreferrer">running your own daemon (self-hosted)</a>,
-        the mobile app, or a <b>paper wallet</b> for cold storage.
+           target="_blank" rel="noreferrer">running your own daemon</a>.
       </div>
     </div>
   );
@@ -379,8 +369,7 @@ function Send({ onSent }: { onSent: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [txid, setTxid] = useState("");
-  // Non-custodial mode: sign on-device with a seed the server never sees.
-  const [secure, setSecure] = useState(false);
+  // Every send is non-custodial: signed on-device with a seed the server never sees.
   const [seed, setSeed] = useState("");
 
   const submit = async () => {
@@ -388,9 +377,7 @@ function Send({ onSent }: { onSent: () => void }) {
     setError("");
     setTxid("");
     try {
-      const r = secure
-        ? await sendNonCustodial(seed.trim(), to.trim(), parseFloat(amount))
-        : await api.send(to.trim(), parseFloat(amount));
+      const r = await sendNonCustodial(seed.trim(), to.trim(), parseFloat(amount));
       setTxid(r.txid);
       setTo("");
       setAmount("");
@@ -410,31 +397,19 @@ function Send({ onSent }: { onSent: () => void }) {
       <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="firecash:…" className="mono" />
       <label>Amount ($firecash)</label>
       <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" inputMode="decimal" />
-      <label className="secure-toggle">
-        <input type="checkbox" checked={secure} onChange={(e) => setSecure(e.target.checked)} />
-        Secure mode (non-custodial): sign on this device — the server never sees your seed
-      </label>
-      {secure && (
-        <>
-          <label>Your seed (used only on this device, never sent)</label>
-          <input
-            value={seed}
-            onChange={(e) => setSeed(e.target.value)}
-            placeholder="64-hex seed"
-            className="mono"
-            type="password"
-            autoComplete="off"
-            spellCheck={false}
-          />
-          <div className="msg ok small">
-            In secure mode the daemon builds the proof from your <b>viewing key</b> only and sends back randomizers; your
-            spend signatures are produced here on-device. Your seed never leaves this page.
-          </div>
-        </>
-      )}
-      <div className="msg warn small">
-        Spends prove into a matured anchor (~10&nbsp;min old), then build a real Halo&nbsp;2 proof — sending can take a few
-        seconds.
+      <label>Your seed (used only on this device, never sent)</label>
+      <input
+        value={seed}
+        onChange={(e) => setSeed(e.target.value)}
+        placeholder="64-hex seed"
+        className="mono"
+        type="password"
+        autoComplete="off"
+        spellCheck={false}
+      />
+      <div className="msg ok small">
+        Sends are signed <b>on this device</b>: the server only ever sees your viewing key and builds the proof — it never
+        holds spend authority. Spends use a matured anchor (~10&nbsp;min old), so sending can take a few seconds.
       </div>
       {error && <div className="msg err">{error}</div>}
       {txid && (
@@ -444,13 +419,11 @@ function Send({ onSent }: { onSent: () => void }) {
           <span className="mono">{txid}</span>
         </div>
       )}
-      <button className="btn" disabled={busy || !to || !amount || (secure && !seed)} onClick={submit}>
+      <button className="btn" disabled={busy || !to || !amount || !seed} onClick={submit}>
         {busy ? (
           <>
             <span className="spin" /> Building proof…
           </>
-        ) : secure ? (
-          "Send privately (non-custodial)"
         ) : (
           "Send privately"
         )}
