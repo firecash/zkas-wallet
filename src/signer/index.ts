@@ -14,6 +14,7 @@ import init, {
   verify as _verify,
   fvk_hex as _fvk_hex,
   sign_spend_auth as _sign_spend_auth,
+  verify_and_sign_payment as _verify_and_sign_payment,
 } from "./firecash_signer.js";
 import { WASM_B64 } from "./wasm-base64.js";
 
@@ -87,4 +88,40 @@ export async function fvkHex(seedHex: string): Promise<string> {
 export async function signSpendAuth(seedHex: string, alphaHex: string, sighashHex: string): Promise<string> {
   await ensureSigner();
   return _sign_spend_auth(seedHex.trim(), alphaHex.trim(), sighashHex.trim());
+}
+
+export interface DeviceSig {
+  index: number;
+  sig: string;
+}
+
+/**
+ * Verify a prepared payment on-device and, only if it checks out, sign it. The device
+ * reconstructs the bundle, confirms it pays exactly `toRecipientHex` the amount asked
+ * (everything else change back to this wallet), recomputes the sighash itself, and signs
+ * that — so a malicious daemon cannot make it authorize a payment to an attacker. Throws
+ * with the reason if the payment does not match. The seed never leaves the device.
+ */
+export async function verifyAndSignPayment(
+  seedHex: string,
+  network: Network,
+  toRecipientHex: string,
+  amountSompi: bigint,
+  feeSompi: bigint,
+  bundleHex: string,
+  disclosureJson: string,
+  alphasJson: string,
+): Promise<DeviceSig[]> {
+  await ensureSigner();
+  const out = _verify_and_sign_payment(
+    seedHex.trim(),
+    network,
+    toRecipientHex,
+    amountSompi,
+    feeSompi,
+    bundleHex,
+    disclosureJson,
+    alphasJson,
+  );
+  return JSON.parse(out) as DeviceSig[];
 }

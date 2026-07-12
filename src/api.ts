@@ -76,6 +76,14 @@ export interface PrepareResp {
   amount_sompi: number;
   fee_sompi: number;
   spend_auth: { index: number; alpha: string }[];
+  bundle_hex: string;
+  disclosure: {
+    spend_value: number;
+    out_value: number;
+    out_recipient: string;
+    out_rseed: string;
+    rcv: string;
+  }[];
 }
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {

@@ -85,7 +85,7 @@ export default function App() {
             ))}
           </div>
           {tab === "receive" && <Receive status={status} />}
-          {tab === "send" && <Send onSent={refresh} />}
+          {tab === "send" && <Send status={status} onSent={refresh} />}
           {tab === "sign" && <Sign status={status} />}
           {tab === "verify" && <Verify />}
           {tab === "local" && <LocalTools />}
@@ -450,7 +450,7 @@ function RevealSeed() {
   );
 }
 
-function Send({ onSent }: { onSent: () => void }) {
+function Send({ status, onSent }: { status: Status | null; onSent: () => void }) {
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
@@ -484,7 +484,7 @@ function Send({ onSent }: { onSent: () => void }) {
           throw e;
         }
       }
-      const r = await sendNonCustodial(seed.trim(), to.trim(), parseFloat(amount));
+      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), parseFloat(amount));
       setTxid(r.txid);
       setTo("");
       setAmount("");
