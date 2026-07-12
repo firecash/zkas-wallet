@@ -90,7 +90,10 @@ function HostedNotice() {
       <div>
         Sends are signed on your device — <b>your seed never leaves it</b>. Still, for maximum security prefer{" "}
         <a href="https://github.com/firecash/firecash-rusty#firecash-walletd--wallet-daemon-rest-powers-the-web-wallet"
-           target="_blank" rel="noreferrer">running your own daemon</a>.
+           target="_blank" rel="noreferrer">running your own daemon</a>{" "}
+        or a{" "}
+        <a href="https://firecash.github.io/firecash-paper-wallet/" target="_blank" rel="noreferrer">paper wallet</a>{" "}
+        for cold storage.
       </div>
     </div>
   );
