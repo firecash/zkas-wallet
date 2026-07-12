@@ -91,13 +91,11 @@ export default function App() {
           {tab === "local" && <LocalTools />}
         </>
       )}
+      <DaemonSetting />
       <div className="footer">
         FireCash Wallet · shielded by default · connected to FireCash's public node.
         <br />
         This wallet lives in this browser — back up your recovery seed to open it on another device or in incognito.
-        <br />
-        Daemon: <span className="mono">{getBase()}</span>
-        {getBase().includes("127.0.0.1") || getBase().includes("localhost") ? " · self-hosted (non-custodial)" : " · hosted"}
         <br />
         <a href="https://github.com/firecash/firecash-wallet" target="_blank" rel="noreferrer" className="ghlink">
           GitHub
@@ -774,6 +772,63 @@ function LocalTools() {
       )}
 
       {err && <div className="msg err">{err}</div>}
+    </div>
+  );
+}
+
+/// The daemon this wallet talks to. Always reachable — not just when the hosted
+/// service is down — because pointing it at your own `firecash-walletd` is how you
+/// stop trusting ours at all, and that has to be one tap away, at any time.
+function DaemonSetting() {
+  const [open, setOpen] = useState(false);
+  const [base, setB] = useState(getBase());
+  const current = getBase();
+  const own = current.includes("127.0.0.1") || current.includes("localhost");
+  return (
+    <div className="card">
+      <h2 style={{ margin: 0 }}>
+        <button
+          className="btn ghost small"
+          style={{ width: "100%", justifyContent: "space-between", textTransform: "none", letterSpacing: 0 }}
+          onClick={() => setOpen(!open)}
+        >
+          <span>Daemon: <span className="mono">{current}</span></span>
+          <span className="muted">{own ? "your own ✓" : "hosted"} {open ? "▲" : "▼"}</span>
+        </button>
+      </h2>
+      {open && (
+        <>
+          <p className="muted small" style={{ marginTop: 14 }}>
+            Your seed is signed with on this device either way. But the hosted daemon still sees your{" "}
+            <b>viewing key</b> — it can watch your balance and history. Run your own <code>firecash-walletd</code>{" "}
+            (it talks to our public node; no full node needed) and point this at it to remove that too.
+          </p>
+          <label>Daemon URL</label>
+          <div className="row">
+            <input value={base} onChange={(e) => setB(e.target.value)} className="mono" placeholder="http://127.0.0.1:8501" />
+            <button
+              className="btn small"
+              style={{ flex: "0 0 auto" }}
+              onClick={() => {
+                setBase(base);
+                location.reload();
+              }}
+            >
+              Save
+            </button>
+          </div>
+          <button
+            className="btn ghost small"
+            style={{ marginTop: 10 }}
+            onClick={() => {
+              setBase("");
+              location.reload();
+            }}
+          >
+            Reset to hosted default
+          </button>
+        </>
+      )}
     </div>
   );
 }
