@@ -6,7 +6,20 @@ build/
 *.log
 .DS_Store
 
-# Capacitor native projects (generated locally with `npx cap add`)
-/android/
+# The Android project IS committed: it carries the app icons, versioning and the
+# release signing wiring, which `npx cap add` would not regenerate. Only its build
+# output and machine-local paths are ignored. iOS is still generated on a Mac.
 /ios/
+/android/build/
+/android/app/build/
+/android/.gradle/
+/android/local.properties
+/android/app/src/main/assets/public/
+/android/app/src/main/assets/capacitor.config.json
+/android/capacitor-cordova-android-plugins/
 .gradle/
+
+# Release signing material — never commit a keystore or its passwords.
+*.jks
+*.keystore
+signing.properties

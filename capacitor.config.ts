@@ -13,9 +13,14 @@ const config: CapacitorConfig = {
   android: {
     // The daemon is HTTPS; no cleartext needed. Keep it locked down.
     allowMixedContent: false,
+    // Pinned, not defaulted: the WebView's origin IS the origin the daemon must
+    // allow through CORS. Android serves the bundle from https://localhost, iOS
+    // from capacitor://localhost — both are in walletd's --allow-origin list.
+    androidScheme: "https",
   },
   ios: {
     contentInset: "always",
+    scheme: "capacitor",
   },
 };
 

@@ -1,9 +1,33 @@
 import { useCallback, useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { api, getBase, setBase, type Status } from "./api";
-import { generateWallet, signLocal, verifyLocal, type Network } from "./signer";
+import { fvkHex, generateWallet, signLocal, verifyLocal, type Network } from "./signer";
 import { sendNonCustodial } from "./noncustodial";
 import logo from "./assets/firecash-logo.jpg";
+
+// navigator.clipboard is absent or throws in some native WebViews; fall back to a
+// hidden textarea so "copy" never dies with an unhandled rejection on a phone.
+export async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    /* fall through */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 type Tab = "receive" | "send" | "sign" | "verify" | "local";
 const TAB_LABEL: Record<Tab, string> = {
@@ -48,7 +72,7 @@ export default function App() {
         <SeedBackup seed={freshSeed.seed} address={freshSeed.address} onDone={() => setFreshSeed(null)} />
       )}
       {reachable && !freshSeed && status && !status.has_wallet && (
-        <Onboard onCreated={(seed, address) => setFreshSeed({ seed, address })} onImported={refresh} />
+        <Onboard status={status} onCreated={(seed, address) => setFreshSeed({ seed, address })} onImported={refresh} />
       )}
       {reachable && !freshSeed && status && status.has_wallet && (
         <>
@@ -62,7 +86,7 @@ export default function App() {
           </div>
           {tab === "receive" && <Receive status={status} />}
           {tab === "send" && <Send onSent={refresh} />}
-          {tab === "sign" && <Sign />}
+          {tab === "sign" && <Sign status={status} />}
           {tab === "verify" && <Verify />}
           {tab === "local" && <LocalTools />}
         </>
@@ -95,6 +119,27 @@ export function getDeviceSeed(): string {
 }
 export function setDeviceSeed(seed: string) {
   if (seed) localStorage.setItem(deviceSeedKey(), seed);
+}
+
+/// Thrown when this device has no key for the wallet and the daemon has none to
+/// give (a watch-only wallet opened on a new device) — the caller then asks the
+/// user to restore it from their seed.
+export const SEED_REQUIRED = "SEED_REQUIRED";
+
+/// The seed to sign with. From this device's storage first; for wallets created
+/// under the old hosted model the daemon still holds one, so fall back to it once
+/// and remember it here. A watch-only wallet on a fresh device has neither — the
+/// user must restore from their backup.
+export async function resolveDeviceSeed(): Promise<string> {
+  const stored = getDeviceSeed();
+  if (stored) return stored;
+  try {
+    const r = await api.reveal();
+    setDeviceSeed(r.seed_hex);
+    return r.seed_hex;
+  } catch {
+    throw new Error(SEED_REQUIRED);
+  }
 }
 
 function HostedNotice() {
@@ -172,7 +217,7 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
   const [confirmed, setConfirmed] = useState(false);
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(seed);
+      await copyText(seed);
     } catch {
       /* clipboard may be blocked; the seed is shown below to copy by hand */
     }
@@ -207,10 +252,18 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
   );
 }
 
+/// The signer's network name for the daemon's chain (only mainnet/testnet exist
+/// for address encoding; anything else is a devnet using the testnet HRP).
+function networkOf(status: Status | null): Network {
+  return status?.network === "mainnet" ? "mainnet" : "testnet";
+}
+
 function Onboard({
+  status,
   onCreated,
   onImported,
 }: {
+  status: Status | null;
   onCreated: (seed: string, address: string) => void;
   onImported: () => void;
 }) {
@@ -220,13 +273,22 @@ function Onboard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  // The seed is generated HERE, in WebAssembly on this device, and never sent
+  // anywhere. The daemon only gets the 96-byte full viewing key, which lets it
+  // sync the wallet and build spend proofs but carries no spend authority — so it
+  // cannot move the funds even if it is compromised. Spends are authorized by a
+  // signature this device makes (see Send → sendNonCustodial).
   const create = async () => {
     setBusy(true);
     setError("");
     try {
-      const r = await api.create();
-      setDeviceSeed(r.seed_hex);
-      onCreated(r.seed_hex, r.address);
+      const w = await generateWallet(networkOf(status));
+      // Born now: the daemon fast-syncs from the current tip instead of scanning
+      // the whole chain for history this wallet cannot have.
+      const birthday = status?.daa_score ?? 0;
+      await api.watch(await fvkHex(w.seedHex), birthday);
+      setDeviceSeed(w.seedHex);
+      onCreated(w.seedHex, w.address);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -234,12 +296,16 @@ function Onboard({
     }
   };
 
+  // Import is the same deal: the seed stays here, only the viewing key is
+  // registered. Birthday 0 (the default) makes the daemon scan the full chain so
+  // an old wallet's historical notes are all recovered.
   const doImport = async () => {
     setBusy(true);
     setError("");
     try {
-      await api.import(importHex.trim(), birthday.trim() ? Number(birthday.trim()) : undefined);
-      setDeviceSeed(importHex.trim());
+      const seed = importHex.trim();
+      await api.watch(await fvkHex(seed), birthday.trim() ? Number(birthday.trim()) : 0);
+      setDeviceSeed(seed);
       onImported();
     } catch (e) {
       setError((e as Error).message);
@@ -308,7 +374,7 @@ function Receive({ status }: { status: Status }) {
       <div className="qr">{qr && <img src={qr} alt="address QR" />}</div>
       <label>Your shielded address</label>
       <div className="addr">{addr}</div>
-      <button className="btn ghost small" style={{ marginTop: 12 }} onClick={() => navigator.clipboard.writeText(addr)}>
+      <button className="btn ghost small" style={{ marginTop: 12 }} onClick={() => copyText(addr)}>
         Copy address
       </button>
 
@@ -332,11 +398,15 @@ function RevealSeed() {
     setBusy(true);
     setError("");
     try {
-      const r = await api.reveal();
-      setSeed(r.seed_hex);
+      // The seed lives on this device, not on the server.
+      setSeed(await resolveDeviceSeed());
       setShown(true);
     } catch (e) {
-      setError((e as Error).message);
+      setError(
+        (e as Error).message === SEED_REQUIRED
+          ? "This device doesn't hold this wallet's seed — it was never sent to the server. Restore it from the backup you saved when you created the wallet."
+          : (e as Error).message,
+      );
     } finally {
       setBusy(false);
     }
@@ -344,7 +414,7 @@ function RevealSeed() {
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(seed);
+      await copyText(seed);
     } catch {
       /* clipboard may be blocked; seed is shown to copy by hand */
     }
@@ -388,25 +458,34 @@ function Send({ onSent }: { onSent: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [txid, setTxid] = useState("");
-
-  // Every send is signed on-device. The signing seed resolves silently: from
-  // this device's storage (saved at create/import), else fetched once from the
-  // wallet's own daemon record (the daemon already holds it for hosted
-  // wallets) and remembered — the user is never asked to type it.
-  const resolveSeed = async (): Promise<string> => {
-    const stored = getDeviceSeed();
-    if (stored) return stored;
-    const r = await api.reveal();
-    setDeviceSeed(r.seed_hex);
-    return r.seed_hex;
-  };
+  const [unlock, setUnlock] = useState("");
+  const [needSeed, setNeedSeed] = useState(false);
 
   const submit = async () => {
     setBusy(true);
     setError("");
     setTxid("");
     try {
-      const seed = await resolveSeed();
+      // Signed on-device; the seed resolves silently from this device's storage.
+      // Only a wallet restored on a NEW device has to be unlocked once.
+      let seed: string;
+      try {
+        seed = await resolveDeviceSeed();
+      } catch (e) {
+        if ((e as Error).message === SEED_REQUIRED) {
+          if (!/^[0-9a-fA-F]{64}$/.test(unlock.trim())) {
+            setNeedSeed(true);
+            setError("This device doesn't hold this wallet's key yet. Enter your recovery seed once to unlock sending here.");
+            return;
+          }
+          seed = unlock.trim();
+          setDeviceSeed(seed);
+          setUnlock("");
+          setNeedSeed(false);
+        } else {
+          throw e;
+        }
+      }
       const r = await sendNonCustodial(seed.trim(), to.trim(), parseFloat(amount));
       setTxid(r.txid);
       setTo("");
@@ -426,6 +505,12 @@ function Send({ onSent }: { onSent: () => void }) {
       <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="firecash:…" className="mono" />
       <label>Amount ($firecash)</label>
       <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" inputMode="decimal" />
+      {needSeed && (
+        <>
+          <label>Recovery seed (unlocks signing on this device — stored only here)</label>
+          <textarea value={unlock} onChange={(e) => setUnlock(e.target.value)} placeholder="64 hex characters" />
+        </>
+      )}
       <div className="msg ok small">
         Sends are signed <b>on this device</b> — the server never holds spend authority. Spends use a matured anchor
         (~10&nbsp;min old), so sending can take a few seconds.
@@ -451,19 +536,23 @@ function Send({ onSent }: { onSent: () => void }) {
   );
 }
 
-function Sign() {
+function Sign({ status }: { status: Status | null }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ address: string; signature: string } | null>(null);
 
+  // Signed on-device too: the daemon holds no spend/sign authority for a
+  // non-custodial wallet, and message signatures prove control of the address.
   const submit = async () => {
     setBusy(true);
     setError("");
     setResult(null);
     try {
-      const r = await api.sign(message);
-      setResult({ address: r.address, signature: r.signature });
+      const seed = await resolveDeviceSeed();
+      const net: Network = status?.network === "mainnet" ? "mainnet" : "testnet";
+      const r = await signLocal(seed, net, message);
+      setResult({ address: r.address, signature: r.signatureHex });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -492,7 +581,7 @@ function Sign() {
           <button
             className="btn ghost small"
             style={{ marginTop: 12 }}
-            onClick={() => navigator.clipboard.writeText(result.signature)}
+            onClick={() => copyText(result.signature)}
           >
             Copy signature
           </button>
@@ -639,7 +728,7 @@ function LocalTools() {
             <button
               className="btn ghost small"
               style={{ marginTop: 8 }}
-              onClick={() => navigator.clipboard.writeText(gen.seedHex)}
+              onClick={() => copyText(gen.seedHex)}
             >
               Copy seed
             </button>
@@ -677,7 +766,7 @@ function LocalTools() {
           <button
             className="btn ghost small"
             style={{ marginTop: 12 }}
-            onClick={() => navigator.clipboard.writeText(sig.signatureHex)}
+            onClick={() => copyText(sig.signatureHex)}
           >
             Copy signature
           </button>

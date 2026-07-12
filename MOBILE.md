@@ -1,100 +1,93 @@
 # FireCash mobile wallet
 
-The FireCash wallet ships as a native **iOS + Android** app by wrapping the exact same
-static SPA that serves [wallet.firecash.info](https://wallet.firecash.info) with
+The FireCash wallet ships as a native **Android + iOS** app that wraps the same static SPA
+serving [wallet.firecash.info](https://wallet.firecash.info), via
 [**Capacitor**](https://capacitorjs.com/). One codebase, three targets (web, Android, iOS).
 
-The web bundle in `dist/` is loaded locally on the device and talks to a
-`firecash-walletd` over HTTPS. On native platforms it defaults to the hosted daemon
-(`https://wallet.firecash.info/daemon`) because a device-local bundle has no same-origin
-`/daemon` to proxy to (see `src/api.ts`); a self-hoster can override the daemon URL in the
-app just like on the web.
+**The app is non-custodial.** The seed is generated on the device, in WebAssembly, and is never
+sent anywhere. The daemon is registered with the wallet's **full viewing key** only: it can sync
+the wallet and build spend *proofs*, but it holds no spend authority and cannot move the funds —
+a compromised server leaks *visibility*, never coins. See
+[Custody](#custody-how-the-server-is-kept-powerless).
 
-## Build the app
+## Build
 
-Native builds need the platform SDKs, so they run on a dev machine — **not** in CI-lite
-or a headless server:
-
-- **Android:** Android Studio + SDK (any OS)
-- **iOS:** macOS + Xcode
+The Android build runs headless on Linux — no Android Studio needed (`scripts/build-android.sh`
+drives the SDK directly). iOS still needs macOS + Xcode.
 
 ```bash
-npm install                       # pulls in @capacitor/* (added to package.json)
+npm install
 
-# one-time: generate the native project(s)
-npm run mobile:add:android        # → ./android  (git-ignored)
-npm run mobile:add:ios            # → ./ios      (macOS only)
+# one-time: generate the iOS project (android/ is committed; ios/ is not)
+npm run mobile:add:ios            # macOS only
 
-# build the web bundle, copy it in, and open the native IDE
-npm run mobile:android            # build + cap sync + open Android Studio
-npm run mobile:ios                # build + cap sync + open Xcode
+./scripts/build-android.sh          # debug APK       → android/app/build/outputs/apk/debug/
+./scripts/build-android.sh release  # signed APK+AAB  → .../apk/release/, .../bundle/release/
+npm run mobile:ios                  # build + cap sync + open Xcode
 ```
 
-From Android Studio / Xcode you can run on a simulator/device and produce a signed
-`.apk` / `.aab` / `.ipa` for the stores. `npm run mobile:sync` just re-copies a fresh
-web build into the existing native projects.
+Toolchain the script expects (override with env vars): JDK 17 at `JAVA_HOME`, Android SDK
+(platform 34, build-tools 34) at `ANDROID_HOME`.
 
-The `android/` and `ios/` folders are **generated** and git-ignored — regenerate them
-with `npx cap add`. App identity lives in `capacitor.config.ts` (`appId:
-com.firecash.wallet`).
-
-## Custody today vs. the non-custodial roadmap
-
-**Already on-device:** the app's **Local** tab runs entirely in WebAssembly
-([`firecash-signer`](https://github.com/firecash/firecash-signer)) — generate a cold
-wallet, derive an address, and sign messages / pool-claims with the seed **never leaving
-the phone**. Message **verification** is also fully local. This ships today.
-
-**Still hosted — balance and *sending*:** for those the app points at a `firecash-walletd`
-that holds the seed, because a shielded spend needs a Halo 2 proof. That is convenient
-(zero-config) but the server can spend. A self-hoster who runs their own daemon is already
-fully non-custodial. The plan below moves *sending* on-device too.
-
-The goal for mobile is **the server cannot spend, ever** — the seed lives on the phone.
-This is possible on a shielded chain because Orchard splits a spend into two independent
-steps (`shielded-core/src/wallet.rs`):
-
-1. **prove** — the heavy Halo 2 proof, built from only the **full viewing key (FVK)**. No
-   spend authority.
-2. **sign** — one small RedPallas `spend_auth_sig` per note, the **only** step that needs
-   `ask` (derived from the seed).
-
-`ask` cannot be derived from the FVK, so whoever proves cannot sign, and whoever signs
-need not prove. orchard 0.14 exposes this as a first-class **PCZT** pipeline
-(`orchard::pczt` — `prover` → `signer` → `finalizer`/`extractor`), where
-`Action::sign(sighash, ask, rng)` signs an arbitrary 32-byte sighash using the action's
-stored randomizer. FireCash's wire format already has the exact injection seam: the
-`to_wire(bundle, spend_auth_sig_closure, …)` function in `shielded-core`.
-
-### Route A — hybrid (ship first): phone signs, server proves
+**Release signing** reads a properties file kept **outside the repo** (`FC_SIGNING_PROPS`,
+default `/root/work/.android-signing`):
 
 ```
-Phone (holds seed)                        Server (walletd, FVK only — cannot spend)
-------------------                        -----------------------------------------
-seed → FVK, ask
-register FVK  ──────────────────────────► watch-only: scan, track notes + witnesses
-"send X"      ──────────────────────────► build_for_pczt + create_proof (no ask)
-sign(sighash, ask) per note  ◄─────────── proven PCZT + our sighash
-submit signed  ─────────────────────────► inject sigs via to_wire → relay to node
+FC_KEYSTORE=/path/firecash-release.jks
+FC_KEYSTORE_PASS=…
+FC_KEY_ALIAS=firecash
+FC_KEY_PASS=…
 ```
 
-- **Server cannot steal** (never holds `ask`); a server hack leaks *viewing* keys, not coins.
-- **Phone stays light** — key derivation + one signature per note. No Halo 2 prover on the
-  device, no multi-MB download, no multi-second freeze. Best mobile UX.
-- **Honest tradeoff:** the server sees the FVK, so it can *watch* balances/history — a
-  **privacy** loss, not a **custody** loss. Closed by Route B.
+The keystore itself is never committed. **Back it up offline** — Android identifies an app by its
+signing key, so losing it means no user can ever install an update over their existing install.
 
-### Route B — full local (gold standard): phone proves + signs
+App identity lives in `capacitor.config.ts` (`appId: com.firecash.wallet`); version lives in
+`android/app/build.gradle` (`versionCode` / `versionName`).
 
-Compile `shielded-core` **with** the `circuit` feature to `wasm32`: keygen + scan +
-witness + prove + sign, all on the device. Seed never leaves the phone and the server
-degrades to a dumb, untrusted light-server (serve tree frontier / submit tx). Fully
-private **and** non-custodial. Costs: large WASM (Halo 2 prover), seconds-long proofs on
-phone, proving params cached once. Feasible today (Zcash's WebZjs does in-browser Orchard
-proving). Prereq shared with everything else: the O(N)-per-note witness rebuild must
-become O(log N) via a `bridgetree`.
+## Custody: how the server is kept powerless
 
-**Plan:** ship Route A to kill custody risk with a light client, then invest in Route B
-for full privacy. The staged implementation (shielded-core split + `firecash-signer`
-WASM + walletd `prepare`/`submit` endpoints + on-device key storage) is tracked in the
-core repo's `docs/NON_CUSTODIAL_WALLET.md`.
+A shielded spend splits into two independent steps, and only the second needs spend authority
+(`shielded-core/src/wallet.rs`):
+
+1. **prove** — the heavy Halo 2 proof, built from the **full viewing key (FVK)** alone.
+2. **sign** — one small RedPallas `spend_auth_sig` per note: the only step that needs `ask`,
+   which is derived from the seed.
+
+`ask` cannot be derived from the FVK, so whoever proves cannot sign. The app puts each step where
+it belongs:
+
+```
+Phone (holds the seed)                      Daemon (FVK only — cannot spend)
+----------------------                      --------------------------------
+seed → FVK, ask   (WASM, on device)
+POST /api/wallet/watch  {fvk}   ──────────► watch-only wallet: scans, balance, witnesses
+POST /api/wallet/prepare {fvk,to,amt} ────► builds the Halo 2 proof; returns the sighash and
+                                            one spend randomizer (alpha) per note
+sign(sighash, ask.randomize(alpha))
+POST /api/wallet/submit {sigs}  ──────────► injects the signatures, broadcasts to the node
+```
+
+The daemon refuses every spend path for such a wallet (`/send`, `/consolidate`, `/sign`,
+`/reveal` → **403**): it has no seed to spend with. Verified end-to-end on mainnet — a
+watch-only-registered wallet spent 1 FC in tx
+`35dd94a1d8d20d8b19e1b70531f105736071876945f04b2028d5b97fdeff43ff`, signed on the device.
+
+**Honest tradeoff:** the daemon sees the FVK, so it can *watch* your balance and history — a
+**privacy** cost, not a **custody** one. Run your own `firecash-walletd` (override the daemon URL
+in the app) and even that goes away. Closing it for hosted users needs in-browser Halo 2 proving
+(large WASM, seconds-long proofs on a phone) — feasible (Zcash's WebZjs does it), and gated behind
+the same `bridgetree` work as the O(log N) witness rebuild.
+
+The **Local** tab is fully offline: generate a cold wallet, derive an address, sign and verify
+messages, with no daemon at all.
+
+## Notes for native
+
+- The WebView's origin (`https://localhost` on Android, `capacitor://localhost` on iOS) is what the
+  daemon must allow through CORS — walletd's `--allow-origin` list carries both. Without them every
+  request from the app fails, with no visible error but a permanently empty balance.
+- The `firecash-signer` WASM is **base64-inlined** into the JS bundle, so it loads with no network
+  fetch and works offline and under the `capacitor://` scheme.
+- On native there is no same-origin `/daemon` to proxy to, so `src/api.ts` defaults to the hosted
+  daemon's absolute URL. A self-hoster overrides it in the app.

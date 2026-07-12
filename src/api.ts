@@ -101,6 +101,13 @@ export const api = {
   status: () => req<Status>("GET", "/api/status"),
   balance: () => req<Balance>("GET", "/api/wallet/balance"),
   create: () => req<{ address: string; seed_hex: string; network: string; warning: string }>("POST", "/api/wallet/create", {}),
+  // Register a WATCH-ONLY wallet: the daemon gets the 96-byte viewing key only —
+  // enough to sync the wallet and prove spends, powerless to authorize them. The
+  // seed stays on this device. This is how the wallet is created/restored now;
+  // `create`/`import` (which put the seed on the server) remain only for a
+  // self-hosted daemon you run yourself.
+  watch: (fvk_hex: string, birthday?: number) =>
+    req<{ address: string }>("POST", "/api/wallet/watch", { fvk_hex, birthday: birthday ?? 0 }),
   reveal: () => req<{ address: string; seed_hex: string; network: string }>("GET", "/api/wallet/reveal"),
   import: (seed_hex: string, birthday?: number) =>
     req<{ address: string; seed_hex: string; network: string; warning: string }>("POST", "/api/wallet/import", {
