@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The WebView's local storage holds the wallet SEED. Android 12+ would otherwise
+     include it in cloud backups and device-to-device transfers, putting the key in
+     Google's custody and defeating the point of signing on-device. Opt out of both. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+    </device-transfer>
+</data-extraction-rules>
