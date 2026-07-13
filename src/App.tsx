@@ -29,6 +29,32 @@ export async function copyText(text: string) {
   }
 }
 
+// A firecash: shielded address is bech32 with an "orchard" version byte; a full
+// decode happens on-device at send time, but this catches the obvious typo/paste
+// mistakes instantly so the user gets a red/green cue while typing.
+function looksLikeAddress(a: string): boolean {
+  const s = a.trim();
+  return /^firecash(test)?:[0-9a-z]{80,}$/.test(s);
+}
+
+// Read the clipboard for a paste button (mobile keyboards make long addresses
+// painful to type). Returns "" if the browser/WebView denies clipboard read.
+async function pasteText(): Promise<string> {
+  try {
+    return (await navigator.clipboard.readText()).trim();
+  } catch {
+    return "";
+  }
+}
+
+// "12.34500000" or "12.345" -> 12.345 (number); NaN if not a clean amount.
+function parseAmount(s: string): number {
+  if (!/^\d*\.?\d*$/.test(s.trim()) || s.trim() === "" || s.trim() === ".") return NaN;
+  return parseFloat(s);
+}
+
+const EXPLORER = "https://explorer.firecash.info";
+
 type Tab = "receive" | "send" | "sign" | "verify" | "local";
 const TAB_LABEL: Record<Tab, string> = {
   receive: "Receive",
@@ -362,18 +388,29 @@ function Onboard({
 
 function Receive({ status }: { status: Status }) {
   const [qr, setQr] = useState("");
+  const [copied, setCopied] = useState(false);
   const addr = status.address || "";
   useEffect(() => {
     if (addr) QRCode.toDataURL(addr, { margin: 1, width: 440 }).then(setQr).catch(() => setQr(""));
   }, [addr]);
+  const copy = async () => {
+    await copyText(addr);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
   return (
     <div className="card">
       <h2>Receive</h2>
-      <div className="qr">{qr && <img src={qr} alt="address QR" />}</div>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Share this address or QR to receive $firecash. Every payment to it is private.
+      </p>
+      <div className="qr">{qr && <img src={qr} alt="address QR" onClick={copy} style={{ cursor: "pointer" }} />}</div>
       <label>Your shielded address</label>
-      <div className="addr">{addr}</div>
-      <button className="btn ghost small" style={{ marginTop: 12 }} onClick={() => copyText(addr)}>
-        Copy address
+      <div className="addr" onClick={copy} style={{ cursor: "pointer" }} title="Tap to copy">
+        {addr}
+      </div>
+      <button className="btn ghost small" style={{ marginTop: 12 }} onClick={copy}>
+        {copied ? "Copied ✓" : "Copy address"}
       </button>
 
       <div style={{ height: 1, background: "var(--border)", margin: "22px 0" }} />
@@ -450,19 +487,35 @@ function RevealSeed() {
   );
 }
 
+// A ~0.03 FC network fee is added on top of the amount (matches the daemon default).
+const FEE_FC = 0.03;
+
 function Send({ status, onSent }: { status: Status | null; onSent: () => void }) {
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [txid, setTxid] = useState("");
+  const [sent, setSent] = useState<{ txid: string; amount: string } | null>(null);
   const [unlock, setUnlock] = useState("");
   const [needSeed, setNeedSeed] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
-  const submit = async () => {
+  const balance = parseFloat(status?.balance_fc || "0");
+  const amt = parseAmount(amount);
+  const addrOk = looksLikeAddress(to);
+  const amtValid = !Number.isNaN(amt) && amt > 0;
+  const overspend = amtValid && amt + FEE_FC > balance + 1e-9;
+  // The send is possible only once the wallet is synced (spends need a matured anchor).
+  const canProceed = addrOk && amtValid && !overspend && !!status?.synced;
+
+  const setMax = () => {
+    const max = Math.max(0, balance - FEE_FC);
+    setAmount(max > 0 ? String(Number(max.toFixed(8))) : "0");
+  };
+
+  const doSend = async () => {
     setBusy(true);
     setError("");
-    setTxid("");
     try {
       // Signed on-device; the seed resolves silently from this device's storage.
       // Only a wallet restored on a NEW device has to be unlocked once.
@@ -473,6 +526,7 @@ function Send({ status, onSent }: { status: Status | null; onSent: () => void })
         if ((e as Error).message === SEED_REQUIRED) {
           if (!/^[0-9a-fA-F]{64}$/.test(unlock.trim())) {
             setNeedSeed(true);
+            setConfirming(false);
             setError("This device doesn't hold this wallet's key yet. Enter your recovery seed once to unlock sending here.");
             return;
           }
@@ -484,51 +538,147 @@ function Send({ status, onSent }: { status: Status | null; onSent: () => void })
           throw e;
         }
       }
-      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), parseFloat(amount));
-      setTxid(r.txid);
+      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt);
+      setSent({ txid: r.txid, amount });
       setTo("");
       setAmount("");
+      setConfirming(false);
       onSent();
     } catch (e) {
       setError((e as Error).message);
+      setConfirming(false);
     } finally {
       setBusy(false);
     }
   };
 
+  // Success screen — clear confirmation with a link to the transaction.
+  if (sent) {
+    return (
+      <div className="card center">
+        <div style={{ fontSize: 42, lineHeight: 1 }}>✓</div>
+        <h2 style={{ marginTop: 10 }}>Sent privately</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          <b>{trimFc(sent.amount)}</b> $firecash is on its way.
+        </p>
+        <a className="btn ghost small" href={`${EXPLORER}/txs/${sent.txid}`} target="_blank" rel="noreferrer">
+          View transaction ↗
+        </a>
+        <button className="btn" onClick={() => setSent(null)}>
+          Send another
+        </button>
+      </div>
+    );
+  }
+
+  // Confirmation step — show exactly what will happen before the proof is built.
+  if (confirming) {
+    return (
+      <div className="card">
+        <h2>Confirm</h2>
+        <div className="confirm-row">
+          <span className="muted">Amount</span>
+          <span className="mono">{trimFc(amount)} $firecash</span>
+        </div>
+        <div className="confirm-row">
+          <span className="muted">Network fee</span>
+          <span className="mono">{FEE_FC} $firecash</span>
+        </div>
+        <div className="confirm-row total">
+          <span>Total</span>
+          <span className="mono">{Number((amt + FEE_FC).toFixed(8))} $firecash</span>
+        </div>
+        <label>To</label>
+        <div className="addr">{to.trim()}</div>
+        {needSeed && (
+          <>
+            <label>Recovery seed (unlocks signing on this device — stored only here)</label>
+            <textarea value={unlock} onChange={(e) => setUnlock(e.target.value)} placeholder="64 hex characters" />
+          </>
+        )}
+        <div className="msg ok small">
+          This is verified and signed <b>on your device</b>, then broadcast. Building the private proof takes a few seconds.
+        </div>
+        {error && <div className="msg err">{error}</div>}
+        <div className="row">
+          <button className="btn ghost" disabled={busy} onClick={() => { setConfirming(false); setError(""); }}>
+            Back
+          </button>
+          <button className="btn" disabled={busy} onClick={doSend}>
+            {busy ? (
+              <>
+                <span className="spin" /> Sending…
+              </>
+            ) : (
+              "Confirm & send"
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="card">
-      <h2>Send</h2>
-      <label>Recipient shielded address</label>
-      <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="firecash:…" className="mono" />
-      <label>Amount ($firecash)</label>
-      <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" inputMode="decimal" />
-      {needSeed && (
-        <>
-          <label>Recovery seed (unlocks signing on this device — stored only here)</label>
-          <textarea value={unlock} onChange={(e) => setUnlock(e.target.value)} placeholder="64 hex characters" />
-        </>
-      )}
-      <div className="msg ok small">
-        Sends are signed <b>on this device</b> — the server never holds spend authority. Spends use a matured anchor
-        (~10&nbsp;min old), so sending can take a few seconds.
+      <div className="sendhead">
+        <h2 style={{ margin: 0 }}>Send</h2>
+        <span className="muted small">
+          {trimFc(status?.balance_fc || "0")} available
+        </span>
       </div>
-      {error && <div className="msg err">{error}</div>}
-      {txid && (
-        <div className="msg ok">
-          Sent. Transaction id:
-          <br />
-          <span className="mono">{txid}</span>
+
+      <label>Recipient shielded address</label>
+      <div className="inputwrap">
+        <input
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          placeholder="firecash:…"
+          className="mono"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          style={to && !addrOk ? { borderColor: "var(--bad)" } : addrOk ? { borderColor: "var(--good)" } : undefined}
+        />
+        <button
+          type="button"
+          className="inlinebtn"
+          onClick={async () => {
+            const t = await pasteText();
+            if (t) setTo(t);
+          }}
+        >
+          Paste
+        </button>
+      </div>
+      {to && !addrOk && <div className="fieldhint bad">That doesn't look like a firecash: address.</div>}
+
+      <div className="amthead">
+        <label style={{ margin: 0 }}>Amount ($firecash)</label>
+        <button type="button" className="linkbtn" onClick={setMax}>
+          Max
+        </button>
+      </div>
+      <input
+        value={amount}
+        onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+        placeholder="0.00"
+        inputMode="decimal"
+        style={overspend ? { borderColor: "var(--bad)" } : undefined}
+      />
+      {overspend && <div className="fieldhint bad">Not enough balance for this amount plus the {FEE_FC} fee.</div>}
+      {amtValid && !overspend && (
+        <div className="fieldhint muted">
+          + {FEE_FC} fee = {Number((amt + FEE_FC).toFixed(8))} total
         </div>
       )}
-      <button className="btn" disabled={busy || !to || !amount} onClick={submit}>
-        {busy ? (
-          <>
-            <span className="spin" /> Building proof…
-          </>
-        ) : (
-          "Send privately"
-        )}
+
+      {!status?.synced && (
+        <div className="msg warn small">Wallet is still syncing — you can send once it finishes.</div>
+      )}
+      {error && <div className="msg err">{error}</div>}
+
+      <button className="btn" disabled={!canProceed} onClick={() => { setError(""); setConfirming(true); }}>
+        Review send
       </button>
     </div>
   );
