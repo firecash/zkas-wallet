@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { api, getBase, setBase, isNative, type Status } from "./api";
+import { loadTxs, recordSend, reconcile, pendingTotal, type LocalTx } from "./localtx";
 import { fvkHex, generateWallet, signLocal, verifyLocal, type Network } from "./signer";
 import { sendNonCustodial } from "./noncustodial";
 import logo from "./assets/firecash-logo.jpg";
@@ -71,10 +72,11 @@ function parseAmount(s: string): number {
 
 const EXPLORER = "https://explorer.firecash.info";
 
-type Tab = "receive" | "send" | "sign" | "verify" | "local";
+type Tab = "receive" | "send" | "history" | "sign" | "verify" | "local";
 const TAB_LABEL: Record<Tab, string> = {
   receive: "Receive",
   send: "Send",
+  history: "History",
   sign: "Sign",
   verify: "Verify",
   local: "Local",
@@ -87,16 +89,29 @@ export default function App() {
   // A freshly created seed, held at the top level so the 4-second status poll
   // (which flips has_wallet true) can never unmount the backup screen mid-copy.
   const [freshSeed, setFreshSeed] = useState<{ seed: string; address: string } | null>(null);
+  // On-device send history; drives the optimistic (0-conf) balance and History tab.
+  const [txs, setTxs] = useState<LocalTx[]>(() => loadTxs());
 
   const refresh = useCallback(async () => {
     try {
       const s = await api.status();
       setStatus(s);
       setReachable(true);
+      setTxs(reconcile(parseFloat(s.balance_fc || "0"), !!s.synced));
     } catch {
       setReachable(false);
     }
   }, []);
+
+  // Called by Send the instant a tx is broadcast: record it and refresh so the
+  // 0-conf balance drops immediately.
+  const onSent = useCallback(
+    (tx: Omit<LocalTx, "pending">) => {
+      setTxs(recordSend(tx));
+      refresh();
+    },
+    [refresh],
+  );
 
   useEffect(() => {
     refresh();
@@ -118,16 +133,17 @@ export default function App() {
       )}
       {reachable && !freshSeed && status && status.has_wallet && (
         <>
-          <BalanceHero status={status} />
+          <BalanceHero status={status} txs={txs} />
           <div className="tabs">
-            {(["receive", "send", "sign", "verify", "local"] as Tab[]).map((t) => (
+            {(["receive", "send", "history", "sign", "verify", "local"] as Tab[]).map((t) => (
               <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
                 {TAB_LABEL[t]}
               </button>
             ))}
           </div>
           {tab === "receive" && <Receive status={status} />}
-          {tab === "send" && <Send status={status} onSent={refresh} />}
+          {tab === "send" && <Send status={status} onSent={onSent} />}
+          {tab === "history" && <History txs={txs} />}
           {tab === "sign" && <Sign status={status} />}
           {tab === "verify" && <Verify />}
           {tab === "local" && <LocalTools />}
@@ -224,14 +240,19 @@ function Header({ status, reachable }: { status: Status | null; reachable: boole
   );
 }
 
-function BalanceHero({ status }: { status: Status }) {
+function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   const syncing = !status.synced;
   const pct =
     status.chain_len > 0 ? Math.min(100, Math.round((status.scanned_blocks / status.chain_len) * 100)) : 0;
+  // Optimistic balance: subtract still-unconfirmed (0-conf) sends immediately so a
+  // just-sent amount never reappears until the daemon has scanned the spend.
+  const pending = pendingTotal(txs);
+  const pendingCount = txs.filter((t) => t.pending).length;
+  const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") - pending);
   return (
     <div className="card balance">
       <div className="amt">
-        {trimFc(status.balance_fc)}
+        {trimFc(shownBal.toFixed(8))}
         <span className="unit">$firecash</span>
       </div>
       <div className="sub">
@@ -245,6 +266,12 @@ function BalanceHero({ status }: { status: Status }) {
           " · synced"
         )}
       </div>
+      {pendingCount > 0 && (
+        <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
+          {trimFc(pending.toFixed(8))} $firecash pending · {pendingCount} unconfirmed send
+          {pendingCount === 1 ? "" : "s"} (0-conf)
+        </div>
+      )}
       {syncing && (
         <>
           <div className="syncbar">
@@ -596,7 +623,7 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
   );
 }
 
-function Send({ status, onSent }: { status: Status | null; onSent: () => void }) {
+function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<LocalTx, "pending">) => void }) {
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
@@ -653,11 +680,22 @@ function Send({ status, onSent }: { status: Status | null; onSent: () => void })
         }
       }
       const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt);
+      const toAddr = to.trim();
       setSent({ txid: r.txid, amount });
       setTo("");
       setAmount("");
       setConfirming(false);
-      onSent();
+      // Record on-device so the balance drops to a 0-conf figure immediately and
+      // the send shows up in History even before the daemon has scanned it.
+      onSent({
+        txid: r.txid,
+        to: toAddr,
+        amountFc: amt,
+        feeFc: FEE_FC,
+        ts: Date.now(),
+        preFc: parseFloat(status?.balance_fc || "0"),
+        spentFc: amt + FEE_FC,
+      });
     } catch (e) {
       setError((e as Error).message);
       setConfirming(false);
@@ -673,7 +711,8 @@ function Send({ status, onSent }: { status: Status | null; onSent: () => void })
         <div style={{ fontSize: 42, lineHeight: 1 }}>✓</div>
         <h2 style={{ marginTop: 10 }}>Sent privately</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          <b>{trimFc(sent.amount)}</b> $firecash is on its way.
+          <b>{trimFc(sent.amount)}</b> $firecash is on its way — broadcast now, unconfirmed (0-conf) until the next
+          block. Your balance already reflects it and it's in your History.
         </p>
         <a className="btn ghost small" href={`${EXPLORER}/txs/${sent.txid}`} target="_blank" rel="noreferrer">
           View transaction ↗
@@ -711,7 +750,8 @@ function Send({ status, onSent }: { status: Status | null; onSent: () => void })
           </>
         )}
         <div className="msg ok small">
-          This is verified and signed <b>on your device</b>, then broadcast. Building the private proof takes a few seconds.
+          This is verified and signed <b>on your device</b>, then broadcast. Building the private zero-knowledge proof
+          takes about <b>15–20 seconds</b> — the tx is sent the moment it completes.
         </div>
         {error && <div className="msg err">{error}</div>}
         <div className="row">
@@ -1040,6 +1080,66 @@ function LocalTools() {
       )}
 
       {err && <div className="msg err">{err}</div>}
+    </div>
+  );
+}
+
+function shortAddr(a: string): string {
+  const body = a.replace(/^firecash(test)?:/, "");
+  return body.length > 20 ? `${a.slice(0, 16)}…${a.slice(-6)}` : a;
+}
+
+function fmtTime(ms: number): string {
+  return new Date(ms).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// On-device history of sends made from this device. The daemon keeps no per-wallet
+// history, so this is the record; each row links to the tx on the explorer.
+function History({ txs }: { txs: LocalTx[] }) {
+  if (txs.length === 0) {
+    return (
+      <div className="card">
+        <h2>History</h2>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          No sends yet from this device. Sends you make here show up instantly — even before the network confirms
+          them. This list is kept on this device only.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="card">
+      <h2>History</h2>
+      <div className="txlist">
+        {txs.map((t) => (
+          <a
+            key={t.txid}
+            className="txrow"
+            href={`${EXPLORER}/txs/${t.txid}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <div className="txrow-main">
+              <span className="txrow-amt">− {trimFc(t.amountFc.toFixed(8))} $firecash</span>
+              <span className={"txrow-badge " + (t.pending ? "pending" : "done")}>
+                {t.pending ? "0-conf" : "sent"}
+              </span>
+            </div>
+            <div className="txrow-sub">
+              <span className="mono">to {shortAddr(t.to)}</span>
+              <span>{fmtTime(t.ts)}</span>
+            </div>
+          </a>
+        ))}
+      </div>
+      <p className="muted small" style={{ marginTop: 14 }}>
+        Sends performed on this device (this wallet keeps no history server-side). Tap a row to view it on the explorer.
+      </p>
     </div>
   );
 }

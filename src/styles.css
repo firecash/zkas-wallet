@@ -124,15 +124,17 @@ a { color: var(--ember); }
 .tabs { display: flex; gap: 6px; margin-top: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 5px; }
 .tabs button {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
   color: var(--muted);
-  padding: 9px 6px;
+  padding: 9px 4px;
   border-radius: 999px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   font-family: inherit;
+  white-space: nowrap;
 }
 .tabs button.active { background: var(--ember); color: #fff7f3; }
 
@@ -393,3 +395,40 @@ select { appearance: none; cursor: pointer; }
   line-height: 1.5;
   margin: 0;
 }
+
+/* Transaction history list (on-device sends). */
+.txlist { display: flex; flex-direction: column; gap: 8px; }
+.txrow {
+  display: block;
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: border-color 0.12s ease;
+}
+.txrow:hover { border-color: var(--ember); }
+.txrow-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.txrow-amt { font-weight: 600; font-size: 14px; }
+.txrow-badge {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.txrow-badge.pending { color: var(--ember); border: 1px solid rgba(255, 107, 53, 0.5); background: rgba(255, 107, 53, 0.1); }
+.txrow-badge.done { color: var(--good); border: 1px solid rgba(53, 196, 106, 0.4); background: rgba(53, 196, 106, 0.1); }
+.txrow-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.txrow-sub .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
