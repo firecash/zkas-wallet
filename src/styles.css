@@ -15,6 +15,14 @@
 
 * { box-sizing: border-box; }
 
+/* Nothing may scroll the page sideways — the viewport is the hard width bound.
+   Any child that would exceed it (a long mono URL/address) must wrap or truncate,
+   never push the layout wider than the screen. */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -172,7 +180,20 @@ select { appearance: none; cursor: pointer; }
 .btn.small { width: auto; padding: 8px 16px; font-size: 13px; margin-top: 0; }
 
 .row { display: flex; gap: 10px; }
-.row > * { flex: 1; }
+/* min-width:0 lets a flex child (e.g. a mono input holding a long URL) shrink
+   below its content width instead of forcing the row past the card edge. */
+.row > * { flex: 1; min-width: 0; }
+
+/* Daemon toggle button: the URL can be long (hosted mobile default is an absolute
+   https URL). Truncate it with an ellipsis so the button never outgrows the card. */
+.daemon-btn { min-width: 0; }
+.daemon-url {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.daemon-mode { flex: 0 0 auto; white-space: nowrap; }
 
 /* Messages */
 .msg { border-radius: 12px; padding: 12px 14px; margin-top: 16px; font-size: 13px; line-height: 1.5; }

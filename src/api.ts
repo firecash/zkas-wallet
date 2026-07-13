@@ -24,6 +24,11 @@ function defaultBase(): string {
 export function getBase(): string {
   return localStorage.getItem("walletd_base") || defaultBase();
 }
+/** True when running inside the native mobile (Capacitor) shell rather than a browser. */
+export function isNative(): boolean {
+  const cap = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  return !!cap?.isNativePlatform?.();
+}
 export function setBase(url: string) {
   if (!url.trim()) localStorage.removeItem("walletd_base");
   else localStorage.setItem("walletd_base", url.replace(/\/$/, ""));

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { api, getBase, setBase, type Status } from "./api";
+import { api, getBase, setBase, isNative, type Status } from "./api";
 import { fvkHex, generateWallet, signLocal, verifyLocal, type Network } from "./signer";
 import { sendNonCustodial } from "./noncustodial";
 import logo from "./assets/firecash-logo.jpg";
@@ -167,6 +167,16 @@ export async function resolveDeviceSeed(): Promise<string> {
 }
 
 function HostedNotice() {
+  // Mobile: keep it to one line — screen real estate is tight and the self-host
+  // links live in the Daemon card anyway. Web keeps the fuller explainer.
+  if (isNative()) {
+    return (
+      <div className="warnbar" role="note">
+        <span className="warnbar-icon" aria-hidden="true">🔒</span>
+        <div>Signed on your device — <b>your seed never leaves it</b>.</div>
+      </div>
+    );
+  }
   return (
     <div className="warnbar" role="note">
       <span className="warnbar-icon" aria-hidden="true">🔒</span>
@@ -938,12 +948,12 @@ function DaemonSetting() {
     <div className="card">
       <h2 style={{ margin: 0 }}>
         <button
-          className="btn ghost small"
+          className="btn ghost small daemon-btn"
           style={{ width: "100%", justifyContent: "space-between", textTransform: "none", letterSpacing: 0 }}
           onClick={() => setOpen(!open)}
         >
-          <span>Daemon: <span className="mono">{current}</span></span>
-          <span className="muted">{own ? "your own ✓" : "hosted"} {open ? "▲" : "▼"}</span>
+          <span className="daemon-url">Daemon: <span className="mono">{current}</span></span>
+          <span className="muted daemon-mode">{own ? "your own ✓" : "hosted"} {open ? "▲" : "▼"}</span>
         </button>
       </h2>
       {open && (
