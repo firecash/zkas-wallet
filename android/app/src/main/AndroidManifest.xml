@@ -40,4 +40,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Scan a recipient's address QR when sending. The camera feed is decoded
+         in-page (jsQR) and never leaves the device; the feature degrades to
+         paste/manual entry if the permission is denied. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

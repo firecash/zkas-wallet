@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
+import jsQR from "jsqr";
 import { api, getBase, setBase, isNative, type Status } from "./api";
 import { fvkHex, generateWallet, signLocal, verifyLocal, type Network } from "./signer";
 import { sendNonCustodial } from "./noncustodial";
@@ -33,8 +34,23 @@ export async function copyText(text: string) {
 // decode happens on-device at send time, but this catches the obvious typo/paste
 // mistakes instantly so the user gets a red/green cue while typing.
 function looksLikeAddress(a: string): boolean {
+  // A shielded address is a fixed-size Orchard payload → 79 bech32 chars after the
+  // HRP. Use a tolerant lower bound (not an exact 79) so this stays a typo guard,
+  // not a second decoder — the real validation is the on-device decode at send time.
   const s = a.trim();
-  return /^firecash(test)?:[0-9a-z]{80,}$/.test(s);
+  return /^firecash(test)?:[0-9a-z]{70,}$/.test(s);
+}
+
+// A scanned QR may be a bare address ("firecash:pxvt…") or a payment URI carrying
+// an amount ("firecash:pxvt…?amount=1.5"). Split off the address and, if present,
+// a numeric amount the caller can prefill.
+function parsePaymentUri(text: string): { address: string; amount?: string } {
+  const s = text.trim();
+  const q = s.indexOf("?");
+  if (q === -1) return { address: s };
+  const address = s.slice(0, q);
+  const amount = new URLSearchParams(s.slice(q + 1)).get("amount");
+  return { address, amount: amount && /^\d*\.?\d+$/.test(amount) ? amount : undefined };
 }
 
 // Read the clipboard for a paste button (mobile keyboards make long addresses
@@ -500,6 +516,86 @@ function RevealSeed() {
 // A ~0.03 FC network fee is added on top of the amount (matches the daemon default).
 const FEE_FC = 0.03;
 
+// Full-screen camera QR scanner. Decodes frames in-page with jsQR — the video
+// never leaves the device. Works on the web (getUserMedia) and inside the native
+// WebView (the app declares CAMERA; Capacitor grants the WebView on first use).
+// Fires `onResult` once with the decoded text, then the parent unmounts us and
+// our cleanup stops the camera.
+function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    let raf = 0;
+    let done = false;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+    const stop = () => {
+      done = true;
+      cancelAnimationFrame(raf);
+      stream?.getTracks().forEach((t) => t.stop());
+    };
+
+    const tick = () => {
+      const v = videoRef.current;
+      if (done || !v || !ctx) return;
+      if (v.readyState === v.HAVE_ENOUGH_DATA && v.videoWidth) {
+        canvas.width = v.videoWidth;
+        canvas.height = v.videoHeight;
+        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+        const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(data, width, height, { inversionAttempts: "dontInvert" });
+        if (code?.data) {
+          stop();
+          onResult(code.data);
+          return;
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    (async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error("no-camera-api");
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        if (done) { stream.getTracks().forEach((t) => t.stop()); return; }
+        const v = videoRef.current;
+        if (!v) return;
+        v.srcObject = stream;
+        v.setAttribute("playsinline", "true");
+        await v.play();
+        raf = requestAnimationFrame(tick);
+      } catch (e) {
+        const name = (e as Error).name || (e as Error).message;
+        setErr(
+          name === "NotAllowedError" || name === "SecurityError"
+            ? "Camera permission was denied. Allow camera access, or paste the address instead."
+            : name === "NotFoundError"
+              ? "No camera found on this device — paste the address instead."
+              : "Couldn't start the camera. Paste the address instead.",
+        );
+      }
+    })();
+
+    return stop;
+  }, [onResult]);
+
+  return (
+    <div className="scan-overlay" role="dialog" aria-label="Scan address QR code">
+      <div className="scan-frame">
+        <video ref={videoRef} className="scan-video" muted playsInline />
+        <div className="scan-reticle" />
+      </div>
+      <p className="scan-hint">{err || "Point the camera at the recipient's address QR"}</p>
+      <button type="button" className="btn ghost" style={{ maxWidth: 220 }} onClick={onClose}>
+        {err ? "Close" : "Cancel"}
+      </button>
+    </div>
+  );
+}
+
 function Send({ status, onSent }: { status: Status | null; onSent: () => void }) {
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
@@ -509,6 +605,14 @@ function Send({ status, onSent }: { status: Status | null; onSent: () => void })
   const [unlock, setUnlock] = useState("");
   const [needSeed, setNeedSeed] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [scanning, setScanning] = useState(false);
+
+  const onScan = useCallback((text: string) => {
+    const { address, amount: amt } = parsePaymentUri(text);
+    setTo(address);
+    if (amt) setAmount(amt);
+    setScanning(false);
+  }, []);
 
   const balance = parseFloat(status?.balance_fc || "0");
   const amt = parseAmount(amount);
@@ -649,6 +753,9 @@ function Send({ status, onSent }: { status: Status | null; onSent: () => void })
           spellCheck={false}
           style={to && !addrOk ? { borderColor: "var(--bad)" } : addrOk ? { borderColor: "var(--good)" } : undefined}
         />
+        <button type="button" className="inlinebtn" aria-label="Scan QR" onClick={() => setScanning(true)}>
+          Scan
+        </button>
         <button
           type="button"
           className="inlinebtn"
@@ -661,6 +768,7 @@ function Send({ status, onSent }: { status: Status | null; onSent: () => void })
         </button>
       </div>
       {to && !addrOk && <div className="fieldhint bad">That doesn't look like a firecash: address.</div>}
+      {scanning && <QrScanner onResult={onScan} onClose={() => setScanning(false)} />}
 
       <div className="amthead">
         <label style={{ margin: 0 }}>Amount ($firecash)</label>
