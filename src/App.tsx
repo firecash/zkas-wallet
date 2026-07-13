@@ -71,6 +71,11 @@ function parseAmount(s: string): number {
 }
 
 const EXPLORER = "https://explorer.firecash.info";
+// Beta signal: the chain runs as mainnet internally (addresses, signing, the node),
+// but while it's still being hardened we surface the network to users as "testnet"
+// so nobody treats it as final. Display-only — does not affect address derivation
+// or which network the daemon/signer actually use.
+const NET_LABEL = "testnet";
 
 type Tab = "receive" | "send" | "history" | "sign" | "verify" | "local";
 const TAB_LABEL: Record<Tab, string> = {
@@ -234,7 +239,7 @@ function Header({ status, reachable }: { status: Status | null; reachable: boole
       </h1>
       <span className="tag">
         <span className={"dot " + (node ? "on" : "off")} />
-        {reachable === false ? "daemon offline" : node ? `${status?.network} · node live` : "node offline"}
+        {reachable === false ? "daemon offline" : node ? `${NET_LABEL} · node live` : "node offline"}
       </span>
     </div>
   );
