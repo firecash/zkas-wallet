@@ -240,6 +240,16 @@ function Header({ status, reachable }: { status: Status | null; reachable: boole
   );
 }
 
+// Spendable-now balance, falling back to the full balance for older daemons that
+// don't report it (so nothing regresses if status lacks the field).
+function spendableFc(status: Status | null): number {
+  if (!status) return 0;
+  return status.spendable_fc != null ? parseFloat(status.spendable_fc) : parseFloat(status.balance_fc || "0");
+}
+function maturingFc(status: Status | null): number {
+  return status?.maturing_fc != null ? parseFloat(status.maturing_fc) : 0;
+}
+
 function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   const syncing = !status.synced;
   const pct =
@@ -249,6 +259,10 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   const pending = pendingTotal(txs);
   const pendingCount = txs.filter((t) => t.pending).length;
   const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") - pending);
+  // Spendable now vs still-maturing (shielded anchor depth ~10 min). Pending 0-conf
+  // sends are already out, so discount them from what's shown as spendable.
+  const maturing = maturingFc(status);
+  const spendable = spendableFc(status) - pending;
   return (
     <div className="card balance">
       <div className="amt">
@@ -270,6 +284,13 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
           {trimFc(pending.toFixed(8))} $firecash pending · {pendingCount} unconfirmed send
           {pendingCount === 1 ? "" : "s"} (0-conf)
+        </div>
+      )}
+      {maturing > 0.00000001 && (
+        <div className="sub" style={{ marginTop: 6 }}>
+          {trimFc(Math.max(0, spendable).toFixed(8))} spendable now ·{" "}
+          <span style={{ color: "var(--ember)" }}>{trimFc(maturing.toFixed(8))} maturing</span> — shielded coins are
+          spendable ~10 min after they arrive.
         </div>
       )}
       {syncing && (
@@ -641,16 +662,23 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
     setScanning(false);
   }, []);
 
-  const balance = parseFloat(status?.balance_fc || "0");
+  // A send can only draw on SPENDABLE (matured) funds, not the full balance — so
+  // Max, the overspend check, and messaging all use spendable, and the total's
+  // maturing remainder is surfaced separately so "you have money but can't send it"
+  // is never a mystery.
+  const spendable = spendableFc(status);
+  const maturing = maturingFc(status);
   const amt = parseAmount(amount);
   const addrOk = looksLikeAddress(to);
   const amtValid = !Number.isNaN(amt) && amt > 0;
-  const overspend = amtValid && amt + FEE_FC > balance + 1e-9;
+  const overspend = amtValid && amt + FEE_FC > spendable + 1e-9;
+  // The maturing balance would cover it — the shortfall is just not-yet-matured funds.
+  const blockedByMaturing = overspend && amtValid && amt + FEE_FC <= spendable + maturing + 1e-9;
   // The send is possible only once the wallet is synced (spends need a matured anchor).
   const canProceed = addrOk && amtValid && !overspend && !!status?.synced;
 
   const setMax = () => {
-    const max = Math.max(0, balance - FEE_FC);
+    const max = Math.max(0, spendable - FEE_FC);
     setAmount(max > 0 ? String(Number(max.toFixed(8))) : "0");
   };
 
@@ -776,9 +804,7 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
     <div className="card">
       <div className="sendhead">
         <h2 style={{ margin: 0 }}>Send</h2>
-        <span className="muted small">
-          {trimFc(status?.balance_fc || "0")} available
-        </span>
+        <span className="muted small">{trimFc(spendable.toFixed(8))} spendable</span>
       </div>
 
       <label>Recipient shielded address</label>
@@ -823,7 +849,19 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
         inputMode="decimal"
         style={overspend ? { borderColor: "var(--bad)" } : undefined}
       />
-      {overspend && <div className="fieldhint bad">Not enough balance for this amount plus the {FEE_FC} fee.</div>}
+      {overspend && blockedByMaturing && (
+        <div className="fieldhint bad">
+          Only {trimFc(spendable.toFixed(8))} is spendable right now — {trimFc(maturing.toFixed(8))} is still maturing
+          (shielded coins can be spent ~10 min after they arrive, incl. your change from a recent send). It'll be
+          available shortly.
+        </div>
+      )}
+      {overspend && !blockedByMaturing && (
+        <div className="fieldhint bad">
+          Not enough funds: {trimFc(spendable.toFixed(8))} spendable, need {trimFc((amt + FEE_FC).toFixed(8))} incl. the{" "}
+          {FEE_FC} fee.
+        </div>
+      )}
       {amtValid && !overspend && (
         <div className="fieldhint muted">
           + {FEE_FC} fee = {Number((amt + FEE_FC).toFixed(8))} total

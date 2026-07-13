@@ -58,6 +58,12 @@ export interface Status {
   chain_len: number;
   balance_sompi: string;
   balance_fc: string;
+  // Spendable now (matured past the ~10-min anchor depth) vs still-maturing. Older
+  // daemons omit these; treat a missing value as "all of balance is spendable".
+  spendable_fc?: string;
+  spendable_sompi?: string;
+  maturing_fc?: string;
+  maturing_sompi?: string;
   note_count: number;
   updated_unix: number;
   error: string | null;
