@@ -234,6 +234,86 @@ select { appearance: none; cursor: pointer; }
 .warnbar-icon { font-size: 18px; line-height: 1.4; flex: none; }
 .warnbar a { color: var(--ember); text-decoration: underline; }
 
+/* Send card: header row ("Send" + available balance) */
+.sendhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+/* Input + inline action (e.g. the address field with a Paste button). The input
+   flexes to fill the row; min-width:0 lets it shrink instead of pushing the row
+   wider than the card when a long mono address is pasted in. */
+.inputwrap {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.inputwrap input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+.inlinebtn {
+  flex: 0 0 auto;
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+.inlinebtn:hover { border-color: var(--ember); color: var(--ember); }
+
+/* Label row with a trailing text action (e.g. "Amount" + a Max button). Carries
+   the label's normal top spacing so the inline label can zero its own margin. */
+.amthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 0 6px;
+}
+.linkbtn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ember);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.linkbtn:hover { color: var(--ember-hover); text-decoration: underline; }
+
+/* Small helper text under a field (validation / fee hints). */
+.fieldhint { font-size: 12px; line-height: 1.4; margin-top: 6px; }
+.fieldhint.bad { color: var(--bad); }
+.fieldhint.muted { color: var(--muted); }
+
+/* Confirm screen: label/value rows, with a divided, emphasized total. */
+.confirm-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.confirm-row.total {
+  border-bottom: none;
+  margin-top: 2px;
+  padding-top: 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
 /* Non-custodial "secure mode" toggle in the Send card. */
 .secure-toggle {
   display: flex;
