@@ -1,4 +1,4 @@
-// Client-side FireCash key primitives, powered by the `firecash-signer` crate
+// Client-side ZKas key primitives, powered by the `firecash-signer` crate
 // compiled to WebAssembly (no proving circuit). Everything here runs entirely in
 // the browser / device — no server, no key material ever leaves the page. Used for
 // on-device wallet generation, address derivation, and message signing/verifying.

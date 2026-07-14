@@ -20,12 +20,12 @@ export function fvk_hex(seed_hex: string): string;
  */
 export function sign_spend_auth(seed_hex: string, alpha_hex: string, sighash_hex: string): string;
 /**
- * Derive the `firecash:` address for an existing seed on a network.
+ * Derive the `zkas:` address for an existing seed on a network.
  */
 export function address_from_seed(seed_hex: string, network: string): string;
 /**
  * Generate a brand-new wallet: a random 32-byte seed (browser CSPRNG) and its
- * `firecash:` address. Retries the negligibly-rare case where a random seed is
+ * `zkas:` address. Retries the negligibly-rare case where a random seed is
  * not a valid Orchard spending key.
  */
 export function new_wallet(network: string): Wallet;
@@ -123,7 +123,7 @@ export enum AddressVersion {
    */
   ScriptHash = 8,
   /**
-   * firecash shielded (Orchard) addresses have the version byte set to 9.
+   * ZKas shielded (Orchard) addresses have the version byte set to 9.
    * The payload is the 43-byte raw Orchard address (diversifier ‖ pk_d). Such
    * an address is never spent through a transparent script — it is the
    * recipient of a shielded (Orchard) output — so it maps to no standard
@@ -234,7 +234,7 @@ export class Wallet {
    */
   seed_hex: string;
   /**
-   * The `firecash:` shielded address derived from the seed.
+   * The `zkas:` shielded address derived from the seed.
    */
   address: string;
 }

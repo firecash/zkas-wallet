@@ -1,19 +1,19 @@
-// Thin client for the firecash-walletd daemon.
+// Thin client for the zkas-walletd daemon.
 //
 // Default: the HOSTED daemon, reached same-origin at `<origin>/daemon` (nginx
 // proxies it to 127.0.0.1:8501). This lets anyone use the wallet with just a
-// browser — no node, no local install — connected to FireCash's public node.
+// browser — no node, no local install — connected to ZKas's public node.
 // Each browser owns a random wallet token so wallets stay separate on the server.
 //
 // Self-hosted (fully non-custodial): override the daemon URL to your own local
-// firecash-walletd (e.g. http://127.0.0.1:8501) — then the seed never leaves your
+// zkas-walletd (e.g. http://127.0.0.1:8501) — then the seed never leaves your
 // machine.
 
 function defaultBase(): string {
   // Native mobile (Capacitor) loads the bundle from the device, so there is no
   // same-origin server to proxy `/daemon` to — reach the hosted daemon directly.
   const cap = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
-  if (cap?.isNativePlatform?.()) return "https://wallet.firecash.info/daemon";
+  if (cap?.isNativePlatform?.()) return "https://wallet.zkas.info/daemon";
   // Same-origin hosted daemon in a normal web page; sensible fallback elsewhere.
   if (typeof window !== "undefined" && window.location?.origin?.startsWith("http")) {
     return window.location.origin + "/daemon";
@@ -64,6 +64,11 @@ export interface Status {
   spendable_sompi?: string;
   maturing_fc?: string;
   maturing_sompi?: string;
+  // 0-conf: value seen arriving/leaving in blocks too close to the tip for the wallet
+  // to ingest safely. The chain has confirmed these; the wallet's own tree has not
+  // caught up yet. Older daemons omit them — absent means "nothing pending".
+  pending_in_fc?: string;
+  pending_out_fc?: string;
   note_count: number;
   updated_unix: number;
   error: string | null;
@@ -146,3 +151,26 @@ export const api = {
   verify: (address: string, message: string, signature: string) =>
     req<{ valid: boolean; reason: string | null }>("POST", "/api/verify", { address, message, signature }),
 };
+
+// ---------------------------------------------------------------------------
+// Public chain API (zkas-api), same-origin at `<origin>/chain` (nginx proxies it).
+// The wallet asks the chain directly whether a send it broadcast is confirmed, rather
+// than inferring it from its own balance — see localtx.applyChainStatus.
+
+export interface ChainTx {
+  confirmations?: number;
+  is_accepted?: boolean;
+  accepting_block_blue_score?: number;
+}
+
+/** Confirmations for a broadcast txid, or null if the chain doesn't know it yet. */
+export async function chainTx(txid: string): Promise<ChainTx | null> {
+  try {
+    const base = isNative() ? "https://wallet.zkas.info/chain" : window.location.origin + "/chain";
+    const r = await fetch(`${base}/transactions/${txid}`);
+    if (!r.ok) return null; // not mined yet (the API 502s on an unknown tx)
+    return (await r.json()) as ChainTx;
+  } catch {
+    return null;
+  }
+}

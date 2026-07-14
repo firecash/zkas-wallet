@@ -259,7 +259,7 @@ export function sign_spend_auth(seed_hex, alpha_hex, sighash_hex) {
 }
 
 /**
- * Derive the `firecash:` address for an existing seed on a network.
+ * Derive the `zkas:` address for an existing seed on a network.
  * @param {string} seed_hex
  * @param {string} network
  * @returns {string}
@@ -289,7 +289,7 @@ export function address_from_seed(seed_hex, network) {
 
 /**
  * Generate a brand-new wallet: a random 32-byte seed (browser CSPRNG) and its
- * `firecash:` address. Retries the negligibly-rare case where a random seed is
+ * `zkas:` address. Retries the negligibly-rare case where a random seed is
  * not a valid Orchard spending key.
  * @param {string} network
  * @returns {Wallet}
@@ -480,7 +480,7 @@ export const AddressVersion = Object.freeze({
      */
     ScriptHash: 8, "8": "ScriptHash",
     /**
-     * firecash shielded (Orchard) addresses have the version byte set to 9.
+     * ZKas shielded (Orchard) addresses have the version byte set to 9.
      * The payload is the 43-byte raw Orchard address (diversifier ‖ pk_d). Such
      * an address is never spent through a transparent script — it is the
      * recipient of a shielded (Orchard) output — so it maps to no standard
@@ -837,7 +837,7 @@ export class Wallet {
         wasm.__wbg_set_signature_address(this.__wbg_ptr, ptr0, len0);
     }
     /**
-     * The `firecash:` shielded address derived from the seed.
+     * The `zkas:` shielded address derived from the seed.
      * @returns {string}
      */
     get address() {
@@ -853,7 +853,7 @@ export class Wallet {
         }
     }
     /**
-     * The `firecash:` shielded address derived from the seed.
+     * The `zkas:` shielded address derived from the seed.
      * @param {string} arg0
      */
     set address(arg0) {

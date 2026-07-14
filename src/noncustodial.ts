@@ -27,7 +27,7 @@ export interface SendResult {
 }
 
 /**
- * Send `amountFc` FireCash to `to`, non-custodially and verified on-device. `seedHex`
+ * Send `amountFc` ZKas to `to`, non-custodially and verified on-device. `seedHex`
  * is used ONLY on this device — to derive the viewing key, to check the prepared
  * payment, and to sign it — and is never transmitted. Rejects if the daemon reports
  * insufficient matured funds, if the prepared payment does not match what was asked

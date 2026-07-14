@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, getBase, setBase, isNative, type Status } from "./api";
-import { loadTxs, recordSend, reconcile, pendingTotal, type LocalTx } from "./localtx";
+import { api, chainTx, getBase, setBase, isNative, type Status } from "./api";
+import {
+  loadTxs,
+  recordSend,
+  reconcile,
+  pendingTotal,
+  applyChainStatus,
+  saveSnapshot,
+  loadSnapshot,
+  type LocalTx,
+} from "./localtx";
 import { fvkHex, generateWallet, signLocal, verifyLocal, type Network } from "./signer";
 import { sendNonCustodial } from "./noncustodial";
-import logo from "./assets/firecash-logo.jpg";
+import logo from "./assets/zkas-logo.png";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
 // hidden textarea so "copy" never dies with an unhandled rejection on a phone.
@@ -31,7 +40,7 @@ export async function copyText(text: string) {
   }
 }
 
-// A firecash: shielded address is bech32 with an "orchard" version byte; a full
+// A zkas: shielded address is bech32 with an "orchard" version byte; a full
 // decode happens on-device at send time, but this catches the obvious typo/paste
 // mistakes instantly so the user gets a red/green cue while typing.
 function looksLikeAddress(a: string): boolean {
@@ -39,11 +48,11 @@ function looksLikeAddress(a: string): boolean {
   // HRP. Use a tolerant lower bound (not an exact 79) so this stays a typo guard,
   // not a second decoder — the real validation is the on-device decode at send time.
   const s = a.trim();
-  return /^firecash(test)?:[0-9a-z]{70,}$/.test(s);
+  return /^(zkas|firecash)(test)?:[0-9a-z]{70,}$/.test(s);
 }
 
-// A scanned QR may be a bare address ("firecash:pxvt…") or a payment URI carrying
-// an amount ("firecash:pxvt…?amount=1.5"). Split off the address and, if present,
+// A scanned QR may be a bare address ("zkas:pxvt…") or a payment URI carrying
+// an amount ("zkas:pxvt…?amount=1.5"). Split off the address and, if present,
 // a numeric amount the caller can prefill.
 function parsePaymentUri(text: string): { address: string; amount?: string } {
   const s = text.trim();
@@ -70,7 +79,7 @@ function parseAmount(s: string): number {
   return parseFloat(s);
 }
 
-const EXPLORER = "https://explorer.firecash.info";
+const EXPLORER = "https://explorer.zkas.info";
 // Beta signal: the chain runs as mainnet internally (addresses, signing, the node),
 // but while it's still being hardened we surface the network to users as "testnet"
 // so nobody treats it as final. Display-only — does not affect address derivation
@@ -102,7 +111,25 @@ export default function App() {
       const s = await api.status();
       setStatus(s);
       setReachable(true);
-      setTxs(reconcile(parseFloat(s.balance_fc || "0"), !!s.synced));
+      let list = reconcile(parseFloat(s.balance_fc || "0"), !!s.synced);
+      // Ask the chain about every send still shown as pending. This is what stops a
+      // confirmed transaction from being displayed as "0-conf" indefinitely.
+      for (const t of list.filter((x) => x.pending)) {
+        const ct = await chainTx(t.txid);
+        if (ct?.confirmations != null) list = applyChainStatus(t.txid, ct.confirmations);
+      }
+      setTxs(list);
+      // Remember a balance the daemon actually knows, so a later reload/restart — when
+      // it answers with zeros while rebuilding — has something honest to show instead.
+      if (s.has_wallet && s.scanned_blocks > 0) {
+        saveSnapshot({
+          balanceFc: parseFloat(s.balance_fc || "0"),
+          spendableFc: spendableFc(s),
+          maturingFc: maturingFc(s),
+          noteCount: s.note_count,
+          ts: Date.now(),
+        });
+      }
     } catch {
       setReachable(false);
     }
@@ -156,7 +183,7 @@ export default function App() {
       )}
       <DaemonSetting />
       <div className="footer">
-        FireCash Wallet · shielded by default · connected to FireCash's public node.
+        ZKas Wallet · shielded by default · connected to ZKas's public node.
         <br />
         This wallet lives in this browser — back up your recovery seed to open it on another device or in incognito.
         <br />
@@ -219,10 +246,10 @@ function HostedNotice() {
       <span className="warnbar-icon" aria-hidden="true">🔒</span>
       <div>
         Sends are signed on your device — <b>your seed never leaves it</b>. Still, for maximum security prefer{" "}
-        <a href="https://github.com/firecash/firecash-rusty#firecash-walletd--wallet-daemon-rest-powers-the-web-wallet"
+        <a href="https://github.com/firecash/firecash-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet"
            target="_blank" rel="noreferrer">running your own daemon</a>{" "}
         or a{" "}
-        <a href="https://firecash.github.io/firecash-paper-wallet/" target="_blank" rel="noreferrer">paper wallet</a>{" "}
+        <a href="https://zkas.info/paper-wallet.html" target="_blank" rel="noreferrer">paper wallet</a>{" "}
         for cold storage.
       </div>
     </div>
@@ -233,9 +260,9 @@ function Header({ status, reachable }: { status: Status | null; reachable: boole
   const node = reachable && status?.node_connected;
   return (
     <div className="brand">
-      <img src={logo} alt="FireCash" />
+      <img src={logo} alt="ZKas" />
       <h1>
-        Fire<span className="em">Cash</span> Wallet
+        <span className="em">Z</span>Kas Wallet
       </h1>
       <span className="tag">
         <span className={"dot " + (node ? "on" : "off")} />
@@ -254,25 +281,64 @@ function spendableFc(status: Status | null): number {
 function maturingFc(status: Status | null): number {
   return status?.maturing_fc != null ? parseFloat(status.maturing_fc) : 0;
 }
+// 0-conf value the chain has already confirmed but the wallet's own tree has not
+// ingested yet (it holds back SYNC_TIP_MARGIN blocks from the tip). Showing these is
+// what makes a payment appear seconds after it is mined rather than ~3 minutes later.
+function pendingInFc(status: Status | null): number {
+  return status?.pending_in_fc != null ? parseFloat(status.pending_in_fc) : 0;
+}
+function pendingOutFc(status: Status | null): number {
+  return status?.pending_out_fc != null ? parseFloat(status.pending_out_fc) : 0;
+}
 
 function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   const syncing = !status.synced;
   const pct =
     status.chain_len > 0 ? Math.min(100, Math.round((status.scanned_blocks / status.chain_len) * 100)) : 0;
-  // Optimistic balance: subtract still-unconfirmed (0-conf) sends immediately so a
-  // just-sent amount never reappears until the daemon has scanned the spend.
-  const pending = pendingTotal(txs);
+  // The daemon has not rebuilt this wallet's state yet — it reports zeros because it
+  // does not KNOW the balance, not because the balance is zero. Never render those
+  // zeros as a balance; fall back to the last figure it gave us.
+  const restoring = status.scanned_blocks === 0 && !status.synced;
+  const snap = restoring ? loadSnapshot() : null;
+  if (restoring) {
+    return (
+      <div className="card balance">
+        <div className="amt">
+          {snap ? trimFc(snap.balanceFc.toFixed(8)) : "—"}
+          <span className="unit">ZKAS</span>
+        </div>
+        <div className="sub">
+          <span className="spin" style={{ width: 11, height: 11 }} />{" "}
+          {snap ? "last known balance — restoring your wallet…" : "restoring your wallet…"}
+        </div>
+        <div className="sub" style={{ marginTop: 8, fontSize: 12 }}>
+          Your coins are on-chain and safe. The wallet is rebuilding its private view of them; this can take a few
+          minutes after a server restart.
+        </div>
+      </div>
+    );
+  }
+  // The displayed balance folds in what the CHAIN has already confirmed but the
+  // wallet's tree has not ingested yet (the daemon's 0-conf preview of the unsettled
+  // window), so a received payment lands here seconds after it is mined.
+  const pendingIn = pendingInFc(status);
+  const pendingOut = pendingOutFc(status);
+  // Outflow is known two ways: this device's own record of a just-broadcast send, and
+  // the daemon seeing our nullifier on-chain. Take the larger rather than the sum —
+  // they describe the same spend, and adding them would debit it twice.
+  const localOut = pendingTotal(txs);
+  const outflow = Math.max(pendingOut, localOut);
   const pendingCount = txs.filter((t) => t.pending).length;
-  const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") - pending);
-  // Spendable now vs still-maturing (shielded anchor depth ~10 min). Pending 0-conf
-  // sends are already out, so discount them from what's shown as spendable.
-  const maturing = maturingFc(status);
-  const spendable = spendableFc(status) - pending;
+  const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") + pendingIn - outflow);
+  // Spendable now vs still-maturing (shielded anchor depth ~10 min). Incoming 0-conf
+  // value is NOT spendable yet, so it only counts toward maturing.
+  const maturing = maturingFc(status) + pendingIn;
+  const spendable = spendableFc(status) - outflow;
   return (
     <div className="card balance">
       <div className="amt">
         {trimFc(shownBal.toFixed(8))}
-        <span className="unit">$firecash</span>
+        <span className="unit">ZKAS</span>
       </div>
       <div className="sub">
         {status.note_count} shielded note{status.note_count === 1 ? "" : "s"}
@@ -285,10 +351,19 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           " · synced"
         )}
       </div>
-      {pendingCount > 0 && (
+      {pendingIn > 0.00000001 && (
         <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
-          {trimFc(pending.toFixed(8))} $firecash pending · {pendingCount} unconfirmed send
-          {pendingCount === 1 ? "" : "s"} (0-conf)
+          +{trimFc(pendingIn.toFixed(8))} ZKAS incoming — confirmed on-chain, settling into your wallet
+        </div>
+      )}
+      {outflow > 0.00000001 && (
+        <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
+          {trimFc(outflow.toFixed(8))} ZKAS{" "}
+          {pendingOut > 0
+            ? "sent — confirmed on-chain, settling into your wallet"
+            : pendingCount > 0
+              ? `pending · ${pendingCount} unconfirmed send${pendingCount === 1 ? "" : "s"} (0-conf)`
+              : "sent — settling into your wallet"}
         </div>
       )}
       {maturing > 0.00000001 && (
@@ -451,7 +526,7 @@ function Onboard({
     <div className="card center">
       <h2>Welcome</h2>
       <p className="muted" style={{ marginTop: 0 }}>
-        Create a fresh shielded wallet, or restore one from a seed. Every FireCash transfer is a private Orchard
+        Create a fresh shielded wallet, or restore one from a seed. Every ZKas transfer is a private Orchard
         (zk-SNARK) transaction.
       </p>
       {error && <div className="msg err">{error}</div>}
@@ -481,7 +556,7 @@ function Receive({ status }: { status: Status }) {
     <div className="card">
       <h2>Receive</h2>
       <p className="muted small" style={{ marginTop: 0 }}>
-        Share this address or QR to receive $firecash. Every payment to it is private.
+        Share this address or QR to receive ZKAS. Every payment to it is private.
       </p>
       <div className="qr">{qr && <img src={qr} alt="address QR" onClick={copy} style={{ cursor: "pointer" }} />}</div>
       <label>Your shielded address</label>
@@ -744,7 +819,7 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
         <div style={{ fontSize: 42, lineHeight: 1 }}>✓</div>
         <h2 style={{ marginTop: 10 }}>Sent privately</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          <b>{trimFc(sent.amount)}</b> $firecash is on its way — broadcast now, unconfirmed (0-conf) until the next
+          <b>{trimFc(sent.amount)}</b> ZKAS is on its way — broadcast now, unconfirmed (0-conf) until the next
           block. Your balance already reflects it and it's in your History.
         </p>
         <a className="btn ghost small" href={`${EXPLORER}/txs/${sent.txid}`} target="_blank" rel="noreferrer">
@@ -764,15 +839,15 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
         <h2>Confirm</h2>
         <div className="confirm-row">
           <span className="muted">Amount</span>
-          <span className="mono">{trimFc(amount)} $firecash</span>
+          <span className="mono">{trimFc(amount)} ZKAS</span>
         </div>
         <div className="confirm-row">
           <span className="muted">Network fee</span>
-          <span className="mono">{FEE_FC} $firecash</span>
+          <span className="mono">{FEE_FC} ZKAS</span>
         </div>
         <div className="confirm-row total">
           <span>Total</span>
-          <span className="mono">{Number((amt + FEE_FC).toFixed(8))} $firecash</span>
+          <span className="mono">{Number((amt + FEE_FC).toFixed(8))} ZKAS</span>
         </div>
         <label>To</label>
         <div className="addr">{to.trim()}</div>
@@ -817,7 +892,7 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
         <input
           value={to}
           onChange={(e) => setTo(e.target.value)}
-          placeholder="firecash:…"
+          placeholder="zkas:…"
           className="mono"
           autoCapitalize="off"
           autoCorrect="off"
@@ -838,11 +913,11 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
           Paste
         </button>
       </div>
-      {to && !addrOk && <div className="fieldhint bad">That doesn't look like a firecash: address.</div>}
+      {to && !addrOk && <div className="fieldhint bad">That doesn't look like a zkas: address.</div>}
       {scanning && <QrScanner onResult={onScan} onClose={() => setScanning(false)} />}
 
       <div className="amthead">
-        <label style={{ margin: 0 }}>Amount ($firecash)</label>
+        <label style={{ margin: 0 }}>Amount (ZKAS)</label>
         <button type="button" className="linkbtn" onClick={setMax}>
           Max
         </button>
@@ -972,7 +1047,7 @@ function Verify() {
         Runs entirely in your browser — no server involved.
       </p>
       <label>Signer's address</label>
-      <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="firecash:…" className="mono" />
+      <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="zkas:…" className="mono" />
       <label>Message</label>
       <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="The signed message…" />
       <label>Signature (hex)</label>
@@ -1049,8 +1124,8 @@ function LocalTools() {
         value={network}
         onChange={(e) => setNetwork(e.target.value as Network)}
       >
-        <option value="mainnet">mainnet (firecash:)</option>
-        <option value="testnet">testnet (firecashtest:)</option>
+        <option value="mainnet">mainnet (zkas:)</option>
+        <option value="testnet">testnet (zkastest:)</option>
       </select>
 
       <h3 style={{ marginBottom: 6 }}>Generate a cold wallet</h3>
@@ -1128,7 +1203,7 @@ function LocalTools() {
 }
 
 function shortAddr(a: string): string {
-  const body = a.replace(/^firecash(test)?:/, "");
+  const body = a.replace(/^(zkas|firecash)(test)?:/, "");
   return body.length > 20 ? `${a.slice(0, 16)}…${a.slice(-6)}` : a;
 }
 
@@ -1168,9 +1243,13 @@ function History({ txs }: { txs: LocalTx[] }) {
             rel="noreferrer"
           >
             <div className="txrow-main">
-              <span className="txrow-amt">− {trimFc(t.amountFc.toFixed(8))} $firecash</span>
+              <span className="txrow-amt">− {trimFc(t.amountFc.toFixed(8))} ZKAS</span>
               <span className={"txrow-badge " + (t.pending ? "pending" : "done")}>
-                {t.pending ? "0-conf" : "sent"}
+                {t.pending
+                  ? "0-conf"
+                  : t.confs != null
+                    ? `${t.confs} conf${t.confs === 1 ? "" : "s"}`
+                    : "sent"}
               </span>
             </div>
             <div className="txrow-sub">
@@ -1188,7 +1267,7 @@ function History({ txs }: { txs: LocalTx[] }) {
 }
 
 /// The daemon this wallet talks to. Always reachable — not just when the hosted
-/// service is down — because pointing it at your own `firecash-walletd` is how you
+/// service is down — because pointing it at your own `zkas-walletd` is how you
 /// stop trusting ours at all, and that has to be one tap away, at any time.
 function DaemonSetting() {
   const [open, setOpen] = useState(false);
@@ -1211,7 +1290,7 @@ function DaemonSetting() {
         <>
           <p className="muted small" style={{ marginTop: 14 }}>
             Your seed is signed with on this device either way. But the hosted daemon still sees your{" "}
-            <b>viewing key</b> — it can watch your balance and history. Run your own <code>firecash-walletd</code>{" "}
+            <b>viewing key</b> — it can watch your balance and history. Run your own <code>zkas-walletd</code>{" "}
             (it talks to our public node; no full node needed) and point this at it to remove that too.
           </p>
           <label>Daemon URL</label>
@@ -1250,11 +1329,11 @@ function Setup() {
     <div className="card setup">
       <h2>Can't reach the wallet service</h2>
       <div className="msg warn">
-        The hosted wallet service isn't responding right now. It normally runs on our side, connected to FireCash's
+        The hosted wallet service isn't responding right now. It normally runs on our side, connected to ZKas's
         public node — you don't need to run anything. Try again shortly.
       </div>
       <p className="muted small">
-        Prefer full <b>non-custodial</b> control? Run your own <code>firecash-walletd</code> locally (it uses our public
+        Prefer full <b>non-custodial</b> control? Run your own <code>zkas-walletd</code> locally (it uses our public
         node, no full node required) and point this URL at it — then your seed never leaves your machine.
       </p>
       <label>Daemon URL</label>

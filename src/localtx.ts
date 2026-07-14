@@ -15,7 +15,8 @@ export type LocalTx = {
   ts: number; // unix ms, when broadcast
   preFc: number; // daemon balance_fc at send time (still includes the spent notes)
   spentFc: number; // amountFc + feeFc — total leaving the wallet
-  pending: boolean; // true until the daemon balance reflects it
+  pending: boolean; // true until the chain confirms it (see reconcile)
+  confs?: number;   // confirmations reported by the chain, once known
 };
 
 const MAX = 200;
@@ -54,18 +55,42 @@ export function recordSend(t: Omit<LocalTx, "pending">): LocalTx[] {
 }
 
 /**
- * Reconcile pending flags against the daemon's current balance. A pending spend is
- * "applied" once the wallet is synced and the daemon balance has fallen to at/below
- * the value expected after that spend — at which point the daemon's own number takes
- * over seamlessly (same figure, no jump). Also ages out stale pendings.
+ * Record what the chain says about a broadcast send.
+ *
+ * This is the authority. The previous rule inferred "the send went through" from the
+ * daemon's balance falling to `preFc - spentFc` — but `preFc` was whatever the daemon
+ * reported at the moment of sending, and if the wallet happened to be loading then, that
+ * was 0. The test became `balance <= -spentFc`, which is never true, so a fully
+ * confirmed transaction stayed on screen as "1 unconfirmed send (0-conf)" forever AND
+ * kept its amount subtracted from the displayed balance. A transaction's status is a
+ * fact about the chain, so ask the chain.
+ */
+export function applyChainStatus(txid: string, confirmations: number): LocalTx[] {
+  let changed = false;
+  const txs = loadTxs().map((t) => {
+    if (t.txid !== txid) return t;
+    const pending = confirmations < 1;
+    if (t.pending !== pending || t.confs !== confirmations) changed = true;
+    return { ...t, pending, confs: confirmations };
+  });
+  if (changed) save(txs);
+  return txs;
+}
+
+/**
+ * Fallback reconciliation for sends the chain hasn't answered about (yet). Still clears
+ * on the balance drop when that signal is trustworthy — `preFc` must be a balance the
+ * daemon actually knew — and ages out stale pendings so nothing can get stuck forever.
  */
 export function reconcile(daemonFc: number, synced: boolean): LocalTx[] {
   const now = Date.now();
   let changed = false;
   const txs = loadTxs().map((t) => {
     if (!t.pending) return t;
-    const applied = synced && daemonFc <= t.preFc - t.spentFc + EPS;
-    if (applied || now - t.ts > PENDING_MAX_AGE_MS) {
+    // preFc <= 0 means the balance was unknown (wallet loading) when this was recorded,
+    // so the drop test below is meaningless for it — leave it to the chain / the age-out.
+    const dropSeen = t.preFc > 0 && synced && daemonFc <= t.preFc - t.spentFc + EPS;
+    if (dropSeen || now - t.ts > PENDING_MAX_AGE_MS) {
       changed = true;
       return { ...t, pending: false };
     }
@@ -78,4 +103,41 @@ export function reconcile(daemonFc: number, synced: boolean): LocalTx[] {
 /** Total still-pending outflow — the amount to subtract from the daemon balance. */
 export function pendingTotal(txs: LocalTx[]): number {
   return txs.reduce((s, t) => (t.pending ? s + t.spentFc : s), 0);
+}
+
+// ---------------------------------------------------------------------------
+// Last-known balance snapshot.
+//
+// The hosted daemon holds a wallet's scanned state in RAM. When it is not resident
+// — after a daemon restart, or when the wallet was evicted — the next request
+// triggers a load, and until that load finishes `/api/status` truthfully answers
+// `balance 0 / 0 notes / scanned 0 / error "loading…"`. Rendering that verbatim tells
+// the user their coins are GONE, which is the single most alarming thing a wallet can
+// do and is exactly what it did on 2026-07-13. The daemon is saying "I don't know
+// yet", not "you have nothing" — so remember what it last told us and show that,
+// clearly marked as stale, until the real number arrives.
+
+export type Snapshot = { balanceFc: number; spendableFc: number; maturingFc: number; noteCount: number; ts: number };
+
+function snapKey(): string {
+  return `last_known_${localStorage.getItem("wallet_token") || "default"}`;
+}
+
+export function saveSnapshot(s: Snapshot) {
+  try {
+    localStorage.setItem(snapKey(), JSON.stringify(s));
+  } catch {
+    /* storage full / disabled — the snapshot is an optimization, never a source of truth */
+  }
+}
+
+export function loadSnapshot(): Snapshot | null {
+  try {
+    const raw = localStorage.getItem(snapKey());
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Snapshot;
+    return typeof s?.balanceFc === "number" ? s : null;
+  } catch {
+    return null;
+  }
 }
