@@ -119,22 +119,49 @@ a { color: var(--ember); }
 }
 
 /* Tabs */
-.tabs { display: flex; gap: 6px; margin-top: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 5px; }
+/* The pill bar has to hold five labels on a 360px phone. `flex: 1` + `nowrap` squeezed
+   each button below its text width, so "Receive" and "History" were clipped. Let every
+   button keep its natural width instead, and let the bar scroll horizontally on the
+   narrowest screens — the scrollbar is hidden and the pills snap, so it still reads as a
+   segmented control rather than a scroll area. On roomy screens they simply share the row. */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;               /* Firefox */
+  -ms-overflow-style: none;            /* old Edge */
+  overscroll-behavior-x: contain;
+}
+.tabs::-webkit-scrollbar { display: none; }   /* WebKit */
 .tabs button {
-  flex: 1;
-  min-width: 0;
+  flex: 1 0 auto;                      /* share the row, but never below the text width */
+  scroll-snap-align: center;
   background: transparent;
   border: none;
   color: var(--muted);
-  padding: 9px 4px;
+  padding: 9px 12px;
   border-radius: 999px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;
   white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
 }
+.tabs button:hover:not(.active) { color: var(--text); }
 .tabs button.active { background: var(--ember); color: #04211c; }
+
+/* Very narrow phones: shave the padding before anything is allowed to clip. */
+@media (max-width: 380px) {
+  .tabs button { padding: 9px 9px; font-size: 12.5px; }
+}
 
 /* Forms */
 label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }

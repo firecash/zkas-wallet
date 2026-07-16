@@ -15,8 +15,14 @@ export type LocalTx = {
   ts: number; // unix ms, when broadcast
   preFc: number; // daemon balance_fc at send time (still includes the spent notes)
   spentFc: number; // amountFc + feeFc — total leaving the wallet
-  pending: boolean; // true until the chain confirms it (see reconcile)
-  confs?: number;   // confirmations reported by the chain, once known
+  // true until the DAEMON'S balance actually reflects the spend — this is what drives
+  // the optimistic subtraction. Cleared ONLY by `reconcile` (daemon balance dropped, or
+  // age-out), NEVER by chain confirmations: a shielded spend confirms on-chain in ~1s but
+  // the daemon only re-scans it ~3 min later, and clearing the subtraction on the earlier
+  // signal made the sent coins REAPPEAR (balance 10 → 6 → 10 → 6). See `confs` for the
+  // separate chain-confirmation status used by History.
+  pending: boolean;
+  confs?: number;   // chain confirmations, for display only — does NOT gate the balance subtraction
 };
 
 const MAX = 200;
@@ -55,23 +61,21 @@ export function recordSend(t: Omit<LocalTx, "pending">): LocalTx[] {
 }
 
 /**
- * Record what the chain says about a broadcast send.
+ * Record what the chain says about a broadcast send — for DISPLAY ONLY (History badge).
  *
- * This is the authority. The previous rule inferred "the send went through" from the
- * daemon's balance falling to `preFc - spentFc` — but `preFc` was whatever the daemon
- * reported at the moment of sending, and if the wallet happened to be loading then, that
- * was 0. The test became `balance <= -spentFc`, which is never true, so a fully
- * confirmed transaction stayed on screen as "1 unconfirmed send (0-conf)" forever AND
- * kept its amount subtracted from the displayed balance. A transaction's status is a
- * fact about the chain, so ask the chain.
+ * Chain confirmation must NOT stop the optimistic balance subtraction: a shielded spend
+ * confirms on-chain in about a second, but the daemon only re-scans it into the wallet's
+ * balance ~3 minutes later (past the reorg margin). Clearing `pending` on the chain signal
+ * dropped the subtraction while `balance_fc` still showed the pre-send figure, so the sent
+ * coins REAPPEARED (10 → 6 → 10 → 6). The subtraction is now owned solely by `reconcile`,
+ * which waits for the daemon's own balance to fall — so here we only record `confs`.
  */
 export function applyChainStatus(txid: string, confirmations: number): LocalTx[] {
   let changed = false;
   const txs = loadTxs().map((t) => {
     if (t.txid !== txid) return t;
-    const pending = confirmations < 1;
-    if (t.pending !== pending || t.confs !== confirmations) changed = true;
-    return { ...t, pending, confs: confirmations };
+    if (t.confs !== confirmations) changed = true;
+    return { ...t, confs: confirmations };
   });
   if (changed) save(txs);
   return txs;

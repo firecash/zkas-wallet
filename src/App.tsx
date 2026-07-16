@@ -86,14 +86,13 @@ const EXPLORER = "https://explorer.zkas.info";
 // or which network the daemon/signer actually use.
 const NET_LABEL = "testnet";
 
-type Tab = "receive" | "send" | "history" | "sign" | "verify" | "local";
+type Tab = "receive" | "send" | "history" | "sign" | "verify";
 const TAB_LABEL: Record<Tab, string> = {
   receive: "Receive",
   send: "Send",
   history: "History",
   sign: "Sign",
   verify: "Verify",
-  local: "Local",
 };
 
 export default function App() {
@@ -109,7 +108,16 @@ export default function App() {
   const refresh = useCallback(async () => {
     try {
       const s = await api.status();
-      setStatus(s);
+      // Never let a transient poll un-render the wallet. While the daemon is reloading a
+      // wallet (or a status call races a sync pass) it can answer has_wallet:false /
+      // address:null for a beat. Rendering that verbatim unmounted the whole tab block —
+      // the address and QR blinked out and the layout jumped on every such poll. Once we
+      // have seen a wallet, keep showing it and just take the fresh numbers.
+      setStatus((prev) =>
+        prev?.has_wallet && (!s.has_wallet || !s.address)
+          ? { ...s, has_wallet: true, address: s.address ?? prev.address }
+          : s,
+      );
       setReachable(true);
       let list = reconcile(parseFloat(s.balance_fc || "0"), !!s.synced);
       // Ask the chain about every send still shown as pending. This is what stops a
@@ -147,7 +155,10 @@ export default function App() {
 
   useEffect(() => {
     refresh();
-    const t = setInterval(refresh, 4000);
+    // 1s, not 4s: the daemon now sees a payment in the mempool within a second of it
+    // being broadcast, so a slow poll here would be the only thing left making a payment
+    // feel sluggish. The call is a cheap read of in-memory state.
+    const t = setInterval(refresh, 1000);
     return () => clearInterval(t);
   }, [refresh]);
 
@@ -167,7 +178,7 @@ export default function App() {
         <>
           <BalanceHero status={status} txs={txs} />
           <div className="tabs">
-            {(["receive", "send", "history", "sign", "verify", "local"] as Tab[]).map((t) => (
+            {(["receive", "send", "history", "sign", "verify"] as Tab[]).map((t) => (
               <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
                 {TAB_LABEL[t]}
               </button>
@@ -178,7 +189,6 @@ export default function App() {
           {tab === "history" && <History txs={txs} />}
           {tab === "sign" && <Sign status={status} />}
           {tab === "verify" && <Verify />}
-          {tab === "local" && <LocalTools />}
         </>
       )}
       <DaemonSetting />
@@ -281,6 +291,15 @@ function spendableFc(status: Status | null): number {
 function maturingFc(status: Status | null): number {
   return status?.maturing_fc != null ? parseFloat(status.maturing_fc) : 0;
 }
+// The balance to remember when recording a send, so `reconcile` can later tell the spend
+// has landed by watching the daemon balance fall to `preFc - spentFc`. `balance_fc` can
+// momentarily read 0 while the daemon reloads/evicts the wallet, and a 0 here would make
+// that drop test meaningless (it requires preFc > 0) — leaving the send subtracted until
+// the 20-min age-out. Fall back to the last-known-good snapshot, which is never spuriously 0.
+function reliablePreFc(status: Status | null): number {
+  const b = parseFloat(status?.balance_fc || "0");
+  return b > 0 ? b : loadSnapshot()?.balanceFc ?? 0;
+}
 // 0-conf value the chain has already confirmed but the wallet's own tree has not
 // ingested yet (it holds back SYNC_TIP_MARGIN blocks from the tip). Showing these is
 // what makes a payment appear seconds after it is mined rather than ~3 minutes later.
@@ -359,11 +378,9 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
       {outflow > 0.00000001 && (
         <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
           {trimFc(outflow.toFixed(8))} ZKAS{" "}
-          {pendingOut > 0
-            ? "sent — confirmed on-chain, settling into your wallet"
-            : pendingCount > 0
-              ? `pending · ${pendingCount} unconfirmed send${pendingCount === 1 ? "" : "s"} (0-conf)`
-              : "sent — settling into your wallet"}
+          {pendingOut > 0 || txs.some((t) => t.pending && (t.confs ?? 0) >= 1)
+            ? "sent — confirmed on-chain, updating your balance shortly"
+            : `sent — broadcast${pendingCount > 1 ? ` · ${pendingCount} sends` : ""} (0-conf)`}
         </div>
       )}
       {maturing > 0.00000001 && (
@@ -545,7 +562,10 @@ function Receive({ status }: { status: Status }) {
   const [copied, setCopied] = useState(false);
   const addr = status.address || "";
   useEffect(() => {
-    if (addr) QRCode.toDataURL(addr, { margin: 1, width: 440 }).then(setQr).catch(() => setQr(""));
+    // Only ever *replace* the QR, never blank it: an empty address (a poll landing mid
+    // reload) used to wipe the code and leave a hole where it had been. A receive address
+    // does not change, so the previous one stays correct until a new one renders.
+    if (addr) QRCode.toDataURL(addr, { margin: 1, width: 440 }).then(setQr).catch(() => {});
   }, [addr]);
   const copy = async () => {
     await copyText(addr);
@@ -801,7 +821,7 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
         amountFc: amt,
         feeFc: FEE_FC,
         ts: Date.now(),
-        preFc: parseFloat(status?.balance_fc || "0"),
+        preFc: reliablePreFc(status),
         spentFc: amt + FEE_FC,
       });
     } catch (e) {
@@ -1065,143 +1085,6 @@ function Verify() {
   );
 }
 
-// Fully client-side, server-independent key tools. Everything here runs in this
-// page's WebAssembly — no daemon, and the seed never leaves the device.
-function LocalTools() {
-  const [network, setNetwork] = useState<Network>("mainnet");
-
-  // Cold wallet generator
-  const [gen, setGen] = useState<{ seedHex: string; address: string } | null>(null);
-  const [revealSeed, setRevealSeed] = useState(false);
-  const [genBusy, setGenBusy] = useState(false);
-
-  // Sign with a seed
-  const [seedIn, setSeedIn] = useState("");
-  const [message, setMessage] = useState("");
-  const [sig, setSig] = useState<{ address: string; signatureHex: string } | null>(null);
-  const [signBusy, setSignBusy] = useState(false);
-  const [err, setErr] = useState("");
-
-  const doGenerate = async () => {
-    setGenBusy(true);
-    setErr("");
-    setRevealSeed(false);
-    try {
-      setGen(await generateWallet(network));
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setGenBusy(false);
-    }
-  };
-
-  const doSign = async () => {
-    setSignBusy(true);
-    setErr("");
-    setSig(null);
-    try {
-      setSig(await signLocal(seedIn, network, message));
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setSignBusy(false);
-    }
-  };
-
-  return (
-    <div className="card">
-      <h2>Local tools (self-custody)</h2>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        These run <b>entirely in this page</b> (WebAssembly) — no server, and your seed
-        never leaves this device. Use them to create a cold wallet or to sign without
-        trusting the daemon. Balance and sending still use the daemon (a shielded spend
-        needs a zero-knowledge proof).
-      </p>
-
-      <label>Network</label>
-      <select
-        className="mono"
-        value={network}
-        onChange={(e) => setNetwork(e.target.value as Network)}
-      >
-        <option value="mainnet">mainnet (zkas:)</option>
-        <option value="testnet">testnet (zkastest:)</option>
-      </select>
-
-      <h3 style={{ marginBottom: 6 }}>Generate a cold wallet</h3>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        Creates a fresh seed + address on-device. Back up the seed offline — it is the
-        only way to restore, and anyone who sees it can spend.
-      </p>
-      <button className="btn" disabled={genBusy} onClick={doGenerate}>
-        {genBusy ? <span className="spin" /> : "Generate new wallet"}
-      </button>
-      {gen && (
-        <>
-          <label>Address (safe to share)</label>
-          <div className="addr">{gen.address}</div>
-          <label>Recovery seed — SECRET</label>
-          {revealSeed ? (
-            <div className="addr">{gen.seedHex}</div>
-          ) : (
-            <button className="btn ghost small" onClick={() => setRevealSeed(true)}>
-              Reveal seed
-            </button>
-          )}
-          {revealSeed && (
-            <button
-              className="btn ghost small"
-              style={{ marginTop: 8 }}
-              onClick={() => copyText(gen.seedHex)}
-            >
-              Copy seed
-            </button>
-          )}
-        </>
-      )}
-
-      <h3 style={{ marginBottom: 6, marginTop: 22 }}>Sign with a seed</h3>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        Prove control of an address (e.g. to claim a mining-pool payout) without spending.
-        The seed is used locally and never transmitted.
-      </p>
-      <label>Seed (64 hex chars)</label>
-      <input
-        className="mono"
-        value={seedIn}
-        onChange={(e) => setSeedIn(e.target.value)}
-        placeholder="your 32-byte seed, hex…"
-        autoComplete="off"
-        spellCheck={false}
-      />
-      <label>Message</label>
-      <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Message to sign…" />
-      <button className="btn" disabled={signBusy || !seedIn || !message} onClick={doSign}>
-        {signBusy ? <span className="spin" /> : "Sign locally"}
-      </button>
-      {sig && (
-        <>
-          <label>Address</label>
-          <div className="addr">{sig.address}</div>
-          <label>Signature (fvk‖sig, hex)</label>
-          <div className="addr" style={{ maxHeight: 120, overflow: "auto" }}>
-            {sig.signatureHex}
-          </div>
-          <button
-            className="btn ghost small"
-            style={{ marginTop: 12 }}
-            onClick={() => copyText(sig.signatureHex)}
-          >
-            Copy signature
-          </button>
-        </>
-      )}
-
-      {err && <div className="msg err">{err}</div>}
-    </div>
-  );
-}
-
 function shortAddr(a: string): string {
   const body = a.replace(/^(zkas|firecash)(test)?:/, "");
   return body.length > 20 ? `${a.slice(0, 16)}…${a.slice(-6)}` : a;
@@ -1244,12 +1127,10 @@ function History({ txs }: { txs: LocalTx[] }) {
           >
             <div className="txrow-main">
               <span className="txrow-amt">− {trimFc(t.amountFc.toFixed(8))} ZKAS</span>
-              <span className={"txrow-badge " + (t.pending ? "pending" : "done")}>
-                {t.pending
-                  ? "0-conf"
-                  : t.confs != null
-                    ? `${t.confs} conf${t.confs === 1 ? "" : "s"}`
-                    : "sent"}
+              <span className={"txrow-badge " + ((t.confs ?? 0) >= 1 ? "done" : "pending")}>
+                {(t.confs ?? 0) >= 1
+                  ? `${t.confs} conf${t.confs === 1 ? "" : "s"}`
+                  : "0-conf"}
               </span>
             </div>
             <div className="txrow-sub">
