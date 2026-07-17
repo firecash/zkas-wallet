@@ -26,6 +26,11 @@ export interface SendResult {
   fee_sompi: number;
 }
 
+/// Where a send currently is, so the UI can show honest progress instead of a
+/// single opaque spinner. "proving" is the long step (the daemon builds the
+/// Halo 2 proof); signing is on-device and quick; broadcast is near-instant.
+export type SendStage = "proving" | "signing" | "broadcasting";
+
 /**
  * Send `amountFc` ZKas to `to`, non-custodially and verified on-device. `seedHex`
  * is used ONLY on this device — to derive the viewing key, to check the prepared
@@ -39,9 +44,12 @@ export async function sendNonCustodial(
   to: string,
   amountFc: number,
   fee?: number,
+  onStage?: (stage: SendStage) => void,
 ): Promise<SendResult> {
   const fvk = await fvkHex(seedHex);
+  onStage?.("proving");
   const prep = await api.prepare(fvk, to, amountFc, fee);
+  onStage?.("signing");
 
   // Verify on-device that this bundle really pays `to` the amount asked, then sign the
   // sighash recomputed from the verified bundle. Throws (refusing to sign) on any
@@ -57,5 +65,6 @@ export async function sendNonCustodial(
     JSON.stringify(prep.spend_auth),
   );
 
+  onStage?.("broadcasting");
   return api.submit(prep.session, sigs);
 }

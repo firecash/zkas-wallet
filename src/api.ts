@@ -54,6 +54,9 @@ export interface Status {
   node_connected: boolean;
   daa_score: number;
   synced: boolean;
+  // Synced, but still doing the one-time witness warm-up that makes sends fast.
+  // Sends work during this (just slower). Older daemons omit it.
+  warming?: boolean;
   scanned_blocks: number;
   chain_len: number;
   balance_sompi: string;

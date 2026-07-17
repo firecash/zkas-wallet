@@ -13,7 +13,7 @@ import {
   type LocalTx,
 } from "./localtx";
 import { fvkHex, generateWallet, signLocal, verifyLocal, type Network } from "./signer";
-import { sendNonCustodial } from "./noncustodial";
+import { sendNonCustodial, type SendStage } from "./noncustodial";
 import logo from "./assets/zkas-logo.png";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -94,11 +94,38 @@ const TAB_LABEL: Record<Tab, string> = {
   sign: "Sign",
   verify: "Verify",
 };
+// On phones (native app or a narrow browser) five pills don't fit — drop Verify,
+// the least-used power feature. Signature verification stays available on desktop.
+const TABS: Tab[] =
+  isNative() || (typeof window !== "undefined" && window.innerWidth < 480)
+    ? ["receive", "send", "history", "sign"]
+    : ["receive", "send", "history", "sign", "verify"];
+
+/// Scroll the active tab pane to sit just under the sticky tab bar, so whatever
+/// the user is here to do (type an address, read tx details) is immediately in
+/// view — never the header/balance they'd have to scroll past.
+function scrollToPane() {
+  requestAnimationFrame(() => {
+    document.querySelector(".pane")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
 
 export default function App() {
   const [status, setStatus] = useState<Status | null>(null);
   const [reachable, setReachable] = useState<boolean | null>(null);
   const [tab, setTab] = useState<Tab>("receive");
+  // Switching tabs aligns the new pane under the tab bar so its form/content is
+  // instantly usable — e.g. tapping Send lands you on the address field, not on
+  // the balance hero with the form below the fold. Skipped on first render so
+  // opening the wallet still starts at the top with the balance visible.
+  const firstTab = useRef(true);
+  useEffect(() => {
+    if (firstTab.current) {
+      firstTab.current = false;
+      return;
+    }
+    scrollToPane();
+  }, [tab]);
   // A freshly created seed, held at the top level so the 4-second status poll
   // (which flips has_wallet true) can never unmount the backup screen mid-copy.
   const [freshSeed, setFreshSeed] = useState<{ seed: string; address: string } | null>(null);
@@ -178,17 +205,20 @@ export default function App() {
         <>
           <BalanceHero status={status} txs={txs} />
           <div className="tabs">
-            {(["receive", "send", "history", "sign", "verify"] as Tab[]).map((t) => (
+            {TABS.map((t) => (
               <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
                 {TAB_LABEL[t]}
               </button>
             ))}
           </div>
-          {tab === "receive" && <Receive status={status} />}
-          {tab === "send" && <Send status={status} onSent={onSent} />}
-          {tab === "history" && <History txs={txs} />}
-          {tab === "sign" && <Sign status={status} />}
-          {tab === "verify" && <Verify />}
+          {/* key remounts the pane on tab switch so the entrance transition plays. */}
+          <div className="pane appear" key={tab}>
+            {tab === "receive" && <Receive status={status} />}
+            {tab === "send" && <Send status={status} onSent={onSent} />}
+            {tab === "history" && <History txs={txs} />}
+            {tab === "sign" && <Sign status={status} />}
+            {tab === "verify" && <Verify />}
+          </div>
         </>
       )}
       <DaemonSetting />
@@ -251,16 +281,18 @@ function HostedNotice() {
       </div>
     );
   }
+  // Web: one calm line. The self-host and cold-storage links matter, but they don't
+  // deserve a red multi-line banner permanently parked above the balance — that just
+  // pushed the actual wallet below the fold.
   return (
     <div className="warnbar" role="note">
       <span className="warnbar-icon" aria-hidden="true">🔒</span>
       <div>
-        Sends are signed on your device — <b>your seed never leaves it</b>. Still, for maximum security prefer{" "}
+        Signed on your device — <b>your seed never leaves it</b>. Max security:{" "}
         <a href="https://github.com/firecash/firecash-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet"
-           target="_blank" rel="noreferrer">running your own daemon</a>{" "}
-        or a{" "}
-        <a href="https://zkas.info/paper-wallet.html" target="_blank" rel="noreferrer">paper wallet</a>{" "}
-        for cold storage.
+           target="_blank" rel="noreferrer">self-host</a>{" "}
+        ·{" "}
+        <a href="https://zkas.info/paper-wallet.html" target="_blank" rel="noreferrer">paper wallet</a>.
       </div>
     </div>
   );
@@ -364,12 +396,26 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         {syncing ? (
           <>
             {" · "}
-            <span className="spin" style={{ width: 11, height: 11 }} /> syncing {pct}%
+            <span className="spin" style={{ width: 11, height: 11 }} />{" "}
+            {/* "syncing 100%" reads as stuck — at the top of the scan the remaining
+                work is ingesting the last few blocks, so say what's happening. */}
+            {pct >= 99 ? "finalizing sync…" : `syncing ${pct}%`}
+          </>
+        ) : status.warming ? (
+          <>
+            {" · "}synced{" · "}
+            <span className="spin" style={{ width: 11, height: 11 }} /> <span className="warmtag">speeding up sends</span>
           </>
         ) : (
           " · synced"
         )}
       </div>
+      {!syncing && status.warming && (
+        <div className="sub warmnote">
+          ⚡ One-time warm-up (~1–2 min) so future sends complete in seconds. You can already send — it just takes
+          longer until this finishes.
+        </div>
+      )}
       {pendingIn > 0.00000001 && (
         <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
           +{trimFc(pendingIn.toFixed(8))} ZKAS incoming — confirmed on-chain, settling into your wallet
@@ -437,7 +483,7 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
         <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ marginTop: 3 }} />
         <span className="muted small">
           I've written down my recovery seed and understand it's the only way to restore this wallet. You can view it
-          again anytime under the <b>Recovery</b> tab.
+          again anytime under the <b>Receive</b> tab.
         </span>
       </label>
       <button className="btn" disabled={!confirmed} onClick={onDone}>
@@ -748,12 +794,28 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState<SendStage | null>(null);
   const [error, setError] = useState("");
   const [sent, setSent] = useState<{ txid: string; amount: string } | null>(null);
   const [unlock, setUnlock] = useState("");
   const [needSeed, setNeedSeed] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [scanning, setScanning] = useState(false);
+
+  // Each step of the flow (confirm → sent) is a fresh screen — align it under the
+  // tab bar so the details are what the user sees, not the page header. Without
+  // this the success card rendered wherever the form had been scrolled to.
+  useEffect(() => {
+    if (confirming || sent) scrollToPane();
+  }, [confirming, sent]);
+
+  // Desktop: put the cursor straight into the recipient field — the first thing a
+  // send needs. Not on touch devices, where autofocus pops the keyboard over the
+  // form before the user has even read it.
+  const toRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!confirming && !sent && window.matchMedia("(pointer: fine)").matches) toRef.current?.focus();
+  }, [confirming, sent]);
 
   const onScan = useCallback((text: string) => {
     const { address, amount: amt } = parsePaymentUri(text);
@@ -807,7 +869,7 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
           throw e;
         }
       }
-      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt);
+      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt, undefined, setStage);
       const toAddr = to.trim();
       setSent({ txid: r.txid, amount });
       setTo("");
@@ -829,14 +891,15 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
       setConfirming(false);
     } finally {
       setBusy(false);
+      setStage(null);
     }
   };
 
   // Success screen — clear confirmation with a link to the transaction.
   if (sent) {
     return (
-      <div className="card center">
-        <div style={{ fontSize: 42, lineHeight: 1 }}>✓</div>
+      <div className="card center appear">
+        <div className="sent-check">✓</div>
         <h2 style={{ marginTop: 10 }}>Sent privately</h2>
         <p className="muted" style={{ marginTop: 0 }}>
           <b>{trimFc(sent.amount)}</b> ZKAS is on its way — broadcast now, unconfirmed (0-conf) until the next
@@ -878,8 +941,18 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
           </>
         )}
         <div className="msg ok small">
-          This is verified and signed <b>on your device</b>, then broadcast. Building the private zero-knowledge proof
-          takes about <b>15–20 seconds</b> — the tx is sent the moment it completes.
+          This is verified and signed <b>on your device</b>, then broadcast.{" "}
+          {status?.warming ? (
+            <>
+              Your wallet is still warming up, so this send can take <b>up to a minute</b> — after the warm-up, sends
+              complete in seconds.
+            </>
+          ) : (
+            <>
+              Building the private zero-knowledge proof usually takes <b>a few seconds</b> — the payment is sent the
+              moment it completes.
+            </>
+          )}
         </div>
         {error && <div className="msg err">{error}</div>}
         <div className="row">
@@ -889,13 +962,25 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
           <button className="btn" disabled={busy} onClick={doSend}>
             {busy ? (
               <>
-                <span className="spin" /> Sending…
+                <span className="spin" />{" "}
+                {stage === "signing"
+                  ? "Signing on device…"
+                  : stage === "broadcasting"
+                    ? "Broadcasting…"
+                    : "Building private proof…"}
               </>
             ) : (
               "Confirm & send"
             )}
           </button>
         </div>
+        {busy && (
+          <div className="stagebar" aria-hidden="true">
+            <span className={"stagedot " + (stage === "proving" ? "live" : "done")} />
+            <span className={"stagedot " + (stage === "signing" ? "live" : stage === "broadcasting" ? "done" : "")} />
+            <span className={"stagedot " + (stage === "broadcasting" ? "live" : "")} />
+          </div>
+        )}
       </div>
     );
   }
@@ -910,6 +995,7 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
       <label>Recipient shielded address</label>
       <div className="inputwrap">
         <input
+          ref={toRef}
           value={to}
           onChange={(e) => setTo(e.target.value)}
           placeholder="zkas:…"
@@ -970,6 +1056,12 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
 
       {!status?.synced && (
         <div className="msg warn small">Wallet is still syncing — you can send once it finishes.</div>
+      )}
+      {status?.synced && status?.warming && (
+        <div className="msg small warminfo">
+          ⚡ Speeding up your wallet (~1–2 min, one-time). You can send now — it'll just take up to a minute; after the
+          warm-up, sends complete in seconds.
+        </div>
       )}
       {error && <div className="msg err">{error}</div>}
 

@@ -23,13 +23,20 @@ html, body {
   max-width: 100%;
 }
 
+/* Desktop: reserve the scrollbar gutter on both edges so the 640px column is
+   optically dead-center regardless of whether the page currently scrolls —
+   without this, a classic scrollbar shifts the whole layout a few px left. */
+@media (pointer: fine) {
+  html { scrollbar-gutter: stable both-edges; }
+}
+
 html, body {
   margin: 0;
   padding: 0;
   background-color: var(--bg);
   background-image:
-    radial-gradient(60rem 60rem at 8% -10%, rgba(255, 107, 53, 0.10), transparent 60%),
-    radial-gradient(50rem 50rem at 100% 0%, rgba(255, 107, 53, 0.06), transparent 55%);
+    radial-gradient(60rem 60rem at 8% -10%, rgba(23, 214, 190, 0.08), transparent 60%),
+    radial-gradient(50rem 50rem at 100% 0%, rgba(23, 214, 190, 0.05), transparent 55%);
   background-attachment: fixed;
   color: var(--ink);
   font-family: Rubik, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -101,9 +108,12 @@ a { color: var(--ember); }
 .balance {
   text-align: center;
   padding: 30px 20px;
+  background: linear-gradient(180deg, rgba(23, 214, 190, 0.05), transparent 65%), var(--surface);
 }
-.balance .amt { font-size: 46px; font-weight: 700; letter-spacing: -0.02em; }
-.balance .amt .unit { font-size: 22px; color: var(--muted); margin-left: 8px; font-weight: 500; }
+/* clamp: a long balance ("123456.12345678") must shrink on a 360px phone
+   instead of clipping outside the hero card. */
+.balance .amt { font-size: clamp(30px, 9.5vw, 46px); font-weight: 700; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.balance .amt .unit { font-size: clamp(16px, 4.5vw, 22px); color: var(--muted); margin-left: 8px; font-weight: 500; }
 .balance .sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
 
 /* Address row */
@@ -132,6 +142,12 @@ a { color: var(--ember); }
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 5px;
+  /* Keep the tab bar reachable while scrolled deep in a long card (History, Verify),
+     so switching sections never requires scrolling back up first. */
+  position: sticky;
+  top: calc(8px + env(safe-area-inset-top));
+  z-index: 20;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
   overflow-x: auto;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
@@ -155,7 +171,7 @@ a { color: var(--ember); }
   white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.tabs button:hover:not(.active) { color: var(--text); }
+.tabs button:hover:not(.active) { color: var(--ink); }
 .tabs button.active { background: var(--ember); color: #04211c; }
 
 /* Very narrow phones: shave the padding before anything is allowed to clip. */
@@ -268,18 +284,19 @@ select { appearance: none; cursor: pointer; }
 /* Hosted-mode security warning banner */
 .warnbar {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: flex-start;
-  margin: 0 0 18px;
-  padding: 14px 16px;
-  border: 1px solid var(--bad);
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: rgba(242, 96, 74, 0.08);
-  color: var(--ink);
-  font-size: 13px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12.5px;
   line-height: 1.5;
 }
-.warnbar-icon { font-size: 18px; line-height: 1.4; flex: none; }
+.warnbar b { color: var(--ink); }
+.warnbar-icon { font-size: 15px; line-height: 1.5; flex: none; }
 .warnbar a { color: var(--ember); text-decoration: underline; }
 
 /* Send card: header row ("Send" + available balance) */
@@ -445,7 +462,7 @@ select { appearance: none; cursor: pointer; }
   border-radius: 999px;
   padding: 3px 9px;
 }
-.txrow-badge.pending { color: var(--ember); border: 1px solid rgba(255, 107, 53, 0.5); background: rgba(255, 107, 53, 0.1); }
+.txrow-badge.pending { color: var(--ember); border: 1px solid rgba(23, 214, 190, 0.45); background: rgba(23, 214, 190, 0.1); }
 .txrow-badge.done { color: var(--good); border: 1px solid rgba(53, 196, 106, 0.4); background: rgba(53, 196, 106, 0.1); }
 .txrow-sub {
   display: flex;
@@ -457,3 +474,77 @@ select { appearance: none; cursor: pointer; }
   color: var(--muted);
 }
 .txrow-sub .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* --- Motion & feedback ------------------------------------------------------ */
+
+/* When a pane is scrolled into view it stops just below the sticky tab bar,
+   never underneath it. */
+.pane { scroll-margin-top: calc(64px + env(safe-area-inset-top)); }
+
+/* Tab panes and step screens slide in gently — enough to feel alive, subtle
+   enough to never get in the way. Disabled entirely for reduced-motion users. */
+.appear { animation: appear 0.22s ease both; }
+@keyframes appear {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Success checkmark: a confident pop, then still. */
+.sent-check {
+  font-size: 46px;
+  line-height: 1;
+  color: var(--good);
+  animation: pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Buttons acknowledge the press. */
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.tabs button:active:not(.active) { transform: scale(0.96); }
+.btn, .tabs button { transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .appear, .sent-check { animation: none; }
+  .btn:active:not(:disabled), .tabs button:active:not(.active) { transform: none; }
+}
+
+/* --- Warm-up (one-time send speed-up) --------------------------------------- */
+
+.warmtag { color: var(--ember); }
+.warmnote {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.msg.warminfo {
+  background: rgba(23, 214, 190, 0.08);
+  border: 1px solid rgba(23, 214, 190, 0.35);
+  color: var(--ink);
+}
+
+/* Send progress: three stage dots under the button (prove → sign → broadcast). */
+.stagebar {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.stagedot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.2s ease;
+}
+.stagedot.done { background: var(--ember); opacity: 0.45; }
+.stagedot.live { background: var(--ember); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.6; }
+}
