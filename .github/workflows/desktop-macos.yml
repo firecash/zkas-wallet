@@ -1,0 +1,69 @@
+# macOS Intel desktop wallet on GitHub's mac runners — no local Mac needed.
+#
+# Runs on an arm64 runner but CROSS-BUILDS x86_64-apple-darwin (Xcode treats the
+# two archs as first-class siblings), because Intel runner images are being
+# retired. Produces a .dmg — unlike the old zip this preserves the executable
+# bit, and the .app inside is ad-hoc signed, which together fix the "exec error
+# in shell" the previous mac zip hit (that zip also shipped arm64-only).
+#
+# Users still right-click → Open on first launch (no notarization without an
+# Apple Developer account; see ios.yml for what enrolling would unlock).
+
+name: desktop-macos
+on:
+  workflow_dispatch:
+  push:
+    tags: ["desktop-v*"]
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      # The Tauri crate depends on ../../rusty-kaspa/zkas-walletd relative to
+      # src-tauri, so the two repos must sit side by side.
+      - uses: actions/checkout@v4
+        with:
+          path: wallet
+      - uses: actions/checkout@v4
+        with:
+          repository: firecash/firecash-rusty
+          path: rusty-kaspa
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+      - name: Build deps (protoc for the gRPC crates)
+        run: brew install protobuf
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wallet/src-tauri
+      - name: Web bundle deps
+        working-directory: wallet
+        run: npm ci
+      - name: Tauri build (Intel)
+        working-directory: wallet
+        run: npx tauri build --target x86_64-apple-darwin --bundles app,dmg
+      - name: Ad-hoc sign the .app (Gatekeeper tolerates this on Intel)
+        working-directory: wallet/src-tauri/target/x86_64-apple-darwin/release/bundle/macos
+        run: |
+          codesign --force --deep -s - "ZKas Wallet.app"
+          codesign --verify --verbose "ZKas Wallet.app"
+          # Zip via ditto so permissions/attrs survive for direct-download users.
+          ditto -c -k --keepParent "ZKas Wallet.app" "ZKas-Wallet-macos-intel.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zkas-wallet-macos-intel
+          path: |
+            wallet/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+            wallet/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/ZKas-Wallet-macos-intel.zip
+      - name: Attach to release (tag builds only)
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" \
+            wallet/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg \
+            wallet/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/ZKas-Wallet-macos-intel.zip \
+            --repo "${GITHUB_REPOSITORY}" --clobber

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ZKas Wallet",
+  "version": "0.1.0",
+  "identifier": "info.zkas.wallet",
+  "build": {
+    "frontendDist": "../dist",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "ZKas Wallet",
+        "width": 1120,
+        "height": 760,
+        "minWidth": 380,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Finance",
+    "shortDescription": "ZKas shielded wallet",
+    "longDescription": "Non-custodial desktop wallet for ZKas — every balance and payment shielded by Orchard zero-knowledge proofs. Connect to the public node or run your own."
+  }
+}

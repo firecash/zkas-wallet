@@ -1,0 +1,49 @@
+[package]
+name = "zkas-desktop"
+version = "0.1.0"
+description = "ZKas desktop wallet — the shielded wallet engine embedded in a native shell"
+edition = "2021"
+license = "ISC"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.8"
+log = "0.4"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "net", "time"] }
+# The wallet daemon as a library: REST API + sync loops + Orchard engine.
+# Path dep: rusty-kaspa checked out as a sibling of this repo.
+zkas-walletd = { path = "../../rusty-kaspa/zkas-walletd" }
+kaspa-core = { path = "../../rusty-kaspa/core" }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
+# Mirrors the rusty-kaspa workspace release profile EXACTLY. Not cosmetic: the
+# workspace enables overflow-checks in release but opts the constant-time crypto
+# crates out (they rely on wrapping ops — with checks on, proving panics), and a
+# matching profile also lets this build reuse the workspace's release artifacts.
+[profile.release]
+lto = "thin"
+strip = true
+overflow-checks = true
+
+[profile.release.package.halo2_proofs]
+opt-level = 3
+codegen-units = 1
+overflow-checks = false
+
+[profile.release.package.halo2_gadgets]
+opt-level = 3
+codegen-units = 1
+overflow-checks = false
+
+[profile.release.package.pasta_curves]
+opt-level = 3
+codegen-units = 1
+overflow-checks = false

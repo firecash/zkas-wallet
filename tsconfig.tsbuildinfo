@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/api.ts","./src/haptics.ts","./src/localtx.ts","./src/main.tsx","./src/noncustodial.ts","./src/vite-env.d.ts","./src/signer/firecash_signer.d.ts","./src/signer/index.ts","./src/signer/wasm-base64.ts"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/api.ts","./src/desktop.ts","./src/haptics.ts","./src/localtx.ts","./src/main.tsx","./src/noncustodial.ts","./src/vite-env.d.ts","./src/signer/firecash_signer.d.ts","./src/signer/index.ts","./src/signer/wasm-base64.ts"],"version":"5.9.3"}

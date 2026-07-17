@@ -1,0 +1,48 @@
+# iOS build on GitHub's macOS runners — no local Mac needed.
+#
+# Today this produces an UNSIGNED .ipa artifact: proof the app builds, usable
+# for local simulator runs and for signing later. Real distribution needs an
+# Apple Developer account ($99/yr):
+#   1. Enroll at developer.apple.com, create an App ID + certificates.
+#   2. Add repo secrets: IOS_CERT_P12_BASE64, IOS_CERT_PASSWORD,
+#      IOS_PROVISIONING_PROFILE_BASE64, APPSTORE_API_KEY (for TestFlight upload).
+#   3. Swap the CODE_SIGNING_ALLOWED=NO build below for a signed archive +
+#      `xcrun altool`/`xcrun notarytool` upload step.
+# TestFlight then gives installs to up to 10,000 testers via a simple link.
+
+name: ios
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Web bundle
+        run: |
+          npm ci
+          npm run build
+      - name: Capacitor sync (pod install)
+        run: npx cap sync ios
+      - name: Build (unsigned)
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace \
+            -scheme App -configuration Release -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry zkas-wallet-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zkas-wallet-ios-unsigned
+          path: zkas-wallet-unsigned.ipa

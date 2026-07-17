@@ -25,6 +25,7 @@
     "@capacitor/core": "^6.2.0",
     "@capacitor/haptics": "^6.0.3",
     "@capacitor/ios": "^6.2.0",
+    "@tauri-apps/api": "^2.11.1",
     "jsqr": "^1.4.0",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^6.2.0",
+    "@tauri-apps/cli": "^2.11.4",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

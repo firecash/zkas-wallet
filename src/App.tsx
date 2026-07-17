@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, chainTx, getBase, setBase, isNative, loadStatusCache, saveStatusCache, type Status } from "./api";
+import { api, chainTx, getBase, setBase, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type Status } from "./api";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import {
   loadTxs,
@@ -15,6 +15,7 @@ import {
 } from "./localtx";
 import { fvkHex, generateWallet, signLocal, verifyLocal, type Network } from "./signer";
 import { sendNonCustodial, type SendStage } from "./noncustodial";
+import { initDesktop, isDesktop, setNodeSource, type DesktopConfig } from "./desktop";
 import logo from "./assets/zkas-logo.png";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -276,7 +277,7 @@ export default function App() {
           </div>
         </>
       )}
-      <DaemonSetting />
+      {isDesktop() ? <NodeSourceSetting /> : <DaemonSetting />}
       <div className="footer">
         ZKas Wallet · shielded by default · connected to ZKas's public node.
         <br />
@@ -1297,14 +1298,35 @@ function History({
   justSent?: string | null;
   onSendAnother?: () => void;
 }) {
+  // Chain-derived history (mints, receives, and OVK-recovered sends): fetched
+  // from the daemon, so it survives a seed restore and shows on every device.
+  const [chain, setChain] = useState<ChainHistory | null>(null);
+  useEffect(() => {
+    let live = true;
+    const pull = () => api.history().then((h) => live && setChain(h)).catch(() => {});
+    pull();
+    const t = setInterval(pull, 15_000);
+    return () => {
+      live = false;
+      clearInterval(t);
+    };
+  }, []);
+
   const fresh = justSent ? txs.find((t) => t.txid === justSent) : undefined;
-  if (txs.length === 0) {
+  const chainRows = chain?.rows ?? [];
+  const confirmed = new Set(chainRows.map((r) => r.txid));
+  // Device-local sends the chain scan hasn't caught up to yet stay on top as
+  // 0-conf rows; once a send appears chain-side, the chain row is authoritative.
+  const pending = txs.filter((t) => !confirmed.has(t.txid));
+
+  if (pending.length === 0 && chainRows.length === 0) {
     return (
       <div className="card">
         <h2>History</h2>
         <p className="muted small" style={{ marginTop: 0 }}>
-          No sends yet from this device. Sends you make here show up instantly — even before the network confirms
-          them. This list is kept on this device only.
+          {chain === null
+            ? "Loading history…"
+            : "Nothing yet. Mints, payments you receive, and sends from this wallet all show up here — recovered from the chain itself, so this list follows your seed, not this device."}
         </p>
       </div>
     );
@@ -1326,7 +1348,7 @@ function History({
         </div>
       )}
       <div className="txlist">
-        {txs.map((t) => (
+        {pending.map((t) => (
           <a
             key={t.txid}
             className={"txrow" + (t.txid === justSent ? " fresh" : "")}
@@ -1337,9 +1359,7 @@ function History({
             <div className="txrow-main">
               <span className="txrow-amt">− {trimFc(t.amountFc.toFixed(8))} ZKAS</span>
               <span className={"txrow-badge " + ((t.confs ?? 0) >= 1 ? "done" : "pending")}>
-                {(t.confs ?? 0) >= 1
-                  ? `${t.confs} conf${t.confs === 1 ? "" : "s"}`
-                  : "0-conf"}
+                {(t.confs ?? 0) >= 1 ? `${t.confs} conf${t.confs === 1 ? "" : "s"}` : "0-conf"}
               </span>
             </div>
             <div className="txrow-sub">
@@ -1348,9 +1368,38 @@ function History({
             </div>
           </a>
         ))}
+        {chainRows.map((r) => (
+          <a key={r.txid + r.kind} className="txrow" href={`${EXPLORER}/txs/${r.txid}`} target="_blank" rel="noreferrer">
+            <div className="txrow-main">
+              <span className="txrow-amt">
+                {r.kind === "sent" ? "− " : "+ "}
+                {trimFc(r.amountZkas.toFixed(8))} ZKAS
+              </span>
+              <span className={"txrow-badge " + (r.kind === "sent" ? "done" : "recv")}>
+                {r.kind === "coinbase" ? "mined" : r.kind === "received" ? "received" : "sent"}
+              </span>
+            </div>
+            <div className="txrow-sub">
+              {r.kind === "sent" && r.recipient ? (
+                <span className="mono">to {shortAddr(r.recipient)}</span>
+              ) : r.memo ? (
+                <span className="memo">“{r.memo}”</span>
+              ) : (
+                <span className="mono">{shortAddr(r.txid)}</span>
+              )}
+              <span>{r.timestamp > 0 ? fmtTime(r.timestamp) : `DAA ${r.daaScore}`}</span>
+            </div>
+            {r.kind === "sent" && r.memo && (
+              <div className="txrow-sub">
+                <span className="memo">“{r.memo}”</span>
+              </div>
+            )}
+          </a>
+        ))}
       </div>
       <p className="muted small" style={{ marginTop: 14 }}>
-        Sends performed on this device (this wallet keeps no history server-side). Tap a row to view it on the explorer.
+        Recovered from the chain by your viewing key — only this wallet can see any of it. Tap a row to view it on the
+        explorer (which shows the shielded transaction, not its contents).
       </p>
     </div>
   );
@@ -1409,6 +1458,87 @@ function DaemonSetting() {
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+/// Desktop only: which ZKas node the EMBEDDED wallet engine scans through.
+/// The engine itself always runs in-app (seed never leaves this machine) —
+/// this only picks where chain data comes from.
+function NodeSourceSetting() {
+  const [cfg, setCfg] = useState<DesktopConfig | null>(null);
+  const [addr, setAddr] = useState("");
+  const [binary, setBinary] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    initDesktop().then((c) => {
+      if (c) {
+        setCfg(c);
+        setAddr(c.node_addr);
+        setBinary(c.node_binary ?? "");
+      }
+    });
+  }, []);
+  if (!cfg) return null;
+  const pick = async (mode: "remote" | "custom" | "local") => {
+    setBusy(true);
+    setErr("");
+    try {
+      setCfg(await setNodeSource(mode, addr || undefined, binary || undefined));
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="card">
+      <h2>Node</h2>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Your wallet engine runs inside this app — your seed and viewing key never leave this machine. Choose which
+        node it reads the chain through:
+      </p>
+      <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
+        {(["remote", "custom", "local"] as const).map((m) => (
+          <button
+            key={m}
+            disabled={busy}
+            className={"btn small" + (cfg.mode === m ? "" : " ghost")}
+            onClick={() => pick(m)}
+          >
+            {m === "remote" ? "ZKas public node" : m === "custom" ? "Custom node" : "Local node"}
+          </button>
+        ))}
+      </div>
+      {cfg.mode === "custom" && (
+        <>
+          <label style={{ marginTop: 10 }}>Node gRPC (host:port)</label>
+          <div className="row">
+            <input value={addr} onChange={(e) => setAddr(e.target.value)} className="mono" placeholder="192.168.1.10:16110" />
+            <button className="btn small" style={{ flex: "0 0 auto" }} disabled={busy} onClick={() => pick("custom")}>
+              Apply
+            </button>
+          </div>
+        </>
+      )}
+      {cfg.mode === "local" && (
+        <>
+          <label style={{ marginTop: 10 }}>zkas-node binary path</label>
+          <div className="row">
+            <input value={binary} onChange={(e) => setBinary(e.target.value)} className="mono" placeholder="/usr/local/bin/zkas-node" />
+            <button className="btn small" style={{ flex: "0 0 auto" }} disabled={busy} onClick={() => pick("local")}>
+              Apply
+            </button>
+          </div>
+          <p className="muted small" style={{ marginTop: 8 }}>
+            {cfg.node_running
+              ? "Local node is running — the app supervises it and stops it on exit."
+              : "Node not running yet — set the binary path and Apply. It syncs the chain into this app's data folder."}
+          </p>
+        </>
+      )}
+      {err && <div className="msg warn">{err}</div>}
     </div>
   );
 }

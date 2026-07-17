@@ -183,9 +183,31 @@ export const api = {
     req<{ txid: string; amount_sompi: number; fee_sompi: number }>("POST", "/api/wallet/submit", { session, sigs }),
   sign: (message: string) =>
     req<{ address: string; message: string; signature: string; note: string }>("POST", "/api/wallet/sign", { message }),
+  // Chain-derived history: recovered from the blocks themselves during scan
+  // (coinbase mints, received notes, and — via the OVK — own sends), so unlike
+  // the device-local send list it survives a seed restore and other devices.
+  history: () => req<ChainHistory>("GET", "/api/wallet/history"),
   verify: (address: string, message: string, signature: string) =>
     req<{ valid: boolean; reason: string | null }>("POST", "/api/verify", { address, message, signature }),
 };
+
+export interface ChainHistoryRow {
+  kind: "coinbase" | "received" | "sent";
+  txid: string;
+  daaScore: number;
+  timestamp: number; // ms; 0 when the scanning node predated block metadata
+  amountSompi: number;
+  amountZkas: number;
+  feeSompi: number;
+  recipient?: string | null; // sent rows only, and only when recoverable (OVK)
+  memo?: string | null;
+}
+
+export interface ChainHistory {
+  recoverableHistory: boolean;
+  total: number;
+  rows: ChainHistoryRow[];
+}
 
 // ---------------------------------------------------------------------------
 // Public chain API (zkas-api), same-origin at `<origin>/chain` (nginx proxies it).

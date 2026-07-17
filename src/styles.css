@@ -464,6 +464,8 @@ select { appearance: none; cursor: pointer; }
 }
 .txrow-badge.pending { color: var(--ember); border: 1px solid rgba(23, 214, 190, 0.45); background: rgba(23, 214, 190, 0.1); }
 .txrow-badge.done { color: var(--good); border: 1px solid rgba(53, 196, 106, 0.4); background: rgba(53, 196, 106, 0.1); }
+.txrow-badge.recv { color: var(--accent); border: 1px solid rgba(23, 214, 190, 0.35); background: rgba(23, 214, 190, 0.08); }
+.txrow-sub .memo { font-style: italic; opacity: 0.85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }
 .txrow-sub {
   display: flex;
   align-items: center;
