@@ -128,6 +128,9 @@ export default function App() {
       firstTab.current = false;
       return;
     }
+    // The "just sent" banner/highlight lives only for the History visit right
+    // after the send — navigating away retires it.
+    if (tab !== "history") setJustSent(null);
     scrollToPane();
   }, [tab]);
   // A freshly created seed, held at the top level so the 4-second status poll
