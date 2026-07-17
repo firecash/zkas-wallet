@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, chainTx, getBase, setBase, isNative, type Status } from "./api";
+import { api, chainTx, getBase, setBase, isNative, loadStatusCache, saveStatusCache, type Status } from "./api";
+import { attachTapHaptics, successFeedback } from "./haptics";
 import {
   loadTxs,
   recordSend,
@@ -111,8 +112,11 @@ function scrollToPane() {
 }
 
 export default function App() {
-  const [status, setStatus] = useState<Status | null>(null);
-  const [reachable, setReachable] = useState<boolean | null>(null);
+  // Boot from the cached last-known status: the whole UI (balance, address, QR)
+  // renders in the first frame instead of trickling in as network calls land —
+  // the 1s poll then corrects anything stale within a second.
+  const [status, setStatus] = useState<Status | null>(() => loadStatusCache());
+  const [reachable, setReachable] = useState<boolean | null>(() => (loadStatusCache() ? true : null));
   const [tab, setTab] = useState<Tab>("receive");
   // Switching tabs aligns the new pane under the tab bar so its form/content is
   // instantly usable — e.g. tapping Send lands you on the address field, not on
@@ -132,6 +136,14 @@ export default function App() {
   // On-device send history; drives the optimistic (0-conf) balance and History tab.
   const [txs, setTxs] = useState<LocalTx[]>(() => loadTxs());
 
+  // Hysteresis timers: the 1s poll can flip `synced` and `warming` for a beat
+  // (a block lands, the background warm re-runs) and rendering every flip made the
+  // hero text flap "synced" ↔ "syncing" ↔ "speeding up" — unsettling to watch.
+  // A state change is only shown once it has held for a few seconds; brief dips
+  // keep displaying the previous steady state.
+  const unsyncedSince = useRef<number | null>(null);
+  const warmingSince = useRef<number | null>(null);
+
   const refresh = useCallback(async () => {
     try {
       const s = await api.status();
@@ -140,11 +152,24 @@ export default function App() {
       // address:null for a beat. Rendering that verbatim unmounted the whole tab block —
       // the address and QR blinked out and the layout jumped on every such poll. Once we
       // have seen a wallet, keep showing it and just take the fresh numbers.
-      setStatus((prev) =>
-        prev?.has_wallet && (!s.has_wallet || !s.address)
-          ? { ...s, has_wallet: true, address: s.address ?? prev.address }
-          : s,
-      );
+      setStatus((prev) => {
+        const now = Date.now();
+        // synced: hold a displayed "synced" through dips shorter than 6s.
+        if (s.synced) unsyncedSince.current = null;
+        else if (unsyncedSince.current == null) unsyncedSince.current = now;
+        const syncedStable = s.synced || (!!prev?.synced && now - (unsyncedSince.current ?? now) < 6000);
+        // warming: only show the warm-up notice once it has held for 8s — the
+        // steady-state background catch-up flips it on for a moment after every
+        // new block, and that must not flash the notice.
+        if (!s.warming) warmingSince.current = null;
+        else if (warmingSince.current == null) warmingSince.current = now;
+        const warmingStable = !!s.warming && now - (warmingSince.current ?? now) >= 8000;
+        const stable = { ...s, synced: syncedStable, warming: warmingStable };
+        return prev?.has_wallet && (!s.has_wallet || !s.address)
+          ? { ...stable, has_wallet: true, address: s.address ?? prev.address }
+          : stable;
+      });
+      saveStatusCache(s);
       setReachable(true);
       let list = reconcile(parseFloat(s.balance_fc || "0"), !!s.synced);
       // Ask the chain about every send still shown as pending. This is what stops a
@@ -170,15 +195,30 @@ export default function App() {
     }
   }, []);
 
-  // Called by Send the instant a tx is broadcast: record it and refresh so the
-  // 0-conf balance drops immediately.
+  // Called by Send the instant a tx is broadcast: record it, jump straight to
+  // History (highlighting the new row) so the confirmations can be watched
+  // arriving live, and answer with a success haptic on the phone.
+  const [justSent, setJustSent] = useState<string | null>(null);
   const onSent = useCallback(
     (tx: Omit<LocalTx, "pending">) => {
       setTxs(recordSend(tx));
+      setJustSent(tx.txid);
+      setTab("history");
+      successFeedback();
       refresh();
     },
     [refresh],
   );
+
+  // Native app: every tap on a control answers with a soft haptic tick.
+  useEffect(() => attachTapHaptics(), []);
+
+  // Warm the signer WASM in the background right after first paint, so the first
+  // send/sign never waits on its (lazily-chunked) download + compile.
+  useEffect(() => {
+    const t = setTimeout(() => import("./signer").then((s) => s.ensureSigner()).catch(() => {}), 800);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -193,6 +233,16 @@ export default function App() {
     <div className="wrap">
       <Header status={status} reachable={reachable} />
       <HostedNotice />
+      {/* First-ever open (nothing cached yet): a visible connecting state while the
+          first status call is in flight, never a stretch of empty page. */}
+      {reachable === null && !status && (
+        <div className="card center">
+          <p className="muted" style={{ margin: 0 }}>
+            <span className="spin" style={{ verticalAlign: -3, marginRight: 8 }} />
+            Connecting to your wallet…
+          </p>
+        </div>
+      )}
       {reachable === false && <Setup />}
       {/* Seed backup takes priority and stays until dismissed — independent of has_wallet. */}
       {reachable && freshSeed && (
@@ -215,7 +265,9 @@ export default function App() {
           <div className="pane appear" key={tab}>
             {tab === "receive" && <Receive status={status} />}
             {tab === "send" && <Send status={status} onSent={onSent} />}
-            {tab === "history" && <History txs={txs} />}
+            {tab === "history" && (
+              <History txs={txs} justSent={justSent} onSendAnother={() => { setJustSent(null); setTab("send"); }} />
+            )}
             {tab === "sign" && <Sign status={status} />}
             {tab === "verify" && <Verify />}
           </div>
@@ -411,10 +463,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         )}
       </div>
       {!syncing && status.warming && (
-        <div className="sub warmnote">
-          ⚡ One-time warm-up (~1–2 min) so future sends complete in seconds. You can already send — it just takes
-          longer until this finishes.
-        </div>
+        <div className="sub warmnote">⚡ Getting up to speed (~1–2 min) — after this, sends take seconds.</div>
       )}
       {pendingIn > 0.00000001 && (
         <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
@@ -604,14 +653,28 @@ function Onboard({
 }
 
 function Receive({ status }: { status: Status }) {
-  const [qr, setQr] = useState("");
-  const [copied, setCopied] = useState(false);
   const addr = status.address || "";
+  // The address QR never changes, so it's cached after the first render and shows
+  // instantly on every later open — no beat where the card has a QR-shaped hole.
+  const [qr, setQr] = useState(() => (addr && localStorage.getItem("qr_" + addr)) || "");
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
-    // Only ever *replace* the QR, never blank it: an empty address (a poll landing mid
-    // reload) used to wipe the code and leave a hole where it had been. A receive address
-    // does not change, so the previous one stays correct until a new one renders.
-    if (addr) QRCode.toDataURL(addr, { margin: 1, width: 440 }).then(setQr).catch(() => {});
+    if (!addr) return; // never blank an already-rendered QR on a transient empty poll
+    const cached = localStorage.getItem("qr_" + addr);
+    if (cached) {
+      setQr(cached);
+      return;
+    }
+    QRCode.toDataURL(addr, { margin: 1, width: 440 })
+      .then((url) => {
+        setQr(url);
+        try {
+          localStorage.setItem("qr_" + addr, url);
+        } catch {
+          /* best-effort cache */
+        }
+      })
+      .catch(() => {});
   }, [addr]);
   const copy = async () => {
     await copyText(addr);
@@ -796,26 +859,24 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<SendStage | null>(null);
   const [error, setError] = useState("");
-  const [sent, setSent] = useState<{ txid: string; amount: string } | null>(null);
   const [unlock, setUnlock] = useState("");
   const [needSeed, setNeedSeed] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [scanning, setScanning] = useState(false);
 
-  // Each step of the flow (confirm → sent) is a fresh screen — align it under the
-  // tab bar so the details are what the user sees, not the page header. Without
-  // this the success card rendered wherever the form had been scrolled to.
+  // The confirm step is a fresh screen — align it under the tab bar so the
+  // details are what the user sees, not the page header.
   useEffect(() => {
-    if (confirming || sent) scrollToPane();
-  }, [confirming, sent]);
+    if (confirming) scrollToPane();
+  }, [confirming]);
 
   // Desktop: put the cursor straight into the recipient field — the first thing a
   // send needs. Not on touch devices, where autofocus pops the keyboard over the
   // form before the user has even read it.
   const toRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (!confirming && !sent && window.matchMedia("(pointer: fine)").matches) toRef.current?.focus();
-  }, [confirming, sent]);
+    if (!confirming && window.matchMedia("(pointer: fine)").matches) toRef.current?.focus();
+  }, [confirming]);
 
   const onScan = useCallback((text: string) => {
     const { address, amount: amt } = parsePaymentUri(text);
@@ -871,12 +932,11 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
       }
       const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt, undefined, setStage);
       const toAddr = to.trim();
-      setSent({ txid: r.txid, amount });
       setTo("");
       setAmount("");
       setConfirming(false);
-      // Record on-device so the balance drops to a 0-conf figure immediately and
-      // the send shows up in History even before the daemon has scanned it.
+      // Record on-device so the balance drops to a 0-conf figure immediately;
+      // onSent switches straight to History where the confirmations tick in live.
       onSent({
         txid: r.txid,
         to: toAddr,
@@ -895,27 +955,9 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
     }
   };
 
-  // Success screen — clear confirmation with a link to the transaction.
-  if (sent) {
-    return (
-      <div className="card center appear">
-        <div className="sent-check">✓</div>
-        <h2 style={{ marginTop: 10 }}>Sent privately</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
-          <b>{trimFc(sent.amount)}</b> ZKAS is on its way — broadcast now, unconfirmed (0-conf) until the next
-          block. Your balance already reflects it and it's in your History.
-        </p>
-        <a className="btn ghost small" href={`${EXPLORER}/txs/${sent.txid}`} target="_blank" rel="noreferrer">
-          View transaction ↗
-        </a>
-        <button className="btn" onClick={() => setSent(null)}>
-          Send another
-        </button>
-      </div>
-    );
-  }
-
   // Confirmation step — show exactly what will happen before the proof is built.
+  // (No separate success screen: a completed send jumps straight to History,
+  // where the new row's confirmations update live.)
   if (confirming) {
     return (
       <div className="card">
@@ -940,20 +982,15 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
             <textarea value={unlock} onChange={(e) => setUnlock(e.target.value)} placeholder="64 hex characters" />
           </>
         )}
-        <div className="msg ok small">
-          This is verified and signed <b>on your device</b>, then broadcast.{" "}
-          {status?.warming ? (
-            <>
-              Your wallet is still warming up, so this send can take <b>up to a minute</b> — after the warm-up, sends
-              complete in seconds.
-            </>
-          ) : (
-            <>
-              Building the private zero-knowledge proof usually takes <b>a few seconds</b> — the payment is sent the
-              moment it completes.
-            </>
-          )}
-        </div>
+        {status?.warming ? (
+          <div className="msg warn small">
+            <b>⚡ This send may take up to a minute</b> — your wallet is still speeding up. Later sends take seconds.
+          </div>
+        ) : (
+          <div className="msg ok small">
+            Verified and signed <b>on your device</b>, then broadcast. Usually takes <b>a few seconds</b>.
+          </div>
+        )}
         {error && <div className="msg err">{error}</div>}
         <div className="row">
           <button className="btn ghost" disabled={busy} onClick={() => { setConfirming(false); setError(""); }}>
@@ -1058,9 +1095,10 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
         <div className="msg warn small">Wallet is still syncing — you can send once it finishes.</div>
       )}
       {status?.synced && status?.warming && (
-        <div className="msg small warminfo">
-          ⚡ Speeding up your wallet (~1–2 min, one-time). You can send now — it'll just take up to a minute; after the
-          warm-up, sends complete in seconds.
+        <div className="msg warn warmbanner">
+          <b>⚡ First send may take up to a minute.</b>
+          <br />
+          Your wallet is speeding up right now (~1–2 min). After that, sends take seconds.
         </div>
       )}
       {error && <div className="msg err">{error}</div>}
@@ -1193,7 +1231,18 @@ function fmtTime(ms: number): string {
 
 // On-device history of sends made from this device. The daemon keeps no per-wallet
 // history, so this is the record; each row links to the tx on the explorer.
-function History({ txs }: { txs: LocalTx[] }) {
+// A just-broadcast send lands here directly (no separate success screen) with a
+// success banner and a highlighted row whose confirmation count ticks up live.
+function History({
+  txs,
+  justSent,
+  onSendAnother,
+}: {
+  txs: LocalTx[];
+  justSent?: string | null;
+  onSendAnother?: () => void;
+}) {
+  const fresh = justSent ? txs.find((t) => t.txid === justSent) : undefined;
   if (txs.length === 0) {
     return (
       <div className="card">
@@ -1208,11 +1257,24 @@ function History({ txs }: { txs: LocalTx[] }) {
   return (
     <div className="card">
       <h2>History</h2>
+      {fresh && (
+        <div className="sentbanner appear">
+          <span className="sent-check small">✓</span>
+          <div>
+            <b>Sent privately.</b> Watch it confirm below — this updates live.
+          </div>
+          {onSendAnother && (
+            <button className="btn ghost small" style={{ flex: "none" }} onClick={onSendAnother}>
+              Send another
+            </button>
+          )}
+        </div>
+      )}
       <div className="txlist">
         {txs.map((t) => (
           <a
             key={t.txid}
-            className="txrow"
+            className={"txrow" + (t.txid === justSent ? " fresh" : "")}
             href={`${EXPLORER}/txs/${t.txid}`}
             target="_blank"
             rel="noreferrer"

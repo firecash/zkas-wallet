@@ -44,5 +44,6 @@
          in-page (jsQR) and never leaves the device; the feature degrades to
          paste/manual entry if the permission is denied. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

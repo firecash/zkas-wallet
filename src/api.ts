@@ -77,6 +77,38 @@ export interface Status {
   error: string | null;
 }
 
+// Last good status, persisted so the app opens straight into the full wallet UI
+// (balance, address, QR) instead of assembling it piece by piece as the first
+// network round-trips land. The 1s poll corrects any staleness within a second.
+// Keyed by wallet token so switching wallets never shows another wallet's data.
+function statusCacheKey(): string {
+  return `status_cache_${localStorage.getItem("wallet_token") || "default"}`;
+}
+export function loadStatusCache(): Status | null {
+  try {
+    const raw = localStorage.getItem(statusCacheKey());
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Status;
+    // Volatile flags must not be revived stale: a cached "warming" would flash the
+    // warm-up notice on every open, and a cached error is long resolved.
+    s.warming = false;
+    s.error = null;
+    return s.has_wallet && s.address ? s : null;
+  } catch {
+    return null;
+  }
+}
+export function saveStatusCache(s: Status) {
+  // Only a status that shows a real wallet is worth reviving; caching a
+  // transient "no wallet" answer would flash the onboarding screen at startup.
+  if (!s.has_wallet || !s.address) return;
+  try {
+    localStorage.setItem(statusCacheKey(), JSON.stringify(s));
+  } catch {
+    /* storage full/blocked — cache is best-effort */
+  }
+}
+
 export interface Balance {
   balance_sompi: string;
   balance_fc: string;

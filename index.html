@@ -7,7 +7,31 @@
     <title>ZKas Wallet</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Inline boot splash: painted by the browser the instant the HTML loads,
+         before any JS is parsed, so opening the app is never a blank screen.
+         React replaces the whole #root content on mount. -->
+    <style>
+      html, body { background: #0b0b0f; }
+      .boot {
+        min-height: 100vh; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 14px;
+        color: #9090a0; font-family: system-ui, sans-serif; font-size: 14px;
+      }
+      .boot-mark { font-size: 34px; font-weight: 700; color: #f6f6f8; letter-spacing: -0.02em; }
+      .boot-mark span { color: #17d6be; }
+      .boot-spin {
+        width: 18px; height: 18px; border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.25); border-top-color: #17d6be;
+        animation: bootsp 0.7s linear infinite;
+      }
+      @keyframes bootsp { to { transform: rotate(360deg); } }
+    </style>
+    <div id="root">
+      <div class="boot">
+        <div class="boot-mark"><span>Z</span>Kas</div>
+        <div class="boot-spin"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

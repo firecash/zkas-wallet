@@ -16,7 +16,6 @@ import init, {
   sign_spend_auth as _sign_spend_auth,
   verify_and_sign_payment as _verify_and_sign_payment,
 } from "./firecash_signer.js";
-import { WASM_B64 } from "./wasm-base64.js";
 
 export type Network = "mainnet" | "testnet";
 
@@ -31,16 +30,23 @@ export interface LocalSignature {
 
 let ready: Promise<void> | null = null;
 
-function wasmBytes(): Uint8Array {
-  const bin = atob(WASM_B64);
+function wasmBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
 }
 
-/** Initialise the wasm module exactly once. Safe to await repeatedly. */
+/** Initialise the wasm module exactly once. Safe to await repeatedly.
+ * The ~665KB base64 wasm blob is loaded via dynamic import so it lives in its
+ * own lazily-fetched chunk — keeping it out of the main bundle cuts the JS the
+ * device must download+parse before first paint by more than half. It's only
+ * needed once the user actually signs/derives something. */
 export function ensureSigner(): Promise<void> {
-  if (!ready) ready = init({ module_or_path: wasmBytes() }).then(() => undefined);
+  if (!ready)
+    ready = import("./wasm-base64.js").then(({ WASM_B64 }) =>
+      init({ module_or_path: wasmBytes(WASM_B64) }).then(() => undefined),
+    );
   return ready;
 }
 

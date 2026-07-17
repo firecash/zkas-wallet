@@ -23,6 +23,7 @@
   "dependencies": {
     "@capacitor/android": "^6.2.0",
     "@capacitor/core": "^6.2.0",
+    "@capacitor/haptics": "^6.0.3",
     "@capacitor/ios": "^6.2.0",
     "jsqr": "^1.4.0",
     "qrcode": "^1.5.4",

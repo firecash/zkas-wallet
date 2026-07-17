@@ -496,6 +496,32 @@ select { appearance: none; cursor: pointer; }
   color: var(--good);
   animation: pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both;
 }
+.sent-check.small { font-size: 22px; flex: none; }
+
+/* Post-send banner at the top of History: confirmation is watched here live. */
+.sentbanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(53, 196, 106, 0.4);
+  border-radius: 12px;
+  background: rgba(53, 196, 106, 0.1);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.sentbanner > div { flex: 1; min-width: 0; }
+
+/* The just-sent row glows green until its confirmations arrive. */
+.txrow.fresh {
+  border-color: rgba(53, 196, 106, 0.6);
+  animation: freshglow 1.6s ease-in-out 4;
+}
+@keyframes freshglow {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: 0 0 0 3px rgba(53, 196, 106, 0.15); }
+}
 @keyframes pop {
   from { opacity: 0; transform: scale(0.4); }
   to { opacity: 1; transform: scale(1); }
@@ -522,11 +548,7 @@ select { appearance: none; cursor: pointer; }
   margin-left: auto;
   margin-right: auto;
 }
-.msg.warminfo {
-  background: rgba(23, 214, 190, 0.08);
-  border: 1px solid rgba(23, 214, 190, 0.35);
-  color: var(--ink);
-}
+.msg.warmbanner { font-size: 13px; }
 
 /* Send progress: three stage dots under the button (prove → sign → broadcast). */
 .stagebar {
