@@ -773,8 +773,13 @@ function RevealSeed() {
   );
 }
 
-// A ~0.03 FC network fee is added on top of the amount (matches the daemon default).
-const FEE_FC = 0.03;
+// Network fee bounds. The daemon computes the EXACT fee per payment — the node's
+// minimum is byte-proportional, so it grows with how many shielded notes the
+// payment has to spend (1–2 notes ≈ 0.03, up to ~0.044 for a full 6-note tx).
+// The UI validates and reserves against the worst case; the true fee comes back
+// with the send result and is what gets recorded.
+const FEE_FC = 0.03; // typical (1–2 note) fee — shown as the "from" figure
+const FEE_MAX_FC = 0.045; // worst-case single-tx fee — used for Max & validation
 
 // Full-screen camera QR scanner. Decodes frames in-page with jsQR — the video
 // never leaves the device. Works on the web (getUserMedia) and inside the native
@@ -866,6 +871,11 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
   const [needSeed, setNeedSeed] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [scanning, setScanning] = useState(false);
+  // Advanced: a manual fee (ZKAS). Empty = automatic. The daemon treats it as a
+  // floor and still raises anything below the network's byte-proportional
+  // minimum — so this can only speed a send up, never break it.
+  const [showFeeCfg, setShowFeeCfg] = useState(false);
+  const [customFee, setCustomFee] = useState("");
 
   // The confirm step is a fresh screen — align it under the tab bar so the
   // details are what the user sees, not the page header.
@@ -897,14 +907,20 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
   const amt = parseAmount(amount);
   const addrOk = looksLikeAddress(to);
   const amtValid = !Number.isNaN(amt) && amt > 0;
-  const overspend = amtValid && amt + FEE_FC > spendable + 1e-9;
+  // Fee actually reserved for validation/Max: the worst automatic case, or the
+  // user's custom fee when it's higher (a custom fee below the network minimum
+  // gets raised server-side, so we still reserve the worst case then).
+  const feeCustom = parseAmount(customFee);
+  const feeCustomSet = !Number.isNaN(feeCustom) && feeCustom > 0;
+  const feeReserve = feeCustomSet ? Math.max(feeCustom, FEE_MAX_FC) : FEE_MAX_FC;
+  const overspend = amtValid && amt + feeReserve > spendable + 1e-9;
   // The maturing balance would cover it — the shortfall is just not-yet-matured funds.
-  const blockedByMaturing = overspend && amtValid && amt + FEE_FC <= spendable + maturing + 1e-9;
+  const blockedByMaturing = overspend && amtValid && amt + feeReserve <= spendable + maturing + 1e-9;
   // The send is possible only once the wallet is synced (spends need a matured anchor).
   const canProceed = addrOk && amtValid && !overspend && !!status?.synced;
 
   const setMax = () => {
-    const max = Math.max(0, spendable - FEE_FC);
+    const max = Math.max(0, spendable - feeReserve);
     setAmount(max > 0 ? String(Number(max.toFixed(8))) : "0");
   };
 
@@ -933,21 +949,25 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
           throw e;
         }
       }
-      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt, undefined, setStage);
+      const feeSompi = feeCustomSet ? Math.round(feeCustom * 1e8) : undefined;
+      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt, feeSompi, setStage);
       const toAddr = to.trim();
       setTo("");
       setAmount("");
       setConfirming(false);
       // Record on-device so the balance drops to a 0-conf figure immediately;
       // onSent switches straight to History where the confirmations tick in live.
+      // The daemon reports the fee it actually charged (byte-proportional) —
+      // record that, not the UI's estimate.
+      const paidFeeFc = (r.fee_sompi ?? FEE_FC * 1e8) / 1e8;
       onSent({
         txid: r.txid,
         to: toAddr,
         amountFc: amt,
-        feeFc: FEE_FC,
+        feeFc: paidFeeFc,
         ts: Date.now(),
         preFc: reliablePreFc(status),
-        spentFc: amt + FEE_FC,
+        spentFc: amt + paidFeeFc,
       });
     } catch (e) {
       setError((e as Error).message);
@@ -971,11 +991,15 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
         </div>
         <div className="confirm-row">
           <span className="muted">Network fee</span>
-          <span className="mono">{FEE_FC} ZKAS</span>
+          <span className="mono">
+            {feeCustomSet ? `${feeCustom} ZKAS (custom)` : `${FEE_FC}–${FEE_MAX_FC} ZKAS`}
+          </span>
         </div>
         <div className="confirm-row total">
           <span>Total</span>
-          <span className="mono">{Number((amt + FEE_FC).toFixed(8))} ZKAS</span>
+          <span className="mono">
+            {feeCustomSet ? Number((amt + feeCustom).toFixed(8)) : `≤ ${Number((amt + FEE_MAX_FC).toFixed(8))}`} ZKAS
+          </span>
         </div>
         <label>To</label>
         <div className="addr">{to.trim()}</div>
@@ -1064,9 +1088,21 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
 
       <div className="amthead">
         <label style={{ margin: 0 }}>Amount (ZKAS)</label>
-        <button type="button" className="linkbtn" onClick={setMax}>
-          Max
-        </button>
+        <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <button
+            type="button"
+            className="linkbtn"
+            aria-label="Fee settings"
+            title="Fee settings"
+            style={feeCustomSet ? undefined : { color: "var(--muted)" }}
+            onClick={() => setShowFeeCfg(!showFeeCfg)}
+          >
+            ⚙{feeCustomSet ? ` ${feeCustom}` : ""}
+          </button>
+          <button type="button" className="linkbtn" onClick={setMax}>
+            Max
+          </button>
+        </div>
       </div>
       <input
         value={amount}
@@ -1075,6 +1111,21 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
         inputMode="decimal"
         style={overspend ? { borderColor: "var(--bad)" } : undefined}
       />
+      {showFeeCfg && (
+        <>
+          <label>Custom network fee (ZKAS) — optional</label>
+          <input
+            value={customFee}
+            onChange={(e) => setCustomFee(e.target.value.replace(/[^0-9.]/g, ""))}
+            placeholder={`automatic (${FEE_FC}–${FEE_MAX_FC})`}
+            inputMode="decimal"
+          />
+          <div className="fieldhint muted">
+            Leave empty for automatic. If a send bounced with a fee error, set a higher fee here — fees below the
+            network minimum are raised automatically, so this can't break a send.
+          </div>
+        </>
+      )}
       {overspend && blockedByMaturing && (
         <div className="fieldhint bad">
           Only {trimFc(spendable.toFixed(8))} is spendable right now — {trimFc(maturing.toFixed(8))} is still maturing
@@ -1084,13 +1135,14 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
       )}
       {overspend && !blockedByMaturing && (
         <div className="fieldhint bad">
-          Not enough funds: {trimFc(spendable.toFixed(8))} spendable, need {trimFc((amt + FEE_FC).toFixed(8))} incl. the{" "}
-          {FEE_FC} fee.
+          Not enough funds: {trimFc(spendable.toFixed(8))} spendable, need {trimFc((amt + FEE_MAX_FC).toFixed(8))} incl. up
+          to {FEE_MAX_FC} fee.
         </div>
       )}
       {amtValid && !overspend && (
         <div className="fieldhint muted">
-          + {FEE_FC} fee = {Number((amt + FEE_FC).toFixed(8))} total
+          + {FEE_FC}–{FEE_MAX_FC} fee (scales with how many coins get combined) = up to{" "}
+          {Number((amt + FEE_MAX_FC).toFixed(8))} total
         </div>
       )}
 
