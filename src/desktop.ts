@@ -30,7 +30,10 @@ export async function initDesktop(): Promise<DesktopConfig | null> {
   if (!isDesktop()) return null;
   const cfg = await invoke<DesktopConfig>("wallet_config");
   localStorage.setItem("walletd_base", cfg.base);
-  localStorage.setItem("wallet_token", cfg.token);
+  // The shell's token is the FIRST wallet, not the only one. Writing it on every
+  // boot clobbered whichever wallet the user had switched to — the embedded
+  // daemon serves any token, so the app's choice is the one that counts.
+  if (!localStorage.getItem("wallet_token")) localStorage.setItem("wallet_token", cfg.token);
   return cfg;
 }
 

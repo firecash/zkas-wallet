@@ -20,7 +20,13 @@
 
 import { seal, unseal, type Sealed } from "./backup";
 
-const LOCK_KEY = "app_lock_v1";
+/// Per wallet, not global. As one global record it sealed whichever wallet was
+/// active and its cleanup deleted EVERY `device_seed_*` — which, once a device
+/// can hold several wallets, means locking one wallet destroys the keys of the
+/// others. Keyed by token, each wallet's lock is its own.
+function lockKey(): string {
+  return `app_lock_v1_${localStorage.getItem("wallet_token") || "default"}`;
+}
 /** Re-lock after this long in the background. Phones get put down, handed over. */
 const AUTO_LOCK_MS = 3 * 60 * 1000;
 
@@ -35,7 +41,7 @@ let unlockedSeed: string | null = null;
 let backgroundedAt = 0;
 
 function record(): LockRecord | null {
-  const raw = localStorage.getItem(LOCK_KEY);
+  const raw = localStorage.getItem(lockKey());
   if (!raw) return null;
   try {
     return JSON.parse(raw) as LockRecord;
@@ -70,7 +76,7 @@ export function unlockedDeviceSeed(): string | null {
 export async function enableLock(seedHex: string, secret: string, kind: "pin" | "passphrase"): Promise<void> {
   const sealed = await seal(seedHex, secret);
   const rec: LockRecord = { version: 1, kind, ...sealed };
-  localStorage.setItem(LOCK_KEY, JSON.stringify(rec));
+  localStorage.setItem(lockKey(), JSON.stringify(rec));
   clearPlaintextSeeds();
   unlockedSeed = seedHex; // stay usable for the rest of this session
 }
@@ -100,17 +106,15 @@ export async function disableLock(secret: string): Promise<string | null> {
   if (!rec) return null;
   const seed = await unseal(rec, secret);
   if (seed === null) return null;
-  localStorage.removeItem(LOCK_KEY);
+  localStorage.removeItem(lockKey());
   unlockedSeed = seed;
   return seed;
 }
 
-/** Remove any cleartext seed copies this device kept before the lock existed. */
+/** Remove the cleartext copy of THIS wallet's seed once it is sealed. Only this
+ *  wallet's: the others are separate wallets whose keys are none of its business. */
 function clearPlaintextSeeds(): void {
-  for (let i = localStorage.length - 1; i >= 0; i--) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith("device_seed_")) localStorage.removeItem(k);
-  }
+  localStorage.removeItem(`device_seed_${localStorage.getItem("wallet_token") || "default"}`);
 }
 
 /**

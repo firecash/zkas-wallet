@@ -35,6 +35,16 @@ import { makeBackup, readBackup } from "./backup";
 import { currentTheme, setTheme, type Theme } from "./theme";
 import { wipeWalletState } from "./walletstate";
 import {
+  activeToken,
+  addWallet,
+  ensureRegistered,
+  listWallets,
+  renameWallet,
+  switchWallet,
+  unregisterWallet,
+  type WalletRef,
+} from "./wallets";
+import {
   addContact,
   findContact,
   removeContact,
@@ -301,6 +311,13 @@ export default function App() {
       }
       // Remember a balance the daemon actually knows, so a later reload/restart — when
       // it answers with zeros while rebuilding — has something honest to show instead.
+      // Keep the wallet registry in step: a wallet that existed before the
+      // switcher (or one just created) must appear in the list, with an address
+      // recognisable enough to pick from.
+      if (s.has_wallet && s.address) {
+        const t = localStorage.getItem("wallet_token");
+        if (t) ensureRegistered(t, s.address);
+      }
       if (s.has_wallet && s.scanned_blocks > 0) {
         saveSnapshot({
           balanceFc: parseFloat(s.balance_fc || "0"),
@@ -801,59 +818,63 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
 // the periodic status poll can't unmount it — it stays until the user dismisses it.
 function SeedBackup({ seed, address, onDone }: { seed: string; address: string; onDone: () => void }) {
   const [copied, setCopied] = useState(false);
-  const [stage, setStage] = useState<"show" | "verify">("show");
+  const [showSeed, setShowSeed] = useState(false);
   const copy = async () => {
     try {
       await copyText(seed);
     } catch {
-      /* clipboard may be blocked; the seed is shown below to copy by hand */
+      /* clipboard may be blocked; the seed is shown to copy by hand */
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // 64 hex characters in one unbroken run is a transcription trap — a single
-  // dropped character loses the wallet, and nothing about the format tells you
-  // where you are. Numbered groups of eight are what a person can actually copy
-  // onto paper and check afterwards.
-  const groups = seed.match(/.{1,8}/g) ?? [];
-
-  if (stage === "verify") {
-    return <VerifyBackup groups={groups} onBack={() => setStage("show")} onDone={onDone} />;
-  }
-
   return (
     <div className="card">
-      <h2>Back up your recovery phrase</h2>
+      <h2>Save your wallet</h2>
       <div className="msg warn">
-        This 32-byte seed <b>is</b> your wallet. Write it down and store it offline. Anyone who has it controls your
-        funds — and nobody, including us, can restore it for you.
+        This wallet exists only on this device. If you lose it with no backup, the coins are gone — nobody, including
+        us, can restore them.
       </div>
-      <label>Recovery seed</label>
-      <div className="seedgrid">
-        {groups.map((g, i) => (
-          <div key={i} className="seedcell">
-            <span className="seedidx">{i + 1}</span>
-            <span className="mono">{g}</span>
-          </div>
-        ))}
-      </div>
-      <button className="btn ghost small" style={{ marginTop: 12 }} onClick={copy}>
-        {copied ? "Copied ✓" : "Copy seed"}
-      </button>
+
+      {/* An encrypted backup file is the primary path, deliberately.
+          The alternative is 64 hex characters, which nobody transcribes by hand
+          and which is trivially mistyped when they try — an earlier version of
+          this screen displayed it in numbered groups and then quizzed the user
+          on two of them, which is a lot of ceremony to make a bad artifact
+          slightly less bad. A file with its own passphrase is the thing people
+          will actually keep, on a USB stick or in a password manager. */}
+      <DeviceSeedBackup />
+
       <label style={{ marginTop: 16 }}>Your shielded address</label>
       <div className="addr">{address}</div>
-      <button className="btn" style={{ marginTop: 18 }} onClick={() => setStage("verify")}>
-        I've written it down
+
+      {showSeed ? (
+        <>
+          <label style={{ marginTop: 16 }}>Recovery seed</label>
+          <div className="addr">{seed}</div>
+          <button className="btn ghost small" style={{ marginTop: 10 }} onClick={copy}>
+            {copied ? "Copied ✓" : "Copy seed"}
+          </button>
+          <p className="muted small">
+            Anyone who has this controls the funds. Keep it in a password manager rather than a screenshot or a note.
+          </p>
+        </>
+      ) : (
+        <button className="btn ghost small" style={{ marginTop: 16 }} onClick={() => setShowSeed(true)}>
+          Show recovery seed instead
+        </button>
+      )}
+
+      <button className="btn" style={{ marginTop: 18 }} onClick={onDone}>
+        Open wallet
       </button>
       <p className="muted small" style={{ marginTop: 10 }}>
-        Next you'll be asked for two of the groups above, so you find out now if the copy is wrong — not on the day you
-        need it.
+        You can make a backup or view the seed at any time under Settings.
       </p>
     </div>
   );
 }
-
 /// Prove the backup was actually written down.
 ///
 /// This used to be a checkbox. A checkbox costs one click and verifies nothing,
@@ -861,74 +882,6 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
 /// failure — a seed that was never really saved — stays invisible until the day
 /// it matters. Asking for two random groups catches a bad transcription while
 /// the seed is still on screen, and cannot be satisfied by clicking through.
-function VerifyBackup({ groups, onBack, onDone }: { groups: string[]; onBack: () => void; onDone: () => void }) {
-  // Chosen once per mount, so retrying cannot reshuffle to easier questions.
-  const [ask] = useState(() => {
-    const idx = groups.map((_, i) => i);
-    for (let i = idx.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [idx[i], idx[j]] = [idx[j], idx[i]];
-    }
-    return idx.slice(0, 2).sort((a, b) => a - b);
-  });
-  const [answers, setAnswers] = useState<string[]>(["", ""]);
-  const [error, setError] = useState("");
-  const toast = useToast();
-
-  const check = () => {
-    const ok = ask.every((g, n) => answers[n].trim().toLowerCase() === groups[g].toLowerCase());
-    if (!ok) {
-      setError("That doesn't match. Check your copy against the seed — go back if you need to see it again.");
-      return;
-    }
-    toast.show("good", "Backup confirmed", "Keep it somewhere safe and offline.");
-    onDone();
-  };
-
-  return (
-    <div className="card">
-      <h2>Confirm your backup</h2>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        From what you just wrote down, type these two groups. This is the only check that your copy is correct — there
-        is no way to recover this wallet without it.
-      </p>
-      {ask.map((g, n) => (
-        <div key={g}>
-          <label>Group {g + 1}</label>
-          <input
-            className="mono"
-            value={answers[n]}
-            autoFocus={n === 0}
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            maxLength={8}
-            onChange={(e) => {
-              const next = [...answers];
-              next[n] = e.target.value.replace(/[^0-9a-fA-F]/g, "");
-              setAnswers(next);
-              setError("");
-            }}
-            placeholder="8 characters"
-          />
-        </div>
-      ))}
-      {error && <div className="msg err">{error}</div>}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button className="btn" onClick={check} disabled={answers.some((a) => a.length !== 8)}>
-          Confirm & open wallet
-        </button>
-        <button className="btn ghost" onClick={onBack}>
-          Show me the seed again
-        </button>
-      </div>
-      <p className="muted small" style={{ marginTop: 10 }}>
-        You can view the seed again later under <b>Receive</b> — but only on this device, and only while you still have
-        it.
-      </p>
-    </div>
-  );
-}
 /// The signer's network name for the daemon's chain (only mainnet/testnet exist
 /// for address encoding; anything else is a devnet using the testnet HRP).
 function networkOf(status: Status | null): Network {
@@ -2991,51 +2944,151 @@ function AppLockSetting() {
 /// start. Guarded hard: without a backup or seed phrase, the funds in the
 /// forgotten wallet are unreachable from this machine.
 function SwitchWallet() {
-  const [ask, setAsk] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [, bump] = useState(0);
+  const [askRemove, setAskRemove] = useState<WalletRef | null>(null);
+  const [renaming, setRenaming] = useState<WalletRef | null>(null);
   const [err, setErr] = useState("");
+  useEffect(() => {
+    const h = () => bump((n) => n + 1);
+    window.addEventListener("wallets-changed", h);
+    return () => window.removeEventListener("wallets-changed", h);
+  }, []);
+
+  const active = activeToken();
+  const wallets = listWallets();
+
   return (
     <div className="card">
-      <h2>Use a different wallet</h2>
+      <h2>Wallets</h2>
       <p className="muted small" style={{ marginTop: 0 }}>
-        Removes this wallet from this device so you can create a new one or restore another. Back it up first — the
-        coins stay on-chain, but without your backup or seed phrase you cannot reach them again.
+        This device can hold several wallets at once. Switching between them keeps every one of them — their keys,
+        history and contacts stay exactly where they are.
       </p>
+
+      {wallets.map((w) => (
+        <div key={w.token} className="contact-row">
+          <div className="avatar" style={w.token === active ? undefined : { opacity: 0.45 }}>
+            {(w.label.match(/\d+/)?.[0] ?? w.label.slice(0, 1)).toString()}
+          </div>
+          <div className="contact-main">
+            <div className="contact-name">
+              {w.label} {w.token === active && <span className="muted small">· active</span>}
+            </div>
+            {w.address && <div className="contact-addr">{w.address}</div>}
+          </div>
+          {w.token === active ? (
+            <button className="linkbtn" onClick={() => setRenaming(w)}>
+              Rename
+            </button>
+          ) : (
+            <button
+              className="linkbtn"
+              onClick={() => {
+                switchWallet(w.token);
+                location.reload();
+              }}
+            >
+              Switch
+            </button>
+          )}
+        </div>
+      ))}
+
       {err && <div className="msg err">{err}</div>}
-      <button className="btn ghost" onClick={() => setAsk(true)} disabled={busy}>
-        {busy ? "Removing…" : "Use a different wallet"}
-      </button>
-      {ask && (
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+        <button
+          className="btn"
+          onClick={() => {
+            // A brand-new token with nothing behind it: the app then shows
+            // onboarding for it (create / restore / import) while every existing
+            // wallet stays untouched under its own token.
+            addWallet();
+            location.reload();
+          }}
+        >
+          Add another wallet
+        </button>
+        {wallets.length > 0 && (
+          <button
+            className="btn ghost"
+            style={{ color: "var(--bad)" }}
+            onClick={() => setAskRemove(wallets.find((w) => w.token === active) ?? null)}
+          >
+            Remove this wallet
+          </button>
+        )}
+      </div>
+
+      {renaming && (
+        <RenameWallet
+          wallet={renaming}
+          onClose={() => {
+            setRenaming(null);
+            bump((n) => n + 1);
+          }}
+        />
+      )}
+
+      {askRemove && (
         <ConfirmDialog
-          title="Remove this wallet from this computer?"
-          body="The app will forget this wallet's key and scan data, then offer to create or restore one. Anything you have not backed up becomes unreachable from here — the coins remain on-chain and return with the seed or a backup file."
+          title={`Remove ${askRemove.label}?`}
+          body="This wallet's key and data are erased from this device. Your other wallets are not affected. The coins stay on-chain but are unreachable from here without a backup or seed phrase."
           confirmLabel="Remove wallet"
           danger
           onConfirm={async () => {
-            setAsk(false);
-            setBusy(true);
+            const w = askRemove;
+            setAskRemove(null);
             try {
-              const token = localStorage.getItem("wallet_token");
-              // Desktop owns its daemon, so the wallet file is deleted and the
-              // token rotated there. On the hosted daemon we cannot (and must
-              // not) delete server state for a token others may share a server
-              // with — dropping the token is what makes this device forget it,
-              // and a fresh token is a fresh wallet.
+              const rest = listWallets().filter((x) => x.token !== w.token);
+              // Desktop owns its daemon, so delete the wallet file there too.
+              // Hosted: dropping the token is what makes this device forget it —
+              // we must not delete server state on a shared daemon.
               if (isDesktop()) await forgetWallet();
-              wipeWalletState(token);
+              wipeWalletState(w.token);
+              unregisterWallet(w.token);
+              // Fall back to another wallet if one exists, rather than dumping the
+              // user into onboarding when they still have wallets left.
+              if (rest.length > 0) switchWallet(rest[0].token);
               location.reload();
             } catch (e) {
               setErr((e as Error).message);
-              setBusy(false);
             }
           }}
-          onCancel={() => setAsk(false)}
+          onCancel={() => setAskRemove(null)}
         />
       )}
     </div>
   );
 }
 
+function RenameWallet({ wallet, onClose }: { wallet: WalletRef; onClose: () => void }) {
+  const [name, setName] = useState(wallet.label);
+  return createPortal(
+    <div className="modalwrap" onClick={onClose}>
+      <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>Rename wallet</h2>
+        <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className="btn"
+            disabled={!name.trim()}
+            onClick={() => {
+              renameWallet(wallet.token, name);
+              onClose();
+            }}
+          >
+            Save
+          </button>
+          <button className="btn ghost" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
 /// Backup for the NON-CUSTODIAL case — which is the default.
 ///
 /// The wallet generates its seed in the app and registers only the viewing key
