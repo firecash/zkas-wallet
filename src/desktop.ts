@@ -132,3 +132,12 @@ export function writeBackupFile(contents: string): Promise<BackupInfo> {
 export function readBackupFile(path: string): Promise<string> {
   return invoke<string>("read_backup_file", { path });
 }
+
+/**
+ * Delete this device's wallet (file + scan state) and restart the daemon empty.
+ * Irreversible here; the coins remain on-chain and return with the seed or a
+ * backup. Callers must warn before calling.
+ */
+export function forgetWallet(): Promise<DesktopConfig> {
+  return invoke<DesktopConfig>("forget_wallet");
+}

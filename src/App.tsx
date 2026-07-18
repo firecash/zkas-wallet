@@ -20,6 +20,7 @@ import {
   backupWallet,
   initDesktop,
   isDesktop,
+  forgetWallet,
   listBackups,
   lockVault,
   openPath,
@@ -736,7 +737,7 @@ function Onboard({
   onCreated: (seed: string, address: string) => void;
   onImported: () => void;
 }) {
-  const [mode, setMode] = useState<"choose" | "import">("choose");
+  const [mode, setMode] = useState<"choose" | "import" | "backup">("choose");
   const [importHex, setImportHex] = useState("");
   const [birthday, setBirthday] = useState("");
   const [busy, setBusy] = useState(false);
@@ -783,6 +784,15 @@ function Onboard({
     }
   };
 
+  if (mode === "backup") {
+    return (
+      <div className="card">
+        <h2>Restore from backup</h2>
+        <RestoreSeedBackup onBack={() => setMode("choose")} />
+      </div>
+    );
+  }
+
   if (mode === "import") {
     return (
       <div className="card">
@@ -817,13 +827,20 @@ function Onboard({
     <div className="card center">
       <h2>Welcome</h2>
       <p className="muted" style={{ marginTop: 0 }}>
-        Create a fresh shielded wallet, or restore one from a seed. Every ZKas transfer is a private Orchard
+        Create a fresh shielded wallet, or restore one you already have. Every ZKas transfer is a private Orchard
         (zk-SNARK) transaction.
       </p>
       {error && <div className="msg err">{error}</div>}
       <button className="btn" disabled={busy} onClick={create}>
         {busy ? <span className="spin" /> : "Create new wallet"}
       </button>
+      {/* Desktop keeps backups in a known folder, so restoring is a pick from a
+          list rather than hunting for a file — the reason to write backups at all. */}
+      {isDesktop() && (
+        <button className="btn ghost" onClick={() => setMode("backup")}>
+          Restore from backup file
+        </button>
+      )}
       <button className="btn ghost" onClick={() => setMode("import")}>
         Import from seed
       </button>
@@ -1895,6 +1912,9 @@ function VaultSetting() {
 
       {watchOnly ? <DeviceSeedBackup /> : <BackupWallet />}
 
+      <div style={{ height: 1, background: "var(--border)", margin: "18px 0" }} />
+      <SwitchWallet />
+
       {askLock && (
         <ConfirmDialog
           title="Lock wallet?"
@@ -1908,6 +1928,57 @@ function VaultSetting() {
         />
       )}
     </div>
+  );
+}
+
+/// Forget this device's wallet so the app offers onboarding again — create a new
+/// one, restore a backup, or import a seed.
+///
+/// Exists because the wallet is remembered across launches (by design: nobody
+/// wants to re-import every morning), which also means a user who wants a
+/// DIFFERENT wallet has no way out — their old one is simply loaded again every
+/// start. Guarded hard: without a backup or seed phrase, the funds in the
+/// forgotten wallet are unreachable from this machine.
+function SwitchWallet() {
+  const [ask, setAsk] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  return (
+    <>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        <b>Use a different wallet.</b> Removes this wallet from this computer so you can create a new one or restore
+        another. Back it up first — the coins stay on-chain, but without your backup or seed phrase you cannot reach
+        them again.
+      </p>
+      {err && <div className="msg err">{err}</div>}
+      <button className="btn ghost" onClick={() => setAsk(true)} disabled={busy}>
+        {busy ? "Removing…" : "Use a different wallet"}
+      </button>
+      {ask && (
+        <ConfirmDialog
+          title="Remove this wallet from this computer?"
+          body="The app will forget this wallet's key and scan data, then offer to create or restore one. Anything you have not backed up becomes unreachable from here — the coins remain on-chain and return with the seed or a backup file."
+          confirmLabel="Remove wallet"
+          danger
+          onConfirm={async () => {
+            setAsk(false);
+            setBusy(true);
+            try {
+              await forgetWallet();
+              // Drop this device's spending key too — it belongs to the wallet
+              // being forgotten, and leaving it would re-attach to a new one.
+              localStorage.removeItem(`device_seed_${localStorage.getItem("wallet_token") || "default"}`);
+              location.reload();
+            } catch (e) {
+              setErr((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+          onCancel={() => setAsk(false)}
+        />
+      )}
+    </>
   );
 }
 

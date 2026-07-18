@@ -416,6 +416,27 @@ fn restore_backup(
     Ok(config_of(&e))
 }
 
+/// Forget the wallet on this device: stop the daemon, delete its wallet file and
+/// scan checkpoint, then restart the daemon empty so the app offers onboarding.
+///
+/// Destructive and irreversible from this machine's point of view — the caller
+/// MUST have warned that funds are unreachable afterwards without a backup or
+/// seed phrase. The chain is untouched: the coins still exist, and restoring the
+/// seed anywhere brings them back.
+#[tauri::command]
+fn forget_wallet(state: tauri::State<'_, Mutex<Engine>>) -> Result<WalletConfig, String> {
+    let mut e = state.lock().unwrap();
+    e.lock(); // stop the daemon so nothing rewrites the files we are removing
+    let dir = e.wallet_dir();
+    let token = e.token.clone();
+    let _ = std::fs::remove_file(format!("{dir}/{token}.json"));
+    let _ = std::fs::remove_file(format!("{dir}/{token}.scan"));
+    let _ = std::fs::remove_file(format!("{dir}/{token}.scan.bak"));
+    e.secret = None;
+    e.start_walletd();
+    Ok(config_of(&e))
+}
+
 /// Backup files this app has written, newest first — so restore can offer a
 /// list instead of asking a user to type a path.
 #[tauri::command]
@@ -518,7 +539,8 @@ pub fn run() {
             list_backups,
             reveal_path,
             write_backup,
-            read_backup_file
+            read_backup_file,
+            forget_wallet
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
