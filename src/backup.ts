@@ -34,7 +34,7 @@ const b64 = (b: ArrayBuffer | Uint8Array) =>
 
 const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
-async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
+export async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
   const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, [
     "deriveKey",
   ]);
@@ -101,4 +101,41 @@ export async function readBackup(json: string, passphrase: string): Promise<{ se
   const seedHex = new TextDecoder().decode(plain).trim();
   if (!/^[0-9a-fA-F]{64}$/.test(seedHex)) throw new Error("Backup decrypted but does not contain a valid seed.");
   return { seedHex, birthday: doc.birthday ?? 0 };
+}
+
+// --- Generic string encryption, shared with the app lock ------------------
+// Same construction as the backup file; kept in one place so there is a single
+// crypto path to review rather than two that drift.
+
+export interface Sealed {
+  saltB64: string;
+  ivB64: string;
+  ciphertextB64: string;
+}
+
+export async function seal(plaintext: string, passphrase: string): Promise<Sealed> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(passphrase, salt);
+  const ct = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: iv as BufferSource },
+    key,
+    new TextEncoder().encode(plaintext),
+  );
+  return { saltB64: b64(salt), ivB64: b64(iv), ciphertextB64: b64(ct) };
+}
+
+/** Returns null when the passphrase is wrong (GCM tag mismatch). */
+export async function unseal(sealed: Sealed, passphrase: string): Promise<string | null> {
+  try {
+    const key = await deriveKey(passphrase, unb64(sealed.saltB64));
+    const plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: unb64(sealed.ivB64) as BufferSource },
+      key,
+      unb64(sealed.ciphertextB64),
+    );
+    return new TextDecoder().decode(plain);
+  } catch {
+    return null;
+  }
 }

@@ -1,7 +1,9 @@
-import { StrictMode, useState } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { LockScreen } from "./LockScreen";
+import { AppLockScreen } from "./AppLockScreen";
+import { installAutoLock, isLockEnabled, isUnlocked } from "./applock";
 import { initDesktop, isDesktop, vaultStatus } from "./desktop";
 import { FirstRunNode, needsNodeChoice } from "./FirstRunNode";
 import "./styles.css";
@@ -14,6 +16,14 @@ import "./styles.css";
 function Root({ locked, askNode }: { locked: boolean; askNode: boolean }) {
   const [unlocked, setUnlocked] = useState(!locked);
   const [nodeChosen, setNodeChosen] = useState(!askNode);
+  // The app lock (PIN/passphrase over the on-device seed) is independent of the
+  // desktop vault: it guards the key this device holds, on every platform, and
+  // is what mobile uses. Re-locks itself after time in the background.
+  const [appUnlocked, setAppUnlocked] = useState(!isLockEnabled() || isUnlocked());
+  useEffect(() => {
+    installAutoLock(() => setAppUnlocked(false));
+  }, []);
+  if (isLockEnabled() && !appUnlocked) return <AppLockScreen onUnlocked={() => setAppUnlocked(true)} />;
   if (!unlocked) return <LockScreen onUnlocked={() => setUnlocked(true)} />;
   // Asked after unlock: the node choice changes what the daemon connects to,
   // and there is no point configuring a connection for a wallet still locked.

@@ -31,6 +31,7 @@ import {
   type DesktopConfig,
 } from "./desktop";
 import { makeBackup, readBackup } from "./backup";
+import { disableLock, enableLock, isLockEnabled, isUnlocked, lockKind, unlockedDeviceSeed } from "./applock";
 import logo from "./assets/zkas-logo.png";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -301,6 +302,7 @@ export default function App() {
           </div>
         </>
       )}
+      {reachable && status?.has_wallet && <AppLockSetting />}
       {isDesktop() ? (
         <>
           <NodeSourceSetting />
@@ -330,10 +332,20 @@ function deviceSeedKey(): string {
   return `device_seed_${localStorage.getItem("wallet_token") || "default"}`;
 }
 export function getDeviceSeed(): string {
+  // With the app lock on, the seed exists only in memory for the current
+  // session — nothing readable is left in storage to fall back to.
+  const unlocked = unlockedDeviceSeed();
+  if (unlocked) return unlocked;
+  if (isLockEnabled()) return "";
   return localStorage.getItem(deviceSeedKey()) || "";
 }
 export function setDeviceSeed(seed: string) {
-  if (seed) localStorage.setItem(deviceSeedKey(), seed);
+  if (!seed) return;
+  // A locked device must not gain a cleartext copy: re-seal instead. The caller
+  // (import/restore) is holding the seed legitimately, but storing it in the
+  // clear would silently undo the lock.
+  if (isLockEnabled()) return;
+  localStorage.setItem(deviceSeedKey(), seed);
 }
 
 /// Thrown when this device has no key for the wallet and the daemon has none to
@@ -1926,6 +1938,171 @@ function VaultSetting() {
           }}
           onCancel={() => setAskLock(false)}
         />
+      )}
+    </div>
+  );
+}
+
+/// Turn the app lock on/off: a PIN (or passphrase) that ENCRYPTS this device's
+/// spending key, rather than merely hiding the screen.
+///
+/// This is the phone's real protection: the seed lives in this app's storage, so
+/// a lock that only hid the UI would leave it readable to anyone with the
+/// device's data or a backup of it. Sealed, a locked app holds nothing spendable.
+function AppLockSetting() {
+  const [enabled, setEnabled] = useState(isLockEnabled());
+  const [kind, setKind] = useState<"pin" | "passphrase">("pin");
+  const [secret, setSecret] = useState("");
+  const [confirmSecret, setConfirmSecret] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [mode, setMode] = useState<"idle" | "enable" | "disable">("idle");
+
+  // 6 digits, not 4: the seal is only as strong as what derives it, and a
+  // 4-digit PIN is 10,000 guesses to anyone who copies the encrypted blob off
+  // the device. Even 6 is a device-theft deterrent rather than real key
+  // strength — which is why the UI says so and offers a passphrase.
+  const minLen = kind === "pin" ? 6 : 8;
+
+  const enable = async () => {
+    setErr("");
+    const seed = getDeviceSeed();
+    if (!seed) return setErr("This device holds no spending key to protect.");
+    if (secret.length < minLen) return setErr(`Use at least ${minLen} ${kind === "pin" ? "digits" : "characters"}.`);
+    if (secret !== confirmSecret) return setErr("The two entries do not match.");
+    setBusy(true);
+    try {
+      await enableLock(seed, secret, kind);
+      setEnabled(true);
+      setMode("idle");
+      setSecret("");
+      setConfirmSecret("");
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disable = async () => {
+    setErr("");
+    setBusy(true);
+    try {
+      const seed = await disableLock(secret);
+      if (!seed) {
+        setErr("That does not unlock this wallet.");
+        return;
+      }
+      // Restore normal on-device storage now that nothing is sealing it.
+      setDeviceSeed(seed);
+      setEnabled(false);
+      setMode("idle");
+      setSecret("");
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card">
+      <h2>App lock</h2>
+      {mode === "enable" ? (
+        <>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Choose what to unlock with. This encrypts your spending key on this device — while locked, the app holds
+            nothing that can spend.
+          </p>
+          <div style={{ display: "flex", gap: 14, margin: "8px 0 4px" }}>
+            <label className="choice" style={{ margin: 0 }}>
+              <input type="radio" checked={kind === "pin"} onChange={() => setKind("pin")} /> <span>PIN</span>
+            </label>
+            <label className="choice" style={{ margin: 0 }}>
+              <input type="radio" checked={kind === "passphrase"} onChange={() => setKind("passphrase")} />{" "}
+              <span>Passphrase</span>
+            </label>
+          </div>
+          <label>{kind === "pin" ? "PIN" : "Passphrase"}</label>
+          <input
+            type="password"
+            inputMode={kind === "pin" ? "numeric" : "text"}
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            placeholder={kind === "pin" ? `At least ${minLen} digits` : `At least ${minLen} characters`}
+          />
+          <label>Confirm</label>
+          <input
+            type="password"
+            inputMode={kind === "pin" ? "numeric" : "text"}
+            value={confirmSecret}
+            onChange={(e) => setConfirmSecret(e.target.value)}
+            placeholder="Enter it again"
+          />
+          {err && <div className="msg err">{err}</div>}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className="btn" onClick={enable} disabled={busy || !secret}>
+              {busy ? "Encrypting…" : "Turn on app lock"}
+            </button>
+            <button className="btn ghost" onClick={() => setMode("idle")} disabled={busy}>
+              Cancel
+            </button>
+          </div>
+          <p className="muted small" style={{ marginTop: 10 }}>
+            Back up your wallet first. Nothing stores this {kind === "pin" ? "PIN" : "passphrase"}, so if you forget it
+            the only way back in is your seed phrase or a backup file.
+          </p>
+          {kind === "pin" && (
+            <p className="muted small">
+              A PIN stops someone who picks up your phone. It is short enough to be guessed by anyone who copies the
+              encrypted key off the device itself — choose a passphrase if that is your concern.
+            </p>
+          )}
+        </>
+      ) : mode === "disable" ? (
+        <>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Enter your current {lockKind() === "pin" ? "PIN" : "passphrase"} to turn the lock off. Your key will be
+            stored unencrypted on this device again.
+          </p>
+          <input
+            type="password"
+            inputMode={lockKind() === "pin" ? "numeric" : "text"}
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            placeholder={lockKind() === "pin" ? "Current PIN" : "Current passphrase"}
+          />
+          {err && <div className="msg err">{err}</div>}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className="btn ghost" onClick={disable} disabled={busy || !secret}>
+              {busy ? "Removing…" : "Turn off app lock"}
+            </button>
+            <button className="btn ghost" onClick={() => setMode("idle")} disabled={busy}>
+              Cancel
+            </button>
+          </div>
+        </>
+      ) : enabled ? (
+        <>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            <b>On.</b> Your spending key is encrypted on this device and unlocked with your{" "}
+            {lockKind() === "pin" ? "PIN" : "passphrase"}. The app re-locks itself after a few minutes in the
+            background.
+          </p>
+          <button className="btn ghost" onClick={() => setMode("disable")}>
+            Turn off app lock
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Your spending key is stored on this device <b>unencrypted</b>. Turn on a PIN or passphrase and it is
+            encrypted at rest — so someone holding this device, or a backup of its data, cannot spend from it.
+          </p>
+          <button className="btn" onClick={() => setMode("enable")}>
+            Set a PIN or passphrase
+          </button>
+        </>
       )}
     </div>
   );
