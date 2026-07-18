@@ -806,20 +806,6 @@ function ConfirmDialog({
 /// Show a flag only once it has held for `delayMs` — the mirror of
 /// [`useMinDwell`]. Used for whole-view switches, where reacting to a single
 /// poll would swap the entire card out and back.
-function useDelayedOn(on: boolean, delayMs: number) {
-  const [shown, setShown] = useState(false);
-  useEffect(() => {
-    if (!on) {
-      setShown(false);
-      return;
-    }
-    if (shown) return;
-    const t = setTimeout(() => setShown(true), delayMs);
-    return () => clearTimeout(t);
-  }, [on, shown, delayMs]);
-  return shown && on;
-}
-
 /// Latch a flag ON until the caller resets it.
 ///
 /// Used for "this send is confirmed": the daemon's view of a pending spend can
@@ -884,10 +870,12 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // The daemon has not rebuilt this wallet's state yet — it reports zeros because it
   // does not KNOW the balance, not because the balance is zero. Never render those
   // zeros as a balance; fall back to the last figure it gave us.
-  // Require this to hold for 2s before replacing the whole balance card: a
-  // single poll answering scanned_blocks:0 (a status racing a sync pass) must
-  // not swap the user's balance out for a restore notice and back again.
-  const restoring = useDelayedOn(status.scanned_blocks === 0 && !status.synced, 2000);
+  // IMMEDIATE, deliberately. I briefly delayed this by 2s to stop the card
+  // flapping — which opened a two-second window where the daemon's "I don't know
+  // yet" zeros rendered as the user's balance. Telling somebody their coins are
+  // gone, even for two seconds, is far worse than a card that changes twice; the
+  // whole point of the snapshot below is that this state NEVER shows a zero.
+  const restoring = status.scanned_blocks === 0 && !status.synced;
   const snap = restoring ? loadSnapshot() : null;
   if (restoring) {
     return (
