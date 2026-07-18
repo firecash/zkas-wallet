@@ -642,3 +642,18 @@ select { appearance: none; cursor: pointer; }
   max-width: 420px;
   margin: 0;
 }
+
+/* First-run node choice: radio rows that stay readable at small widths. */
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 10px 0;
+  font-weight: 400;
+  cursor: pointer;
+}
+.choice input {
+  margin-top: 3px;
+  width: auto;
+  flex: none;
+}

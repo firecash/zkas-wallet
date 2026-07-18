@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { api, chainTx, getBase, setBase, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type Status } from "./api";
@@ -482,13 +483,17 @@ function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  return (
+  // Rendered through a portal on <body>: a `position: fixed` overlay inside an
+  // ancestor that has a transform (the pane's entrance animation) would be
+  // positioned against that ancestor instead of the viewport — the classic
+  // "modal opened but you cannot see it" bug. A portal is immune to it.
+  return createPortal(
     <div className="modalwrap" onClick={onCancel}>
       <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
         <h2 style={{ marginTop: 0 }}>{title}</h2>
         <p className="muted small">{body}</p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-          <button className={danger ? "btn" : "btn"} onClick={onConfirm}>
+          <button className="btn" onClick={onConfirm}>
             {confirmLabel}
           </button>
           <button className="btn ghost" onClick={onCancel}>
@@ -496,7 +501,8 @@ function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

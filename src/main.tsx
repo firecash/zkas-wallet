@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { LockScreen } from "./LockScreen";
 import { initDesktop, isDesktop, vaultStatus } from "./desktop";
+import { FirstRunNode, needsNodeChoice } from "./FirstRunNode";
 import "./styles.css";
 
 // On desktop the wallet is gated behind a passphrase: the embedded daemon does
@@ -10,9 +11,13 @@ import "./styles.css";
 // order is — ask the shell whether this device is locked, show the lock screen if
 // it is, and only mount the wallet once the daemon is up. In the browser there is
 // no vault and this resolves straight to the app.
-function Root({ locked }: { locked: boolean }) {
+function Root({ locked, askNode }: { locked: boolean; askNode: boolean }) {
   const [unlocked, setUnlocked] = useState(!locked);
+  const [nodeChosen, setNodeChosen] = useState(!askNode);
   if (!unlocked) return <LockScreen onUnlocked={() => setUnlocked(true)} />;
+  // Asked after unlock: the node choice changes what the daemon connects to,
+  // and there is no point configuring a connection for a wallet still locked.
+  if (!nodeChosen) return <FirstRunNode onDone={() => setNodeChosen(true)} />;
   return <App />;
 }
 
@@ -39,9 +44,11 @@ async function boot() {
   // unlocked / browser paths.
   if (!locked) await initDesktop().catch(() => null);
 
+  const askNode = isDesktop() && needsNodeChoice();
+
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
-      <Root locked={locked} />
+      <Root locked={locked} askNode={askNode} />
     </StrictMode>,
   );
 }
