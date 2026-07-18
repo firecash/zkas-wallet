@@ -187,6 +187,10 @@ export const api = {
   // (coinbase mints, received notes, and — via the OVK — own sends), so unlike
   // the device-local send list it survives a seed restore and other devices.
   history: () => req<ChainHistory>("GET", "/api/wallet/history"),
+  // History is opt-in: enabling stores a readable transaction record in the
+  // wallet's scan data (and makes sends OVK-recoverable); disabling erases it.
+  setHistoryEnabled: (on: boolean) =>
+    req<{ recoverableHistory: boolean }>("POST", "/api/wallet/settings", { recoverable_history: on }),
   verify: (address: string, message: string, signature: string) =>
     req<{ valid: boolean; reason: string | null }>("POST", "/api/verify", { address, message, signature }),
 };
@@ -203,10 +207,20 @@ export interface ChainHistoryRow {
   memo?: string | null;
 }
 
+export interface PendingOutgoingRow {
+  txid: string;
+  amountSompi: number;
+  amountZkas: number;
+  submittedDaa: number;
+}
+
 export interface ChainHistory {
   recoverableHistory: boolean;
   total: number;
   rows: ChainHistoryRow[];
+  // Sends submitted but not yet observed on-chain; the daemon auto-returns the
+  // funds to the balance if the transaction never lands (~1 h).
+  pendingOutgoing?: PendingOutgoingRow[];
 }
 
 // ---------------------------------------------------------------------------

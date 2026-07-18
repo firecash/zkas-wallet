@@ -1301,6 +1301,7 @@ function History({
   // Chain-derived history (mints, receives, and OVK-recovered sends): fetched
   // from the daemon, so it survives a seed restore and shows on every device.
   const [chain, setChain] = useState<ChainHistory | null>(null);
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     let live = true;
     const pull = () => api.history().then((h) => live && setChain(h)).catch(() => {});
@@ -1312,12 +1313,67 @@ function History({
     };
   }, []);
 
+  // History is opt-in: nothing readable is stored until the user activates it,
+  // and turning it off erases the stored record immediately.
+  const setHistory = async (on: boolean) => {
+    if (
+      !on &&
+      !confirm("Turn history off? The stored record is erased immediately. Your balance and funds are not affected.")
+    )
+      return;
+    setBusy(true);
+    try {
+      await api.setHistoryEnabled(on);
+      setChain(await api.history());
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const fresh = justSent ? txs.find((t) => t.txid === justSent) : undefined;
   const chainRows = chain?.rows ?? [];
   const confirmed = new Set(chainRows.map((r) => r.txid));
   // Device-local sends the chain scan hasn't caught up to yet stay on top as
   // 0-conf rows; once a send appears chain-side, the chain row is authoritative.
   const pending = txs.filter((t) => !confirmed.has(t.txid));
+  const historyOff = chain !== null && !chain.recoverableHistory;
+
+  // Notes locked by sends still awaiting chain confirmation. Their value includes
+  // the change coming back, so this is shown as "held", never as an amount sent —
+  // and the daemon returns it all automatically if a transaction never lands.
+  const heldZkas = (chain?.pendingOutgoing ?? []).reduce((s, p) => s + p.amountZkas, 0);
+  const heldTxids = new Set((chain?.pendingOutgoing ?? []).map((p) => p.txid)).size;
+
+  if (historyOff) {
+    return (
+      <div className="card">
+        <h2>History</h2>
+        {heldTxids > 0 && (
+          <p className="muted small">
+            {heldTxids} outgoing transaction{heldTxids === 1 ? "" : "s"} in flight — {trimFc(heldZkas.toFixed(8))} ZKAS
+            temporarily held until it confirms (returned automatically within ~1 hour if it never does).
+          </p>
+        )}
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Transaction history is <b>off</b> — the private default. Nothing about your payments is stored anywhere.
+        </p>
+        <p className="muted small">
+          Turn it on and this wallet keeps a readable record — amounts, dates, and for your own sends the recipient and
+          memo — saved with the wallet’s sync data, so it survives restarts and follows your seed. The risk you accept:
+          anyone who obtains this wallet’s access token or file can read that record. On-chain, transactions stay fully
+          shielded either way.
+        </p>
+        <button className="btn" onClick={() => setHistory(true)} disabled={busy}>
+          {busy ? "Enabling…" : "Enable history"}
+        </button>
+        <p className="muted small" style={{ marginTop: 10 }}>
+          Recording starts from now. Sends made while history was off can never be recovered — not even by you.
+        </p>
+      </div>
+    );
+  }
 
   if (pending.length === 0 && chainRows.length === 0) {
     return (
@@ -1328,6 +1384,11 @@ function History({
             ? "Loading history…"
             : "Nothing yet. Mints, payments you receive, and sends from this wallet all show up here — recovered from the chain itself, so this list follows your seed, not this device."}
         </p>
+        {chain !== null && (
+          <button className="btn ghost small" onClick={() => setHistory(false)} disabled={busy}>
+            Turn history off
+          </button>
+        )}
       </div>
     );
   }
@@ -1397,9 +1458,24 @@ function History({
           </a>
         ))}
       </div>
+      {heldTxids > 0 && (
+        <p className="muted small" style={{ marginTop: 14 }}>
+          {heldTxids} outgoing transaction{heldTxids === 1 ? "" : "s"} in flight — {trimFc(heldZkas.toFixed(8))} ZKAS
+          temporarily held until it confirms (returned automatically within ~1 hour if it never does).
+        </p>
+      )}
       <p className="muted small" style={{ marginTop: 14 }}>
         Recovered from the chain by your viewing key — only this wallet can see any of it. Tap a row to view it on the
-        explorer (which shows the shielded transaction, not its contents).
+        explorer (which shows the shielded transaction, not its contents).{" "}
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            setHistory(false);
+          }}
+        >
+          Turn history off & erase
+        </a>
       </p>
     </div>
   );
