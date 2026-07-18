@@ -407,8 +407,72 @@ function pendingOutFc(status: Status | null): number {
   return status?.pending_out_fc != null ? parseFloat(status.pending_out_fc) : 0;
 }
 
+/// Hold a transient flag ON for at least `minMs` once it shows.
+///
+/// The status poll runs every second and the daemon legitimately flips these
+/// states on and off as blocks land, so a notice could appear and vanish inside
+/// one frame — the balance line visibly flickering between "synced", "syncing"
+/// and "updating…" several times in a few seconds. The upstream hysteresis only
+/// delays *entry* (don't show a blip); this guarantees *dwell* (once shown, stay
+/// long enough to read). Together: a state must persist to appear, and must
+/// linger to disappear, so the line changes at most every few seconds.
+function useMinDwell(on: boolean, minMs = 4000) {
+  const [shown, setShown] = useState(on);
+  const shownAt = useRef(0);
+  useEffect(() => {
+    if (on) {
+      if (!shown) {
+        shownAt.current = Date.now();
+        setShown(true);
+      }
+      return;
+    }
+    if (!shown) return;
+    const held = Date.now() - shownAt.current;
+    if (held >= minMs) {
+      setShown(false);
+      return;
+    }
+    const t = setTimeout(() => setShown(false), minMs - held);
+    return () => clearTimeout(t);
+  }, [on, shown, minMs]);
+  return shown;
+}
+
+/// [`useMinDwell`] for a money figure: while the notice is held open past the
+/// value going to zero, keep showing the last real amount — otherwise the dwell
+/// would render "0 ZKAS incoming" for its final seconds.
+function useHeldAmount(amount: number, minMs = 4000) {
+  const on = amount > 0.00000001;
+  const shown = useMinDwell(on, minMs);
+  const last = useRef(amount);
+  useEffect(() => {
+    if (on) last.current = amount;
+  }, [on, amount]);
+  return { shown, amount: on ? amount : last.current };
+}
+
 function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
-  const syncing = !status.synced;
+  // NB: every hook here runs BEFORE the `restoring` early return below. That
+  // return comes and goes with the daemon's scan state, so a hook placed after
+  // it would change hook order between renders — React's "rendered fewer hooks
+  // than expected" crash, on exactly the path a user hits after a restart.
+  const syncing = useMinDwell(!status.synced, 5000);
+  const warming = useMinDwell(!!status.warming, 6000);
+  // The displayed balance folds in what the CHAIN has already confirmed but the
+  // wallet's tree has not ingested yet (the daemon's 0-conf preview of the
+  // unsettled window), so a received payment lands here seconds after it is mined.
+  const pendingIn = pendingInFc(status);
+  const pendingOut = pendingOutFc(status);
+  // Outflow is known two ways: this device's own record of a just-broadcast send,
+  // and the daemon seeing our nullifier on-chain. Take the larger rather than the
+  // sum — they describe the same spend, and adding them would debit it twice.
+  const localOut = pendingTotal(txs);
+  const outflow = Math.max(pendingOut, localOut);
+  // Both money notices dwell, so a value that blinks to zero between polls does
+  // not blink the whole line out of the layout under the user's eyes.
+  const inNotice = useHeldAmount(pendingIn, 4000);
+  const outNotice = useHeldAmount(outflow, 4000);
   const pct =
     status.chain_len > 0 ? Math.min(100, Math.round((status.scanned_blocks / status.chain_len) * 100)) : 0;
   // The daemon has not rebuilt this wallet's state yet — it reports zeros because it
@@ -434,16 +498,6 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
       </div>
     );
   }
-  // The displayed balance folds in what the CHAIN has already confirmed but the
-  // wallet's tree has not ingested yet (the daemon's 0-conf preview of the unsettled
-  // window), so a received payment lands here seconds after it is mined.
-  const pendingIn = pendingInFc(status);
-  const pendingOut = pendingOutFc(status);
-  // Outflow is known two ways: this device's own record of a just-broadcast send, and
-  // the daemon seeing our nullifier on-chain. Take the larger rather than the sum —
-  // they describe the same spend, and adding them would debit it twice.
-  const localOut = pendingTotal(txs);
-  const outflow = Math.max(pendingOut, localOut);
   const pendingCount = txs.filter((t) => t.pending).length;
   const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") + pendingIn - outflow);
   // Spendable now vs still-maturing (shielded anchor depth ~10 min). Incoming 0-conf
@@ -466,7 +520,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
                 work is ingesting the last few blocks, so say what's happening. */}
             {pct >= 99 ? "finalizing sync…" : `syncing ${pct}%`}
           </>
-        ) : status.warming ? (
+        ) : warming ? (
           <>
             {" · "}synced{" · "}
             <span className="spin" style={{ width: 11, height: 11 }} /> <span className="warmtag">speeding up sends</span>
@@ -475,17 +529,17 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           " · synced"
         )}
       </div>
-      {!syncing && status.warming && (
+      {!syncing && warming && (
         <div className="sub warmnote">⚡ Getting up to speed (~1–2 min) — after this, sends take seconds.</div>
       )}
-      {pendingIn > 0.00000001 && (
+      {inNotice.shown && (
         <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
-          +{trimFc(pendingIn.toFixed(8))} ZKAS incoming — confirmed on-chain, settling into your wallet
+          +{trimFc(inNotice.amount.toFixed(8))} ZKAS incoming — confirmed on-chain, settling into your wallet
         </div>
       )}
-      {outflow > 0.00000001 && (
+      {outNotice.shown && (
         <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
-          {trimFc(outflow.toFixed(8))} ZKAS{" "}
+          {trimFc(outNotice.amount.toFixed(8))} ZKAS{" "}
           {pendingOut > 0 || txs.some((t) => t.pending && (t.confs ?? 0) >= 1)
             ? "sent — confirmed on-chain, updating your balance shortly"
             : `sent — broadcast${pendingCount > 1 ? ` · ${pendingCount} sends` : ""} (0-conf)`}
