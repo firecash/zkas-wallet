@@ -19,15 +19,18 @@ const PER_WALLET_PREFIXES = [
   "contacts_", // address book
   "local_txs_", // on-device record of sends
   "last_known_", // balance snapshot shown while the daemon reloads
+  "app_lock_v1_", // legacy per-wallet lock record (superseded by the device lock)
 ];
 
 /**
- * Global keys that belong to whatever wallet is current. The app lock is the
- * dangerous one: it is NOT token-scoped, and it holds the sealed seed of the
- * wallet being removed. Left behind, the app boots into "Unlock ZKas" demanding
- * a PIN for a wallet that no longer exists.
+ * Keys that are global and must be left ALONE here.
+ *
+ * `app_lock_v2` is the device lock: one record holding the sealed seed of EVERY
+ * wallet. Deleting it while removing one wallet would destroy the keys of all
+ * the others — the caller drops just the removed wallet's entry via
+ * `forgetWalletLock`. Listed explicitly so nobody adds it to the sweep below.
  */
-const GLOBAL_WALLET_KEYS = ["app_lock_v1"];
+const NEVER_TOUCH = ["app_lock_v2"];
 
 /**
  * Erase every trace of the wallet identified by `token` from this device's
@@ -41,7 +44,7 @@ const GLOBAL_WALLET_KEYS = ["app_lock_v1"];
 export function wipeWalletState(token: string | null): void {
   const t = token || localStorage.getItem("wallet_token") || "default";
   for (const p of PER_WALLET_PREFIXES) localStorage.removeItem(p + t);
-  for (const k of GLOBAL_WALLET_KEYS) localStorage.removeItem(k);
+  void NEVER_TOUCH; // documentation of intent; see the comment above
 
   // QR images are cached per ADDRESS, and the address of a wallet being removed
   // is not worth reconstructing just to delete one entry — sweep the prefix.

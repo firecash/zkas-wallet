@@ -53,7 +53,7 @@ import {
   updateContact,
   type Contact,
 } from "./contacts";
-import { disableLock, enableLock, isLockEnabled, isUnlocked, lockKind, unlockedDeviceSeed } from "./applock";
+import { disableLock, enableLock, forgetWalletLock, isLockEnabled, lockKind, sealNewSeed, unlockedDeviceSeed } from "./applock";
 import logo from "./assets/zkas-logo.png";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -160,13 +160,15 @@ const EXPLORER = "https://explorer.zkas.info";
 // or which network the daemon/signer actually use.
 const NET_LABEL = "testnet";
 
-type Tab = "receive" | "send" | "history" | "sign" | "verify" | "settings";
+type Tab = "receive" | "send" | "history" | "signatures" | "settings";
 const TAB_LABEL: Record<Tab, string> = {
   receive: "Receive",
   send: "Send",
   history: "History",
-  sign: "Sign",
-  verify: "Verify",
+  // Signing and verifying are two halves of one idea — proving control of an
+  // address — and split across two tabs they each looked like a whole feature
+  // while together they crowded out the three that matter.
+  signatures: "Signatures",
   settings: "⚙",
 };
 
@@ -184,7 +186,7 @@ const ROOMY = () => isDesktop() || (typeof window !== "undefined" && window.inne
 // reads like a debug console rather than a wallet. Everything that is not
 // receiving, sending, or looking at history now lives behind the gear.
 const TABS: Tab[] = ROOMY()
-  ? ["receive", "send", "history", "sign", "verify", "settings"]
+  ? ["receive", "send", "history", "signatures", "settings"]
   : ["receive", "send", "history", "settings"];
 
 /// How many consecutive "no wallet" answers to ride out before believing them.
@@ -444,8 +446,7 @@ export default function App() {
                 }}
               />
             )}
-            {tab === "sign" && <Sign status={status} />}
-            {tab === "verify" && <Verify />}
+            {tab === "signatures" && <Signatures status={status} />}
             {tab === "settings" && <SettingsPane status={status} />}
           </div>
         </>
@@ -476,10 +477,16 @@ export function getDeviceSeed(): string {
 }
 export function setDeviceSeed(seed: string) {
   if (!seed) return;
-  // A locked device must not gain a cleartext copy: re-seal instead. The caller
-  // (import/restore) is holding the seed legitimately, but storing it in the
-  // clear would silently undo the lock.
-  if (isLockEnabled()) return;
+  // With the lock on, keep the seed SEALED rather than in the clear — and
+  // never simply drop it. This used to `return` early, so creating, importing
+  // or restoring a wallet while locked stored nothing at all: a wallet that
+  // could not spend and whose key was gone on reload. Losing a key is a worse
+  // outcome than any it was protecting against.
+  if (isLockEnabled()) {
+    const token = localStorage.getItem("wallet_token") || "default";
+    void sealNewSeed(token, seed);
+    return;
+  }
   localStorage.setItem(deviceSeedKey(), seed);
 }
 
@@ -1246,7 +1253,7 @@ function SettingsPane({ status }: { status: Status }) {
         <DaemonSetting />
       )}
       <AppearanceCard />
-      {!ROOMY() && <ToolsCard status={status} />}
+      {!ROOMY() && <Signatures status={status} />}
       <SwitchWallet />
       <AboutCard />
     </>
@@ -1279,41 +1286,35 @@ function AppearanceCard() {
   );
 }
 
-/// Message signing and verification: real capabilities, but ones a person needs
-/// a handful of times ever. They used to occupy two of five primary tabs.
-function ToolsCard({ status }: { status: Status }) {
-  const [open, setOpen] = useState<"none" | "sign" | "verify">("none");
+/// Signing and verifying, together.
+///
+/// They are one subject — proving that whoever controls an address said
+/// something — and a person arrives wanting one side or the other, never both at
+/// once. Two tabs made each look like a separate feature and cost a slot the
+/// wallet needed for money.
+function Signatures({ status }: { status: Status | null }) {
+  const [mode, setMode] = useState<"sign" | "verify">("sign");
   return (
     <div className="card">
-      <h2>Tools</h2>
+      <h2>Signatures</h2>
       <p className="muted small" style={{ marginTop: 0 }}>
-        Prove you control your address without spending, or check someone else's proof.
+        Prove you control your address without spending from it, or check somebody else's proof.
       </p>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button className={"chip" + (open === "sign" ? " on" : "")} onClick={() => setOpen(open === "sign" ? "none" : "sign")}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+        <button className={"chip" + (mode === "sign" ? " on" : "")} onClick={() => setMode("sign")}>
           Sign a message
         </button>
-        <button
-          className={"chip" + (open === "verify" ? " on" : "")}
-          onClick={() => setOpen(open === "verify" ? "none" : "verify")}
-        >
+        <button className={"chip" + (mode === "verify" ? " on" : "")} onClick={() => setMode("verify")}>
           Verify a signature
         </button>
       </div>
-      {open === "sign" && (
-        <div style={{ marginTop: 14 }}>
-          <Sign status={status} embedded />
-        </div>
-      )}
-      {open === "verify" && (
-        <div style={{ marginTop: 14 }}>
-          <Verify embedded />
-        </div>
-      )}
+      {mode === "sign" ? <Sign status={status} embedded /> : <Verify embedded />}
     </div>
   );
 }
 
+/// Message signing and verification: real capabilities, but ones a person needs
+/// a handful of times ever. They used to occupy two of five primary tabs.
 function AboutCard() {
   return (
     <div className="card">
@@ -2894,13 +2895,12 @@ function AppLockSetting() {
 
   const enable = async () => {
     setErr("");
-    const seed = getDeviceSeed();
-    if (!seed) return setErr("This device holds no spending key to protect.");
     if (secret.length < minLen) return setErr(`Use at least ${minLen} ${kind === "pin" ? "digits" : "characters"}.`);
     if (secret !== confirmSecret) return setErr("The two entries do not match.");
     setBusy(true);
     try {
-      await enableLock(seed, secret, kind);
+      // Seals EVERY wallet on this device, not just the active one.
+      await enableLock(secret, kind);
       setEnabled(true);
       setMode("idle");
       setSecret("");
@@ -2916,13 +2916,10 @@ function AppLockSetting() {
     setErr("");
     setBusy(true);
     try {
-      const seed = await disableLock(secret);
-      if (!seed) {
-        setErr("That does not unlock this wallet.");
+      if (!(await disableLock(secret))) {
+        setErr("That passphrase does not unlock this device.");
         return;
       }
-      // Restore normal on-device storage now that nothing is sealing it.
-      setDeviceSeed(seed);
       setEnabled(false);
       setMode("idle");
       setSecret("");
@@ -2939,8 +2936,8 @@ function AppLockSetting() {
       {mode === "enable" ? (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Choose what to unlock with. This encrypts your spending key on this device — while locked, the app holds
-            nothing that can spend.
+            Choose what to unlock with. This encrypts the key of <b>every wallet</b> on this device and asks for it
+            when the app opens — while locked, this device holds nothing that can spend any of them.
           </p>
           <div style={{ display: "flex", gap: 14, margin: "8px 0 4px" }}>
             <label className="choice" style={{ margin: 0 }}>
@@ -3013,8 +3010,8 @@ function AppLockSetting() {
       ) : enabled ? (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            <b>On.</b> Your spending key is encrypted on this device and unlocked with your{" "}
-            {lockKind() === "pin" ? "PIN" : "passphrase"}. The app re-locks itself after a few minutes in the
+            <b>On.</b> Every wallet's key on this device is encrypted, and the app asks for your{" "}
+            {lockKind() === "pin" ? "PIN" : "passphrase"} to open. It re-locks itself after a few minutes in the
             background.
           </p>
           <button className="btn ghost" onClick={() => setMode("disable")}>
@@ -3024,8 +3021,9 @@ function AppLockSetting() {
       ) : (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Your spending key is stored on this device <b>unencrypted</b>. Turn on a PIN or passphrase and it is
-            encrypted at rest — so someone holding this device, or a backup of its data, cannot spend from it.
+            Your wallet keys are stored on this device <b>unencrypted</b>. Turn on a PIN or passphrase and every one
+            of them is encrypted at rest, and the app asks for it on open — so someone holding this device, or a
+            backup of its data, cannot spend from it.
           </p>
           <button className="btn" onClick={() => setMode("enable")}>
             Set a PIN or passphrase
@@ -3147,6 +3145,7 @@ function SwitchWallet() {
               // we must not delete server state on a shared daemon.
               if (isDesktop()) await forgetWallet();
               wipeWalletState(w.token);
+              forgetWalletLock(w.token);
               unregisterWallet(w.token);
               // Fall back to another wallet if one exists, rather than dumping the
               // user into onboarding when they still have wallets left.
