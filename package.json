@@ -2,7 +2,7 @@
   "name": "zkas-wallet",
   "private": true,
   "version": "0.1.0",
-  "description": "Shielded web wallet for ZKas — a thin React/Vite SPA over the zkas-walletd daemon.",
+  "description": "Shielded web wallet for ZKas \u2014 a thin React/Vite SPA over the zkas-walletd daemon.",
   "license": "ISC",
   "homepage": "https://wallet.zkas.info",
   "repository": {
@@ -18,7 +18,8 @@
     "mobile:add:ios": "cap add ios",
     "mobile:sync": "npm run build && cap sync",
     "mobile:android": "npm run build && cap sync android && cap open android",
-    "mobile:ios": "npm run build && cap sync ios && cap open ios"
+    "mobile:ios": "npm run build && cap sync ios && cap open ios",
+    "test": "vitest run"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",
@@ -34,11 +35,16 @@
   "devDependencies": {
     "@capacitor/cli": "^6.2.0",
     "@tauri-apps/cli": "^2.11.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^29.1.1",
     "typescript": "^5.7.2",
-    "vite": "^5.4.15"
+    "vite": "^5.4.15",
+    "vitest": "^2.1.9"
   }
 }

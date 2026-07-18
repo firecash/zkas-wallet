@@ -189,6 +189,48 @@ const TABS: Tab[] = ROOMY()
   ? ["receive", "send", "history", "signatures", "settings"]
   : ["receive", "send", "history", "settings"];
 
+/// Do two status snapshots differ in anything the UI renders?
+///
+/// Deliberately field-by-field rather than a deep compare: the daemon's answer
+/// carries liveness fields (`updated_unix`, and scan counters that tick even when
+/// the view is identical) which change every second and mean nothing on screen.
+/// Comparing those would defeat the purpose.
+function sameStatus(a: Status, b: Status): boolean {
+  return (
+    a.has_wallet === b.has_wallet &&
+    a.address === b.address &&
+    a.synced === b.synced &&
+    a.warming === b.warming &&
+    a.node_connected === b.node_connected &&
+    a.balance_fc === b.balance_fc &&
+    a.spendable_fc === b.spendable_fc &&
+    a.maturing_fc === b.maturing_fc &&
+    a.pending_in_fc === b.pending_in_fc &&
+    a.pending_out_fc === b.pending_out_fc &&
+    a.note_count === b.note_count &&
+    a.error === b.error &&
+    // Scan progress only matters while it is being shown as progress.
+    (a.synced ? true : a.scanned_blocks === b.scanned_blocks && a.chain_len === b.chain_len)
+  );
+}
+
+/// Same idea for the on-device send list: identity, confirmations and pending
+/// state are what the History rows show.
+function sameTxs(a: LocalTx[], b: LocalTx[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((x, i) => x.txid === b[i].txid && x.confs === b[i].confs && x.pending === b[i].pending);
+}
+
+/// Last snapshot written, so an unchanged balance does not rewrite localStorage
+/// once a second for the lifetime of the app.
+let lastSnapshotKey = "";
+function snapshotDirty(s: Status): boolean {
+  const key = `${s.balance_fc}|${s.spendable_fc}|${s.maturing_fc}|${s.note_count}`;
+  if (key === lastSnapshotKey) return false;
+  lastSnapshotKey = key;
+  return true;
+}
+
 /// How many consecutive "no wallet" answers to ride out before believing them.
 /// ~10s at the 1s poll: long enough to cover a daemon restart, short enough that
 /// a real removal takes effect while the user is still looking at the screen.
@@ -293,9 +335,21 @@ export default function App() {
         if (s.has_wallet && s.address) missingPolls.current = 0;
         else missingPolls.current += 1;
         const transient = missingPolls.current <= MISSING_TOLERANCE;
-        return prev?.has_wallet && (!s.has_wallet || !s.address) && transient
-          ? { ...stable, has_wallet: true, address: s.address ?? prev.address }
-          : stable;
+        const next =
+          prev?.has_wallet && (!s.has_wallet || !s.address) && transient
+            ? { ...stable, has_wallet: true, address: s.address ?? prev.address }
+            : stable;
+        // Return the PREVIOUS object when nothing meaningful moved, so React
+        // bails out instead of re-rendering.
+        //
+        // This poll runs every second and used to hand back a fresh object every
+        // time, re-rendering the entire tree 60×/minute for a wallet that had not
+        // changed. On Android that dismisses the native paste bubble before the
+        // user can tap it (reported: "I can't paste my seed, the Paste button
+        // disappears") and interrupts momentum scrolling. `updated_unix` and other
+        // liveness fields tick constantly and are deliberately not compared —
+        // only what is actually displayed.
+        return prev && sameStatus(prev, next) ? prev : next;
       });
       saveStatusCache(s);
       setReachable(true);
@@ -306,7 +360,7 @@ export default function App() {
         const ct = await chainTx(t.txid);
         if (ct?.confirmations != null) list = applyChainStatus(t.txid, ct.confirmations);
       }
-      setTxs(list);
+      setTxs((prev) => (sameTxs(prev, list) ? prev : list));
       // Announce money ARRIVING. A payment landing is the most important event a
       // wallet has, and on a shielded chain the wallet is the only thing that can
       // report it — no explorer can see it, no email arrives. Compared against the
@@ -330,7 +384,7 @@ export default function App() {
         const t = localStorage.getItem("wallet_token");
         if (t) ensureRegistered(t, s.address);
       }
-      if (s.has_wallet && s.scanned_blocks > 0) {
+      if (s.has_wallet && s.scanned_blocks > 0 && snapshotDirty(s)) {
         saveSnapshot({
           balanceFc: parseFloat(s.balance_fc || "0"),
           spendableFc: spendableFc(s),
