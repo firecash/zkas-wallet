@@ -455,6 +455,82 @@ function useMinDwell(on: boolean, minMs = 4000) {
   return shown;
 }
 
+/// In-app confirmation dialog.
+///
+/// NOT `window.confirm`: inside the desktop shell's macOS WKWebView the native
+/// JS dialogs do not behave like a browser's — `confirm()` comes back false
+/// without ever showing a panel, so every action guarded by it silently did
+/// nothing (reported live: "I clicked turn history off and nothing happens").
+/// Rendering our own dialog also keeps these prompts styled like the rest of the
+/// wallet instead of an OS alert.
+function ConfirmDialog({
+  title,
+  body,
+  confirmLabel,
+  danger,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  body: string;
+  confirmLabel: string;
+  danger?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="modalwrap" onClick={onCancel}>
+      <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>{title}</h2>
+        <p className="muted small">{body}</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+          <button className={danger ? "btn" : "btn"} onClick={onConfirm}>
+            {confirmLabel}
+          </button>
+          <button className="btn ghost" onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/// Show a flag only once it has held for `delayMs` — the mirror of
+/// [`useMinDwell`]. Used for whole-view switches, where reacting to a single
+/// poll would swap the entire card out and back.
+function useDelayedOn(on: boolean, delayMs: number) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (!on) {
+      setShown(false);
+      return;
+    }
+    if (shown) return;
+    const t = setTimeout(() => setShown(true), delayMs);
+    return () => clearTimeout(t);
+  }, [on, shown, delayMs]);
+  return shown && on;
+}
+
+/// Latch a flag ON until the caller resets it.
+///
+/// Used for "this send is confirmed": the daemon's view of a pending spend can
+/// waver between polls (the nullifier is seen, then a status races a sync pass),
+/// but a confirmation is not something that un-happens. Without the latch the
+/// message under the outflow line alternated between "confirmed on-chain,
+/// updating your balance shortly" and "broadcast (0-conf)" once a second, which
+/// is what made "updating…" appear to strobe even after the line itself was
+/// given a dwell.
+function useLatch(on: boolean, reset: boolean) {
+  const [latched, setLatched] = useState(false);
+  useEffect(() => {
+    if (reset) setLatched(false);
+    else if (on) setLatched(true);
+  }, [on, reset]);
+  return latched && !reset;
+}
+
 /// [`useMinDwell`] for a money figure: while the notice is held open past the
 /// value going to zero, keep showing the last real amount — otherwise the dwell
 /// would render "0 ZKAS incoming" for its final seconds.
@@ -487,14 +563,24 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   const outflow = Math.max(pendingOut, localOut);
   // Both money notices dwell, so a value that blinks to zero between polls does
   // not blink the whole line out of the layout under the user's eyes.
-  const inNotice = useHeldAmount(pendingIn, 4000);
-  const outNotice = useHeldAmount(outflow, 4000);
+  // 10s: long enough that a notice reads as a state, not a blink.
+  const inNotice = useHeldAmount(pendingIn, 10_000);
+  const outNotice = useHeldAmount(outflow, 10_000);
+  // Whether the outgoing send has been seen on-chain. Latched for as long as the
+  // notice is up, so the wording cannot oscillate under the user.
+  const outConfirmed = useLatch(
+    pendingOut > 0 || txs.some((t) => t.pending && (t.confs ?? 0) >= 1),
+    !outNotice.shown,
+  );
   const pct =
     status.chain_len > 0 ? Math.min(100, Math.round((status.scanned_blocks / status.chain_len) * 100)) : 0;
   // The daemon has not rebuilt this wallet's state yet — it reports zeros because it
   // does not KNOW the balance, not because the balance is zero. Never render those
   // zeros as a balance; fall back to the last figure it gave us.
-  const restoring = status.scanned_blocks === 0 && !status.synced;
+  // Require this to hold for 2s before replacing the whole balance card: a
+  // single poll answering scanned_blocks:0 (a status racing a sync pass) must
+  // not swap the user's balance out for a restore notice and back again.
+  const restoring = useDelayedOn(status.scanned_blocks === 0 && !status.synced, 2000);
   const snap = restoring ? loadSnapshot() : null;
   if (restoring) {
     return (
@@ -556,7 +642,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
       {outNotice.shown && (
         <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
           {trimFc(outNotice.amount.toFixed(8))} ZKAS{" "}
-          {pendingOut > 0 || txs.some((t) => t.pending && (t.confs ?? 0) >= 1)
+          {outConfirmed
             ? "sent — confirmed on-chain, updating your balance shortly"
             : `sent — broadcast${pendingCount > 1 ? ` · ${pendingCount} sends` : ""} (0-conf)`}
         </div>
@@ -756,13 +842,14 @@ function RescanButton({ label, hint }: { label: string; hint: string }) {
     };
   }, []);
 
+  // `ask` holds the pending action (its value = "also enable history") until the
+  // user confirms in-app.
+  const [ask, setAsk] = useState<boolean | null>(null);
+  const [err, setErr] = useState("");
+
   const run = async (alsoEnableHistory: boolean) => {
-    const scope = alsoEnableHistory
-      ? "Rescan will re-read the chain from your wallet's birthday, recovering your balance AND rebuilding your transaction history from here on."
-      : historyOn === false
-        ? "Rescan will re-read the chain from your wallet's birthday and recover your balance. History is off, so no transaction list is produced."
-        : "Rescan will re-read the chain from your wallet's birthday to rebuild history and recover anything missing.";
-    if (!confirm(scope + " Takes a minute or two — the balance shows as syncing meanwhile. Continue?")) return;
+    setAsk(null);
+    setErr("");
     setBusy(true);
     try {
       if (alsoEnableHistory) {
@@ -773,11 +860,19 @@ function RescanButton({ label, hint }: { label: string; hint: string }) {
       setDone(true);
       setTimeout(() => setDone(false), 6000);
     } catch (e) {
-      alert((e as Error).message);
+      setErr((e as Error).message);
     } finally {
       setBusy(false);
     }
   };
+
+  const scopeText = (alsoEnableHistory: boolean) =>
+    (alsoEnableHistory
+      ? "Rescan will re-read the chain from your wallet's birthday, recovering your balance AND rebuilding your transaction history from here on."
+      : historyOn === false
+        ? "Rescan will re-read the chain from your wallet's birthday and recover your balance. History is off, so no transaction list is produced."
+        : "Rescan will re-read the chain from your wallet's birthday to rebuild history and recover anything missing.") +
+    " Takes a minute or two — the balance shows as syncing meanwhile.";
 
   const offHint = "Recovers your balance from the chain. History is off, so this rebuilds funds — not a transaction list.";
   return (
@@ -789,15 +884,25 @@ function RescanButton({ label, hint }: { label: string; hint: string }) {
         </div>
       </div>
       <div className="rescanbox-actions">
-        <button className="btn ghost" onClick={() => run(false)} disabled={busy}>
+        <button className="btn ghost" onClick={() => setAsk(false)} disabled={busy}>
           {busy ? "Starting…" : "↻ Rescan"}
         </button>
         {historyOn === false && (
-          <button className="btn ghost small" onClick={() => run(true)} disabled={busy}>
+          <button className="btn ghost small" onClick={() => setAsk(true)} disabled={busy}>
             Enable history & recover
           </button>
         )}
       </div>
+      {err && <div className="msg err">{err}</div>}
+      {ask !== null && (
+        <ConfirmDialog
+          title={ask ? "Enable history & recover" : "Rescan wallet"}
+          body={scopeText(ask)}
+          confirmLabel={ask ? "Enable & rescan" : "Rescan"}
+          onConfirm={() => run(ask)}
+          onCancel={() => setAsk(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1453,6 +1558,8 @@ function History({
   // True from the moment history is enabled until the recovery scan produces
   // rows — so the tab explains the wait instead of looking empty and broken.
   const [recovering, setRecovering] = useState(false);
+  const [askDisable, setAskDisable] = useState(false);
+  const [err, setErr] = useState("");
   useEffect(() => {
     if (recovering && (chain?.rows.length ?? 0) > 0) setRecovering(false);
   }, [recovering, chain]);
@@ -1475,11 +1582,8 @@ function History({
   // payment arrives — the flag looks broken. The rescan re-reads the chain from
   // the wallet's birthday and recovers everything the keys can still derive.
   const setHistory = async (on: boolean) => {
-    if (
-      !on &&
-      !confirm("Turn history off? The stored record is erased immediately. Your balance and funds are not affected.")
-    )
-      return;
+    setAskDisable(false);
+    setErr("");
     setBusy(true);
     try {
       await api.setHistoryEnabled(on);
@@ -1489,7 +1593,7 @@ function History({
       }
       setChain(await api.history());
     } catch (e) {
-      alert((e as Error).message);
+      setErr((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -1553,7 +1657,7 @@ function History({
               : "Nothing yet. Mints, payments you receive, and sends from this wallet all show up here — recovered from the chain itself, so this list follows your seed, not this device."}
         </p>
         {chain !== null && !recovering && (
-          <button className="btn ghost small" onClick={() => setHistory(false)} disabled={busy}>
+          <button className="btn ghost small" onClick={() => setAskDisable(true)} disabled={busy}>
             Turn history off
           </button>
         )}
@@ -1641,12 +1745,23 @@ function History({
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            setHistory(false);
+            setAskDisable(true);
           }}
         >
           Turn history off & erase
         </a>
       </p>
+      {err && <div className="msg err">{err}</div>}
+      {askDisable && (
+        <ConfirmDialog
+          title="Turn history off?"
+          body="The stored transaction record is erased from this wallet immediately. Your balance and funds are not affected, and payments stay shielded on-chain either way."
+          confirmLabel="Turn off & erase"
+          danger
+          onConfirm={() => setHistory(false)}
+          onCancel={() => setAskDisable(false)}
+        />
+      )}
     </div>
   );
 }
@@ -1716,16 +1831,24 @@ function DaemonSetting() {
 /// passphrase, so what stays on disk cannot be spent.
 function VaultSetting() {
   const [state, setState] = useState<string | null>(null);
+  const [askLock, setAskLock] = useState(false);
   useEffect(() => {
     vaultStatus()
       .then((v) => setState(v.state))
       .catch(() => {});
   }, []);
   if (state === null) return null;
+
+  // Watch-only wallets hold no spending key: nothing to encrypt, nothing to back
+  // up. Every other state gets the backup option — including an unencrypted
+  // wallet, whose seed is exactly the one most worth getting a copy of.
+  const watchOnly = state === "watchonly";
+
   return (
     <div className="card">
-      <h2>Security</h2>
-      {state === "plaintext" ? (
+      <h2>Security &amp; backup</h2>
+
+      {state === "plaintext" && (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
             This wallet's seed is stored <b>unencrypted</b> on this computer — anyone who copies the file can spend your
@@ -1743,29 +1866,42 @@ function VaultSetting() {
           >
             Set a passphrase
           </button>
+          <div style={{ height: 1, background: "var(--border)", margin: "18px 0" }} />
         </>
-      ) : state === "watchonly" ? (
-        <p className="muted small" style={{ marginTop: 0 }}>
-          Watch-only wallet — there is no spending key on this computer to encrypt.
-        </p>
-      ) : (
+      )}
+
+      {state === "encrypted" && (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
             Your seed is encrypted on this device. Locking stops the wallet daemon and forgets your passphrase until you
             enter it again — do this when you step away.
           </p>
-          <button
-            className="btn ghost"
-            onClick={async () => {
-              await lockVault().catch(() => {});
-              location.reload();
-            }}
-          >
+          <button className="btn ghost" onClick={() => setAskLock(true)}>
             Lock wallet
           </button>
           <div style={{ height: 1, background: "var(--border)", margin: "18px 0" }} />
-          <BackupWallet />
         </>
+      )}
+
+      {watchOnly ? (
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Watch-only wallet — there is no spending key on this computer to encrypt or back up.
+        </p>
+      ) : (
+        <BackupWallet />
+      )}
+
+      {askLock && (
+        <ConfirmDialog
+          title="Lock wallet?"
+          body="The wallet daemon stops and your passphrase is forgotten. You will need it again to unlock. Your funds are not affected."
+          confirmLabel="Lock"
+          onConfirm={async () => {
+            await lockVault().catch(() => {});
+            location.reload();
+          }}
+          onCancel={() => setAskLock(false)}
+        />
       )}
     </div>
   );

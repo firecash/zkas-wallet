@@ -622,3 +622,23 @@ select { appearance: none; cursor: pointer; }
 .lockcard input[type="password"] {
   width: 100%;
 }
+
+/* In-app dialog. Native window.confirm/alert are unusable inside the desktop
+   shell's macOS webview (confirm returns false without ever showing a panel),
+   so every destructive prompt renders here instead. */
+.modalwrap {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.modalcard {
+  width: 100%;
+  max-width: 420px;
+  margin: 0;
+}
