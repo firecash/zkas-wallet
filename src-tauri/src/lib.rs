@@ -519,17 +519,18 @@ pub fn run() {
                     log::warn!("local node not started: {e}");
                 }
             }
-            // NB: the daemon is NOT started here. It only runs once the user has
-            // supplied the passphrase (`unlock` / `set_passphrase`), because it
-            // cannot decrypt the seed without one — and a wallet that boots
-            // straight into a spendable state is a wallet a stolen laptop spends.
-            // The one exception is a legacy cleartext wallet, which the UI
-            // unlocks with an empty passphrase and then prompts to encrypt.
-            // Start now for the states that need no passphrase to load a wallet:
-            // a legacy cleartext wallet, and a WATCH-ONLY one (the non-custodial
-            // default — the daemon holds only a viewing key, the seed lives in
-            // the app). Only an encrypted seed file must wait for `unlock`.
-            if matches!(engine.vault(), zkas_walletd::VaultState::Plaintext | zkas_walletd::VaultState::WatchOnly) {
+            // Start the engine unless there is an ENCRYPTED seed file that needs a
+            // passphrase first. Everything else — no wallet yet, a legacy cleartext
+            // wallet, or the watch-only default where the daemon holds only a
+            // viewing key — needs no secret to run and must not be gated.
+            //
+            // This previously listed only Plaintext and WatchOnly, which left
+            // `Missing` out and so BROKE EVERY FRESH INSTALL: with no wallet the
+            // engine never started, the UI had nothing to talk to, and the app
+            // showed "the wallet engine didn't start" with no way to reach
+            // onboarding and create one. A device with no wallet has no secret to
+            // protect and is exactly when the engine is needed most.
+            if engine.vault() != zkas_walletd::VaultState::Encrypted {
                 engine.start_walletd();
             }
             app.manage(Mutex::new(engine));
