@@ -1,3 +1,7 @@
+/* Design tokens.
+   Dark is the wallet's identity and stays the default, but the app now honours a
+   light preference too: a wallet is opened in daylight, in bed, on a laptop in a
+   cafe, and forcing one contrast on all of that is a comfort tax, not a brand. */
 :root {
   --bg: #0b0b0f;
   --surface: #16161d;
@@ -7,10 +11,49 @@
   --muted: #9090a0;
   --ember: #17d6be;
   --ember-hover: #3ee6d1;
+  --ember-soft: rgba(23, 214, 190, 0.12);
   --good: #35c46a;
   --bad: #f2604a;
   --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   --mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --glow-1: rgba(23, 214, 190, 0.08);
+  --glow-2: rgba(23, 214, 190, 0.05);
+}
+
+/* Light theme: same hues, inverted surfaces. Applied when the OS asks for it,
+   unless the user has explicitly chosen a theme in the app (data-theme wins). */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f7f7fa;
+    --surface: #ffffff;
+    --surface-2: #f1f1f6;
+    --border: #e0e0e8;
+    --ink: #15151c;
+    --muted: #6a6a7a;
+    --ember: #0a9d8b;
+    --ember-hover: #0bb8a2;
+    --ember-soft: rgba(10, 157, 139, 0.1);
+    --shadow: 0 10px 30px rgba(20, 20, 40, 0.08);
+    --glow-1: rgba(10, 157, 139, 0.07);
+    --glow-2: rgba(10, 157, 139, 0.04);
+  }
+}
+
+:root[data-theme="light"] {
+  --bg: #f7f7fa;
+  --surface: #ffffff;
+  --surface-2: #f1f1f6;
+  --border: #e0e0e8;
+  --ink: #15151c;
+  --muted: #6a6a7a;
+  --ember: #0a9d8b;
+  --ember-hover: #0bb8a2;
+  --ember-soft: rgba(10, 157, 139, 0.1);
+  --shadow: 0 10px 30px rgba(20, 20, 40, 0.08);
+  --glow-1: rgba(10, 157, 139, 0.07);
+  --glow-2: rgba(10, 157, 139, 0.04);
 }
 
 * { box-sizing: border-box; }
@@ -35,8 +78,8 @@ html, body {
   padding: 0;
   background-color: var(--bg);
   background-image:
-    radial-gradient(60rem 60rem at 8% -10%, rgba(23, 214, 190, 0.08), transparent 60%),
-    radial-gradient(50rem 50rem at 100% 0%, rgba(23, 214, 190, 0.05), transparent 55%);
+    radial-gradient(60rem 60rem at 8% -10%, var(--glow-1), transparent 60%),
+    radial-gradient(50rem 50rem at 100% 0%, var(--glow-2), transparent 55%);
   background-attachment: fixed;
   color: var(--ink);
   font-family: Rubik, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -656,4 +699,137 @@ select { appearance: none; cursor: pointer; }
   margin-top: 3px;
   width: auto;
   flex: none;
+}
+
+/* --- Toasts ---------------------------------------------------------------
+   Fixed above everything, out of the way of the thumb on mobile (top) and the
+   pointer on desktop. Tap to dismiss; they expire on their own. */
+.toasts {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(420px, calc(100vw - 24px));
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ember);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+  animation: toast-in 0.22s ease both;
+}
+.toast.good { border-left-color: var(--good); }
+.toast.bad { border-left-color: var(--bad); }
+.toast-title { font-weight: 600; }
+.toast-body { color: var(--muted); font-size: 13px; margin-top: 2px; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* --- Contacts -------------------------------------------------------------- */
+.contact-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.contact-row:last-child { border-bottom: none; }
+.avatar {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--bg);
+  background: linear-gradient(135deg, var(--ember), var(--ember-hover));
+}
+.contact-main { min-width: 0; flex: 1; }
+.contact-name { font-weight: 600; }
+.contact-addr {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Keyboard accessibility ------------------------------------------------
+   Pointer users never saw a focus ring; keyboard users had nothing to follow.
+   :focus-visible gives the ring only to those who need it. */
+:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* --- Skeletons ------------------------------------------------------------- */
+.skel {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: skel 1.4s ease infinite;
+  border-radius: 8px;
+}
+@keyframes skel {
+  from { background-position: 100% 50%; }
+  to { background-position: 0 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skel, .toast { animation: none; }
+}
+
+/* --- Detail sheet ---------------------------------------------------------- */
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row .k { color: var(--muted); flex: none; }
+.detail-row .v {
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.modalcard.wide { max-width: 520px; max-height: 84vh; overflow-y: auto; }
+
+/* --- Search / filter ------------------------------------------------------- */
+.filterbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.filterbar input { flex: 1; min-width: 140px; margin: 0; }
+.chip {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.chip.on {
+  color: var(--ink);
+  border-color: var(--ember);
+  background: var(--ember-soft);
 }

@@ -45,10 +45,14 @@ export async function sendNonCustodial(
   amountFc: number,
   fee?: number,
   onStage?: (stage: SendStage) => void,
+  memo?: string,
 ): Promise<SendResult> {
   const fvk = await fvkHex(seedHex);
   onStage?.("proving");
-  const prep = await api.prepare(fvk, to, amountFc, fee);
+  // The memo is sealed into the recipient's encrypted note by the prover; the
+  // on-device verification below still checks recipient and amounts, which are
+  // what a malicious prover could actually steal with.
+  const prep = await api.prepare(fvk, to, amountFc, fee, memo);
   onStage?.("signing");
 
   // Verify on-device that this bundle really pays `to` the amount asked, then sign the

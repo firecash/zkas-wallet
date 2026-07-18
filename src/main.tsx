@@ -4,6 +4,8 @@ import App from "./App";
 import { LockScreen } from "./LockScreen";
 import { AppLockScreen } from "./AppLockScreen";
 import { installAutoLock, isLockEnabled, isUnlocked } from "./applock";
+import { ToastHost } from "./toast";
+import { applyStoredTheme } from "./theme";
 import { initDesktop, isDesktop, vaultStatus } from "./desktop";
 import { FirstRunNode, needsNodeChoice } from "./FirstRunNode";
 import "./styles.css";
@@ -59,9 +61,14 @@ async function boot() {
 
   const askNode = isDesktop() && needsNodeChoice();
 
+  // Theme before first paint so a light-theme user never sees a dark flash.
+  applyStoredTheme();
+
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
-      <Root locked={locked} askNode={askNode} />
+      <ToastHost>
+        <Root locked={locked} askNode={askNode} />
+      </ToastHost>
     </StrictMode>,
   );
 }

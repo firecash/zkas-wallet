@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { api, chainTx, getBase, setBase, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type Status } from "./api";
 import { attachTapHaptics, successFeedback } from "./haptics";
+import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
 import {
   loadTxs,
   recordSend,
@@ -31,6 +32,14 @@ import {
   type DesktopConfig,
 } from "./desktop";
 import { makeBackup, readBackup } from "./backup";
+import {
+  addContact,
+  findContact,
+  removeContact,
+  sortedContacts,
+  updateContact,
+  type Contact,
+} from "./contacts";
 import { disableLock, enableLock, isLockEnabled, isUnlocked, lockKind, unlockedDeviceSeed } from "./applock";
 import logo from "./assets/zkas-logo.png";
 
@@ -72,13 +81,33 @@ function looksLikeAddress(a: string): boolean {
 // A scanned QR may be a bare address ("zkas:pxvt…") or a payment URI carrying
 // an amount ("zkas:pxvt…?amount=1.5"). Split off the address and, if present,
 // a numeric amount the caller can prefill.
-function parsePaymentUri(text: string): { address: string; amount?: string } {
+function parsePaymentUri(text: string): { address: string; amount?: string; memo?: string; label?: string } {
   const s = text.trim();
   const q = s.indexOf("?");
   if (q === -1) return { address: s };
   const address = s.slice(0, q);
-  const amount = new URLSearchParams(s.slice(q + 1)).get("amount");
-  return { address, amount: amount && /^\d*\.?\d+$/.test(amount) ? amount : undefined };
+  const p = new URLSearchParams(s.slice(q + 1));
+  const amount = p.get("amount");
+  return {
+    address,
+    amount: amount && /^\d*\.?\d+$/.test(amount) ? amount : undefined,
+    // `memo` rides into the encrypted note; `label` names the payee for the
+    // sender's own address book and never leaves this device.
+    memo: p.get("memo") || undefined,
+    label: p.get("label") || undefined,
+  };
+}
+
+/// Build the payment URI a payee hands out: address plus whatever they want
+/// filled in for the payer. Everything after the address is a request, not a
+/// commitment — the payer's wallet shows it and they can change it.
+function buildPaymentUri(address: string, opts: { amount?: string; memo?: string; label?: string }): string {
+  const p = new URLSearchParams();
+  if (opts.amount && parseAmount(opts.amount) > 0) p.set("amount", opts.amount);
+  if (opts.memo?.trim()) p.set("memo", opts.memo.trim());
+  if (opts.label?.trim()) p.set("label", opts.label.trim());
+  const qs = p.toString();
+  return qs ? `${address}?${qs}` : address;
 }
 
 // Read the clipboard for a paste button (mobile keyboards make long addresses
@@ -164,6 +193,20 @@ export default function App() {
   const [freshSeed, setFreshSeed] = useState<{ seed: string; address: string } | null>(null);
   // On-device send history; drives the optimistic (0-conf) balance and History tab.
   const [txs, setTxs] = useState<LocalTx[]>(() => loadTxs());
+  // Last CONFIRMED balance seen while synced — the baseline for "money arrived".
+  // Starts null so the first poll of a session establishes it silently instead of
+  // announcing the user's entire balance as an incoming payment.
+  const lastBalance = useRef<number | null>(null);
+  const toast = useToast();
+  const announce = useCallback(
+    (deltaFc: number) => {
+      const amount = `${trimFc(deltaFc.toFixed(8))} ZKAS`;
+      toast.show("good", `Received ${amount}`, "Settling into your wallet — spendable in ~10 minutes.");
+      notifyOs("ZKas payment received", `${amount} arrived in your wallet.`);
+      successFeedback();
+    },
+    [toast],
+  );
 
   // Hysteresis timers: the 1s poll can flip `synced` and `warming` for a beat
   // (a block lands, the background warm re-runs) and rendering every flip made the
@@ -208,6 +251,20 @@ export default function App() {
         if (ct?.confirmations != null) list = applyChainStatus(t.txid, ct.confirmations);
       }
       setTxs(list);
+      // Announce money ARRIVING. A payment landing is the most important event a
+      // wallet has, and on a shielded chain the wallet is the only thing that can
+      // report it — no explorer can see it, no email arrives. Compared against the
+      // last confirmed balance and only while synced, so a mid-scan number climbing
+      // toward the truth is not narrated as a stream of payments.
+      const conf = parseFloat(s.balance_fc || "0");
+      if (s.synced && s.scanned_blocks > 0) {
+        const prev = lastBalance.current;
+        if (prev !== null && conf > prev + 1e-8) {
+          const delta = conf - prev;
+          announce(delta);
+        }
+        lastBalance.current = conf;
+      }
       // Remember a balance the daemon actually knows, so a later reload/restart — when
       // it answers with zeros while rebuilding — has something honest to show instead.
       if (s.has_wallet && s.scanned_blocks > 0) {
@@ -251,6 +308,10 @@ export default function App() {
 
   useEffect(() => {
     refresh();
+    // Ask for notification permission once the wallet is actually in use, not at
+    // first paint — a permission prompt before the user has a wallet is noise
+    // they will refuse, and a refusal is sticky.
+    ensureNotificationPermission();
     // 1s, not 4s: the daemon now sees a payment in the mempool within a second of it
     // being broadcast, so a slow poll here would be the only thing left making a payment
     // feel sluggish. The call is a cheap read of in-memory state.
@@ -302,6 +363,7 @@ export default function App() {
           </div>
         </>
       )}
+      {reachable && status?.has_wallet && <ContactsCard />}
       {reachable && status?.has_wallet && <AppLockSetting />}
       {isDesktop() ? (
         <>
@@ -860,6 +922,227 @@ function Onboard({
   );
 }
 
+/// Initials for a contact avatar — a face for a 79-character address.
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
+}
+
+/// Pick someone to pay from the address book.
+function ContactPicker({ onPick, onClose }: { onPick: (c: Contact) => void; onClose: () => void }) {
+  const [q, setQ] = useState("");
+  const list = sortedContacts().filter(
+    (c) => !q.trim() || c.name.toLowerCase().includes(q.toLowerCase()) || c.address.toLowerCase().includes(q.toLowerCase()),
+  );
+  return createPortal(
+    <div className="modalwrap" onClick={onClose}>
+      <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>Choose a contact</h2>
+        {sortedContacts().length === 0 ? (
+          <p className="muted small">
+            No contacts yet. Save one after a payment, or from a received address — on a shielded chain the wallet is
+            the only place an address can have a name.
+          </p>
+        ) : (
+          <>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or address" autoFocus />
+            <div style={{ maxHeight: "46vh", overflowY: "auto", marginTop: 6 }}>
+              {list.map((c) => (
+                <div key={c.id} className="contact-row" style={{ cursor: "pointer" }} onClick={() => onPick(c)}>
+                  <div className="avatar">{initials(c.name)}</div>
+                  <div className="contact-main">
+                    <div className="contact-name">{c.name}</div>
+                    <div className="contact-addr">{c.address}</div>
+                  </div>
+                </div>
+              ))}
+              {list.length === 0 && <p className="muted small">Nobody matches that.</p>}
+            </div>
+          </>
+        )}
+        <button className="btn ghost" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/// Name an address, from wherever the user just met it.
+function SaveContactDialog({ address, onClose }: { address: string; onClose: () => void }) {
+  const [name, setName] = useState(findContact(address)?.name ?? "");
+  const [note, setNote] = useState(findContact(address)?.note ?? "");
+  const toast = useToast();
+  return createPortal(
+    <div className="modalwrap" onClick={onClose}>
+      <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>Save contact</h2>
+        <label>Name</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alice" autoFocus />
+        <label>Note (optional)</label>
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What this address is for" />
+        <label>Address</label>
+        <div className="addr" style={{ fontSize: 12 }}>
+          {address}
+        </div>
+        <p className="muted small">Stored only on this device — a list of who you pay is exactly the metadata ZKas exists to protect.</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            className="btn"
+            disabled={!name.trim()}
+            onClick={() => {
+              addContact(name, address, note);
+              toast.show("good", `Saved ${name.trim()}`);
+              onClose();
+            }}
+          >
+            Save
+          </button>
+          <button className="btn ghost" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/// The address book as a settings card: rename, re-address, remove.
+function ContactsCard() {
+  const [, bump] = useState(0);
+  const [editing, setEditing] = useState<Contact | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [newAddr, setNewAddr] = useState("");
+  useEffect(() => {
+    const h = () => bump((n) => n + 1);
+    window.addEventListener("contacts-changed", h);
+    return () => window.removeEventListener("contacts-changed", h);
+  }, []);
+  const list = sortedContacts();
+  return (
+    <div className="card">
+      <h2>Contacts</h2>
+      {list.length === 0 ? (
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Nobody saved yet. Naming an address here is the only way it will ever read as a person — the chain itself
+          knows nothing about who anyone is.
+        </p>
+      ) : (
+        <div style={{ marginBottom: 10 }}>
+          {list.map((c) => (
+            <div key={c.id} className="contact-row">
+              <div className="avatar">{initials(c.name)}</div>
+              <div className="contact-main">
+                <div className="contact-name">{c.name}</div>
+                <div className="contact-addr">{c.address}</div>
+                {c.note && <div className="muted small">{c.note}</div>}
+              </div>
+              <button className="linkbtn" onClick={() => setEditing(c)}>
+                Edit
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {adding ? (
+        <>
+          <label>Address</label>
+          <input
+            value={newAddr}
+            onChange={(e) => setNewAddr(e.target.value)}
+            placeholder="zkas:…"
+            className="mono"
+            autoCapitalize="off"
+            spellCheck={false}
+          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              className="btn"
+              disabled={!looksLikeAddress(newAddr)}
+              onClick={() => {
+                setEditing({ id: "", name: "", address: newAddr.trim(), createdUnix: 0 });
+                setAdding(false);
+                setNewAddr("");
+              }}
+            >
+              Next
+            </button>
+            <button className="btn ghost" onClick={() => setAdding(false)}>
+              Cancel
+            </button>
+          </div>
+        </>
+      ) : (
+        <button className="btn ghost" onClick={() => setAdding(true)}>
+          Add a contact
+        </button>
+      )}
+      {editing && <EditContact contact={editing} onClose={() => setEditing(null)} />}
+    </div>
+  );
+}
+
+function EditContact({ contact, onClose }: { contact: Contact; onClose: () => void }) {
+  const [name, setName] = useState(contact.name);
+  const [note, setNote] = useState(contact.note ?? "");
+  const [confirmDel, setConfirmDel] = useState(false);
+  const isNew = !contact.id;
+  return createPortal(
+    <div className="modalwrap" onClick={onClose}>
+      <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>{isNew ? "New contact" : "Edit contact"}</h2>
+        <label>Name</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        <label>Note (optional)</label>
+        <input value={note} onChange={(e) => setNote(e.target.value)} />
+        <label>Address</label>
+        <div className="addr" style={{ fontSize: 12 }}>
+          {contact.address}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            className="btn"
+            disabled={!name.trim()}
+            onClick={() => {
+              if (isNew) addContact(name, contact.address, note);
+              else updateContact(contact.id, { name, note });
+              onClose();
+            }}
+          >
+            Save
+          </button>
+          <button className="btn ghost" onClick={onClose}>
+            Cancel
+          </button>
+          {!isNew && (
+            <button className="btn ghost" style={{ color: "var(--bad)" }} onClick={() => setConfirmDel(true)}>
+              Remove
+            </button>
+          )}
+        </div>
+        {confirmDel && (
+          <ConfirmDialog
+            title={`Remove ${contact.name}?`}
+            body="Only the name is forgotten — any payments you made are untouched, and the address itself stays in your history."
+            confirmLabel="Remove"
+            danger
+            onConfirm={() => {
+              removeContact(contact.id);
+              setConfirmDel(false);
+              onClose();
+            }}
+            onCancel={() => setConfirmDel(false)}
+          />
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 /// Re-derive the wallet from the chain. Prominent on both Receive and History
 /// because it is the answer to the two things a user panics about: "my payment
 /// hasn't shown up" and "my balance/history is missing something".
@@ -948,28 +1231,40 @@ function RescanButton({ label, hint }: { label: string; hint: string }) {
 
 function Receive({ status }: { status: Status }) {
   const addr = status.address || "";
+  // A payment REQUEST: the address plus what you are asking for. Without this the
+  // Receive tab can only hand over an address and hope the payer types the right
+  // number — the commonest way a payment goes wrong is a wrong amount, and it is
+  // entirely avoidable.
+  const [reqAmount, setReqAmount] = useState("");
+  const [reqMemo, setReqMemo] = useState("");
+  const [reqOpen, setReqOpen] = useState(false);
+  const uri = buildPaymentUri(addr, { amount: reqAmount, memo: reqMemo });
+  const isRequest = uri !== addr;
   // The address QR never changes, so it's cached after the first render and shows
   // instantly on every later open — no beat where the card has a QR-shaped hole.
   const [qr, setQr] = useState(() => (addr && localStorage.getItem("qr_" + addr)) || "");
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!addr) return; // never blank an already-rendered QR on a transient empty poll
-    const cached = localStorage.getItem("qr_" + addr);
+    // Plain address: served from cache so the card never has a QR-shaped hole.
+    // A request QR changes with every keystroke, so it is generated live and not
+    // cached (there would be nothing to reuse).
+    const cached = !isRequest ? localStorage.getItem("qr_" + addr) : null;
     if (cached) {
       setQr(cached);
       return;
     }
-    QRCode.toDataURL(addr, { margin: 1, width: 440 })
+    QRCode.toDataURL(uri, { margin: 1, width: 440 })
       .then((url) => {
         setQr(url);
         try {
-          localStorage.setItem("qr_" + addr, url);
+          if (!isRequest) localStorage.setItem("qr_" + addr, url);
         } catch {
           /* best-effort cache */
         }
       })
       .catch(() => {});
-  }, [addr]);
+  }, [addr, uri, isRequest]);
   const copy = async () => {
     await copyText(addr);
     setCopied(true);
@@ -987,8 +1282,49 @@ function Receive({ status }: { status: Status }) {
         {addr}
       </div>
       <button className="btn ghost small" style={{ marginTop: 12 }} onClick={copy}>
-        {copied ? "Copied ✓" : "Copy address"}
+        {copied ? "Copied ✓" : isRequest ? "Copy payment request" : "Copy address"}
       </button>
+
+      {/* Payment request: ask for a specific amount, with a note for the payer.
+          Their wallet fills both in from the QR or the link. */}
+      <div style={{ height: 1, background: "var(--border)", margin: "18px 0" }} />
+      {reqOpen ? (
+        <>
+          <h2 style={{ fontSize: 17, marginTop: 0 }}>Request a payment</h2>
+          <label>Amount (ZKAS) — optional</label>
+          <input
+            value={reqAmount}
+            onChange={(e) => setReqAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+            placeholder="0.00"
+            inputMode="decimal"
+          />
+          <label>Note for the payer — optional</label>
+          <input
+            value={reqMemo}
+            onChange={(e) => setReqMemo(e.target.value.slice(0, 200))}
+            placeholder="e.g. Invoice 41"
+          />
+          {isRequest && (
+            <>
+              <label>Payment link</label>
+              <div className="addr" style={{ fontSize: 12 }} onClick={() => copyText(uri)} title="Tap to copy">
+                {uri}
+              </div>
+              <p className="muted small">
+                The QR above now carries this request. Anything you fill in is a suggestion the payer can still change —
+                and the note is sealed to you both, never on-chain.
+              </p>
+            </>
+          )}
+          <button className="btn ghost small" onClick={() => { setReqOpen(false); setReqAmount(""); setReqMemo(""); }}>
+            Clear request
+          </button>
+        </>
+      ) : (
+        <button className="btn ghost small" onClick={() => setReqOpen(true)}>
+          Request a specific amount
+        </button>
+      )}
 
       <RescanButton label="Payment not showing up?" hint="Re-read the chain for this wallet — recovers anything the local view is missing." />
 
@@ -1157,6 +1493,14 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
 function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<LocalTx, "pending">) => void }) {
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
+  // Private note to the recipient, sealed inside their encrypted note. Supported
+  // by the daemon since day one; the UI simply never offered it.
+  const [memo, setMemo] = useState("");
+  const [pickContact, setPickContact] = useState(false);
+  // Offered after a successful send to an unknown address — the moment the user
+  // actually knows who it was.
+  const [saveAddr, setSaveAddr] = useState<string | null>(null);
+  const contact = findContact(to);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<SendStage | null>(null);
   const [error, setError] = useState("");
@@ -1184,12 +1528,24 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
     if (!confirming && window.matchMedia("(pointer: fine)").matches) toRef.current?.focus();
   }, [confirming]);
 
-  const onScan = useCallback((text: string) => {
-    const { address, amount: amt } = parsePaymentUri(text);
+  /// Apply a scanned/pasted payment request: address plus whatever the payee
+  /// asked for. Their `label` is a suggestion for THIS device's address book,
+  /// never sent anywhere.
+  const applyRequest = useCallback((text: string) => {
+    const { address, amount: amt, memo: m, label } = parsePaymentUri(text);
     setTo(address);
     if (amt) setAmount(amt);
-    setScanning(false);
+    if (m) setMemo(m);
+    if (label && address && !findContact(address)) addContact(label, address);
   }, []);
+
+  const onScan = useCallback(
+    (text: string) => {
+      applyRequest(text);
+      setScanning(false);
+    },
+    [applyRequest],
+  );
 
   // A send can only draw on SPENDABLE (matured) funds, not the full balance — so
   // Max, the overspend check, and messaging all use spendable, and the total's
@@ -1243,16 +1599,20 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
         }
       }
       const feeSompi = feeCustomSet ? Math.round(feeCustom * 1e8) : undefined;
-      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt, feeSompi, setStage);
+      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt, feeSompi, setStage, memo);
       const toAddr = to.trim();
       setTo("");
       setAmount("");
+      setMemo("");
       setConfirming(false);
       // Record on-device so the balance drops to a 0-conf figure immediately;
       // onSent switches straight to History where the confirmations tick in live.
       // The daemon reports the fee it actually charged (byte-proportional) —
       // record that, not the UI's estimate.
       const paidFeeFc = (r.fee_sompi ?? FEE_FC * 1e8) / 1e8;
+      // The one moment the user certainly knows who they just paid — ask now,
+      // not in an address book they will never open.
+      if (!findContact(toAddr)) setSaveAddr(toAddr);
       onSent({
         txid: r.txid,
         to: toAddr,
@@ -1295,7 +1655,23 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
           </span>
         </div>
         <label>To</label>
+        {contact && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+            <div className="avatar" style={{ width: 30, height: 30, fontSize: 12 }}>
+              {initials(contact.name)}
+            </div>
+            <b>{contact.name}</b>
+          </div>
+        )}
         <div className="addr">{to.trim()}</div>
+        {memo.trim() && (
+          <>
+            <label>Private note</label>
+            <div className="msg small" style={{ background: "transparent", border: "1px solid var(--border)" }}>
+              “{memo.trim()}” — sealed in the recipient's encrypted note; only they can read it.
+            </div>
+          </>
+        )}
         {needSeed && (
           <>
             <label>Recovery seed (unlocks signing on this device — stored only here)</label>
@@ -1370,13 +1746,38 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
           className="inlinebtn"
           onClick={async () => {
             const t = await pasteText();
-            if (t) setTo(t);
+            if (t) applyRequest(t);
           }}
         >
           Paste
         </button>
       </div>
       {to && !addrOk && <div className="fieldhint bad">That doesn't look like a zkas: address.</div>}
+      {contact && (
+        <div className="fieldhint" style={{ color: "var(--good)" }}>
+          Paying <b>{contact.name}</b> from your contacts.
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
+        <button type="button" className="linkbtn" onClick={() => setPickContact(true)}>
+          Choose a contact
+        </button>
+        {addrOk && !contact && (
+          <button type="button" className="linkbtn" onClick={() => setSaveAddr(to.trim())}>
+            Save as contact
+          </button>
+        )}
+      </div>
+      {pickContact && (
+        <ContactPicker
+          onPick={(c) => {
+            setTo(c.address);
+            setPickContact(false);
+          }}
+          onClose={() => setPickContact(false)}
+        />
+      )}
+      {saveAddr && <SaveContactDialog address={saveAddr} onClose={() => setSaveAddr(null)} />}
       {scanning && <QrScanner onResult={onScan} onClose={() => setScanning(false)} />}
 
       <div className="amthead">
@@ -1404,6 +1805,17 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
         inputMode="decimal"
         style={overspend ? { borderColor: "var(--bad)" } : undefined}
       />
+
+      <label>Private note (optional)</label>
+      <input
+        value={memo}
+        onChange={(e) => setMemo(e.target.value.slice(0, 400))}
+        placeholder="What is this payment for?"
+        maxLength={400}
+      />
+      <div className="fieldhint">
+        Sealed inside the recipient's encrypted note — only they can read it. Never appears on-chain or on the explorer.
+      </div>
       {showFeeCfg && (
         <>
           <label>Custom network fee (ZKAS) — optional</label>
