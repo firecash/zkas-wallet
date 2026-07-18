@@ -18,6 +18,10 @@ on:
 jobs:
   build:
     runs-on: macos-14
+    # The attach step pushes assets to a release, which the default read-only
+    # GITHUB_TOKEN cannot do — that is what failed the desktop-v0.1.0 tag build.
+    permissions:
+      contents: write
     steps:
       # The Tauri crate depends on ../../rusty-kaspa/zkas-walletd relative to
       # src-tauri, so the two repos must sit side by side.
@@ -63,6 +67,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Create the release if the tag has none yet — `upload` alone fails on a
+          # missing release, which is how the desktop-v0.1.0 build lost its assets
+          # and needed a manual upload.
+          gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1 \
+            || gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" \
+                 --title "ZKas Wallet Desktop ${GITHUB_REF_NAME#desktop-v}" --notes "macOS (Intel) desktop wallet."
           gh release upload "${GITHUB_REF_NAME}" \
             wallet/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg \
             wallet/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/ZKas-Wallet-macos-intel.zip \
