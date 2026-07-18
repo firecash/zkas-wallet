@@ -3143,7 +3143,7 @@ function SwitchWallet() {
               // Desktop owns its daemon, so delete the wallet file there too.
               // Hosted: dropping the token is what makes this device forget it —
               // we must not delete server state on a shared daemon.
-              if (isDesktop()) await forgetWallet();
+              if (isDesktop()) await forgetWallet(w.token);
               wipeWalletState(w.token);
               forgetWalletLock(w.token);
               unregisterWallet(w.token);

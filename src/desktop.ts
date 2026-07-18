@@ -141,6 +141,6 @@ export function readBackupFile(path: string): Promise<string> {
  * Irreversible here; the coins remain on-chain and return with the seed or a
  * backup. Callers must warn before calling.
  */
-export function forgetWallet(): Promise<DesktopConfig> {
-  return invoke<DesktopConfig>("forget_wallet");
+export function forgetWallet(token?: string): Promise<DesktopConfig> {
+  return invoke<DesktopConfig>("forget_wallet", { token: token ?? null });
 }

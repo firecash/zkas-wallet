@@ -424,11 +424,15 @@ fn restore_backup(
 /// seed phrase. The chain is untouched: the coins still exist, and restoring the
 /// seed anywhere brings them back.
 #[tauri::command]
-fn forget_wallet(state: tauri::State<'_, Mutex<Engine>>) -> Result<WalletConfig, String> {
+fn forget_wallet(state: tauri::State<'_, Mutex<Engine>>, token: Option<String>) -> Result<WalletConfig, String> {
     let mut e = state.lock().unwrap();
     e.lock(); // stop the daemon so nothing rewrites the files we are removing
     let dir = e.wallet_dir();
-    let token = e.token.clone();
+    // Delete the wallet the UI is REMOVING, which is not necessarily this
+    // shell's own. The device can hold several wallets and the app decides which
+    // is active; using the shell's token here deleted wallet #1 whenever the
+    // user removed any other one.
+    let token = token.unwrap_or_else(|| e.token.clone());
     let _ = std::fs::remove_file(format!("{dir}/{token}.json"));
     let _ = std::fs::remove_file(format!("{dir}/{token}.scan"));
     let _ = std::fs::remove_file(format!("{dir}/{token}.scan.bak"));
@@ -437,8 +441,12 @@ fn forget_wallet(state: tauri::State<'_, Mutex<Engine>>) -> Result<WalletConfig,
     // (status cache, device seed, contacts). Keeping it meant the NEXT wallet
     // inherited the removed one's cached identity and appeared to be the same
     // wallet coming back from the dead.
-    let _ = std::fs::remove_file(e.config_dir.join("wallet-token"));
-    e.token = Engine::load_or_create_token(&e.config_dir);
+    // Only rotate the shell's own identity when it is the one being removed;
+    // rotating it while deleting some other wallet would strand the shell's.
+    if token == e.token {
+        let _ = std::fs::remove_file(e.config_dir.join("wallet-token"));
+        e.token = Engine::load_or_create_token(&e.config_dir);
+    }
     e.secret = None;
     e.start_walletd();
     Ok(config_of(&e))

@@ -39,6 +39,16 @@ interface LockRecord {
 
 /** Unsealed seeds by token, in memory only — never written back to storage. */
 let unlocked: Record<string, string> | null = null;
+/**
+ * The passphrase for this session, in memory only.
+ *
+ * Held because a wallet can be CREATED while the device is unlocked, and sealing
+ * its seed requires the secret. Without it `sealNewSeed` could only keep the key
+ * in RAM — so the wallet worked until reload and then had no key at all, which
+ * is the fund-loss this lock exists to avoid causing. Cleared by `lock()`, and
+ * never written anywhere.
+ */
+let sessionSecret: string | null = null;
 let backgroundedAt = 0;
 
 function record(): LockRecord | null {
@@ -113,13 +123,10 @@ export function unlockedDeviceSeed(): string | null {
  */
 export async function sealNewSeed(token: string, seedHex: string, secret?: string): Promise<boolean> {
   const rec = record();
-  if (!rec || !unlocked) return false;
-  // Re-sealing needs the passphrase. When it is not supplied we can still hold
-  // the seed for this session; the next explicit unlock re-seals everything.
-  if (secret) {
-    rec.wallets[token] = await seal(seedHex, secret);
-    write(rec);
-  }
+  const key = secret ?? sessionSecret;
+  if (!rec || !unlocked || !key) return false;
+  rec.wallets[token] = await seal(seedHex, key);
+  write(rec);
   unlocked[token] = seedHex;
   return true;
 }
@@ -132,6 +139,7 @@ export async function enableLock(secret: string, kind: "pin" | "passphrase"): Pr
   write({ version: 2, kind, wallets });
   for (const token of Object.keys(seeds)) localStorage.removeItem(`device_seed_${token}`);
   unlocked = seeds; // stay usable for the rest of this session
+  sessionSecret = secret;
 }
 
 /** Verify `secret` and hold every wallet's seed in memory for this session. */
@@ -145,6 +153,7 @@ export async function unlock(secret: string): Promise<boolean> {
       out[token] = seed;
     }
     unlocked = out;
+    sessionSecret = secret;
     return true;
   }
   // Migrate a legacy per-wallet lock: same passphrase, now device-wide.
@@ -161,12 +170,14 @@ export async function unlock(secret: string): Promise<boolean> {
   write({ version: 2, kind: Object.values(legacy)[0]?.kind ?? "pin", wallets });
   for (const token of Object.keys(legacy)) localStorage.removeItem(LEGACY_PREFIX + token);
   unlocked = out;
+  sessionSecret = secret;
   return true;
 }
 
 /** Forget the in-memory seeds. The sealed copies on disk are untouched. */
 export function lock(): void {
   unlocked = null;
+  sessionSecret = null;
 }
 
 /**
@@ -179,6 +190,7 @@ export async function disableLock(secret: string): Promise<boolean> {
     localStorage.setItem(`device_seed_${token}`, seedHex);
   }
   localStorage.removeItem(LOCK_KEY);
+  sessionSecret = null;
   return true;
 }
 
