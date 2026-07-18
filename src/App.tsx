@@ -19,12 +19,16 @@ import {
   backupWallet,
   initDesktop,
   isDesktop,
+  listBackups,
   lockVault,
   openPath,
+  readBackupFile,
   setNodeSource,
   vaultStatus,
+  writeBackupFile,
   type DesktopConfig,
 } from "./desktop";
+import { makeBackup, readBackup } from "./backup";
 import logo from "./assets/zkas-logo.png";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -1883,13 +1887,7 @@ function VaultSetting() {
         </>
       )}
 
-      {watchOnly ? (
-        <p className="muted small" style={{ marginTop: 0 }}>
-          Watch-only wallet — there is no spending key on this computer to encrypt or back up.
-        </p>
-      ) : (
-        <BackupWallet />
-      )}
+      {watchOnly ? <DeviceSeedBackup /> : <BackupWallet />}
 
       {askLock && (
         <ConfirmDialog
@@ -1904,6 +1902,198 @@ function VaultSetting() {
         />
       )}
     </div>
+  );
+}
+
+/// Backup for the NON-CUSTODIAL case — which is the default.
+///
+/// The wallet generates its seed in the app and registers only the viewing key
+/// with the daemon, so the daemon correctly reports "watch-only: nothing to back
+/// up" while the app holds the one secret that matters, in this device's
+/// storage. The encryption therefore has to happen here (see `backup.ts`), not
+/// in walletd.
+function DeviceSeedBackup() {
+  const [pass, setPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [done, setDone] = useState<{ path: string; folder: string } | null>(null);
+  const [mode, setMode] = useState<"backup" | "restore">("backup");
+  const seed = getDeviceSeed();
+
+  if (!seed) {
+    return (
+      <p className="muted small" style={{ marginTop: 0 }}>
+        This device holds no spending key for the wallet — it can watch the balance but not spend. Restore your seed
+        phrase on the Send tab to spend from here.
+      </p>
+    );
+  }
+
+  const run = async () => {
+    setErr("");
+    if (pass.length < 8) return setErr("Use at least 8 characters.");
+    if (pass !== confirmPass) return setErr("The two passphrases do not match.");
+    setBusy(true);
+    try {
+      const doc = await makeBackup(seed, pass, "mainnet", 0);
+      if (isDesktop()) {
+        setDone(await writeBackupFile(doc));
+      } else {
+        // Browser: hand it over as a download instead of writing a file.
+        const url = URL.createObjectURL(new Blob([doc], { type: "application/json" }));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `zkas-wallet-backup-${Math.floor(Date.now() / 1000)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setDone({ path: a.download, folder: "" });
+      }
+      setPass("");
+      setConfirmPass("");
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          <b>Backup written.</b> Copy it somewhere off this computer — a USB stick, cloud storage, or a password
+          manager. It is encrypted, so it is useless to anyone without the backup passphrase.
+        </p>
+        <div className="addr" style={{ fontSize: 12 }}>
+          {done.path}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+          {done.folder && (
+            <button className="btn ghost small" onClick={() => openPath(done.folder).catch(() => {})}>
+              Open folder
+            </button>
+          )}
+          <button className="btn ghost small" onClick={() => setDone(null)}>
+            Done
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  if (mode === "restore") return <RestoreSeedBackup onBack={() => setMode("backup")} />;
+
+  return (
+    <>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        <b>Back up your wallet.</b> Your spending key is stored by this app on this computer. Save an encrypted copy to
+        a file so you can restore the wallet if this machine is lost — give the file its own passphrase.
+      </p>
+      <label>Backup passphrase</label>
+      <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="At least 8 characters" />
+      <label>Confirm backup passphrase</label>
+      <input type="password" value={confirmPass} onChange={(e) => setConfirmPass(e.target.value)} placeholder="Type it again" />
+      {err && <div className="msg err">{err}</div>}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button className="btn" onClick={run} disabled={busy || !pass}>
+          {busy ? "Encrypting…" : "Create backup file"}
+        </button>
+        {isDesktop() && (
+          <button className="btn ghost" onClick={() => setMode("restore")} disabled={busy}>
+            Restore from backup
+          </button>
+        )}
+      </div>
+      <p className="muted small" style={{ marginTop: 10 }}>
+        Lose the backup passphrase and the file cannot be opened — not by us, not by anyone. Your seed phrase remains
+        the other way back in.
+      </p>
+    </>
+  );
+}
+
+/// Restore the device's spending key from an encrypted backup file.
+function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
+  const [found, setFound] = useState<string[]>([]);
+  const [path, setPath] = useState("");
+  const [pass, setPass] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState(false);
+
+  useEffect(() => {
+    listBackups()
+      .then((b) => {
+        setFound(b);
+        if (b.length > 0) setPath(b[0]);
+      })
+      .catch(() => {});
+  }, []);
+
+  const run = async () => {
+    setErr("");
+    if (!path.trim()) return setErr("Choose a backup file.");
+    setBusy(true);
+    try {
+      const json = await readBackupFile(path.trim());
+      const { seedHex, birthday } = await readBackup(json, pass);
+      // Register the viewing key with the daemon and keep the seed on-device —
+      // the same shape as a freshly created wallet, so spending works after this.
+      await api.watch(await fvkHex(seedHex), birthday);
+      setDeviceSeed(seedHex);
+      setOk(true);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (ok) {
+    return (
+      <>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          <b>Wallet restored.</b> Your balance rebuilds from the chain — this takes a minute or two.
+        </p>
+        <button className="btn" onClick={() => location.reload()}>
+          Reload wallet
+        </button>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        <b>Restore from backup.</b> Open an encrypted backup file and put its wallet on this computer.
+      </p>
+      {found.length > 0 && (
+        <>
+          <label>Backups found on this computer</label>
+          <select value={path} onChange={(e) => setPath(e.target.value)}>
+            {found.map((f) => (
+              <option key={f} value={f}>
+                {f.split(/[/\\]/).pop()}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
+      <label>{found.length > 0 ? "…or paste a path" : "Path to your backup file"}</label>
+      <input value={path} onChange={(e) => setPath(e.target.value)} placeholder="/path/to/zkas-wallet-backup-….json" />
+      <label>Backup passphrase</label>
+      <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="The passphrase you gave the file" />
+      {err && <div className="msg err">{err}</div>}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button className="btn" onClick={run} disabled={busy || !pass}>
+          {busy ? "Restoring…" : "Restore wallet"}
+        </button>
+        <button className="btn ghost" onClick={onBack} disabled={busy}>
+          Back
+        </button>
+      </div>
+    </>
   );
 }
 

@@ -122,3 +122,13 @@ export function listBackups(): Promise<string[]> {
 export function openPath(path: string): Promise<void> {
   return invoke<void>("reveal_path", { path });
 }
+
+/** Write an app-encrypted backup document to the backup folder (desktop only). */
+export function writeBackupFile(contents: string): Promise<BackupInfo> {
+  return invoke<BackupInfo>("write_backup", { contents });
+}
+
+/** Read a backup file's raw contents; the app decrypts it. */
+export function readBackupFile(path: string): Promise<string> {
+  return invoke<string>("read_backup_file", { path });
+}

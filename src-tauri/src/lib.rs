@@ -369,6 +369,33 @@ fn backup_wallet(state: tauri::State<'_, Mutex<Engine>>, backup_passphrase: Stri
     Ok(BackupInfo { path: path.to_string_lossy().into_owned(), folder: folder.to_string_lossy().into_owned() })
 }
 
+/// Write a backup document produced by the APP (client-side encryption of the
+/// seed this device holds) into the backup folder.
+///
+/// The daemon-side `backup_wallet` above covers wallets whose seed walletd
+/// holds; this covers the non-custodial case, which is the default — the seed
+/// lives in the webview, so only the app can encrypt it.
+#[tauri::command]
+fn write_backup(state: tauri::State<'_, Mutex<Engine>>, contents: String) -> Result<BackupInfo, String> {
+    let folder = state.lock().unwrap().backup_dir();
+    std::fs::create_dir_all(&folder).map_err(|e| format!("cannot create backup folder: {e}"))?;
+    let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let path = folder.join(format!("zkas-wallet-backup-{stamp}.json"));
+    std::fs::write(&path, contents).map_err(|e| format!("cannot write backup: {e}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    }
+    Ok(BackupInfo { path: path.to_string_lossy().into_owned(), folder: folder.to_string_lossy().into_owned() })
+}
+
+/// Read a backup file back (the app decrypts it — the shell never sees a key).
+#[tauri::command]
+fn read_backup_file(path: String) -> Result<String, String> {
+    std::fs::read_to_string(&path).map_err(|e| format!("cannot read {path}: {e}"))
+}
+
 /// Restore a wallet from a backup file, then unlock with the new device
 /// passphrase. Only possible when this device has no wallet — the library
 /// refuses to clobber one.
@@ -485,7 +512,9 @@ pub fn run() {
             backup_wallet,
             restore_backup,
             list_backups,
-            reveal_path
+            reveal_path,
+            write_backup,
+            read_backup_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
