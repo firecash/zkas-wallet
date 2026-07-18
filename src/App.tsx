@@ -106,7 +106,16 @@ const TABS: Tab[] =
 /// Scroll the active tab pane to sit just under the sticky tab bar, so whatever
 /// the user is here to do (type an address, read tx details) is immediately in
 /// view — never the header/balance they'd have to scroll past.
+///
+/// **Mobile only.** On a phone the pane genuinely starts below the fold, so this
+/// saves a scroll. On a desktop window the whole card is already visible, so the
+/// same call just yanks the page under the user for no reason — the view jumping
+/// on every tab click. Gated on viewport rather than build target so a narrow
+/// desktop window (and the mobile PWA, which is not `isNative()`) still benefits.
+const MOBILE_SCROLL_MAX_WIDTH = 720;
+
 function scrollToPane() {
+  if (typeof window === "undefined" || window.innerWidth > MOBILE_SCROLL_MAX_WIDTH) return;
   requestAnimationFrame(() => {
     document.querySelector(".pane")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
