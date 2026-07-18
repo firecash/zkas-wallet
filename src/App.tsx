@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, chainTx, getBase, setBase, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type Status } from "./api";
+import { api, chainTx, getBase, setBase, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
 import {
@@ -32,10 +32,12 @@ import {
   type DesktopConfig,
 } from "./desktop";
 import { makeBackup, readBackup } from "./backup";
+import { currentTheme, setTheme, type Theme } from "./theme";
 import {
   addContact,
   findContact,
   removeContact,
+  displayName,
   sortedContacts,
   updateContact,
   type Contact,
@@ -133,20 +135,22 @@ const EXPLORER = "https://explorer.zkas.info";
 // or which network the daemon/signer actually use.
 const NET_LABEL = "testnet";
 
-type Tab = "receive" | "send" | "history" | "sign" | "verify";
+type Tab = "receive" | "send" | "history" | "settings";
 const TAB_LABEL: Record<Tab, string> = {
   receive: "Receive",
   send: "Send",
   history: "History",
-  sign: "Sign",
-  verify: "Verify",
+  settings: "⚙",
 };
-// On phones (native app or a narrow browser) five pills don't fit — drop Verify,
-// the least-used power feature. Signature verification stays available on desktop.
-const TABS: Tab[] =
-  isNative() || (typeof window !== "undefined" && window.innerWidth < 480)
-    ? ["receive", "send", "history", "sign"]
-    : ["receive", "send", "history", "sign", "verify"];
+// Three verbs and a gear.
+//
+// This used to be five pills (Sign and Verify sat beside Receive/Send/History)
+// AND every settings card — contacts, app lock, node source, backup, daemon —
+// rendered permanently below the wallet on every single tab. The result was that
+// a user's entire configuration surface sat under their money at all times, which
+// reads like a debug console rather than a wallet. Everything that is not
+// receiving, sending, or looking at history now lives behind the gear.
+const TABS: Tab[] = ["receive", "send", "history", "settings"];
 
 /// Scroll the active tab pane to sit just under the sticky tab bar, so whatever
 /// the user is here to do (type an address, read tx details) is immediately in
@@ -285,6 +289,8 @@ export default function App() {
   // History (highlighting the new row) so the confirmations can be watched
   // arriving live, and answer with a success haptic on the phone.
   const [justSent, setJustSent] = useState<string | null>(null);
+  // "Send again" from a transaction carries the recipient across to the form.
+  const [sendPrefill, setSendPrefill] = useState<string | null>(null);
   const onSent = useCallback(
     (tx: Omit<LocalTx, "pending">) => {
       setTxs(recordSend(tx));
@@ -354,34 +360,27 @@ export default function App() {
           {/* key remounts the pane on tab switch so the entrance transition plays. */}
           <div className="pane appear" key={tab}>
             {tab === "receive" && <Receive status={status} />}
-            {tab === "send" && <Send status={status} onSent={onSent} />}
+            {tab === "send" && <Send status={status} onSent={onSent} prefillTo={sendPrefill} />}
             {tab === "history" && (
-              <History txs={txs} justSent={justSent} onSendAnother={() => { setJustSent(null); setTab("send"); }} />
+              <History
+                txs={txs}
+                justSent={justSent}
+                onSendAnother={(prefill) => {
+                  setJustSent(null);
+                  setSendPrefill(prefill ?? null);
+                  setTab("send");
+                }}
+              />
             )}
-            {tab === "sign" && <Sign status={status} />}
-            {tab === "verify" && <Verify />}
+            {tab === "settings" && <SettingsPane status={status} />}
           </div>
         </>
       )}
-      {reachable && status?.has_wallet && <ContactsCard />}
-      {reachable && status?.has_wallet && <AppLockSetting />}
-      {isDesktop() ? (
-        <>
-          <NodeSourceSetting />
-          <VaultSetting />
-        </>
-      ) : (
-        <DaemonSetting />
-      )}
-      <div className="footer">
-        ZKas Wallet · shielded by default · connected to ZKas's public node.
-        <br />
-        This wallet lives in this browser — back up your recovery seed to open it on another device or in incognito.
-        <br />
-        <a href="https://github.com/firecash/firecash-wallet" target="_blank" rel="noreferrer" className="ghlink">
-          GitHub
-        </a>
-      </div>
+      {/* No wallet yet: the daemon/node picker must still be reachable, since a
+          user pointing the app at their own node is exactly who has no wallet
+          on the default one. */}
+      {reachable && status && !status.has_wallet && !freshSeed && (isDesktop() ? <NodeSourceSetting /> : <DaemonSetting />)}
+      <Footer />
     </div>
   );
 }
@@ -918,6 +917,242 @@ function Onboard({
       <button className="btn ghost" onClick={() => setMode("import")}>
         Import from seed
       </button>
+    </div>
+  );
+}
+
+/// One transaction, in full.
+///
+/// History rows used to be dead ends whose only action was opening a block
+/// explorer — which, on a shielded chain, can tell the user nothing about their
+/// own payment. Everything knowable lives in this wallet, so this is where it
+/// belongs: amount, fee, when, the memo, the counterparty (nameable on the
+/// spot), and the txid.
+function TxDetail({ row, onClose, onSendAgain }: { row: ChainHistoryRow; onClose: () => void; onSendAgain?: (addr: string) => void }) {
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState("");
+  const contact = findContact(row.recipient);
+  const kind = row.kind === "coinbase" ? "Mined" : row.kind === "received" ? "Received" : "Sent";
+  const sign = row.kind === "sent" ? "−" : "+";
+  const copy = async (what: string, value: string) => {
+    await copyText(value);
+    setCopied(what);
+    setTimeout(() => setCopied(""), 1500);
+  };
+  return createPortal(
+    <div className="modalwrap" onClick={onClose}>
+      <div className="card modalcard wide" onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>{kind}</h2>
+        <div className="amt" style={{ fontSize: 30, marginBottom: 10 }}>
+          {sign} {trimFc(row.amountZkas.toFixed(8))}
+          <span className="unit">ZKAS</span>
+        </div>
+
+        {row.memo && (
+          <div className="msg small" style={{ background: "transparent", border: "1px solid var(--border)" }}>
+            “{row.memo}”
+          </div>
+        )}
+
+        <div className="detail-row">
+          <span className="k">When</span>
+          <span className="v">{row.timestamp > 0 ? fmtTime(row.timestamp) : `DAA ${row.daaScore}`}</span>
+        </div>
+        {row.feeSompi > 0 && (
+          <div className="detail-row">
+            <span className="k">Network fee</span>
+            <span className="v mono">{trimFc((row.feeSompi / 1e8).toFixed(8))} ZKAS</span>
+          </div>
+        )}
+        {row.recipient && (
+          <div className="detail-row">
+            <span className="k">{row.kind === "sent" ? "To" : "Received at"}</span>
+            <span className="v mono" style={{ fontSize: 12 }}>
+              {contact ? <b>{contact.name}</b> : shortAddr(row.recipient)}
+            </span>
+          </div>
+        )}
+        <div className="detail-row">
+          <span className="k">Transaction</span>
+          <span className="v mono" style={{ fontSize: 12 }}>
+            {shortAddr(row.txid)}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+          <button className="btn ghost small" onClick={() => copy("txid", row.txid)}>
+            {copied === "txid" ? "Copied ✓" : "Copy transaction id"}
+          </button>
+          {row.recipient && (
+            <button className="btn ghost small" onClick={() => copy("addr", row.recipient!)}>
+              {copied === "addr" ? "Copied ✓" : "Copy address"}
+            </button>
+          )}
+          {row.recipient && !contact && (
+            <button className="btn ghost small" onClick={() => setSaving(true)}>
+              Save as contact
+            </button>
+          )}
+          {row.recipient && row.kind === "sent" && onSendAgain && (
+            <button className="btn ghost small" onClick={() => onSendAgain(row.recipient!)}>
+              Send again
+            </button>
+          )}
+          <a className="btn ghost small" href={`${EXPLORER}/txs/${row.txid}`} target="_blank" rel="noreferrer">
+            View on explorer
+          </a>
+        </div>
+        <p className="muted small" style={{ marginTop: 12 }}>
+          The explorer shows that a shielded transaction happened — never its amount, sender, recipient or note. This
+          screen is the only place those exist, and only for you.
+        </p>
+        <button className="btn ghost" onClick={onClose}>
+          Close
+        </button>
+        {saving && row.recipient && <SaveContactDialog address={row.recipient} onClose={() => setSaving(false)} />}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/// History as a spreadsheet, for accounting and taxes. Generated on-device from
+/// data the wallet already holds — nothing is uploaded to produce it.
+function historyCsv(rows: ChainHistoryRow[]): string {
+  const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+  const head = ["kind", "amount_zkas", "fee_zkas", "time_utc", "daa_score", "counterparty", "memo", "txid"];
+  const lines = rows.map((r) =>
+    [
+      r.kind,
+      r.amountZkas.toFixed(8),
+      (r.feeSompi / 1e8).toFixed(8),
+      r.timestamp > 0 ? new Date(r.timestamp).toISOString() : "",
+      String(r.daaScore),
+      displayName(r.recipient, r.recipient ?? ""),
+      r.memo ?? "",
+      r.txid,
+    ]
+      .map(esc)
+      .join(","),
+  );
+  return [head.join(","), ...lines].join("\n");
+}
+
+/// Everything that is not receiving, sending, or reading history.
+///
+/// Grouped and ordered by how often a person actually needs it: who you pay,
+/// what protects the key, how you get the wallet back, what it talks to, and
+/// the power tools last. Each section is a card so the pane reads as a list of
+/// concerns rather than one wall of controls.
+function SettingsPane({ status }: { status: Status }) {
+  return (
+    <>
+      <ContactsCard />
+      <AppLockSetting />
+      {isDesktop() ? (
+        <>
+          <VaultSetting />
+          <NodeSourceSetting />
+        </>
+      ) : (
+        <DaemonSetting />
+      )}
+      <AppearanceCard />
+      <ToolsCard status={status} />
+      <AboutCard />
+    </>
+  );
+}
+
+/// Light/dark. Defaults to following the system, which is what most people
+/// expect and nobody has to discover.
+function AppearanceCard() {
+  const [t, setT] = useState<Theme>(currentTheme());
+  const choose = (next: Theme) => {
+    setTheme(next);
+    setT(next);
+  };
+  return (
+    <div className="card">
+      <h2>Appearance</h2>
+      <div className="filterbar" style={{ marginBottom: 0 }}>
+        {(["system", "dark", "light"] as Theme[]).map((opt) => (
+          <button key={opt} className={"chip" + (t === opt ? " on" : "")} onClick={() => choose(opt)}>
+            {opt === "system" ? "Match system" : opt === "dark" ? "Dark" : "Light"}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/// Message signing and verification: real capabilities, but ones a person needs
+/// a handful of times ever. They used to occupy two of five primary tabs.
+function ToolsCard({ status }: { status: Status }) {
+  const [open, setOpen] = useState<"none" | "sign" | "verify">("none");
+  return (
+    <div className="card">
+      <h2>Tools</h2>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Prove you control your address without spending, or check someone else's proof.
+      </p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button className={"chip" + (open === "sign" ? " on" : "")} onClick={() => setOpen(open === "sign" ? "none" : "sign")}>
+          Sign a message
+        </button>
+        <button
+          className={"chip" + (open === "verify" ? " on" : "")}
+          onClick={() => setOpen(open === "verify" ? "none" : "verify")}
+        >
+          Verify a signature
+        </button>
+      </div>
+      {open === "sign" && (
+        <div style={{ marginTop: 14 }}>
+          <Sign status={status} embedded />
+        </div>
+      )}
+      {open === "verify" && (
+        <div style={{ marginTop: 14 }}>
+          <Verify embedded />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AboutCard() {
+  return (
+    <div className="card">
+      <h2>About</h2>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        ZKas Wallet — every balance and payment shielded by Orchard zero-knowledge proofs. Your spending key is held on
+        this device and never sent anywhere.
+      </p>
+      <a href="https://github.com/firecash/firecash-wallet" target="_blank" rel="noreferrer">
+        Source code
+      </a>
+      {" · "}
+      <a href={EXPLORER} target="_blank" rel="noreferrer">
+        Explorer
+      </a>
+    </div>
+  );
+}
+
+/// One honest line. It used to claim the wallet "lives in this browser" and is
+/// "connected to ZKas's public node" — both wrong in the desktop app, in the
+/// native app, and for anyone pointed at their own node.
+function Footer() {
+  return (
+    <div className="footer">
+      ZKas · shielded by default
+      {!isDesktop() && !isNative() && (
+        <>
+          <br />
+          This wallet lives in this browser — back up your seed to open it elsewhere.
+        </>
+      )}
     </div>
   );
 }
@@ -1490,8 +1725,16 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
   );
 }
 
-function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<LocalTx, "pending">) => void }) {
-  const [to, setTo] = useState("");
+function Send({
+  status,
+  onSent,
+  prefillTo,
+}: {
+  status: Status | null;
+  onSent: (tx: Omit<LocalTx, "pending">) => void;
+  prefillTo?: string | null;
+}) {
+  const [to, setTo] = useState(prefillTo ?? "");
   const [amount, setAmount] = useState("");
   // Private note to the recipient, sealed inside their encrypted note. Supported
   // by the daemon since day one; the UI simply never offered it.
@@ -1870,7 +2113,7 @@ function Send({ status, onSent }: { status: Status | null; onSent: (tx: Omit<Loc
   );
 }
 
-function Sign({ status }: { status: Status | null }) {
+function Sign({ status, embedded }: { status: Status | null; embedded?: boolean }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -1895,8 +2138,8 @@ function Sign({ status }: { status: Status | null }) {
   };
 
   return (
-    <div className="card">
-      <h2>Sign message</h2>
+    <div className={embedded ? "" : "card"}>
+      {!embedded && <h2>Sign message</h2>}
       <p className="muted small" style={{ marginTop: 0 }}>
         Prove you control this wallet's address without spending. The signature discloses your viewing key (enables
         note detection, never spend authority).
@@ -1928,7 +2171,7 @@ function Sign({ status }: { status: Status | null }) {
   );
 }
 
-function Verify() {
+function Verify({ embedded }: { embedded?: boolean }) {
   const [address, setAddress] = useState("");
   const [message, setMessage] = useState("");
   const [signature, setSignature] = useState("");
@@ -1951,8 +2194,8 @@ function Verify() {
   };
 
   return (
-    <div className="card">
-      <h2>Verify message</h2>
+    <div className={embedded ? "" : "card"}>
+      {!embedded && <h2>Verify message</h2>}
       <p className="muted small" style={{ marginTop: 0 }}>
         Runs entirely in your browser — no server involved.
       </p>
@@ -2000,7 +2243,7 @@ function History({
 }: {
   txs: LocalTx[];
   justSent?: string | null;
-  onSendAnother?: () => void;
+  onSendAnother?: (prefillAddress?: string) => void;
 }) {
   // Chain-derived history (mints, receives, and OVK-recovered sends): fetched
   // from the daemon, so it survives a seed restore and shows on every device.
@@ -2011,6 +2254,9 @@ function History({
   const [recovering, setRecovering] = useState(false);
   const [askDisable, setAskDisable] = useState(false);
   const [err, setErr] = useState("");
+  const [detail, setDetail] = useState<ChainHistoryRow | null>(null);
+  const [q, setQ] = useState("");
+  const [kindFilter, setKindFilter] = useState<"all" | "received" | "sent" | "coinbase">("all");
   useEffect(() => {
     if (recovering && (chain?.rows.length ?? 0) > 0) setRecovering(false);
   }, [recovering, chain]);
@@ -2051,7 +2297,21 @@ function History({
   };
 
   const fresh = justSent ? txs.find((t) => t.txid === justSent) : undefined;
-  const chainRows = chain?.rows ?? [];
+  const allRows = chain?.rows ?? [];
+  // Search covers what a person actually remembers about a payment: who, what it
+  // was for, and roughly how much — not the txid they never read.
+  const needle = q.trim().toLowerCase();
+  const chainRows = allRows.filter((r) => {
+    if (kindFilter !== "all" && r.kind !== kindFilter) return false;
+    if (!needle) return true;
+    const who = r.recipient ? `${displayName(r.recipient, "")} ${r.recipient}` : "";
+    return (
+      who.toLowerCase().includes(needle) ||
+      (r.memo ?? "").toLowerCase().includes(needle) ||
+      r.amountZkas.toFixed(8).includes(needle) ||
+      r.txid.toLowerCase().includes(needle)
+    );
+  });
   const confirmed = new Set(chainRows.map((r) => r.txid));
   // Device-local sends the chain scan hasn't caught up to yet stay on top as
   // 0-conf rows; once a send appears chain-side, the chain row is authoritative.
@@ -2124,12 +2384,27 @@ function History({
           <div>
             <b>Sent privately.</b> Watch it confirm below — this updates live.
           </div>
+          {/* Explicit arrow, not the bare handler: passing it directly would hand
+              the click event in as the "prefill address" argument. */}
           {onSendAnother && (
-            <button className="btn ghost small" style={{ flex: "none" }} onClick={onSendAnother}>
+            <button className="btn ghost small" style={{ flex: "none" }} onClick={() => onSendAnother()}>
               Send another
             </button>
           )}
         </div>
+      )}
+      {allRows.length > 3 && (
+        <div className="filterbar">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, note or amount" />
+          {(["all", "received", "sent", "coinbase"] as const).map((k) => (
+            <button key={k} className={"chip" + (kindFilter === k ? " on" : "")} onClick={() => setKindFilter(k)}>
+              {k === "all" ? "All" : k === "coinbase" ? "Mined" : k === "sent" ? "Sent" : "Received"}
+            </button>
+          ))}
+        </div>
+      )}
+      {allRows.length > 0 && chainRows.length === 0 && (
+        <p className="muted small">Nothing matches that filter.</p>
       )}
       <div className="txlist">
         {pending.map((t) => (
@@ -2153,7 +2428,13 @@ function History({
           </a>
         ))}
         {chainRows.map((r) => (
-          <a key={r.txid + r.kind} className="txrow" href={`${EXPLORER}/txs/${r.txid}`} target="_blank" rel="noreferrer">
+          <button
+            key={r.txid + r.kind}
+            type="button"
+            className="txrow"
+            style={{ textAlign: "left", width: "100%", font: "inherit", color: "inherit" }}
+            onClick={() => setDetail(r)}
+          >
             <div className="txrow-main">
               <span className="txrow-amt">
                 {r.kind === "sent" ? "− " : "+ "}
@@ -2165,7 +2446,9 @@ function History({
             </div>
             <div className="txrow-sub">
               {r.kind === "sent" && r.recipient ? (
-                <span className="mono">to {shortAddr(r.recipient)}</span>
+                <span className={findContact(r.recipient) ? "" : "mono"}>
+                  to {displayName(r.recipient, shortAddr(r.recipient))}
+                </span>
               ) : r.memo ? (
                 <span className="memo">“{r.memo}”</span>
               ) : (
@@ -2178,7 +2461,7 @@ function History({
                 <span className="memo">“{r.memo}”</span>
               </div>
             )}
-          </a>
+          </button>
         ))}
       </div>
       {heldTxids > 0 && (
@@ -2202,6 +2485,33 @@ function History({
           Turn history off & erase
         </a>
       </p>
+      {allRows.length > 0 && (
+        <button
+          className="btn ghost small"
+          onClick={() => {
+            // Built and downloaded on-device: exporting your own records must not
+            // mean handing them to a server.
+            const url = URL.createObjectURL(new Blob([historyCsv(allRows)], { type: "text/csv" }));
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `zkas-history-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          Export CSV
+        </button>
+      )}
+      {detail && (
+        <TxDetail
+          row={detail}
+          onClose={() => setDetail(null)}
+          onSendAgain={(addr) => {
+            setDetail(null);
+            onSendAnother?.(addr);
+          }}
+        />
+      )}
       {err && <div className="msg err">{err}</div>}
       {askDisable && (
         <ConfirmDialog
