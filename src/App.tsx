@@ -656,6 +656,73 @@ function Onboard({
   );
 }
 
+/// Re-derive the wallet from the chain. Prominent on both Receive and History
+/// because it is the answer to the two things a user panics about: "my payment
+/// hasn't shown up" and "my balance/history is missing something".
+function RescanButton({ label, hint }: { label: string; hint: string }) {
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  // Whether history recording is on decides what a rescan can actually give
+  // back. With it off, a rescan still recovers notes and balance — the funds —
+  // but writes no transaction rows, so the button must not promise a list.
+  const [historyOn, setHistoryOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    let live = true;
+    api
+      .history()
+      .then((h) => live && setHistoryOn(h.recoverableHistory))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const run = async (alsoEnableHistory: boolean) => {
+    const scope = alsoEnableHistory
+      ? "Rescan will re-read the chain from your wallet's birthday, recovering your balance AND rebuilding your transaction history from here on."
+      : historyOn === false
+        ? "Rescan will re-read the chain from your wallet's birthday and recover your balance. History is off, so no transaction list is produced."
+        : "Rescan will re-read the chain from your wallet's birthday to rebuild history and recover anything missing.";
+    if (!confirm(scope + " Takes a minute or two — the balance shows as syncing meanwhile. Continue?")) return;
+    setBusy(true);
+    try {
+      if (alsoEnableHistory) {
+        await api.setHistoryEnabled(true);
+        setHistoryOn(true);
+      }
+      await api.rescan();
+      setDone(true);
+      setTimeout(() => setDone(false), 6000);
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const offHint = "Recovers your balance from the chain. History is off, so this rebuilds funds — not a transaction list.";
+  return (
+    <div className="rescanbox">
+      <div>
+        <b>{label}</b>
+        <div className="muted small">
+          {done ? "Rescanning — this tab updates as it catches up." : historyOn === false ? offHint : hint}
+        </div>
+      </div>
+      <div className="rescanbox-actions">
+        <button className="btn ghost" onClick={() => run(false)} disabled={busy}>
+          {busy ? "Starting…" : "↻ Rescan"}
+        </button>
+        {historyOn === false && (
+          <button className="btn ghost small" onClick={() => run(true)} disabled={busy}>
+            Enable history + rescan
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Receive({ status }: { status: Status }) {
   const addr = status.address || "";
   // The address QR never changes, so it's cached after the first render and shows
@@ -699,6 +766,8 @@ function Receive({ status }: { status: Status }) {
       <button className="btn ghost small" style={{ marginTop: 12 }} onClick={copy}>
         {copied ? "Copied ✓" : "Copy address"}
       </button>
+
+      <RescanButton label="Payment not showing up?" hint="Re-read the chain for this wallet — recovers anything the local view is missing." />
 
       <div style={{ height: 1, background: "var(--border)", margin: "22px 0" }} />
       <RevealSeed />
@@ -1313,28 +1382,6 @@ function History({
     };
   }, []);
 
-  // Re-derive the wallet from the chain (from its birthday): backfills history
-  // and recovers anything a stale local view might be missing — the answer to
-  // both "why is my history empty" and "where did my balance go".
-  const rescan = async () => {
-    if (
-      !confirm(
-        "Rescan re-reads the chain from your wallet's birthday to rebuild history and recover anything missing. " +
-          "Takes a minute or two — the balance shows as syncing meanwhile. Continue?"
-      )
-    )
-      return;
-    setBusy(true);
-    try {
-      await api.rescan();
-      setChain(await api.history());
-    } catch (e) {
-      alert((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   // History is opt-in: nothing readable is stored until the user activates it,
   // and turning it off erases the stored record immediately.
   const setHistory = async (on: boolean) => {
@@ -1487,19 +1534,11 @@ function History({
           temporarily held until it confirms (returned automatically within ~1 hour if it never does).
         </p>
       )}
+      <RescanButton label="Something missing?" hint="Re-read the chain to rebuild this history and recover any funds the local view lost." />
+
       <p className="muted small" style={{ marginTop: 14 }}>
         Recovered from the chain by your viewing key — only this wallet can see any of it. Tap a row to view it on the
         explorer (which shows the shielded transaction, not its contents).{" "}
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            rescan();
-          }}
-        >
-          Rescan
-        </a>
-        {" · "}
         <a
           href="#"
           onClick={(e) => {

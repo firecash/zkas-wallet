@@ -572,3 +572,36 @@ select { appearance: none; cursor: pointer; }
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.35); opacity: 0.6; }
 }
+
+/* Rescan callout — the recovery action, on Receive and History. Deliberately a
+   bordered box rather than an inline link: it is what a user reaches for when a
+   payment "hasn't arrived" or history looks wrong, so it must be findable. */
+.rescanbox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.rescanbox b {
+  display: block;
+  margin-bottom: 3px;
+}
+.rescanbox .muted.small {
+  max-width: 46ch;
+}
+.rescanbox-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: none;
+}
+.rescanbox .btn {
+  flex: none;
+  white-space: nowrap;
+}
