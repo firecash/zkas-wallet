@@ -1,0 +1,146 @@
+# Desktop wallet for every platform we can honestly support, in one run.
+#
+# Tauri cannot cross-compile a bundle: the installer format is produced by the
+# host OS (WiX/NSIS on Windows, dpkg/AppImage on Linux, hdiutil on macOS), so
+# each target needs its own runner. That is the whole reason this is a matrix and
+# not a loop.
+#
+# Everything lands on a release tag chosen at dispatch time, so desktop builds
+# can ride along with the mobile release rather than living in a separate place.
+
+name: desktop-all
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach the builds to"
+        required: true
+        default: "v0.3.1"
+  push:
+    tags: ["desktop-v*"]
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      # One platform failing must not deny the others a release — a missing
+      # Windows build is bad, but withholding the Linux one too is worse.
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows-x86_64
+            target: x86_64-pc-windows-msvc
+            bundles: msi,nsis
+          - os: ubuntu-22.04
+            name: linux-x86_64
+            target: x86_64-unknown-linux-gnu
+            bundles: deb,appimage
+          - os: ubuntu-22.04-arm
+            name: linux-aarch64
+            target: aarch64-unknown-linux-gnu
+            bundles: deb,appimage
+          - os: macos-14
+            name: macos-x86_64
+            target: x86_64-apple-darwin
+            bundles: app,dmg
+          - os: macos-14
+            name: macos-aarch64
+            target: aarch64-apple-darwin
+            bundles: app,dmg
+    runs-on: ${{ matrix.os }}
+    steps:
+      # The Tauri crate depends on ../../rusty-kaspa/zkas-walletd relative to
+      # src-tauri, so the two repos must sit side by side.
+      - uses: actions/checkout@v4
+        with:
+          path: wallet
+      - uses: actions/checkout@v4
+        with:
+          repository: firecash/firecash-rusty
+          path: rusty-kaspa
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # protoc: the kaspa gRPC crates generate their client at build time.
+      - name: protoc (linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: protoc (macos)
+        if: startsWith(matrix.os, 'macos')
+        run: brew install protobuf
+      - name: protoc (windows)
+        if: startsWith(matrix.os, 'windows')
+        run: choco install protoc -y
+
+      # Tauri's Linux bundler needs the webkit/gtk stack and patchelf.
+      - name: Tauri system deps (linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+            build-essential curl wget file libssl-dev libxdo-dev \
+            libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wallet/src-tauri
+          key: ${{ matrix.name }}
+
+      - name: Web bundle deps
+        working-directory: wallet
+        run: npm ci
+
+      - name: Build
+        working-directory: wallet
+        run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+      # Ad-hoc signing so Gatekeeper lets the user through with right-click →
+      # Open. Real notarization needs an Apple Developer account.
+      - name: Sign and zip (macos)
+        if: startsWith(matrix.os, 'macos')
+        working-directory: wallet/src-tauri/target/${{ matrix.target }}/release/bundle/macos
+        run: |
+          codesign --force --deep -s - "ZKas Wallet.app"
+          codesign --verify --verbose "ZKas Wallet.app"
+          ditto -c -k --keepParent "ZKas Wallet.app" "ZKas-Wallet-${{ matrix.name }}.zip"
+
+      - name: Collect artifacts
+        shell: bash
+        working-directory: wallet
+        run: |
+          mkdir -p out
+          B="src-tauri/target/${{ matrix.target }}/release/bundle"
+          # Name every file after its platform+arch. Tauri's own names collide
+          # across targets ("ZKas Wallet_0.1.0_amd64.deb" from two runners), and a
+          # user cannot tell which build they downloaded from the filename alone.
+          find "$B" -type f \( -name '*.dmg' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.msi' -o -name '*.exe' -o -name '*.zip' \) -print0 |
+          while IFS= read -r -d '' f; do
+            base=$(basename "$f")
+            ext="${base##*.}"
+            cp "$f" "out/ZKas-Wallet-${{ matrix.name }}.${ext}"
+          done
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zkas-wallet-${{ matrix.name }}
+          path: wallet/out/*
+
+      - name: Attach to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: wallet
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          [ -n "$TAG" ] || TAG="${GITHUB_REF_NAME}"
+          gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1 ||
+            gh release create "$TAG" --repo "${GITHUB_REPOSITORY}" --title "$TAG" --notes "Desktop builds."
+          gh release upload "$TAG" out/* --repo "${GITHUB_REPOSITORY}" --clobber
