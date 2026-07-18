@@ -33,6 +33,7 @@ import {
 } from "./desktop";
 import { makeBackup, readBackup } from "./backup";
 import { currentTheme, setTheme, type Theme } from "./theme";
+import { wipeWalletState } from "./walletstate";
 import {
   addContact,
   findContact,
@@ -166,6 +167,11 @@ const TAB_LABEL: Record<Tab, string> = {
 // receiving, sending, or looking at history now lives behind the gear.
 const TABS: Tab[] = ["receive", "send", "history", "settings"];
 
+/// How many consecutive "no wallet" answers to ride out before believing them.
+/// ~10s at the 1s poll: long enough to cover a daemon restart, short enough that
+/// a real removal takes effect while the user is still looking at the screen.
+const MISSING_TOLERANCE = 10;
+
 /// Scroll the active tab pane to sit just under the sticky tab bar, so whatever
 /// the user is here to do (type an address, read tx details) is immediately in
 /// view — never the header/balance they'd have to scroll past.
@@ -215,6 +221,8 @@ export default function App() {
   // Starts null so the first poll of a session establishes it silently instead of
   // announcing the user's entire balance as an incoming payment.
   const lastBalance = useRef<number | null>(null);
+  // Consecutive polls answering "no wallet"; see the guard in `refresh`.
+  const missingPolls = useRef(0);
   const toast = useToast();
   const announce = useCallback(
     (deltaFc: number) => {
@@ -255,7 +263,15 @@ export default function App() {
         else if (warmingSince.current == null) warmingSince.current = now;
         const warmingStable = !!s.warming && now - (warmingSince.current ?? now) >= 8000;
         const stable = { ...s, synced: syncedStable, warming: warmingStable };
-        return prev?.has_wallet && (!s.has_wallet || !s.address)
+        // Hold a known wallet through a TRANSIENT "no wallet" answer (the daemon
+        // reloading, or a status racing a sync pass) — but only transiently. This
+        // guard used to be unconditional, so a wallet the user had deliberately
+        // removed was resurrected on every poll and the app looked like it had
+        // ignored them. After MISSING_TOLERANCE consecutive denials we believe it.
+        if (s.has_wallet && s.address) missingPolls.current = 0;
+        else missingPolls.current += 1;
+        const transient = missingPolls.current <= MISSING_TOLERANCE;
+        return prev?.has_wallet && (!s.has_wallet || !s.address) && transient
           ? { ...stable, has_wallet: true, address: s.address ?? prev.address }
           : stable;
       });
@@ -371,7 +387,7 @@ export default function App() {
                 role="tab"
                 aria-selected={tab === t}
                 aria-label={t === "settings" ? "Settings" : TAB_LABEL[t]}
-                className={tab === t ? "active" : ""}
+                className={`${tab === t ? "active" : ""}${t === "settings" ? " gear" : ""}`}
                 onClick={() => setTab(t)}
                 onKeyDown={(e) => {
                   // Arrow keys move between tabs, as a tablist is expected to.
@@ -1177,6 +1193,7 @@ function SettingsPane({ status }: { status: Status }) {
       )}
       <AppearanceCard />
       <ToolsCard status={status} />
+      <SwitchWallet />
       <AboutCard />
     </>
   );
@@ -2784,9 +2801,6 @@ function VaultSetting() {
 
       {watchOnly ? <DeviceSeedBackup /> : <BackupWallet />}
 
-      <div style={{ height: 1, background: "var(--border)", margin: "18px 0" }} />
-      <SwitchWallet />
-
       {askLock && (
         <ConfirmDialog
           title="Lock wallet?"
@@ -2981,11 +2995,11 @@ function SwitchWallet() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   return (
-    <>
+    <div className="card">
+      <h2>Use a different wallet</h2>
       <p className="muted small" style={{ marginTop: 0 }}>
-        <b>Use a different wallet.</b> Removes this wallet from this computer so you can create a new one or restore
-        another. Back it up first — the coins stay on-chain, but without your backup or seed phrase you cannot reach
-        them again.
+        Removes this wallet from this device so you can create a new one or restore another. Back it up first — the
+        coins stay on-chain, but without your backup or seed phrase you cannot reach them again.
       </p>
       {err && <div className="msg err">{err}</div>}
       <button className="btn ghost" onClick={() => setAsk(true)} disabled={busy}>
@@ -3001,21 +3015,24 @@ function SwitchWallet() {
             setAsk(false);
             setBusy(true);
             try {
-              await forgetWallet();
-              // Drop this device's spending key too — it belongs to the wallet
-              // being forgotten, and leaving it would re-attach to a new one.
-              localStorage.removeItem(`device_seed_${localStorage.getItem("wallet_token") || "default"}`);
+              const token = localStorage.getItem("wallet_token");
+              // Desktop owns its daemon, so the wallet file is deleted and the
+              // token rotated there. On the hosted daemon we cannot (and must
+              // not) delete server state for a token others may share a server
+              // with — dropping the token is what makes this device forget it,
+              // and a fresh token is a fresh wallet.
+              if (isDesktop()) await forgetWallet();
+              wipeWalletState(token);
               location.reload();
             } catch (e) {
               setErr((e as Error).message);
-            } finally {
               setBusy(false);
             }
           }}
           onCancel={() => setAsk(false)}
         />
       )}
-    </>
+    </div>
   );
 }
 

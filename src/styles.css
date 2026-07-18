@@ -208,6 +208,17 @@ a { color: var(--ember); }
 .tabs button:hover:not(.active) { color: var(--ink); }
 .tabs button.active { background: var(--ember); color: #04211c; }
 
+/* The settings tab is a glyph, not a word: at the shared 13px it read as a
+   speck next to three text labels, and a gear is the one control people scan
+   for by shape. Sized up and given a fixed, square-ish footprint so it does not
+   stretch to a quarter of the row like the text tabs do. */
+.tabs button.gear {
+  font-size: 19px;
+  line-height: 1;
+  padding: 7px 14px;
+  flex: 0 0 auto;
+}
+
 /* Very narrow phones: shave the padding before anything is allowed to clip. */
 @media (max-width: 380px) {
   .tabs button { padding: 9px 9px; font-size: 12.5px; }

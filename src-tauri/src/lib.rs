@@ -432,6 +432,13 @@ fn forget_wallet(state: tauri::State<'_, Mutex<Engine>>) -> Result<WalletConfig,
     let _ = std::fs::remove_file(format!("{dir}/{token}.json"));
     let _ = std::fs::remove_file(format!("{dir}/{token}.scan"));
     let _ = std::fs::remove_file(format!("{dir}/{token}.scan.bak"));
+    // Rotate the token as well. It is the wallet's identity everywhere — the
+    // filename on disk AND the key every per-wallet cache in the UI hangs off
+    // (status cache, device seed, contacts). Keeping it meant the NEXT wallet
+    // inherited the removed one's cached identity and appeared to be the same
+    // wallet coming back from the dead.
+    let _ = std::fs::remove_file(e.config_dir.join("wallet-token"));
+    e.token = Engine::load_or_create_token(&e.config_dir);
     e.secret = None;
     e.start_walletd();
     Ok(config_of(&e))
