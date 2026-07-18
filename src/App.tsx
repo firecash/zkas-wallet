@@ -757,7 +757,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
 // the periodic status poll can't unmount it — it stays until the user dismisses it.
 function SeedBackup({ seed, address, onDone }: { seed: string; address: string; onDone: () => void }) {
   const [copied, setCopied] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
+  const [stage, setStage] = useState<"show" | "verify">("show");
   const copy = async () => {
     try {
       await copyText(seed);
@@ -767,34 +767,124 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // 64 hex characters in one unbroken run is a transcription trap — a single
+  // dropped character loses the wallet, and nothing about the format tells you
+  // where you are. Numbered groups of eight are what a person can actually copy
+  // onto paper and check afterwards.
+  const groups = seed.match(/.{1,8}/g) ?? [];
+
+  if (stage === "verify") {
+    return <VerifyBackup groups={groups} onBack={() => setStage("show")} onDone={onDone} />;
+  }
+
   return (
     <div className="card">
       <h2>Back up your recovery phrase</h2>
       <div className="msg warn">
         This 32-byte seed <b>is</b> your wallet. Write it down and store it offline. Anyone who has it controls your
-        funds. Take your time — nothing is synced until you continue.
+        funds — and nobody, including us, can restore it for you.
       </div>
-      <label>Recovery seed (hex)</label>
-      <div className="addr">{seed}</div>
+      <label>Recovery seed</label>
+      <div className="seedgrid">
+        {groups.map((g, i) => (
+          <div key={i} className="seedcell">
+            <span className="seedidx">{i + 1}</span>
+            <span className="mono">{g}</span>
+          </div>
+        ))}
+      </div>
       <button className="btn ghost small" style={{ marginTop: 12 }} onClick={copy}>
         {copied ? "Copied ✓" : "Copy seed"}
       </button>
       <label style={{ marginTop: 16 }}>Your shielded address</label>
       <div className="addr">{address}</div>
-      <label style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 18, cursor: "pointer" }}>
-        <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ marginTop: 3 }} />
-        <span className="muted small">
-          I've written down my recovery seed and understand it's the only way to restore this wallet. You can view it
-          again anytime under the <b>Receive</b> tab.
-        </span>
-      </label>
-      <button className="btn" disabled={!confirmed} onClick={onDone}>
-        Open wallet
+      <button className="btn" style={{ marginTop: 18 }} onClick={() => setStage("verify")}>
+        I've written it down
       </button>
+      <p className="muted small" style={{ marginTop: 10 }}>
+        Next you'll be asked for two of the groups above, so you find out now if the copy is wrong — not on the day you
+        need it.
+      </p>
     </div>
   );
 }
 
+/// Prove the backup was actually written down.
+///
+/// This used to be a checkbox. A checkbox costs one click and verifies nothing,
+/// which on a chain with no recovery path means the wallet's most destructive
+/// failure — a seed that was never really saved — stays invisible until the day
+/// it matters. Asking for two random groups catches a bad transcription while
+/// the seed is still on screen, and cannot be satisfied by clicking through.
+function VerifyBackup({ groups, onBack, onDone }: { groups: string[]; onBack: () => void; onDone: () => void }) {
+  // Chosen once per mount, so retrying cannot reshuffle to easier questions.
+  const [ask] = useState(() => {
+    const idx = groups.map((_, i) => i);
+    for (let i = idx.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [idx[i], idx[j]] = [idx[j], idx[i]];
+    }
+    return idx.slice(0, 2).sort((a, b) => a - b);
+  });
+  const [answers, setAnswers] = useState<string[]>(["", ""]);
+  const [error, setError] = useState("");
+  const toast = useToast();
+
+  const check = () => {
+    const ok = ask.every((g, n) => answers[n].trim().toLowerCase() === groups[g].toLowerCase());
+    if (!ok) {
+      setError("That doesn't match. Check your copy against the seed — go back if you need to see it again.");
+      return;
+    }
+    toast.show("good", "Backup confirmed", "Keep it somewhere safe and offline.");
+    onDone();
+  };
+
+  return (
+    <div className="card">
+      <h2>Confirm your backup</h2>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        From what you just wrote down, type these two groups. This is the only check that your copy is correct — there
+        is no way to recover this wallet without it.
+      </p>
+      {ask.map((g, n) => (
+        <div key={g}>
+          <label>Group {g + 1}</label>
+          <input
+            className="mono"
+            value={answers[n]}
+            autoFocus={n === 0}
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={8}
+            onChange={(e) => {
+              const next = [...answers];
+              next[n] = e.target.value.replace(/[^0-9a-fA-F]/g, "");
+              setAnswers(next);
+              setError("");
+            }}
+            placeholder="8 characters"
+          />
+        </div>
+      ))}
+      {error && <div className="msg err">{error}</div>}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button className="btn" onClick={check} disabled={answers.some((a) => a.length !== 8)}>
+          Confirm & open wallet
+        </button>
+        <button className="btn ghost" onClick={onBack}>
+          Show me the seed again
+        </button>
+      </div>
+      <p className="muted small" style={{ marginTop: 10 }}>
+        You can view the seed again later under <b>Receive</b> — but only on this device, and only while you still have
+        it.
+      </p>
+    </div>
+  );
+}
 /// The signer's network name for the daemon's chain (only mainnet/testnet exist
 /// for address encoding; anything else is a devnet using the testnet HRP).
 function networkOf(status: Status | null): Network {
@@ -3228,16 +3318,38 @@ function NodeSourceSetting() {
 
 function Setup() {
   const [base, setB] = useState(getBase());
+
+  // Desktop runs the wallet engine INSIDE the app, so "the hosted service is
+  // down" is both wrong and unactionable there — and the URL box is meaningless,
+  // since the shell hands the UI its own loopback port and token.
+  if (isDesktop()) {
+    return (
+      <div className="card setup">
+        <h2>The wallet engine didn't start</h2>
+        <div className="msg warn">
+          ZKas Wallet runs its wallet engine inside this app, and it isn't answering. Your funds are safe on-chain —
+          this is a local problem, not a chain one.
+        </div>
+        <p className="muted small">
+          Restarting the app usually clears it. If it keeps happening, the node it connects to may be unreachable — you
+          can change that below.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="card setup">
       <h2>Can't reach the wallet service</h2>
       <div className="msg warn">
-        The hosted wallet service isn't responding right now. It normally runs on our side, connected to ZKas's
-        public node — you don't need to run anything. Try again shortly.
+        {isNative()
+          ? "The wallet service isn't responding. Check your connection and try again shortly — your funds are safe on-chain."
+          : "The hosted wallet service isn't responding right now. It normally runs on our side, connected to ZKas's public node — you don't need to run anything. Try again shortly."}
       </div>
       <p className="muted small">
-        Prefer full <b>non-custodial</b> control? Run your own <code>zkas-walletd</code> locally (it uses our public
-        node, no full node required) and point this URL at it — then your seed never leaves your machine.
+        Your spending key is on this device either way — it is never sent to the service. What running your own{" "}
+        <code>zkas-walletd</code> changes is <b>privacy</b>: the hosted service can see which wallet is asking about
+        which blocks, and your own daemon sees only what you already know.
       </p>
       <label>Daemon URL</label>
       <div className="row">
@@ -3256,7 +3368,6 @@ function Setup() {
     </div>
   );
 }
-
 function trimFc(fc: string): string {
   // "12.34500000" -> "12.345"; "12.00000000" -> "12"
   if (!fc.includes(".")) return fc;

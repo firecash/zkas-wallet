@@ -833,3 +833,28 @@ select { appearance: none; cursor: pointer; }
   border-color: var(--ember);
   background: var(--ember-soft);
 }
+
+/* Recovery seed, written for a human with a pen: numbered groups of eight so a
+   dropped character is visible before it costs someone their wallet. */
+.seedgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+.seedcell {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 10px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+.seedidx {
+  color: var(--muted);
+  font-size: 11px;
+  min-width: 12px;
+}
