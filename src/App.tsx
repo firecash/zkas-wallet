@@ -122,6 +122,20 @@ async function pasteText(): Promise<string> {
   }
 }
 
+/// Keep a money field to something that can actually be a number: digits, one
+/// decimal point, at most 8 places (a sompi is 1e-8 ZKAS — more digits are not
+/// representable and silently round). Stripping only non-[0-9.] let "1.2.3"
+/// through, which parses as NaN and left the user staring at a disabled button
+/// with no explanation.
+function sanitizeAmountInput(raw: string): string {
+  let v = raw.replace(/[^0-9.]/g, "");
+  const first = v.indexOf(".");
+  if (first !== -1) v = v.slice(0, first + 1) + v.slice(first + 1).replace(/\./g, "");
+  const dot = v.indexOf(".");
+  if (dot !== -1) v = v.slice(0, dot + 1 + 8);
+  return v;
+}
+
 // "12.34500000" or "12.345" -> 12.345 (number); NaN if not a clean amount.
 function parseAmount(s: string): number {
   if (!/^\d*\.?\d*$/.test(s.trim()) || s.trim() === "" || s.trim() === ".") return NaN;
@@ -350,9 +364,23 @@ export default function App() {
       {reachable && !freshSeed && status && status.has_wallet && (
         <>
           <BalanceHero status={status} txs={txs} />
-          <div className="tabs">
+          <div className="tabs" role="tablist" aria-label="Wallet sections">
             {TABS.map((t) => (
-              <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
+              <button
+                key={t}
+                role="tab"
+                aria-selected={tab === t}
+                aria-label={t === "settings" ? "Settings" : TAB_LABEL[t]}
+                className={tab === t ? "active" : ""}
+                onClick={() => setTab(t)}
+                onKeyDown={(e) => {
+                  // Arrow keys move between tabs, as a tablist is expected to.
+                  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+                  e.preventDefault();
+                  const i = TABS.indexOf(t);
+                  setTab(TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length]);
+                }}
+              >
                 {TAB_LABEL[t]}
               </button>
             ))}
@@ -1619,7 +1647,7 @@ function Receive({ status }: { status: Status }) {
           <label>Amount (ZKAS) — optional</label>
           <input
             value={reqAmount}
-            onChange={(e) => setReqAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+            onChange={(e) => setReqAmount(sanitizeAmountInput(e.target.value))}
             placeholder="0.00"
             inputMode="decimal"
           />
@@ -1834,6 +1862,10 @@ function Send({
   // actually knows who it was.
   const [saveAddr, setSaveAddr] = useState<string | null>(null);
   const contact = findContact(to);
+  // Paying yourself is valid (it merges notes) but is nearly always a paste
+  // mistake, and silently burning a fee for it is the kind of thing a wallet
+  // should mention before it happens rather than after.
+  const isSelf = !!status?.address && to.trim().toLowerCase() === status.address.toLowerCase();
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<SendStage | null>(null);
   const [error, setError] = useState("");
@@ -2091,6 +2123,11 @@ function Send({
           Paying <b>{contact.name}</b> from your contacts.
         </div>
       )}
+      {isSelf && (
+        <div className="fieldhint" style={{ color: "var(--ember)" }}>
+          That's your own address. The payment works — it just returns to you, minus the fee.
+        </div>
+      )}
       <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
         <button type="button" className="linkbtn" onClick={() => setPickContact(true)}>
           Choose a contact
@@ -2133,7 +2170,7 @@ function Send({
       </div>
       <input
         value={amount}
-        onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+        onChange={(e) => setAmount(sanitizeAmountInput(e.target.value))}
         placeholder="0.00"
         inputMode="decimal"
         style={overspend ? { borderColor: "var(--bad)" } : undefined}
@@ -2450,9 +2487,16 @@ function History({
     return (
       <div className="card">
         <h2>History</h2>
+        {chain === null && (
+          <div style={{ display: "grid", gap: 10 }}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="skel" style={{ height: 46 }} />
+            ))}
+          </div>
+        )}
         <p className="muted small" style={{ marginTop: 0 }}>
           {chain === null
-            ? "Loading history…"
+            ? ""
             : recovering
               ? "Recovering your history from the chain — this takes a minute or two. Rows appear here as the scan catches up; you can leave this tab."
               : "Nothing yet. Mints, payments you receive, and sends from this wallet all show up here — recovered from the chain itself, so this list follows your seed, not this device."}
