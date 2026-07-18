@@ -1313,6 +1313,28 @@ function History({
     };
   }, []);
 
+  // Re-derive the wallet from the chain (from its birthday): backfills history
+  // and recovers anything a stale local view might be missing — the answer to
+  // both "why is my history empty" and "where did my balance go".
+  const rescan = async () => {
+    if (
+      !confirm(
+        "Rescan re-reads the chain from your wallet's birthday to rebuild history and recover anything missing. " +
+          "Takes a minute or two — the balance shows as syncing meanwhile. Continue?"
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      await api.rescan();
+      setChain(await api.history());
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // History is opt-in: nothing readable is stored until the user activates it,
   // and turning it off erases the stored record immediately.
   const setHistory = async (on: boolean) => {
@@ -1369,7 +1391,8 @@ function History({
           {busy ? "Enabling…" : "Enable history"}
         </button>
         <p className="muted small" style={{ marginTop: 10 }}>
-          Recording starts from now. Sends made while history was off can never be recovered — not even by you.
+          Recording starts from now — after enabling, use “Rescan” in this tab to backfill what the chain still holds
+          for your keys. Sends made while history was off can never be recovered — not even by you.
         </p>
       </div>
     );
@@ -1467,6 +1490,16 @@ function History({
       <p className="muted small" style={{ marginTop: 14 }}>
         Recovered from the chain by your viewing key — only this wallet can see any of it. Tap a row to view it on the
         explorer (which shows the shielded transaction, not its contents).{" "}
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            rescan();
+          }}
+        >
+          Rescan
+        </a>
+        {" · "}
         <a
           href="#"
           onClick={(e) => {

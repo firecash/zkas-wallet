@@ -191,6 +191,9 @@ export const api = {
   // wallet's scan data (and makes sends OVK-recoverable); disabling erases it.
   setHistoryEnabled: (on: boolean) =>
     req<{ recoverableHistory: boolean }>("POST", "/api/wallet/settings", { recoverable_history: on }),
+  // Re-derive the wallet from the chain itself (from its birthday): backfills
+  // history rows and recovers anything the incremental view lost.
+  rescan: () => req<{ rescanning: boolean }>("POST", "/api/wallet/rescan", {}),
   verify: (address: string, message: string, signature: string) =>
     req<{ valid: boolean; reason: string | null }>("POST", "/api/verify", { address, message, signature }),
 };
