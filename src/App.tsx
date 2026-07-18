@@ -724,7 +724,7 @@ function RescanButton({ label, hint }: { label: string; hint: string }) {
         </button>
         {historyOn === false && (
           <button className="btn ghost small" onClick={() => run(true)} disabled={busy}>
-            Enable history + rescan
+            Enable history & recover
           </button>
         )}
       </div>
@@ -1380,6 +1380,12 @@ function History({
   // from the daemon, so it survives a seed restore and shows on every device.
   const [chain, setChain] = useState<ChainHistory | null>(null);
   const [busy, setBusy] = useState(false);
+  // True from the moment history is enabled until the recovery scan produces
+  // rows — so the tab explains the wait instead of looking empty and broken.
+  const [recovering, setRecovering] = useState(false);
+  useEffect(() => {
+    if (recovering && (chain?.rows.length ?? 0) > 0) setRecovering(false);
+  }, [recovering, chain]);
   useEffect(() => {
     let live = true;
     const pull = () => api.history().then((h) => live && setChain(h)).catch(() => {});
@@ -1393,6 +1399,11 @@ function History({
 
   // History is opt-in: nothing readable is stored until the user activates it,
   // and turning it off erases the stored record immediately.
+  //
+  // Enabling also kicks off a rescan. Rows are only written as blocks are
+  // scanned, so without it "Enable history" leaves the tab empty until the next
+  // payment arrives — the flag looks broken. The rescan re-reads the chain from
+  // the wallet's birthday and recovers everything the keys can still derive.
   const setHistory = async (on: boolean) => {
     if (
       !on &&
@@ -1402,6 +1413,10 @@ function History({
     setBusy(true);
     try {
       await api.setHistoryEnabled(on);
+      if (on) {
+        await api.rescan();
+        setRecovering(true);
+      }
       setChain(await api.history());
     } catch (e) {
       alert((e as Error).message);
@@ -1444,11 +1459,13 @@ function History({
           shielded either way.
         </p>
         <button className="btn" onClick={() => setHistory(true)} disabled={busy}>
-          {busy ? "Enabling…" : "Enable history"}
+          {busy ? "Enabling & recovering…" : "Enable history & recover"}
         </button>
         <p className="muted small" style={{ marginTop: 10 }}>
-          Recording starts from now — after enabling, use “Rescan” in this tab to backfill what the chain still holds
-          for your keys. Sends made while history was off can never be recovered — not even by you.
+          Enabling immediately re-reads the chain to recover everything your keys can still see — mints, payments
+          received, and sends made while history was on before. Takes a minute or two. Sends made while history was off
+          carry no record for anyone, so those recover as amounts without a recipient — not even you can recover who was
+          paid.
         </p>
       </div>
     );
@@ -1461,9 +1478,11 @@ function History({
         <p className="muted small" style={{ marginTop: 0 }}>
           {chain === null
             ? "Loading history…"
-            : "Nothing yet. Mints, payments you receive, and sends from this wallet all show up here — recovered from the chain itself, so this list follows your seed, not this device."}
+            : recovering
+              ? "Recovering your history from the chain — this takes a minute or two. Rows appear here as the scan catches up; you can leave this tab."
+              : "Nothing yet. Mints, payments you receive, and sends from this wallet all show up here — recovered from the chain itself, so this list follows your seed, not this device."}
         </p>
-        {chain !== null && (
+        {chain !== null && !recovering && (
           <button className="btn ghost small" onClick={() => setHistory(false)} disabled={busy}>
             Turn history off
           </button>
