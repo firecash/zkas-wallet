@@ -160,13 +160,21 @@ const EXPLORER = "https://explorer.zkas.info";
 // or which network the daemon/signer actually use.
 const NET_LABEL = "testnet";
 
-type Tab = "receive" | "send" | "history" | "settings";
+type Tab = "receive" | "send" | "history" | "sign" | "verify" | "settings";
 const TAB_LABEL: Record<Tab, string> = {
   receive: "Receive",
   send: "Send",
   history: "History",
+  sign: "Sign",
+  verify: "Verify",
   settings: "⚙",
 };
+
+/// Desktop has a window; a phone has a thumb's width. Sign and Verify are real
+/// capabilities that deserve to be one click away where there is room, and would
+/// crowd out the three that matter where there isn't — on narrow screens they
+/// live in Settings → Tools instead.
+const ROOMY = () => isDesktop() || (typeof window !== "undefined" && window.innerWidth >= 900);
 // Three verbs and a gear.
 //
 // This used to be five pills (Sign and Verify sat beside Receive/Send/History)
@@ -175,7 +183,9 @@ const TAB_LABEL: Record<Tab, string> = {
 // a user's entire configuration surface sat under their money at all times, which
 // reads like a debug console rather than a wallet. Everything that is not
 // receiving, sending, or looking at history now lives behind the gear.
-const TABS: Tab[] = ["receive", "send", "history", "settings"];
+const TABS: Tab[] = ROOMY()
+  ? ["receive", "send", "history", "sign", "verify", "settings"]
+  : ["receive", "send", "history", "settings"];
 
 /// How many consecutive "no wallet" answers to ride out before believing them.
 /// ~10s at the 1s poll: long enough to cover a daemon restart, short enough that
@@ -375,6 +385,7 @@ export default function App() {
   return (
     <div className="wrap">
       <Header status={status} reachable={reachable} />
+      <WalletBar />
       <HostedNotice />
       {/* First-ever open (nothing cached yet): a visible connecting state while the
           first status call is in flight, never a stretch of empty page. */}
@@ -433,6 +444,8 @@ export default function App() {
                 }}
               />
             )}
+            {tab === "sign" && <Sign status={status} />}
+            {tab === "verify" && <Verify />}
             {tab === "settings" && <SettingsPane status={status} />}
           </div>
         </>
@@ -535,8 +548,96 @@ function Header({ status, reachable }: { status: Status | null; reachable: boole
   );
 }
 
-// Spendable-now balance, falling back to the full balance for older daemons that
-// don't report it (so nothing regresses if status lacks the field).
+/// Which wallet you are looking at — on the main screen, not buried in settings.
+///
+/// Switching wallets is a thing people do constantly (spending vs savings, work
+/// vs personal); settings is where you go once. So the active wallet is named in
+/// the open, directly above the balance it belongs to, and one tap swaps it. This
+/// is also the honest place for it: a balance with no visible owner invites
+/// exactly the "wait, which wallet is this?" mistake that ends in a payment from
+/// the wrong one.
+function WalletBar() {
+  const [open, setOpen] = useState(false);
+  const [, bump] = useState(0);
+  useEffect(() => {
+    const h = () => bump((n) => n + 1);
+    window.addEventListener("wallets-changed", h);
+    return () => window.removeEventListener("wallets-changed", h);
+  }, []);
+
+  const active = activeToken();
+  const wallets = listWallets();
+  // A single wallet needs no switcher — showing one would be chrome for its own
+  // sake. It appears the moment a second wallet exists.
+  if (wallets.length < 2) return null;
+  const current = wallets.find((w) => w.token === active);
+
+  return (
+    <>
+      <button className="walletbar" onClick={() => setOpen(true)} aria-label="Switch wallet">
+        <span className="avatar sm">{(current?.label.match(/\d+/)?.[0] ?? "1").toString()}</span>
+        <span className="walletbar-name">{current?.label ?? "Wallet"}</span>
+        <span className="walletbar-chev" aria-hidden="true">
+          ▾
+        </span>
+      </button>
+      {open && <WalletSwitcher onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function WalletSwitcher({ onClose }: { onClose: () => void }) {
+  const active = activeToken();
+  const wallets = listWallets();
+  return createPortal(
+    <div className="modalwrap" onClick={onClose}>
+      <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>Your wallets</h2>
+        {wallets.map((w) => (
+          <div
+            key={w.token}
+            className="contact-row"
+            style={{ cursor: w.token === active ? "default" : "pointer" }}
+            onClick={() => {
+              if (w.token === active) return;
+              switchWallet(w.token);
+              location.reload();
+            }}
+          >
+            <div className="avatar" style={w.token === active ? undefined : { opacity: 0.45 }}>
+              {(w.label.match(/\d+/)?.[0] ?? w.label.slice(0, 1)).toString()}
+            </div>
+            <div className="contact-main">
+              <div className="contact-name">
+                {w.label} {w.token === active && <span className="muted small">· active</span>}
+              </div>
+              {w.address && <div className="contact-addr">{w.address}</div>}
+            </div>
+          </div>
+        ))}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+          <button
+            className="btn"
+            onClick={() => {
+              addWallet();
+              location.reload();
+            }}
+          >
+            Add another wallet
+          </button>
+          <button className="btn ghost" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <p className="muted small" style={{ marginTop: 10 }}>
+          Every wallet stays on this device with its own key, history and contacts. Rename or remove them under
+          Settings.
+        </p>
+      </div>
+    </div>,
+    document.body,
+  );
+}
 function spendableFc(status: Status | null): number {
   if (!status) return 0;
   return status.spendable_fc != null ? parseFloat(status.spendable_fc) : parseFloat(status.balance_fc || "0");
@@ -1145,7 +1246,7 @@ function SettingsPane({ status }: { status: Status }) {
         <DaemonSetting />
       )}
       <AppearanceCard />
-      <ToolsCard status={status} />
+      {!ROOMY() && <ToolsCard status={status} />}
       <SwitchWallet />
       <AboutCard />
     </>

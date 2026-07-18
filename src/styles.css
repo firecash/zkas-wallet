@@ -213,9 +213,9 @@ a { color: var(--ember); }
    for by shape. Sized up and given a fixed, square-ish footprint so it does not
    stretch to a quarter of the row like the text tabs do. */
 .tabs button.gear {
-  font-size: 19px;
+  font-size: 23px;
   line-height: 1;
-  padding: 7px 14px;
+  padding: 4px 16px;
   flex: 0 0 auto;
 }
 
@@ -836,3 +836,30 @@ select { appearance: none; cursor: pointer; }
   background: var(--ember-soft);
 }
 
+
+
+/* --- Wallet bar -----------------------------------------------------------
+   Which wallet you are looking at, on the main screen. Appears only when a
+   second wallet exists — with one wallet it would be chrome for its own sake.
+   Directly above the balance on purpose: a balance with no visible owner is how
+   people pay from the wrong wallet. */
+.walletbar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 10px 0 0;
+  padding: 7px 14px 7px 7px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.walletbar:hover { border-color: var(--ember); }
+.walletbar-name { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.walletbar-chev { color: var(--muted); font-size: 12px; }
+.avatar.sm { width: 26px; height: 26px; font-size: 12px; }
