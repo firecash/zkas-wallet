@@ -489,7 +489,11 @@ pub fn run() {
             // straight into a spendable state is a wallet a stolen laptop spends.
             // The one exception is a legacy cleartext wallet, which the UI
             // unlocks with an empty passphrase and then prompts to encrypt.
-            if engine.vault() == zkas_walletd::VaultState::Plaintext {
+            // Start now for the states that need no passphrase to load a wallet:
+            // a legacy cleartext wallet, and a WATCH-ONLY one (the non-custodial
+            // default — the daemon holds only a viewing key, the seed lives in
+            // the app). Only an encrypted seed file must wait for `unlock`.
+            if matches!(engine.vault(), zkas_walletd::VaultState::Plaintext | zkas_walletd::VaultState::WatchOnly) {
                 engine.start_walletd();
             }
             app.manage(Mutex::new(engine));

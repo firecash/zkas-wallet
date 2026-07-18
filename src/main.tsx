@@ -26,9 +26,12 @@ async function boot() {
   if (isDesktop()) {
     try {
       const v = await vaultStatus();
-      // A legacy cleartext wallet is already running and usable; the app nags to
-      // encrypt it from Settings rather than locking the user out of their money.
-      locked = !v.unlocked && v.state !== "plaintext";
+      // Only an ENCRYPTED seed file needs unlocking. A cleartext wallet is
+      // already usable (the app nags to encrypt it from Settings rather than
+      // locking anyone out of their money), and a watch-only wallet has no seed
+      // here at all — demanding a passphrase for it would protect nothing while
+      // making the app look broken.
+      locked = v.state === "encrypted" && !v.unlocked;
       // Settings → "Set a passphrase" on a cleartext wallet asks for the setup
       // screen even though the wallet is perfectly usable as-is.
       if (sessionStorage.getItem("vault_setup") === "1") {
