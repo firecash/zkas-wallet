@@ -1193,10 +1193,14 @@ function AppearanceCard() {
   return (
     <div className="card">
       <h2>Appearance</h2>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        ZKas is dark by default. Light is here if you want it — it does not follow your system, so nothing changes
+        under you unexpectedly.
+      </p>
       <div className="filterbar" style={{ marginBottom: 0 }}>
-        {(["system", "dark", "light"] as Theme[]).map((opt) => (
+        {(["dark", "light"] as Theme[]).map((opt) => (
           <button key={opt} className={"chip" + (t === opt ? " on" : "")} onClick={() => choose(opt)}>
-            {opt === "system" ? "Match system" : opt === "dark" ? "Dark" : "Light"}
+            {opt === "dark" ? "Dark" : "Light"}
           </button>
         ))}
       </div>

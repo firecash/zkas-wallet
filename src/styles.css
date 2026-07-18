@@ -1,14 +1,17 @@
 /* Design tokens.
-   Dark is the wallet's identity and stays the default, but the app now honours a
-   light preference too: a wallet is opened in daylight, in bed, on a laptop in a
-   cafe, and forcing one contrast on all of that is a comfort tax, not a brand. */
+   Dark IS the wallet — these are the defaults and the only palette anything gets
+   without being asked for. A light set exists further down for users who pick it
+   in Appearance; nothing else may switch it. */
 :root {
-  --bg: #0b0b0f;
-  --surface: #16161d;
-  --surface-2: #1c1c26;
-  --border: #2a2a35;
-  --ink: #f6f6f8;
-  --muted: #9090a0;
+  color-scheme: dark; /* native controls (scrollbars, pickers) follow the theme */
+  --bg: #08080c;
+  --surface: #15151d;
+  --surface-2: #1d1d27;
+  --border: #2e2e3b;
+  --ink: #f7f7fa;
+  /* Was #9090a0 — a touch under 4.5:1 on the card surface, which is where most
+     explanatory copy in this app lives. Lifted to clear it. */
+  --muted: #a2a2b4;
   --ember: #17d6be;
   --ember-hover: #3ee6d1;
   --ember-soft: rgba(23, 214, 190, 0.12);
@@ -22,26 +25,14 @@
   --glow-2: rgba(23, 214, 190, 0.05);
 }
 
-/* Light theme: same hues, inverted surfaces. Applied when the OS asks for it,
-   unless the user has explicitly chosen a theme in the app (data-theme wins). */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg: #f7f7fa;
-    --surface: #ffffff;
-    --surface-2: #f1f1f6;
-    --border: #e0e0e8;
-    --ink: #15151c;
-    --muted: #6a6a7a;
-    --ember: #0a9d8b;
-    --ember-hover: #0bb8a2;
-    --ember-soft: rgba(10, 157, 139, 0.1);
-    --shadow: 0 10px 30px rgba(20, 20, 40, 0.08);
-    --glow-1: rgba(10, 157, 139, 0.07);
-    --glow-2: rgba(10, 157, 139, 0.04);
-  }
-}
-
+/* Dark is the theme. It is not a preference the OS gets to override.
+   
+   Auto-switching on prefers-color-scheme was a mistake: a light-set OS flipped
+   the tokens while the window itself stayed dark, so the wallet's own title went
+   near-black on black and vanished. Light now applies ONLY when the user picks
+   it in Appearance, where the whole page changes together. */
 :root[data-theme="light"] {
+  color-scheme: light;
   --bg: #f7f7fa;
   --surface: #ffffff;
   --surface-2: #f1f1f6;
