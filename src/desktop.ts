@@ -48,3 +48,77 @@ export async function setNodeSource(
   localStorage.setItem("walletd_base", cfg.base);
   return cfg;
 }
+
+// ---------------------------------------------------------------------------
+// Vault: the seed is encrypted at rest with a passphrase the app never stores.
+//
+// The embedded daemon does not run until the user unlocks — it cannot decrypt
+// the seed without the passphrase, and a wallet that boots straight into a
+// spendable state is a wallet a stolen laptop spends.
+
+export type VaultState = "missing" | "plaintext" | "encrypted" | "watchonly";
+
+export interface VaultStatus {
+  state: VaultState;
+  unlocked: boolean;
+}
+
+export function vaultStatus(): Promise<VaultStatus> {
+  return invoke<VaultStatus>("vault_status");
+}
+
+/** Unlock an existing wallet and start the daemon. Rejects a wrong passphrase. */
+export async function unlockVault(passphrase: string): Promise<DesktopConfig> {
+  const cfg = await invoke<DesktopConfig>("unlock", { passphrase });
+  localStorage.setItem("walletd_base", cfg.base);
+  localStorage.setItem("wallet_token", cfg.token);
+  return cfg;
+}
+
+/** Set the passphrase: encrypts an existing cleartext wallet in place. */
+export async function setPassphrase(passphrase: string): Promise<DesktopConfig> {
+  const cfg = await invoke<DesktopConfig>("set_passphrase", { passphrase });
+  localStorage.setItem("walletd_base", cfg.base);
+  localStorage.setItem("wallet_token", cfg.token);
+  return cfg;
+}
+
+/** Forget the passphrase and stop the daemon. */
+export function lockVault(): Promise<void> {
+  return invoke<void>("lock_wallet");
+}
+
+export interface BackupInfo {
+  path: string;
+  folder: string;
+}
+
+/**
+ * Write an encrypted backup of the seed, under a passphrase chosen for the FILE
+ * (not the device unlock passphrase — this file is meant to travel).
+ */
+export function backupWallet(backupPassphrase: string): Promise<BackupInfo> {
+  return invoke<BackupInfo>("backup_wallet", { backupPassphrase });
+}
+
+/** Restore from a backup file and unlock with the new device passphrase. */
+export async function restoreBackup(
+  path: string,
+  backupPassphrase: string,
+  passphrase: string,
+): Promise<DesktopConfig> {
+  const cfg = await invoke<DesktopConfig>("restore_backup", { path, backupPassphrase, passphrase });
+  localStorage.setItem("walletd_base", cfg.base);
+  localStorage.setItem("wallet_token", cfg.token);
+  return cfg;
+}
+
+/** Backup files this app has written, newest first. */
+export function listBackups(): Promise<string[]> {
+  return invoke<string[]>("list_backups");
+}
+
+/** Reveal a folder in the OS file manager (handled shell-side). */
+export function openPath(path: string): Promise<void> {
+  return invoke<void>("reveal_path", { path });
+}

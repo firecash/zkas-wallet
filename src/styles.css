@@ -605,3 +605,20 @@ select { appearance: none; cursor: pointer; }
   flex: none;
   white-space: nowrap;
 }
+
+/* Lock screen — the desktop front door. Centred, nothing else on screen: the
+   wallet behind it does not exist until the passphrase decrypts the seed. */
+.lockwrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.lockcard {
+  width: 100%;
+  max-width: 420px;
+}
+.lockcard input[type="password"] {
+  width: 100%;
+}

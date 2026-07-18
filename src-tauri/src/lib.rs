@@ -62,6 +62,31 @@ struct Engine {
     data_dir: PathBuf,
     shutdown: Option<tokio::sync::oneshot::Sender<()>>,
     node_child: Option<std::process::Child>,
+    /// The wallet passphrase, held in memory ONLY between unlock and lock. It is
+    /// never written anywhere: the daemon uses it to decrypt the seed at load,
+    /// and `lock()` drops it and stops the daemon. Nothing on disk can be turned
+    /// back into a spending key without the user typing this again.
+    secret: Option<String>,
+}
+
+/// The user's Documents folder, without pulling in a `dirs` dependency for one
+/// lookup. Falls back to `None` when the platform gives us nothing usable, and
+/// the caller then writes into the app data dir instead.
+fn dirs_documents() -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    {
+        std::env::var_os("USERPROFILE").map(|h| PathBuf::from(h).join("Documents"))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        // XDG first (a localized or relocated Documents dir), then the common default.
+        if let Some(d) = std::env::var_os("XDG_DOCUMENTS_DIR") {
+            return Some(PathBuf::from(d));
+        }
+        let home = PathBuf::from(std::env::var_os("HOME")?);
+        let docs = home.join("Documents");
+        Some(if docs.is_dir() { docs } else { home })
+    }
 }
 
 impl Engine {
@@ -76,7 +101,7 @@ impl Engine {
             .enable_all()
             .build()
             .expect("tokio runtime");
-        Self { rt, port: 0, token, settings, config_dir, data_dir, shutdown: None, node_child: None }
+        Self { rt, port: 0, token, settings, config_dir, data_dir, shutdown: None, node_child: None, secret: None }
     }
 
     /// The wallet token doubles as the wallet FILENAME on disk, so it must be
@@ -125,16 +150,19 @@ impl Engine {
                 "https://tauri.localhost".into(),
             ],
             allow_default_token: false,
-            wallet_secret: None,
+            // The passphrase the user unlocked with. `None` only in the
+            // pre-passphrase (plaintext) case, which the UI pushes users off.
+            wallet_secret: self.secret.clone(),
         };
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         self.shutdown = Some(tx);
         self.rt.spawn(async move {
             if let Err(e) = zkas_walletd::serve(cfg, rx).await {
-                log::error!("embedded walletd stopped: {e}");
+                // eprintln (not just log): must be visible even if no logger is up.
+                eprintln!("[zkas-desktop] embedded walletd stopped: {e}");
             }
         });
-        log::info!("embedded walletd on 127.0.0.1:{port} -> node {}", self.settings.rpc_addr());
+        eprintln!("[zkas-desktop] embedded walletd on 127.0.0.1:{port} -> node {}", self.settings.rpc_addr());
     }
 
     /// Spawn the user-provided node binary (`local` mode) and supervise it for
@@ -164,6 +192,31 @@ impl Engine {
             let _ = c.kill();
             let _ = c.wait();
         }
+    }
+
+    fn wallet_dir(&self) -> String {
+        self.data_dir.join("wallets").to_string_lossy().into_owned()
+    }
+
+    /// Where backups are written: the user's Documents folder when there is one
+    /// (somewhere they can actually find and copy to a USB stick), else the app
+    /// data dir as a fallback.
+    fn backup_dir(&self) -> PathBuf {
+        dirs_documents().unwrap_or_else(|| self.data_dir.clone()).join("ZKas Wallet Backups")
+    }
+
+    fn vault(&self) -> zkas_walletd::VaultState {
+        zkas_walletd::vault_state(&self.wallet_dir(), &self.token)
+    }
+
+    /// Stop the daemon and forget the passphrase. After this the on-disk seed is
+    /// ciphertext and this process holds nothing that can spend.
+    fn lock(&mut self) {
+        if let Some(tx) = self.shutdown.take() {
+            let _ = tx.send(());
+        }
+        self.secret = None;
+        self.port = 0;
     }
 }
 
@@ -195,6 +248,166 @@ fn config_of(e: &Engine) -> WalletConfig {
 #[tauri::command]
 fn wallet_config(state: tauri::State<'_, Mutex<Engine>>) -> WalletConfig {
     config_of(&state.lock().unwrap())
+}
+
+/// What the lock screen must render: whether a wallet exists, whether its seed
+/// is encrypted, and whether this session is currently unlocked.
+#[derive(Serialize)]
+struct VaultStatus {
+    /// "missing" | "plaintext" | "encrypted" | "watchonly"
+    state: zkas_walletd::VaultState,
+    /// Daemon running with a passphrase in hand.
+    unlocked: bool,
+}
+
+#[tauri::command]
+fn vault_status(state: tauri::State<'_, Mutex<Engine>>) -> VaultStatus {
+    let e = state.lock().unwrap();
+    VaultStatus { state: e.vault(), unlocked: e.port != 0 }
+}
+
+/// Unlock with `passphrase` and start the daemon.
+///
+/// The passphrase is verified against the stored ciphertext BEFORE the daemon
+/// starts, so a wrong one is a clean error rather than a daemon that comes up
+/// unable to load the wallet and reports an empty balance — which would read
+/// exactly like "my money is gone".
+#[tauri::command]
+fn unlock(state: tauri::State<'_, Mutex<Engine>>, passphrase: String) -> Result<WalletConfig, String> {
+    let mut e = state.lock().unwrap();
+    let dir = e.wallet_dir();
+    match e.vault() {
+        zkas_walletd::VaultState::Missing => return Err("no wallet on this device yet".into()),
+        zkas_walletd::VaultState::Encrypted => {
+            if !zkas_walletd::verify_wallet_secret(&dir, &e.token, &passphrase) {
+                return Err("wrong passphrase".into());
+            }
+        }
+        // Nothing to verify against; the daemon just runs with the secret so any
+        // wallet CREATED from here on is written encrypted.
+        zkas_walletd::VaultState::Plaintext | zkas_walletd::VaultState::WatchOnly => {}
+    }
+    e.secret = Some(passphrase);
+    e.start_walletd();
+    Ok(config_of(&e))
+}
+
+/// Set the passphrase for a device that has none yet: encrypt an existing
+/// cleartext wallet in place, or simply arm the daemon so a wallet created next
+/// is written encrypted. Idempotent for an already-encrypted wallet.
+#[tauri::command]
+fn set_passphrase(state: tauri::State<'_, Mutex<Engine>>, passphrase: String) -> Result<WalletConfig, String> {
+    if passphrase.chars().count() < 8 {
+        return Err("passphrase must be at least 8 characters".into());
+    }
+    let mut e = state.lock().unwrap();
+    let dir = e.wallet_dir();
+    if e.vault() == zkas_walletd::VaultState::Plaintext {
+        // Stop the daemon first: it holds this wallet open, and the rewrite must
+        // not race a checkpoint write.
+        e.lock();
+        zkas_walletd::encrypt_wallet_in_place(&dir, &e.token, &passphrase)?;
+    }
+    e.secret = Some(passphrase);
+    e.start_walletd();
+    Ok(config_of(&e))
+}
+
+/// Drop the passphrase and stop the daemon — the wallet is ciphertext again.
+#[tauri::command]
+fn lock_wallet(state: tauri::State<'_, Mutex<Engine>>) {
+    state.lock().unwrap().lock();
+}
+
+/// Open a folder in the OS file manager, so "your backup is at …" can be a
+/// button rather than a path the user has to go hunting for.
+#[tauri::command]
+fn reveal_path(path: String) -> Result<(), String> {
+    let cmd = if cfg!(target_os = "macos") {
+        "open"
+    } else if cfg!(target_os = "windows") {
+        "explorer"
+    } else {
+        "xdg-open"
+    };
+    std::process::Command::new(cmd).arg(&path).spawn().map_err(|e| format!("cannot open {path}: {e}"))?;
+    Ok(())
+}
+
+#[derive(Serialize)]
+struct BackupInfo {
+    path: String,
+    /// The containing folder, so the UI can offer to open it.
+    folder: String,
+}
+
+/// Write an encrypted backup of the seed to the user's Documents folder (or the
+/// app data dir if there is none), under a passphrase chosen for the FILE.
+///
+/// A separate backup passphrase is deliberate: the file is meant to leave this
+/// machine — USB stick, cloud drive, password manager — and reusing the daily
+/// unlock secret for something that travels is how one compromise becomes two.
+#[tauri::command]
+fn backup_wallet(state: tauri::State<'_, Mutex<Engine>>, backup_passphrase: String) -> Result<BackupInfo, String> {
+    let e = state.lock().unwrap();
+    let json = zkas_walletd::export_backup(&e.wallet_dir(), &e.token, e.secret.as_deref(), &backup_passphrase)?;
+    let folder = e.backup_dir();
+    std::fs::create_dir_all(&folder).map_err(|err| format!("cannot create backup folder: {err}"))?;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let path = folder.join(format!("zkas-wallet-backup-{stamp}.json"));
+    std::fs::write(&path, json).map_err(|err| format!("cannot write backup: {err}"))?;
+    // Owner-only: the file is encrypted, but there is no reason to leave it
+    // world-readable in a shared home directory either.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    }
+    Ok(BackupInfo { path: path.to_string_lossy().into_owned(), folder: folder.to_string_lossy().into_owned() })
+}
+
+/// Restore a wallet from a backup file, then unlock with the new device
+/// passphrase. Only possible when this device has no wallet — the library
+/// refuses to clobber one.
+#[tauri::command]
+fn restore_backup(
+    state: tauri::State<'_, Mutex<Engine>>,
+    path: String,
+    backup_passphrase: String,
+    passphrase: String,
+) -> Result<WalletConfig, String> {
+    let mut e = state.lock().unwrap();
+    let json = std::fs::read_to_string(&path).map_err(|err| format!("cannot read {path}: {err}"))?;
+    let dir = e.wallet_dir();
+    std::fs::create_dir_all(&dir).map_err(|err| format!("cannot create wallet folder: {err}"))?;
+    zkas_walletd::import_backup(&dir, &e.token, &json, &backup_passphrase, &passphrase)?;
+    e.secret = Some(passphrase);
+    e.start_walletd();
+    Ok(config_of(&e))
+}
+
+/// Backup files this app has written, newest first — so restore can offer a
+/// list instead of asking a user to type a path.
+#[tauri::command]
+fn list_backups(state: tauri::State<'_, Mutex<Engine>>) -> Vec<String> {
+    let dir = state.lock().unwrap().backup_dir();
+    let mut found: Vec<_> = std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|p| {
+            p.file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.starts_with("zkas-wallet-backup-") && n.ends_with(".json"))
+        })
+        .collect();
+    found.sort();
+    found.reverse();
+    found.into_iter().map(|p| p.to_string_lossy().into_owned()).collect()
 }
 
 /// Switch the node source. Restarts the embedded daemon against the new node;
@@ -243,7 +456,15 @@ pub fn run() {
                     log::warn!("local node not started: {e}");
                 }
             }
-            engine.start_walletd();
+            // NB: the daemon is NOT started here. It only runs once the user has
+            // supplied the passphrase (`unlock` / `set_passphrase`), because it
+            // cannot decrypt the seed without one — and a wallet that boots
+            // straight into a spendable state is a wallet a stolen laptop spends.
+            // The one exception is a legacy cleartext wallet, which the UI
+            // unlocks with an empty passphrase and then prompts to encrypt.
+            if engine.vault() == zkas_walletd::VaultState::Plaintext {
+                engine.start_walletd();
+            }
             app.manage(Mutex::new(engine));
             Ok(())
         })
@@ -254,7 +475,18 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![wallet_config, set_node_source])
+        .invoke_handler(tauri::generate_handler![
+            wallet_config,
+            set_node_source,
+            vault_status,
+            unlock,
+            set_passphrase,
+            lock_wallet,
+            backup_wallet,
+            restore_backup,
+            list_backups,
+            reveal_path
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

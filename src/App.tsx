@@ -15,7 +15,16 @@ import {
 } from "./localtx";
 import { fvkHex, generateWallet, signLocal, verifyLocal, type Network } from "./signer";
 import { sendNonCustodial, type SendStage } from "./noncustodial";
-import { initDesktop, isDesktop, setNodeSource, type DesktopConfig } from "./desktop";
+import {
+  backupWallet,
+  initDesktop,
+  isDesktop,
+  lockVault,
+  openPath,
+  setNodeSource,
+  vaultStatus,
+  type DesktopConfig,
+} from "./desktop";
 import logo from "./assets/zkas-logo.png";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -286,7 +295,14 @@ export default function App() {
           </div>
         </>
       )}
-      {isDesktop() ? <NodeSourceSetting /> : <DaemonSetting />}
+      {isDesktop() ? (
+        <>
+          <NodeSourceSetting />
+          <VaultSetting />
+        </>
+      ) : (
+        <DaemonSetting />
+      )}
       <div className="footer">
         ZKas Wallet · shielded by default · connected to ZKas's public node.
         <br />
@@ -1695,6 +1711,141 @@ function DaemonSetting() {
 /// Desktop only: which ZKas node the EMBEDDED wallet engine scans through.
 /// The engine itself always runs in-app (seed never leaves this machine) —
 /// this only picks where chain data comes from.
+/// Lock the wallet without quitting the app, and nag a legacy cleartext wallet
+/// into being encrypted. Locking stops the embedded daemon and drops the
+/// passphrase, so what stays on disk cannot be spent.
+function VaultSetting() {
+  const [state, setState] = useState<string | null>(null);
+  useEffect(() => {
+    vaultStatus()
+      .then((v) => setState(v.state))
+      .catch(() => {});
+  }, []);
+  if (state === null) return null;
+  return (
+    <div className="card">
+      <h2>Security</h2>
+      {state === "plaintext" ? (
+        <>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            This wallet's seed is stored <b>unencrypted</b> on this computer — anyone who copies the file can spend your
+            funds. Set a passphrase to encrypt it; your balance and history are untouched.
+          </p>
+          <button
+            className="btn"
+            onClick={() => {
+              // Plaintext wallets boot straight into the app (they are usable and
+              // we must not lock anyone out of their money), so ask for the setup
+              // screen explicitly rather than relying on the boot check.
+              sessionStorage.setItem("vault_setup", "1");
+              location.reload();
+            }}
+          >
+            Set a passphrase
+          </button>
+        </>
+      ) : state === "watchonly" ? (
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Watch-only wallet — there is no spending key on this computer to encrypt.
+        </p>
+      ) : (
+        <>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Your seed is encrypted on this device. Locking stops the wallet daemon and forgets your passphrase until you
+            enter it again — do this when you step away.
+          </p>
+          <button
+            className="btn ghost"
+            onClick={async () => {
+              await lockVault().catch(() => {});
+              location.reload();
+            }}
+          >
+            Lock wallet
+          </button>
+          <div style={{ height: 1, background: "var(--border)", margin: "18px 0" }} />
+          <BackupWallet />
+        </>
+      )}
+    </div>
+  );
+}
+
+/// Write an encrypted backup file the user can store off this machine.
+///
+/// The file gets its OWN passphrase: it is meant to travel (USB stick, cloud
+/// drive, password manager), and reusing the daily unlock secret on something
+/// that leaves the machine turns one compromise into two. The file is useless
+/// without that passphrase, so it is safe to keep where the seed phrase alone
+/// would not be.
+function BackupWallet() {
+  const [pass, setPass] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [done, setDone] = useState<{ path: string; folder: string } | null>(null);
+
+  const run = async () => {
+    setErr("");
+    if (pass.length < 8) return setErr("Use at least 8 characters.");
+    if (pass !== confirm) return setErr("The two passphrases do not match.");
+    setBusy(true);
+    try {
+      const info = await backupWallet(pass);
+      setDone(info);
+      setPass("");
+      setConfirm("");
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          <b>Backup written.</b> Copy this file somewhere off this computer — a USB stick, cloud storage, or a password
+          manager. It is encrypted, so it is useless to anyone without the backup passphrase.
+        </p>
+        <div className="addr" style={{ fontSize: 12 }}>
+          {done.path}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+          <button className="btn ghost small" onClick={() => openPath(done.folder).catch(() => {})}>
+            Open folder
+          </button>
+          <button className="btn ghost small" onClick={() => setDone(null)}>
+            Make another
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        <b>Backup</b> — save an encrypted copy of your wallet to a file. Restore it on any computer with this app. Give
+        it its own passphrase; do not reuse the one that unlocks this device.
+      </p>
+      <label>Backup passphrase</label>
+      <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="At least 8 characters" />
+      <label>Confirm backup passphrase</label>
+      <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Type it again" />
+      {err && <div className="msg err">{err}</div>}
+      <button className="btn ghost" onClick={run} disabled={busy || !pass}>
+        {busy ? "Writing…" : "Create backup file"}
+      </button>
+      <p className="muted small" style={{ marginTop: 10 }}>
+        Lose this passphrase and the file cannot be opened — not by us, not by anyone. Your seed phrase remains the
+        other way back in.
+      </p>
+    </>
+  );
+}
+
 function NodeSourceSetting() {
   const [cfg, setCfg] = useState<DesktopConfig | null>(null);
   const [addr, setAddr] = useState("");
