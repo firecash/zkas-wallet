@@ -104,16 +104,18 @@ export interface DeviceSig {
 /**
  * Verify a prepared payment on-device and, only if it checks out, sign it. The device
  * reconstructs the bundle, confirms it pays exactly `toRecipientHex` the amount asked
- * (everything else change back to this wallet), recomputes the sighash itself, and signs
- * that — so a malicious daemon cannot make it authorize a payment to an attacker. Throws
- * with the reason if the payment does not match. The seed never leaves the device.
+ * (everything else change back to this wallet), that the fee the bundle ACTUALLY pays
+ * (read from the bundle itself, never from the daemon's response) is at most
+ * `maxFeeSompi`, recomputes the sighash itself, and signs that — so a malicious daemon
+ * can neither redirect the payment nor burn the wallet's change as an inflated fee.
+ * Throws with the reason if the payment does not match. The seed never leaves the device.
  */
 export async function verifyAndSignPayment(
   seedHex: string,
   network: Network,
   toRecipientHex: string,
   amountSompi: bigint,
-  feeSompi: bigint,
+  maxFeeSompi: bigint,
   bundleHex: string,
   disclosureJson: string,
   alphasJson: string,
@@ -124,7 +126,7 @@ export async function verifyAndSignPayment(
     network,
     toRecipientHex,
     amountSompi,
-    feeSompi,
+    maxFeeSompi,
     bundleHex,
     disclosureJson,
     alphasJson,

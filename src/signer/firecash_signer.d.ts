@@ -1,24 +1,32 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * **The anti-blind-signing entry point** for the non-custodial send.
+ *
+ * Given the server's `prepare` response, this VERIFIES on the device — using only the
+ * wallet's own viewing key — that the unsigned `bundle_hex` really pays `to` the amount
+ * `amount_sompi`, with any other output being change back to this wallet, and that the
+ * fee the bundle actually pays (its public value balance — **never** a number the
+ * server reported) is positive and at most `max_fee_sompi`. Without that ceiling a
+ * malicious daemon could burn the wallet's entire change as "fee" — collectable by a
+ * miner, plausibly the daemon's own pool — while every commitment check still passed.
+ * Only if all of that holds does it recompute the sighash **from the verified bundle
+ * itself** (never trusting a server-supplied hash or network domain) and return
+ * the RedPallas spend-auth signatures.
+ *
+ * `disclosure_json` is the `disclosure` array from `prepare`, `alphas_json` its
+ * `spend_auth` array (`[{index, alpha}]`). A malicious server cannot get a signature
+ * for anything but the payment the user asked for: any lie fails a note or value
+ * commitment here, and a bundle that dodges the checks won't match the sighash this
+ * function signs. Returns `[{index, sig}]` JSON on success, or throws with the reason.
+ */
+export function verify_and_sign_payment(seed_hex: string, network: string, to_address: string, amount_sompi: bigint, max_fee_sompi: bigint, bundle_hex: string, disclosure_json: string, alphas_json: string): string;
+/**
  * Verify that `signature_hex` (`fvk ‖ sig`) proves control of `address` over
  * `message`. Returns `true` iff valid. The network is taken from the address
  * prefix, matching how the signature was produced.
  */
 export function verify(address: string, message: string, signature_hex: string): boolean;
-/**
- * The wallet's full viewing key (`ak ‖ nk ‖ rivk`, 96 bytes) as hex, derived from
- * the seed on-device. Send this to the daemon's non-custodial `/prepare` endpoint so
- * it can scan watch-only and build the payment proof. Grants viewing, not spend.
- */
-export function fvk_hex(seed_hex: string): string;
-/**
- * Device half of a **non-custodial payment**. Given the wallet seed and, from the
- * server's `prepare` response, a spend's `alpha` randomizer and the payment `sighash`,
- * returns the 64-byte RedPallas spend-auth signature (hex). The seed never leaves the
- * device; the server applies this signature and broadcasts. No proving circuit.
- */
-export function sign_spend_auth(seed_hex: string, alpha_hex: string, sighash_hex: string): string;
 /**
  * Derive the `zkas:` address for an existing seed on a network.
  */
@@ -30,28 +38,24 @@ export function address_from_seed(seed_hex: string, network: string): string;
  */
 export function new_wallet(network: string): Wallet;
 /**
- * **The anti-blind-signing entry point** for the non-custodial send.
- *
- * Given the server's `prepare` response, this VERIFIES on the device — using only the
- * wallet's own viewing key — that the unsigned `bundle_hex` really pays `to` the amount
- * `amount_sompi` for a fee of `fee_sompi`, with any other output being change back to
- * this wallet. Only if that holds does it recompute the sighash **from the verified
- * bundle itself** (never trusting a server-supplied hash or network domain) and return
- * the RedPallas spend-auth signatures.
- *
- * `disclosure_json` is the `disclosure` array from `prepare`, `alphas_json` its
- * `spend_auth` array (`[{index, alpha}]`). A malicious server cannot get a signature
- * for anything but the payment the user asked for: any lie fails a note or value
- * commitment here, and a bundle that dodges the checks won't match the sighash this
- * function signs. Returns `[{index, sig}]` JSON on success, or throws with the reason.
- */
-export function verify_and_sign_payment(seed_hex: string, network: string, to_address: string, amount_sompi: bigint, fee_sompi: bigint, bundle_hex: string, disclosure_json: string, alphas_json: string): string;
-/**
  * Sign `message`, proving control of the seed's address on `network`. The
  * returned `signature_hex` is `fvk ‖ sig`, interoperable with `shielded-pay` and
  * the mining-pool claim verifier.
  */
 export function sign(seed_hex: string, network: string, message: string): Signature;
+/**
+ * Device half of a **non-custodial payment**. Given the wallet seed and, from the
+ * server's `prepare` response, a spend's `alpha` randomizer and the payment `sighash`,
+ * returns the 64-byte RedPallas spend-auth signature (hex). The seed never leaves the
+ * device; the server applies this signature and broadcasts. No proving circuit.
+ */
+export function sign_spend_auth(seed_hex: string, alpha_hex: string, sighash_hex: string): string;
+/**
+ * The wallet's full viewing key (`ak ‖ nk ‖ rivk`, 96 bytes) as hex, derived from
+ * the seed on-device. Send this to the daemon's non-custodial `/prepare` endpoint so
+ * it can scan watch-only and build the payment proof. Grants viewing, not spend.
+ */
+export function fvk_hex(seed_hex: string): string;
 /**
  * r" Deferred promise - an object that has `resolve()` and `reject()`
  * r" functions that can be called outside of the promise body.

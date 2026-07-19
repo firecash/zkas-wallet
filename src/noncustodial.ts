@@ -45,6 +45,15 @@ export interface SendResult {
 /// amount `/prepare` takes.
 const SOMPI_PER_ZKAS = 100_000_000;
 
+/// Largest per-transaction fee the device will EVER authorize, in sompi (0.1 ZKAS).
+/// The daemon prices fees by transaction bytes; the worst legitimate case (a
+/// 6-spend standard transaction) is ~0.044 ZKAS, so this bound never bites an
+/// honest daemon — but it caps what a malicious or compromised daemon can burn.
+/// Before this ceiling existed the device signed whatever fee the daemon reported,
+/// which let a lying daemon spend the wallet's entire change as "fee" (collectable
+/// by a miner — plausibly the daemon operator's own pool).
+const MAX_FEE_SOMPI = 10_000_000;
+
 /// Hard stop on the chunk loop. A standard transaction spends at most 6 notes, so a
 /// badly fragmented wallet could otherwise loop for a very long time; better to send
 /// what we can, then tell the user plainly how much is left and why.
@@ -89,9 +98,18 @@ export async function sendNonCustodial(
   const fvk = await fvkHex(seedHex);
   const sentParts: SendPart[] = [];
   const txids: string[] = [];
-  let sent = 0;
-  let fees = 0;
-  let owed = amountFc;
+  let sent = 0n;
+  let fees = 0n;
+  // The ONE float→integer conversion, at the user-input boundary. From here on
+  // every amount is integer sompi — no floating-point coin math on the wire or
+  // in the chunk accounting.
+  let owed = BigInt(Math.round(amountFc * Number(SOMPI_PER_ZKAS)));
+  const totalSompi = owed;
+
+  // The fee ceiling the on-device signer enforces per transaction. A custom fee is
+  // a floor the daemon may raise to the byte-priced relay minimum, so the ceiling
+  // is whichever is larger — the user's figure or the standing cap.
+  const maxFee = BigInt(Math.max(fee ?? 0, MAX_FEE_SOMPI));
 
   // One transaction can only spend `max_spends_per_tx` (6) notes, so a wallet whose
   // balance sits in many small notes — a miner's per-block coinbase, say — pays a large
@@ -103,7 +121,7 @@ export async function sendNonCustodial(
     const progress = (): SendProgress => ({
       part: chunk + 1,
       parts: Math.max(parts, chunk + 1),
-      sentFc: sent / SOMPI_PER_ZKAS,
+      sentFc: Number(sent) / Number(SOMPI_PER_ZKAS),
       totalFc: amountFc,
     });
     onStage?.("proving", progress());
@@ -111,23 +129,44 @@ export async function sendNonCustodial(
     // on-device verification below still checks recipient and amounts, which are
     // what a malicious prover could actually steal with.
     const prep = await api.prepare(fvk, to, owed, fee, memo, true);
+    // Exact integer figures; the plain-number fields are the fallback for a
+    // daemon that predates the *_exact decimal strings.
+    const chunkAmount = BigInt(prep.amount_sompi_exact ?? Math.round(prep.amount_sompi));
+    const chunkFee = BigInt(prep.fee_sompi_exact ?? Math.round(prep.fee_sompi));
+    const remaining = BigInt(prep.remaining_sompi_exact ?? Math.round(prep.remaining_sompi ?? 0));
+    // A daemon that pays less than asked must account for every missing sompi
+    // in `remaining` — anything else is it silently rewriting the payment.
+    if (chunkAmount + remaining !== owed) {
+      throw new Error("The daemon changed the requested amount. Refusing to sign.");
+    }
     // Now that one chunk's capacity is known, estimate how many the payment needs.
-    if (chunk === 0 && prep.amount_sompi > 0) {
-      parts = Math.ceil((prep.amount_sompi + (prep.remaining_sompi ?? 0)) / prep.amount_sompi);
+    if (chunk === 0 && chunkAmount > 0n && remaining > 0n) {
+      parts = Number((totalSompi + chunkAmount - 1n) / chunkAmount);
+    }
+    // Refuse an over-priced chunk BEFORE proving/signing work: the signer would
+    // reject it anyway (it reads the real fee from the bundle), but this gives the
+    // user a plain answer instead of a signer error.
+    if (chunkFee > maxFee) {
+      throw new Error(
+        `The daemon asked for a fee of ${Number(chunkFee) / Number(SOMPI_PER_ZKAS)} ZKAS — above the ` +
+          `${Number(maxFee) / Number(SOMPI_PER_ZKAS)} ZKAS this wallet allows. Refusing to sign.`,
+      );
     }
     onStage?.("signing", progress());
 
-    // Verify on-device that this bundle really pays `to` the amount asked, then sign the
-    // sighash recomputed from the verified bundle. Throws (refusing to sign) on any
-    // mismatch — the guard against a malicious prover. Note this checks against the
-    // amount THIS transaction claims to pay, so a chunked payment is verified chunk by
-    // chunk; the loop below is what holds the daemon to the total.
+    // Verify on-device that this bundle really pays `to` the amount asked — and no
+    // more than `maxFee` of fee — then sign the sighash recomputed from the verified
+    // bundle. Throws (refusing to sign) on any mismatch — the guard against a
+    // malicious prover. The fee the device enforces is read from the bundle itself,
+    // NOT from the response figure, which is display data. Note this checks against
+    // the amount THIS transaction claims to pay, so a chunked payment is verified
+    // chunk by chunk; the loop below is what holds the daemon to the total.
     const sigs = await verifyAndSignPayment(
       seedHex,
       network,
       to.trim(),
-      BigInt(prep.amount_sompi),
-      BigInt(prep.fee_sompi),
+      chunkAmount,
+      maxFee,
       prep.bundle_hex,
       JSON.stringify(prep.disclosure),
       JSON.stringify(prep.spend_auth),
@@ -137,19 +176,19 @@ export async function sendNonCustodial(
     const res = await api.submit(prep.session, sigs);
     txids.push(res.txid);
     sentParts.push({ txid: res.txid, amount_sompi: res.amount_sompi, fee_sompi: res.fee_sompi });
-    sent += res.amount_sompi;
-    fees += res.fee_sompi;
+    sent += BigInt(Math.round(res.amount_sompi));
+    fees += BigInt(Math.round(res.fee_sompi));
 
-    const remaining = prep.remaining_sompi ?? 0;
-    if (remaining <= 0) break;
-    owed = remaining / SOMPI_PER_ZKAS;
+    if (remaining <= 0n) break;
+    owed = remaining;
     if (chunk === MAX_CHUNKS - 1) {
       throw new Error(
-        `Sent ${sent / SOMPI_PER_ZKAS} ZKAS in ${txids.length} transactions, but ${owed} ZKAS could not be sent: this ` +
-          `wallet's balance is split across too many small notes. Consolidate the wallet and send the rest.`,
+        `Sent ${Number(sent) / Number(SOMPI_PER_ZKAS)} ZKAS in ${txids.length} transactions, but ` +
+          `${Number(owed) / Number(SOMPI_PER_ZKAS)} ZKAS could not be sent: this wallet's balance is split across ` +
+          `too many small notes. Consolidate the wallet and send the rest.`,
       );
     }
   }
 
-  return { txid: txids[0], amount_sompi: sent, fee_sompi: fees, txids, parts: sentParts };
+  return { txid: txids[0], amount_sompi: Number(sent), fee_sompi: Number(fees), txids, parts: sentParts };
 }

@@ -140,6 +140,11 @@ export interface PrepareResp {
   /// Sompi of the requested amount this transaction does NOT cover (0 when complete).
   /// Only ever non-zero when `allow_partial` was passed.
   remaining_sompi: number;
+  // Exact decimal-string forms of the figures above, immune to JS float loss.
+  // Newer daemons always send them; fall back to the numbers when absent.
+  amount_sompi_exact?: string;
+  fee_sompi_exact?: string;
+  remaining_sompi_exact?: string;
   spend_auth: { index: number; alpha: string }[];
   bundle_hex: string;
   disclosure: {
@@ -204,11 +209,14 @@ export const api = {
   // daemon pays what one transaction carries and reports `remaining_sompi`; the caller
   // repeats until 0 (see sendNonCustodial). Without it the daemon errors instead — so a
   // caller that does not loop can never mistake a partial payment for a complete one.
-  prepare: (fvk_hex: string, to: string, amount_fc: number, fee?: number, memo?: string, allow_partial?: boolean) =>
+  // `amountSompi` is an exact integer (bigint), sent as a decimal string so no
+  // floating-point coin amount ever crosses the wire. The one float→integer
+  // conversion happens where the user's decimal input is parsed, not here.
+  prepare: (fvk_hex: string, to: string, amountSompi: bigint, fee?: number, memo?: string, allow_partial?: boolean) =>
     req<PrepareResp>("POST", "/api/wallet/prepare", {
       fvk_hex,
       to,
-      amount_fc,
+      amount_sompi: amountSompi.toString(),
       fee,
       memo: memo?.trim() ? memo.trim() : undefined,
       allow_partial,
