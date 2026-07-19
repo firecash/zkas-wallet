@@ -8592,7 +8592,7 @@ dependencies = [
 
 [[package]]
 name = "zkas-desktop"
-version = "0.1.0"
+version = "0.3.8"
 dependencies = [
  "kaspa-core",
  "log",

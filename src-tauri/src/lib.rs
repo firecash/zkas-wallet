@@ -536,6 +536,13 @@ fn list_backups(state: tauri::State<'_, Mutex<Engine>>) -> Vec<String> {
 
 /// Switch the node source. Restarts the embedded daemon against the new node;
 /// wallet files and scan checkpoints are untouched (they key off the token).
+///
+/// A custom node is PROBED before anything is persisted. The embedded daemon
+/// retries its node connection forever before it starts serving HTTP, so
+/// restarting it against an unreachable address didn't just fail — it took the
+/// whole wallet UI down, survived relaunches (the address was already saved),
+/// and read as "the app is broken, reinstall it". A wrong address must be
+/// refused here, with the running daemon untouched.
 #[tauri::command]
 fn set_node_source(
     state: tauri::State<'_, Mutex<Engine>>,
@@ -543,27 +550,36 @@ fn set_node_source(
     node_addr: Option<String>,
     node_binary: Option<String>,
 ) -> Result<WalletConfig, String> {
-    let mut e = engine(&state);
     if !matches!(mode.as_str(), "remote" | "custom" | "local") {
         return Err("mode must be remote | custom | local".into());
     }
-    if let Some(a) = node_addr {
-        // People paste URLs. The gRPC dialer wants bare host:port and prefixes
-        // its own scheme, so "grpc://x" became "grpc://grpc://x" — which never
-        // connects and never errors. Normalize, and refuse what can't work.
-        let a = a.trim().trim_end_matches('/');
-        let a = ["grpc://", "http://", "https://"]
-            .iter()
-            .find_map(|s| a.strip_prefix(s))
-            .unwrap_or(a)
-            .to_string();
-        if mode == "custom" {
-            let host_port_ok =
-                a.rsplit_once(':').map(|(h, p)| !h.is_empty() && p.parse::<u16>().is_ok()).unwrap_or(false);
-            if !host_port_ok {
-                return Err(format!("node address must be host:port, e.g. 127.0.0.1:16110 (got \"{a}\")"));
+    // Normalize/validate BEFORE taking the engine lock: the reachability probe
+    // below can take seconds and must not freeze every other wallet command.
+    let node_addr = match node_addr {
+        Some(a) => {
+            // People paste URLs. The gRPC dialer wants bare host:port and prefixes
+            // its own scheme, so "grpc://x" became "grpc://grpc://x" — which never
+            // connects and never errors. Normalize, and refuse what can't work.
+            let a = a.trim().trim_end_matches('/');
+            let a = ["grpc://", "http://", "https://"]
+                .iter()
+                .find_map(|s| a.strip_prefix(s))
+                .unwrap_or(a)
+                .to_string();
+            if mode == "custom" {
+                let host_port_ok =
+                    a.rsplit_once(':').map(|(h, p)| !h.is_empty() && p.parse::<u16>().is_ok()).unwrap_or(false);
+                if !host_port_ok {
+                    return Err(format!("node address must be host:port, e.g. 127.0.0.1:16110 (got \"{a}\")"));
+                }
+                probe_node(&a)?;
             }
+            Some(a)
         }
+        None => None,
+    };
+    let mut e = engine(&state);
+    if let Some(a) = node_addr {
         e.settings.node_addr = a;
     }
     e.settings.mode = mode;
@@ -578,6 +594,26 @@ fn set_node_source(
     }
     e.start_walletd();
     Ok(config_of(&e))
+}
+
+/// Refuse a node address nothing is listening on. A TCP connect (with DNS
+/// resolution) catches the wrong-host/wrong-port/typo cases in seconds; a node
+/// that accepts TCP but speaks the wrong protocol still leaves the app alive —
+/// the daemon serves HTTP and shows "node not connected" — so TCP is the right
+/// depth for this gate.
+fn probe_node(addr: &str) -> Result<(), String> {
+    use std::net::ToSocketAddrs;
+    let mut addrs = addr
+        .to_socket_addrs()
+        .map_err(|e| format!("cannot resolve \"{addr}\": {e} — settings unchanged, still using the previous node"))?;
+    let target = addrs.next().ok_or_else(|| format!("\"{addr}\" resolves to nothing — settings unchanged"))?;
+    std::net::TcpStream::connect_timeout(&target, std::time::Duration::from_secs(4)).map_err(|e| {
+        format!(
+            "no node answering at {addr} ({e}). Check the address and that the node is running \
+             with gRPC on that port — settings unchanged, still using the previous node"
+        )
+    })?;
+    Ok(())
 }
 
 pub fn run() {

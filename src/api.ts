@@ -293,13 +293,20 @@ function chainBase(): string {
   return native ? "https://wallet.zkas.info/chain" : window.location.origin + "/chain";
 }
 
-/** Confirmations for a broadcast txid, or null if the chain doesn't know it yet. */
+/** Confirmations for a broadcast txid, or null if the chain doesn't know it yet.
+ * Hard 4s timeout: this runs inside the wallet's 1-second status poll, and one
+ * hung request (mobile network, sleeping proxy) used to stall the ENTIRE poll —
+ * balance, sync state, and every other row's confirmations froze with it. */
 export async function chainTx(txid: string): Promise<ChainTx | null> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 4000);
   try {
-    const r = await fetch(`${chainBase()}/transactions/${txid}`);
+    const r = await fetch(`${chainBase()}/transactions/${txid}`, { signal: ctl.signal });
     if (!r.ok) return null; // not mined yet (the API 502s on an unknown tx)
     return (await r.json()) as ChainTx;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }

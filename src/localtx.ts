@@ -23,6 +23,12 @@ export type LocalTx = {
   // separate chain-confirmation status used by History.
   pending: boolean;
   confs?: number;   // chain confirmations, for display only — does NOT gate the balance subtraction
+  // How many confirmation lookups have come back empty for this row. A txid the
+  // chain will never answer for (a send whose transaction was dropped, a record
+  // from before a relaunch) used to be retried on EVERY 1-second poll forever —
+  // dead rows ate the whole lookup budget and starved the row the user was
+  // actually watching. Reset whenever the chain does answer.
+  confTries?: number;
 };
 
 const MAX = 200;
@@ -74,10 +80,17 @@ export function applyChainStatus(txid: string, confirmations: number): LocalTx[]
   let changed = false;
   const txs = loadTxs().map((t) => {
     if (t.txid !== txid) return t;
-    if (t.confs !== confirmations) changed = true;
-    return { ...t, confs: confirmations };
+    if (t.confs !== confirmations || t.confTries) changed = true;
+    return { ...t, confs: confirmations, confTries: 0 };
   });
   if (changed) save(txs);
+  return txs;
+}
+
+/** Count one unanswered confirmation lookup against `txid` (see `confTries`). */
+export function bumpConfTry(txid: string): LocalTx[] {
+  const txs = loadTxs().map((t) => (t.txid === txid ? { ...t, confTries: (t.confTries ?? 0) + 1 } : t));
+  save(txs);
   return txs;
 }
 

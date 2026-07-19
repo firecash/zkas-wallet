@@ -9,6 +9,7 @@ import {
   loadTxs,
   recordSend,
   reconcile,
+  bumpConfTry,
   pendingTotal,
   applyChainStatus,
   saveSnapshot,
@@ -53,7 +54,7 @@ import {
   updateContact,
   type Contact,
 } from "./contacts";
-import { disableLock, enableLock, forgetWalletLock, isLockEnabled, lockKind, sealNewSeed, unlockedDeviceSeed } from "./applock";
+import { disableLock, enableLock, forgetWalletLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed } from "./applock";
 import logo from "./assets/zkas-logo.png";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -265,6 +266,12 @@ function prefersReducedMotion(): boolean {
 /// A payment split across many transactions produces a row each, and the poll runs
 /// once a second — this keeps that bounded without starving a normal wallet.
 const CONF_LOOKUP_LIMIT = 12;
+/// Give up asking the chain about a row after this many unanswered lookups
+/// (~2 min of polling) unless it is still `pending`. The chain answers about a
+/// real transaction within a few seconds of it being mined; a hundred empty
+/// answers means this txid will never resolve (dropped send, record from a
+/// previous chain), and retrying it forever starves rows that can.
+const CONF_MAX_TRIES = 120;
 
 /// Which device-recorded sends History must still show as its own 0-conf rows.
 ///
@@ -424,12 +431,20 @@ export default function App() {
       // row rendering "0-conf" for the rest of its life. The two states are
       // unrelated: one drives the optimistic balance, the other is display.
       //
-      // Bounded to the most recent rows so a long history never turns one poll into
-      // hundreds of requests; older rows keep whatever they last learned.
-      const needsConfs = list.filter((x) => x.pending || x.confs == null).slice(0, CONF_LOOKUP_LIMIT);
-      for (const t of needsConfs) {
-        const ct = await chainTx(t.txid);
-        if (ct?.confirmations != null) list = applyChainStatus(t.txid, ct.confirmations);
+      // Three rules keep this loop from being the thing that makes confirmations
+      // LATE (as it briefly was): lookups run in PARALLEL, not one awaited fetch
+      // after another (12 sequential cross-network requests turned a "1-second"
+      // poll into ~10+ seconds, so a fresh send's count crawled); a row the chain
+      // has repeatedly not answered for stops being asked after CONF_MAX_TRIES
+      // (dead txids — dropped sends, pre-relaunch records — were eating the whole
+      // budget forever); and each fetch carries its own 4s timeout (in chainTx)
+      // so one hung request cannot stall the poll.
+      const needsConfs = list
+        .filter((x) => x.pending || (x.confs == null && (x.confTries ?? 0) < CONF_MAX_TRIES))
+        .slice(0, CONF_LOOKUP_LIMIT);
+      const answers = await Promise.all(needsConfs.map(async (t) => [t.txid, await chainTx(t.txid)] as const));
+      for (const [txid, ct] of answers) {
+        list = ct?.confirmations != null ? applyChainStatus(txid, ct.confirmations) : bumpConfTry(txid);
       }
       // A poll has no authority to DELETE this device's own send record — it only
       // ever updates confirmations and the pending flag. `reconcile` re-reads
@@ -1511,6 +1526,7 @@ function SettingsPane({ status }: { status: Status }) {
     <>
       <ContactsCard />
       <AppLockSetting />
+      <RevealSeedCard />
       {isDesktop() ? (
         <>
           <VaultSetting />
@@ -2005,29 +2021,46 @@ function Receive({ status }: { status: Status }) {
 
       <RescanButton label="Payment not showing up?" hint="Re-read the chain for this wallet — recovers anything the local view is missing." />
 
-      <div style={{ height: 1, background: "var(--border)", margin: "22px 0" }} />
-      <RevealSeed />
+      <p className="muted small" style={{ marginTop: 18 }}>
+        Looking for your recovery seed? It moved to <b>Settings → Recovery seed</b>, behind your app lock.
+      </p>
     </div>
   );
 }
 
-// Reveal / copy the recovery seed on demand. Lives inside Receive so a wallet's
-// address and its backup phrase sit together. Gated behind an explicit tap so the
-// seed is never on screen until asked for.
-function RevealSeed() {
+/// Settings card that reveals the recovery seed — deliberately, never by one
+/// stray tap. It used to be a single button inside Receive; "reveal" pressed in
+/// a public place put the spending key on screen for anyone behind you. Now:
+/// with an app lock set, the seed shows only after re-entering the PIN /
+/// passphrase (even though the app is already unlocked — this is exactly the
+/// moment to re-prove it's the owner holding the phone); without one, an
+/// explicit are-you-somewhere-private confirmation stands in the way instead.
+function RevealSeedCard() {
+  const [step, setStep] = useState<"idle" | "gate" | "shown">("idle");
+  const [pass, setPass] = useState("");
   const [seed, setSeed] = useState("");
-  const [shown, setShown] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const locked = isLockEnabled();
+  const pin = lockKind() === "pin";
 
   const reveal = async () => {
     setBusy(true);
     setError("");
     try {
+      if (locked) {
+        // Verify against the SAME sealed record the app lock uses; a wrong
+        // entry reveals nothing.
+        if (!(await unlock(pass))) {
+          setError(pin ? "Wrong PIN." : "Wrong passphrase.");
+          return;
+        }
+      }
       // The seed lives on this device, not on the server.
       setSeed(await resolveDeviceSeed());
-      setShown(true);
+      setStep("shown");
+      setPass("");
     } catch (e) {
       setError(
         (e as Error).message === SEED_REQUIRED
@@ -2050,18 +2083,61 @@ function RevealSeed() {
   };
 
   return (
-    <>
-      <label>Recovery phrase</label>
+    <div className="card">
+      <h2>Recovery seed</h2>
       <p className="muted small" style={{ marginTop: 4 }}>
         Your seed is the only way to restore this wallet. Anyone who sees it can spend your funds — reveal it only
         somewhere private.
       </p>
       {error && <div className="msg err">{error}</div>}
-      {!shown ? (
-        <button className="btn ghost small" disabled={busy} onClick={reveal}>
-          {busy ? <span className="spin" /> : "Reveal recovery seed"}
+      {step === "idle" && (
+        <button
+          className="btn ghost small"
+          onClick={() => {
+            setError("");
+            setStep("gate");
+          }}
+        >
+          Reveal recovery seed…
         </button>
-      ) : (
+      )}
+      {step === "gate" &&
+        (locked ? (
+          <>
+            <label>{pin ? "Enter your PIN to reveal" : "Enter your passphrase to reveal"}</label>
+            <div className="row">
+              <input
+                type="password"
+                inputMode={pin ? "numeric" : undefined}
+                autoComplete="off"
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !busy && pass && reveal()}
+              />
+              <button className="btn small" style={{ flex: "0 0 auto" }} disabled={busy || !pass} onClick={reveal}>
+                {busy ? <span className="spin" /> : "Reveal"}
+              </button>
+            </div>
+            <button className="btn ghost small" style={{ marginTop: 10 }} onClick={() => setStep("idle")}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="msg warn small">
+              Make sure nobody can see your screen. The next tap puts your spending key on it.
+            </div>
+            <div className="row" style={{ marginTop: 10 }}>
+              <button className="btn small" disabled={busy} onClick={reveal}>
+                {busy ? <span className="spin" /> : "I'm somewhere private — reveal"}
+              </button>
+              <button className="btn ghost small" onClick={() => setStep("idle")}>
+                Cancel
+              </button>
+            </div>
+          </>
+        ))}
+      {step === "shown" && (
         <>
           <div className="msg warn small">Keep this private. Anyone with it controls your funds.</div>
           <div className="addr">{seed}</div>
@@ -2069,13 +2145,19 @@ function RevealSeed() {
             <button className="btn ghost small" onClick={copy}>
               {copied ? "Copied ✓" : "Copy seed"}
             </button>
-            <button className="btn ghost small" onClick={() => setShown(false)}>
+            <button
+              className="btn ghost small"
+              onClick={() => {
+                setSeed("");
+                setStep("idle");
+              }}
+            >
               Hide
             </button>
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }
 
@@ -3054,11 +3136,45 @@ function History({
 /// The daemon this wallet talks to. Always reachable — not just when the hosted
 /// service is down — because pointing it at your own `zkas-walletd` is how you
 /// stop trusting ours at all, and that has to be one tap away, at any time.
+/// Which wallet service (and through it, which node) this app talks to — the
+/// phone/web equivalent of the desktop node picker, and titled so people
+/// looking for "connect to my own node" actually find it. The URL is PROBED
+/// before it is saved: saving an unreachable one used to reload the app
+/// straight into "can't reach the wallet service" — the same wrong-address trap
+/// the desktop app had with custom nodes, just softer.
 function DaemonSetting() {
   const [open, setOpen] = useState(false);
   const [base, setB] = useState(getBase());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const current = getBase();
   const own = current.includes("127.0.0.1") || current.includes("localhost");
+
+  const save = async (url: string) => {
+    setBusy(true);
+    setError("");
+    try {
+      if (url.trim()) {
+        const target = url.trim().replace(/\/$/, "");
+        // Prove something walletd-shaped answers there before committing.
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 5000);
+        try {
+          const r = await fetch(`${target}/health`, { signal: ctl.signal });
+          if (!r.ok) throw new Error(`answered ${r.status}`);
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+      setBase(url);
+      location.reload();
+    } catch (e) {
+      const detail = (e as Error).name === "AbortError" ? "timed out after 5s" : (e as Error).message;
+      setError(`No wallet service answering at that URL (${detail}). Nothing was changed — still using ${current}.`);
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="card">
       <h2 style={{ margin: 0 }}>
@@ -3067,39 +3183,27 @@ function DaemonSetting() {
           style={{ width: "100%", justifyContent: "space-between", textTransform: "none", letterSpacing: 0 }}
           onClick={() => setOpen(!open)}
         >
-          <span className="daemon-url">Daemon: <span className="mono">{current}</span></span>
+          <span className="daemon-url">Node &amp; wallet service: <span className="mono">{current}</span></span>
           <span className="muted daemon-mode">{own ? "your own ✓" : "hosted"} {open ? "▲" : "▼"}</span>
         </button>
       </h2>
       {open && (
         <>
           <p className="muted small" style={{ marginTop: 14 }}>
-            Your seed is signed with on this device either way. But the hosted daemon still sees your{" "}
-            <b>viewing key</b> — it can watch your balance and history. Run your own <code>zkas-walletd</code>{" "}
-            (it talks to our public node; no full node needed) and point this at it to remove that too.
+            Your seed signs on this device either way. But the hosted service still sees your <b>viewing key</b> — it
+            can watch your balance and history. To use your own node from this device, run{" "}
+            <code>zkas-walletd</code> next to it (it does the chain scanning; your node provides the blocks) and point
+            this at it — e.g. <span className="mono">http://192.168.1.20:8501</span> on your home network.
           </p>
-          <label>Daemon URL</label>
+          {error && <div className="msg err">{error}</div>}
+          <label>Wallet service URL</label>
           <div className="row">
             <input value={base} onChange={(e) => setB(e.target.value)} className="mono" placeholder="http://127.0.0.1:8501" />
-            <button
-              className="btn small"
-              style={{ flex: "0 0 auto" }}
-              onClick={() => {
-                setBase(base);
-                location.reload();
-              }}
-            >
-              Save
+            <button className="btn small" style={{ flex: "0 0 auto" }} disabled={busy} onClick={() => save(base)}>
+              {busy ? <span className="spin" /> : "Test & save"}
             </button>
           </div>
-          <button
-            className="btn ghost small"
-            style={{ marginTop: 10 }}
-            onClick={() => {
-              setBase("");
-              location.reload();
-            }}
-          >
+          <button className="btn ghost small" style={{ marginTop: 10 }} disabled={busy} onClick={() => save("")}>
             Reset to hosted default
           </button>
         </>
@@ -3848,6 +3952,51 @@ function NodeSourceSetting() {
   );
 }
 
+/// Desktop with a dead embedded engine. The most common cause in the field is a
+/// custom node address that nothing answers on: the engine waits for the node
+/// before it serves anything, so the app looks broken — and because the address
+/// is persisted, it stays broken across relaunches. People were reinstalling to
+/// escape. The way out must live HERE, on this screen, because the normal node
+/// settings only render when the engine is up: one button that switches back to
+/// the public node (a Tauri shell call — it works with the engine down) and
+/// restarts the engine in place.
+function DesktopEngineDown() {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <div className="card setup">
+      <h2>The wallet engine didn't start</h2>
+      <div className="msg warn">
+        ZKas Wallet runs its wallet engine inside this app, and it isn't answering. Your funds are safe on-chain —
+        this is a local problem, not a chain one.
+      </div>
+      <p className="muted small">
+        The usual cause is a custom node address that isn't reachable — the engine waits for its node before it can
+        serve the wallet. Switching back to the public node fixes that without touching your wallet:
+      </p>
+      <button
+        className="btn"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setErr(null);
+          try {
+            await setNodeSource("remote");
+            location.reload();
+          } catch (e) {
+            setErr(String((e as Error)?.message ?? e));
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "Switching…" : "Use the public node"}
+      </button>
+      {err && <div className="msg warn">{err}</div>}
+      <p className="muted small">If it still doesn't start after that, restart the app once more.</p>
+    </div>
+  );
+}
+
 function Setup() {
   const [base, setB] = useState(getBase());
 
@@ -3855,19 +4004,7 @@ function Setup() {
   // down" is both wrong and unactionable there — and the URL box is meaningless,
   // since the shell hands the UI its own loopback port and token.
   if (isDesktop()) {
-    return (
-      <div className="card setup">
-        <h2>The wallet engine didn't start</h2>
-        <div className="msg warn">
-          ZKas Wallet runs its wallet engine inside this app, and it isn't answering. Your funds are safe on-chain —
-          this is a local problem, not a chain one.
-        </div>
-        <p className="muted small">
-          Restarting the app usually clears it. If it keeps happening, the node it connects to may be unreachable — you
-          can change that below.
-        </p>
-      </div>
-    );
+    return <DesktopEngineDown />;
   }
 
   return (
