@@ -221,6 +221,21 @@ function sameTxs(a: LocalTx[], b: LocalTx[]): boolean {
   return a.every((x, i) => x.txid === b[i].txid && x.confs === b[i].confs && x.pending === b[i].pending);
 }
 
+/// Which device-recorded sends History must still show as its own 0-conf rows.
+///
+/// A device row is suppressed ONLY when the chain reports the same transaction as
+/// a SEND. Matching on txid alone was wrong: our own payment also produces change
+/// coming back, and a wallet that has not yet attributed the spend records that as
+/// a `received` row under the same txid. The device row was then dropped in favour
+/// of a chain row that says "+ received" — the send appeared to vanish, and the
+/// same payment showed up under the Received filter.
+///
+/// Exported for the tests: this merge is where the History tab has broken twice.
+export function visibleDeviceRows(txs: LocalTx[], chainRows: { txid: string; kind: string }[]): LocalTx[] {
+  const sentOnChain = new Set(chainRows.filter((r) => r.kind === "sent").map((r) => r.txid));
+  return txs.filter((t) => !sentOnChain.has(t.txid));
+}
+
 /// Last snapshot written, so an unchanged balance does not rewrite localStorage
 /// once a second for the lifetime of the app.
 let lastSnapshotKey = "";
@@ -360,7 +375,15 @@ export default function App() {
         const ct = await chainTx(t.txid);
         if (ct?.confirmations != null) list = applyChainStatus(t.txid, ct.confirmations);
       }
-      setTxs((prev) => (sameTxs(prev, list) ? prev : list));
+      // A poll has no authority to DELETE this device's own send record — it only
+      // ever updates confirmations and the pending flag. `reconcile` re-reads
+      // localStorage under `wallet_token`, so if that key is momentarily absent or
+      // has just been rotated (wallet switch, restore, desktop shell handing back a
+      // new token), it answers [] for a wallet that really does have rows, and this
+      // line used to write that emptiness straight into the UI: the History tab
+      // painted the row from the initial `useState(loadTxs)` snapshot and the first
+      // 1-second poll wiped it. Rows are removed only by an explicit wallet wipe.
+      setTxs((prev) => (sameTxs(prev, list) ? prev : list.length === 0 && prev.length > 0 ? prev : list));
       // Announce money ARRIVING. A payment landing is the most important event a
       // wallet has, and on a shielded chain the wallet is the only thing that can
       // report it — no explorer can see it, no email arrives. Compared against the
@@ -2574,17 +2597,16 @@ function History({
       r.txid.toLowerCase().includes(needle)
     );
   });
-  // Dedupe against ALL chain rows, not the filtered view. Deriving this from
-  // `chainRows` tied it to the active filter/search: a send that had just landed
-  // chain-side was dropped from `pending` while its chain row was filtered out, so
-  // the row flashed and then vanished from the list entirely.
-  const confirmed = new Set(allRows.map((r) => r.txid));
   // Device-local sends the chain scan hasn't caught up to yet stay on top as
-  // 0-conf rows; once a send appears chain-side, the chain row is authoritative.
+  // 0-conf rows; once the chain reports the same transaction AS A SEND, the chain
+  // row is authoritative and the device row steps aside. See `visibleDeviceRows`
+  // for why a bare txid match was wrong. Dedupe against ALL chain rows, never the
+  // filtered view, or an active filter hides the chain row while still suppressing
+  // the device row and the payment disappears from both lists.
+  const notYetOnChain = visibleDeviceRows(txs, allRows);
   // These are always SENDS, so they must honour the same filter and search the
   // chain rows do — otherwise a send shows up under "Received".
-  const pending = txs.filter((t) => {
-    if (confirmed.has(t.txid)) return false;
+  const pending = notYetOnChain.filter((t) => {
     if (kindFilter !== "all" && kindFilter !== "sent") return false;
     if (!needle) return true;
     const who = `${displayName(t.to, "")} ${t.to}`.toLowerCase();

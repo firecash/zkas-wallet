@@ -1,7 +1,7 @@
 {
   "name": "zkas-wallet",
   "private": true,
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Shielded web wallet for ZKas \u2014 a thin React/Vite SPA over the zkas-walletd daemon.",
   "license": "ISC",
   "homepage": "https://wallet.zkas.info",
