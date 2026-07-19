@@ -126,6 +126,9 @@ export interface PrepareResp {
   value_balance: number;
   amount_sompi: number;
   fee_sompi: number;
+  /// Sompi of the requested amount this transaction does NOT cover (0 when complete).
+  /// Only ever non-zero when `allow_partial` was passed.
+  remaining_sompi: number;
   spend_auth: { index: number; alpha: string }[];
   bundle_hex: string;
   disclosure: {
@@ -185,13 +188,19 @@ export const api = {
     }),
   // Non-custodial payment (mobile / hardened): the daemon builds the proof from the
   // FVK and returns per-spend randomizers to sign on-device; see noncustodial.ts.
-  prepare: (fvk_hex: string, to: string, amount_fc: number, fee?: number, memo?: string) =>
+  // `allow_partial` opts into chunking: a standard transaction can only spend 6 notes,
+  // so a wallet holding many small notes cannot pay a large amount at once. With it the
+  // daemon pays what one transaction carries and reports `remaining_sompi`; the caller
+  // repeats until 0 (see sendNonCustodial). Without it the daemon errors instead — so a
+  // caller that does not loop can never mistake a partial payment for a complete one.
+  prepare: (fvk_hex: string, to: string, amount_fc: number, fee?: number, memo?: string, allow_partial?: boolean) =>
     req<PrepareResp>("POST", "/api/wallet/prepare", {
       fvk_hex,
       to,
       amount_fc,
       fee,
       memo: memo?.trim() ? memo.trim() : undefined,
+      allow_partial,
     }),
   submit: (session: string, sigs: { index: number; sig: string }[]) =>
     req<{ txid: string; amount_sompi: number; fee_sompi: number }>("POST", "/api/wallet/submit", { session, sigs }),

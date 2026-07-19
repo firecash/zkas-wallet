@@ -24,12 +24,39 @@ export interface SendResult {
   txid: string;
   amount_sompi: number;
   fee_sompi: number;
+  /// Every transaction the payment took, oldest first. A payment spread over many
+  /// small notes needs more than one — `txid` is the first of these.
+  txids: string[];
 }
+
+/// Sompi per ZKAS, for converting a remaining balance back to the FC-denominated
+/// amount `/prepare` takes.
+const SOMPI_PER_ZKAS = 100_000_000;
+
+/// Hard stop on the chunk loop. A standard transaction spends at most 6 notes, so a
+/// badly fragmented wallet could otherwise loop for a very long time; better to send
+/// what we can, then tell the user plainly how much is left and why.
+const MAX_CHUNKS = 24;
 
 /// Where a send currently is, so the UI can show honest progress instead of a
 /// single opaque spinner. "proving" is the long step (the daemon builds the
 /// Halo 2 proof); signing is on-device and quick; broadcast is near-instant.
 export type SendStage = "proving" | "signing" | "broadcasting";
+
+/// Progress of a payment that spans several transactions. A wallet holding many small
+/// notes pays a large amount in chunks of at most 6 notes each, which can take minutes
+/// — without this the UI sits on "Building private proof…" the whole time and an
+/// entirely healthy send is indistinguishable from a hung one.
+export interface SendProgress {
+  /// 1-based index of the transaction being built.
+  part: number;
+  /// Best estimate of how many transactions this payment needs, once known.
+  parts: number;
+  /// ZKAS already accepted by the node.
+  sentFc: number;
+  /// ZKAS originally requested.
+  totalFc: number;
+}
 
 /**
  * Send `amountFc` ZKas to `to`, non-custodially and verified on-device. `seedHex`
@@ -44,31 +71,71 @@ export async function sendNonCustodial(
   to: string,
   amountFc: number,
   fee?: number,
-  onStage?: (stage: SendStage) => void,
+  onStage?: (stage: SendStage, progress?: SendProgress) => void,
   memo?: string,
 ): Promise<SendResult> {
   const fvk = await fvkHex(seedHex);
-  onStage?.("proving");
-  // The memo is sealed into the recipient's encrypted note by the prover; the
-  // on-device verification below still checks recipient and amounts, which are
-  // what a malicious prover could actually steal with.
-  const prep = await api.prepare(fvk, to, amountFc, fee, memo);
-  onStage?.("signing");
+  const txids: string[] = [];
+  let sent = 0;
+  let fees = 0;
+  let owed = amountFc;
 
-  // Verify on-device that this bundle really pays `to` the amount asked, then sign the
-  // sighash recomputed from the verified bundle. Throws (refusing to sign) on any
-  // mismatch — the guard against a malicious prover.
-  const sigs = await verifyAndSignPayment(
-    seedHex,
-    network,
-    to.trim(),
-    BigInt(prep.amount_sompi),
-    BigInt(prep.fee_sompi),
-    prep.bundle_hex,
-    JSON.stringify(prep.disclosure),
-    JSON.stringify(prep.spend_auth),
-  );
+  // One transaction can only spend `max_spends_per_tx` (6) notes, so a wallet whose
+  // balance sits in many small notes — a miner's per-block coinbase, say — pays a large
+  // amount across several transactions. Each is a complete, independently valid payment
+  // to the same recipient; we keep going until the daemon reports nothing remaining.
+  // Only known after the first chunk reports what one transaction can carry.
+  let parts = 1;
+  for (let chunk = 0; chunk < MAX_CHUNKS; chunk++) {
+    const progress = (): SendProgress => ({
+      part: chunk + 1,
+      parts: Math.max(parts, chunk + 1),
+      sentFc: sent / SOMPI_PER_ZKAS,
+      totalFc: amountFc,
+    });
+    onStage?.("proving", progress());
+    // The memo is sealed into the recipient's encrypted note by the prover; the
+    // on-device verification below still checks recipient and amounts, which are
+    // what a malicious prover could actually steal with.
+    const prep = await api.prepare(fvk, to, owed, fee, memo, true);
+    // Now that one chunk's capacity is known, estimate how many the payment needs.
+    if (chunk === 0 && prep.amount_sompi > 0) {
+      parts = Math.ceil((prep.amount_sompi + (prep.remaining_sompi ?? 0)) / prep.amount_sompi);
+    }
+    onStage?.("signing", progress());
 
-  onStage?.("broadcasting");
-  return api.submit(prep.session, sigs);
+    // Verify on-device that this bundle really pays `to` the amount asked, then sign the
+    // sighash recomputed from the verified bundle. Throws (refusing to sign) on any
+    // mismatch — the guard against a malicious prover. Note this checks against the
+    // amount THIS transaction claims to pay, so a chunked payment is verified chunk by
+    // chunk; the loop below is what holds the daemon to the total.
+    const sigs = await verifyAndSignPayment(
+      seedHex,
+      network,
+      to.trim(),
+      BigInt(prep.amount_sompi),
+      BigInt(prep.fee_sompi),
+      prep.bundle_hex,
+      JSON.stringify(prep.disclosure),
+      JSON.stringify(prep.spend_auth),
+    );
+
+    onStage?.("broadcasting", progress());
+    const res = await api.submit(prep.session, sigs);
+    txids.push(res.txid);
+    sent += res.amount_sompi;
+    fees += res.fee_sompi;
+
+    const remaining = prep.remaining_sompi ?? 0;
+    if (remaining <= 0) break;
+    owed = remaining / SOMPI_PER_ZKAS;
+    if (chunk === MAX_CHUNKS - 1) {
+      throw new Error(
+        `Sent ${sent / SOMPI_PER_ZKAS} ZKAS in ${txids.length} transactions, but ${owed} ZKAS could not be sent: this ` +
+          `wallet's balance is split across too many small notes. Consolidate the wallet and send the rest.`,
+      );
+    }
+  }
+
+  return { txid: txids[0], amount_sompi: sent, fee_sompi: fees, txids };
 }

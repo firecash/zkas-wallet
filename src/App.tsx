@@ -16,7 +16,7 @@ import {
   type LocalTx,
 } from "./localtx";
 import { fvkHex, generateWallet, signLocal, verifyLocal, type Network } from "./signer";
-import { sendNonCustodial, type SendStage } from "./noncustodial";
+import { sendNonCustodial, type SendStage, type SendProgress } from "./noncustodial";
 import {
   backupWallet,
   initDesktop,
@@ -1986,6 +1986,12 @@ function Send({
   const isSelf = !!status?.address && to.trim().toLowerCase() === status.address.toLowerCase();
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<SendStage | null>(null);
+  // Chunk progress for a payment that spans several transactions (see SendProgress).
+  const [sendProgress, setSendProgress] = useState<SendProgress | null>(null);
+  const onStage = useCallback((s: SendStage, p?: SendProgress) => {
+    setStage(s);
+    if (p) setSendProgress(p);
+  }, []);
   const [error, setError] = useState("");
   const [unlock, setUnlock] = useState("");
   const [needSeed, setNeedSeed] = useState(false);
@@ -2082,7 +2088,7 @@ function Send({
         }
       }
       const feeSompi = feeCustomSet ? Math.round(feeCustom * 1e8) : undefined;
-      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt, feeSompi, setStage, memo);
+      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt, feeSompi, onStage, memo);
       const toAddr = to.trim();
       setTo("");
       setAmount("");
@@ -2111,6 +2117,7 @@ function Send({
     } finally {
       setBusy(false);
       setStage(null);
+      setSendProgress(null);
     }
   };
 
@@ -2184,12 +2191,22 @@ function Send({
                   : stage === "broadcasting"
                     ? "Broadcasting…"
                     : "Building private proof…"}
+                {/* A multi-transaction payment can run for minutes; without the part
+                    counter a healthy send is indistinguishable from a hung one. */}
+                {sendProgress && sendProgress.parts > 1 && ` (${sendProgress.part} of ${sendProgress.parts})`}
               </>
             ) : (
               "Confirm & send"
             )}
           </button>
         </div>
+        {busy && sendProgress && sendProgress.parts > 1 && (
+          <p className="muted small" style={{ marginTop: 8 }}>
+            Your balance is spread across many small notes, so this payment is being sent as{" "}
+            {sendProgress.parts} transactions — {trimFc(sendProgress.sentFc.toFixed(8))} of{" "}
+            {trimFc(sendProgress.totalFc.toFixed(8))} ZKAS confirmed so far. Keep this page open until it finishes.
+          </p>
+        )}
         {busy && (
           <div className="stagebar" aria-hidden="true">
             <span className={"stagedot " + (stage === "proving" ? "live" : "done")} />
@@ -2557,11 +2574,27 @@ function History({
       r.txid.toLowerCase().includes(needle)
     );
   });
-  const confirmed = new Set(chainRows.map((r) => r.txid));
+  // Dedupe against ALL chain rows, not the filtered view. Deriving this from
+  // `chainRows` tied it to the active filter/search: a send that had just landed
+  // chain-side was dropped from `pending` while its chain row was filtered out, so
+  // the row flashed and then vanished from the list entirely.
+  const confirmed = new Set(allRows.map((r) => r.txid));
   // Device-local sends the chain scan hasn't caught up to yet stay on top as
   // 0-conf rows; once a send appears chain-side, the chain row is authoritative.
-  const pending = txs.filter((t) => !confirmed.has(t.txid));
+  // These are always SENDS, so they must honour the same filter and search the
+  // chain rows do — otherwise a send shows up under "Received".
+  const pending = txs.filter((t) => {
+    if (confirmed.has(t.txid)) return false;
+    if (kindFilter !== "all" && kindFilter !== "sent") return false;
+    if (!needle) return true;
+    const who = `${displayName(t.to, "")} ${t.to}`.toLowerCase();
+    return who.includes(needle) || t.amountFc.toFixed(8).includes(needle) || t.txid.toLowerCase().includes(needle);
+  });
   const historyOff = chain !== null && !chain.recoverableHistory;
+  // Sends this device recorded itself (localtx, in this browser/app's storage).
+  // These exist and are readable with chain history OFF — they never left the
+  // device. Chain-recovered history is the separate, permissioned thing.
+  const hasDeviceRows = pending.length > 0;
 
   // Notes locked by sends still awaiting chain confirmation. Their value includes
   // the change coming back, so this is shown as "held", never as an amount sent —
@@ -2569,7 +2602,11 @@ function History({
   const heldZkas = (chain?.pendingOutgoing ?? []).reduce((s, p) => s + p.amountZkas, 0);
   const heldTxids = new Set((chain?.pendingOutgoing ?? []).map((p) => p.txid)).size;
 
-  if (historyOff) {
+  // Only take over the whole tab when there is genuinely nothing to show. If this
+  // device already kept its own record, show it — turning on chain recovery is a
+  // separate choice the user makes deliberately, not a toll gate on data they
+  // already have.
+  if (historyOff && !hasDeviceRows) {
     return (
       <div className="card">
         <h2>History</h2>
@@ -2630,6 +2667,21 @@ function History({
   return (
     <div className="card">
       <h2>History</h2>
+      {historyOff && (
+        <div className="sentbanner appear" style={{ alignItems: "flex-start" }}>
+          <div>
+            <b>Showing this device's own record.</b>{" "}
+            <span className="muted small">
+              These are sends this app saved locally. Payments you received, mined coins, and sends from your other
+              devices aren't listed — recovering those means turning on stored history, which keeps a readable record
+              with the wallet's sync data.
+            </span>
+          </div>
+          <button className="btn ghost small" style={{ flex: "none" }} onClick={() => setHistory(true)} disabled={busy}>
+            {busy ? "Enabling…" : "Recover full history"}
+          </button>
+        </div>
+      )}
       {fresh && (
         <div className="sentbanner appear">
           <span className="sent-check small">✓</span>
