@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!-- Merged into the generated Info.plist by Tauri. Without the camera usage
+     description, macOS TCC KILLS the app the moment the QR scanner asks
+     WKWebView for the camera — a crash, not a permission prompt. -->
+<dict>
+  <key>NSCameraUsageDescription</key>
+  <string>Scan a recipient's address QR code. The camera feed is decoded on this device and never leaves it.</string>
+</dict>
+</plist>

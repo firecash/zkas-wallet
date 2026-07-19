@@ -13,8 +13,54 @@
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 use tauri::Manager;
+
+/// Where the crash log lives: the app's data dir, computed WITHOUT the Tauri
+/// runtime so the panic hook can reach it even if the app dies before (or
+/// while) Tauri is up. Mirrors Tauri's identifier-based layout.
+fn crash_log_dir() -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    let base = std::env::var_os("APPDATA").map(PathBuf::from);
+    #[cfg(target_os = "macos")]
+    let base = std::env::var_os("HOME").map(|h| PathBuf::from(h).join("Library/Application Support"));
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let base = std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")));
+    Some(base?.join("info.zkas.wallet"))
+}
+
+/// Append one line to crash.log. Best-effort by design: a desktop user reports
+/// "it crashed" with nothing else — this file is the only witness, because the
+/// Windows build has no console (`windows_subsystem = "windows"`).
+fn log_crash(msg: &str) {
+    if let Some(dir) = crash_log_dir() {
+        let _ = std::fs::create_dir_all(&dir);
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        if let Ok(mut f) =
+            std::fs::OpenOptions::new().create(true).append(true).open(dir.join("crash.log"))
+        {
+            use std::io::Write;
+            let _ = writeln!(f, "[{ts}] {msg}");
+        }
+    }
+    eprintln!("[zkas-desktop] {msg}");
+}
+
+/// Lock the engine, RECOVERING from poison. A panic anywhere while the lock was
+/// held used to poison it and turn every later command into another panic — one
+/// fault became "the app crashes from now on". The engine's state is plain data
+/// that is safe to keep using; log it and carry on.
+fn engine(m: &Mutex<Engine>) -> MutexGuard<'_, Engine> {
+    m.lock().unwrap_or_else(|poisoned| {
+        log_crash("engine lock was poisoned by an earlier panic; recovering");
+        poisoned.into_inner()
+    })
+}
 
 /// ZKas's public node gRPC (VPS1, exposed via socat). The default for the
 /// lightweight install: no local chain, wallet scans through this node.
@@ -133,9 +179,24 @@ impl Engine {
             let _ = tx.send(()); // graceful: serve() aborts its loops and returns
         }
         // A fresh loopback port each (re)start avoids TIME_WAIT collisions.
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind loopback");
-        let port = listener.local_addr().unwrap().port();
-        drop(listener);
+        // A bind failure (firewall software gone wild, loopback misconfigured)
+        // must not panic the app: leave port 0 — the UI shows "cannot reach the
+        // wallet daemon" and crash.log says why.
+        let port = match std::net::TcpListener::bind("127.0.0.1:0") {
+            Ok(l) => match l.local_addr() {
+                Ok(a) => a.port(),
+                Err(e) => {
+                    log_crash(&format!("cannot read loopback address for wallet engine: {e}"));
+                    self.port = 0;
+                    return;
+                }
+            },
+            Err(e) => {
+                log_crash(&format!("cannot bind a loopback port for wallet engine: {e}"));
+                self.port = 0;
+                return;
+            }
+        };
         self.port = port;
 
         let cfg = zkas_walletd::Config {
@@ -158,11 +219,11 @@ impl Engine {
         self.shutdown = Some(tx);
         self.rt.spawn(async move {
             if let Err(e) = zkas_walletd::serve(cfg, rx).await {
-                // eprintln (not just log): must be visible even if no logger is up.
-                eprintln!("[zkas-desktop] embedded walletd stopped: {e}");
+                // crash.log, not just stderr: the Windows build has no console.
+                log_crash(&format!("embedded walletd stopped: {e}"));
             }
         });
-        eprintln!("[zkas-desktop] embedded walletd on 127.0.0.1:{port} -> node {}", self.settings.rpc_addr());
+        log_crash(&format!("embedded walletd on 127.0.0.1:{port} -> node {}", self.settings.rpc_addr()));
     }
 
     /// Spawn the user-provided node binary (`local` mode) and supervise it for
@@ -247,7 +308,7 @@ fn config_of(e: &Engine) -> WalletConfig {
 
 #[tauri::command]
 fn wallet_config(state: tauri::State<'_, Mutex<Engine>>) -> WalletConfig {
-    config_of(&state.lock().unwrap())
+    config_of(&engine(&state))
 }
 
 /// What the lock screen must render: whether a wallet exists, whether its seed
@@ -262,7 +323,7 @@ struct VaultStatus {
 
 #[tauri::command]
 fn vault_status(state: tauri::State<'_, Mutex<Engine>>) -> VaultStatus {
-    let e = state.lock().unwrap();
+    let e = engine(&state);
     VaultStatus { state: e.vault(), unlocked: e.port != 0 }
 }
 
@@ -274,7 +335,7 @@ fn vault_status(state: tauri::State<'_, Mutex<Engine>>) -> VaultStatus {
 /// exactly like "my money is gone".
 #[tauri::command]
 fn unlock(state: tauri::State<'_, Mutex<Engine>>, passphrase: String) -> Result<WalletConfig, String> {
-    let mut e = state.lock().unwrap();
+    let mut e = engine(&state);
     let dir = e.wallet_dir();
     match e.vault() {
         zkas_walletd::VaultState::Missing => return Err("no wallet on this device yet".into()),
@@ -300,7 +361,7 @@ fn set_passphrase(state: tauri::State<'_, Mutex<Engine>>, passphrase: String) ->
     if passphrase.chars().count() < 8 {
         return Err("passphrase must be at least 8 characters".into());
     }
-    let mut e = state.lock().unwrap();
+    let mut e = engine(&state);
     let dir = e.wallet_dir();
     if e.vault() == zkas_walletd::VaultState::Plaintext {
         // Stop the daemon first: it holds this wallet open, and the rewrite must
@@ -316,7 +377,7 @@ fn set_passphrase(state: tauri::State<'_, Mutex<Engine>>, passphrase: String) ->
 /// Drop the passphrase and stop the daemon — the wallet is ciphertext again.
 #[tauri::command]
 fn lock_wallet(state: tauri::State<'_, Mutex<Engine>>) {
-    state.lock().unwrap().lock();
+    engine(&state).lock();
 }
 
 /// Open a folder in the OS file manager, so "your backup is at …" can be a
@@ -349,7 +410,7 @@ struct BackupInfo {
 /// unlock secret for something that travels is how one compromise becomes two.
 #[tauri::command]
 fn backup_wallet(state: tauri::State<'_, Mutex<Engine>>, backup_passphrase: String) -> Result<BackupInfo, String> {
-    let e = state.lock().unwrap();
+    let e = engine(&state);
     let json = zkas_walletd::export_backup(&e.wallet_dir(), &e.token, e.secret.as_deref(), &backup_passphrase)?;
     let folder = e.backup_dir();
     std::fs::create_dir_all(&folder).map_err(|err| format!("cannot create backup folder: {err}"))?;
@@ -377,7 +438,7 @@ fn backup_wallet(state: tauri::State<'_, Mutex<Engine>>, backup_passphrase: Stri
 /// lives in the webview, so only the app can encrypt it.
 #[tauri::command]
 fn write_backup(state: tauri::State<'_, Mutex<Engine>>, contents: String) -> Result<BackupInfo, String> {
-    let folder = state.lock().unwrap().backup_dir();
+    let folder = engine(&state).backup_dir();
     std::fs::create_dir_all(&folder).map_err(|e| format!("cannot create backup folder: {e}"))?;
     let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
     let path = folder.join(format!("zkas-wallet-backup-{stamp}.json"));
@@ -406,7 +467,7 @@ fn restore_backup(
     backup_passphrase: String,
     passphrase: String,
 ) -> Result<WalletConfig, String> {
-    let mut e = state.lock().unwrap();
+    let mut e = engine(&state);
     let json = std::fs::read_to_string(&path).map_err(|err| format!("cannot read {path}: {err}"))?;
     let dir = e.wallet_dir();
     std::fs::create_dir_all(&dir).map_err(|err| format!("cannot create wallet folder: {err}"))?;
@@ -425,7 +486,7 @@ fn restore_backup(
 /// seed anywhere brings them back.
 #[tauri::command]
 fn forget_wallet(state: tauri::State<'_, Mutex<Engine>>, token: Option<String>) -> Result<WalletConfig, String> {
-    let mut e = state.lock().unwrap();
+    let mut e = engine(&state);
     e.lock(); // stop the daemon so nothing rewrites the files we are removing
     let dir = e.wallet_dir();
     // Delete the wallet the UI is REMOVING, which is not necessarily this
@@ -456,7 +517,7 @@ fn forget_wallet(state: tauri::State<'_, Mutex<Engine>>, token: Option<String>) 
 /// list instead of asking a user to type a path.
 #[tauri::command]
 fn list_backups(state: tauri::State<'_, Mutex<Engine>>) -> Vec<String> {
-    let dir = state.lock().unwrap().backup_dir();
+    let dir = engine(&state).backup_dir();
     let mut found: Vec<_> = std::fs::read_dir(dir)
         .into_iter()
         .flatten()
@@ -482,14 +543,30 @@ fn set_node_source(
     node_addr: Option<String>,
     node_binary: Option<String>,
 ) -> Result<WalletConfig, String> {
-    let mut e = state.lock().unwrap();
+    let mut e = engine(&state);
     if !matches!(mode.as_str(), "remote" | "custom" | "local") {
         return Err("mode must be remote | custom | local".into());
     }
-    e.settings.mode = mode;
     if let Some(a) = node_addr {
+        // People paste URLs. The gRPC dialer wants bare host:port and prefixes
+        // its own scheme, so "grpc://x" became "grpc://grpc://x" — which never
+        // connects and never errors. Normalize, and refuse what can't work.
+        let a = a.trim().trim_end_matches('/');
+        let a = ["grpc://", "http://", "https://"]
+            .iter()
+            .find_map(|s| a.strip_prefix(s))
+            .unwrap_or(a)
+            .to_string();
+        if mode == "custom" {
+            let host_port_ok =
+                a.rsplit_once(':').map(|(h, p)| !h.is_empty() && p.parse::<u16>().is_ok()).unwrap_or(false);
+            if !host_port_ok {
+                return Err(format!("node address must be host:port, e.g. 127.0.0.1:16110 (got \"{a}\")"));
+            }
+        }
         e.settings.node_addr = a;
     }
+    e.settings.mode = mode;
     if let Some(b) = node_binary {
         e.settings.node_binary = if b.trim().is_empty() { None } else { Some(b) };
     }
@@ -505,7 +582,26 @@ fn set_node_source(
 
 pub fn run() {
     kaspa_core::log::try_init_logger("info");
+    // Any panic, on any thread, leaves a trace in crash.log before the default
+    // hook runs. Without this, a Windows crash is a window that just vanishes.
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let bt = std::backtrace::Backtrace::force_capture();
+        log_crash(&format!("panic: {info}\n{bt}"));
+        default_hook(info);
+    }));
+    log_crash(&format!("app start v{}", env!("CARGO_PKG_VERSION")));
     tauri::Builder::default()
+        // Single instance MUST be first: a second launch (Windows double-click
+        // races make this routine) would otherwise start a second embedded
+        // walletd writing the same wallet and scan files as the first — a
+        // corruption/crash factory. Instead, focus the window already open.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(w) = app.webview_windows().values().next() {
+                let _ = w.unminimize();
+                let _ = w.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             let config_dir = app.path().app_config_dir().expect("app config dir");
@@ -539,7 +635,7 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Destroyed = event {
                 if let Some(state) = window.app_handle().try_state::<Mutex<Engine>>() {
-                    state.lock().unwrap().stop_local_node();
+                    engine(&state).stop_local_node();
                 }
             }
         })

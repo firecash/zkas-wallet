@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ZKas Wallet",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "identifier": "info.zkas.wallet",
   "build": {
     "frontendDist": "../dist",
@@ -32,6 +32,9 @@
       "icons/icon.ico"
     ],
     "category": "Finance",
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
     "shortDescription": "ZKas shielded wallet",
     "longDescription": "Non-custodial desktop wallet for ZKas — every balance and payment shielded by Orchard zero-knowledge proofs. Connect to the public node or run your own."
   }

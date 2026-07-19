@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState } from "react";
+import { Component, StrictMode, useEffect, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { LockScreen } from "./LockScreen";
@@ -33,6 +33,40 @@ function Root({ locked, askNode }: { locked: boolean; askNode: boolean }) {
   return <App />;
 }
 
+// A render error anywhere in the tree would otherwise unmount EVERYTHING —
+// the user sees a blank window over their money and calls it a crash. Catch it,
+// say what happened, and offer the one action that usually clears transient
+// state: reload. The wallet itself (seed, settings) is in storage, not in React.
+class Boundary extends Component<{ children: ReactNode }, { err: Error | null }> {
+  state = { err: null as Error | null };
+  static getDerivedStateFromError(err: Error) {
+    return { err };
+  }
+  componentDidCatch(err: Error, info: { componentStack?: string | null }) {
+    console.error("wallet UI crashed:", err, info.componentStack);
+  }
+  render() {
+    if (!this.state.err) return this.props.children;
+    return (
+      <div className="lockwrap">
+        <div className="card lockcard">
+          <h2 style={{ marginTop: 0 }}>Something went wrong</h2>
+          <p className="muted small">
+            The wallet display hit an error. Your wallet and funds are not affected — reloading almost always fixes
+            this.
+          </p>
+          <p className="muted small mono" style={{ wordBreak: "break-all" }}>
+            {String(this.state.err)}
+          </p>
+          <button className="btn" onClick={() => location.reload()}>
+            Reload wallet
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
+
 async function boot() {
   let locked = false;
   if (isDesktop()) {
@@ -64,10 +98,22 @@ async function boot() {
   // Theme before first paint so a light-theme user never sees a dark flash.
   applyStoredTheme();
 
+  // Ask the browser not to evict our storage. Safari deletes a site's
+  // localStorage after 7 days without a visit — and for an on-device wallet
+  // that storage holds the SEED. Best-effort; browsers may ignore it, which is
+  // why the backup nag exists.
+  try {
+    void navigator.storage?.persist?.();
+  } catch {
+    /* older engines have no storage manager */
+  }
+
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <ToastHost>
-        <Root locked={locked} askNode={askNode} />
+        <Boundary>
+          <Root locked={locked} askNode={askNode} />
+        </Boundary>
       </ToastHost>
     </StrictMode>,
   );

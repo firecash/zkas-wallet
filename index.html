@@ -77,6 +77,39 @@
         <div class="boot-tag">Private · Fast</div>
       </div>
     </div>
+    <!-- Old-engine guard, deliberately ES5. The app bundle is a modern module
+         (es2020 syntax, WebAssembly, BigInt): on an outdated Android System
+         WebView or ancient browser it fails to PARSE, the splash never gets
+         replaced, and the user sees an animated shield forever — a "white
+         screen" bug report. This classic script parses everywhere, probes the
+         exact features the wallet needs, and says what to do instead. -->
+    <script>
+      (function () {
+        var ok = false;
+        try {
+          ok =
+            typeof BigInt === "function" &&
+            typeof WebAssembly === "object" &&
+            typeof Promise !== "undefined" &&
+            typeof crypto !== "undefined" &&
+            typeof crypto.getRandomValues === "function";
+          if (ok) new Function("return a?.b ?? 0;"); // es2020 syntax the bundle uses
+        } catch (e) {
+          ok = false;
+        }
+        if (!ok) {
+          var el = document.querySelector(".boot");
+          if (el) {
+            el.innerHTML =
+              '<div style="max-width:420px;padding:24px;text-align:center;color:#f6f6f8;">' +
+              '<div style="font-size:24px;font-weight:700;margin-bottom:12px;"><span style="color:#17d6be;">Z</span>Kas</div>' +
+              '<p style="color:#b9b9c6;line-height:1.5;">This device’s web engine is too old to run the wallet’s cryptography.</p>' +
+              '<p style="color:#b9b9c6;line-height:1.5;">On Android, update <b>Android System WebView</b> (and Chrome) in the Play Store, then reopen the app. In a browser, please update it or try another one.</p>' +
+              "</div>";
+          }
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

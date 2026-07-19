@@ -14,6 +14,12 @@ function defaultBase(): string {
   // same-origin server to proxy `/daemon` to — reach the hosted daemon directly.
   const cap = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
   if (cap?.isNativePlatform?.()) return "https://wallet.zkas.info/daemon";
+  // Tauri desktop: the embedded daemon's real port is installed into
+  // walletd_base by initDesktop before the app mounts. If it is ever missing,
+  // same-origin would pass the startsWith("http") test on Windows (the origin
+  // there is http://tauri.localhost) and route wallet calls INTO the app
+  // bundle. Loopback is the only honest fallback on desktop.
+  if ("__TAURI_INTERNALS__" in globalThis) return "http://127.0.0.1:8501";
   // Same-origin hosted daemon in a normal web page; sensible fallback elsewhere.
   if (typeof window !== "undefined" && window.location?.origin?.startsWith("http")) {
     return window.location.origin + "/daemon";
