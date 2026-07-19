@@ -1279,7 +1279,94 @@ function Onboard({
 /// own payment. Everything knowable lives in this wallet, so this is where it
 /// belongs: amount, fee, when, the memo, the counterparty (nameable on the
 /// spot), and the txid.
-function TxDetail({ row, onClose, onSendAgain }: { row: ChainHistoryRow; onClose: () => void; onSendAgain?: (addr: string) => void }) {
+/// The send animation. A coin of value is drawn into a shield that seals shut
+/// (privacy), then fires off along a fast light-trail (speed) — the two things
+/// that make a ZKas payment worth making, shown while the proof builds so the
+/// wait reads as "sealing your payment", not "hanging". The stage drives which
+/// beat is emphasised; the scene loops so a long multi-note send stays alive.
+function SendScene({ stage }: { stage?: SendStage }) {
+  const s = stage ?? "proving";
+  const caption =
+    s === "signing"
+      ? "Signing on your device — your key never leaves it"
+      : s === "broadcasting"
+        ? "Sealed and shielded — broadcasting to the network"
+        : "Building your zero-knowledge proof — nobody will see amount or recipient";
+  return (
+    <div className={"sendscene s-" + s} role="status" aria-live="polite">
+      <div className="sendscene-stage" aria-hidden="true">
+        <div className="ss-track" />
+        <div className="ss-streak" />
+        <div className="ss-spark ss-spark-1" />
+        <div className="ss-spark ss-spark-2" />
+        <div className="ss-spark ss-spark-3" />
+        <div className="ss-payload">
+          <div className="ss-coin">
+            <span className="ss-coin-z">Z</span>
+          </div>
+          <div className="ss-shield">
+            <svg viewBox="0 0 40 46" width="48" height="54">
+              <path
+                className="ss-shield-body"
+                d="M20 2 L37 9 V23 C37 34 29 42 20 45 C11 42 3 34 3 23 V9 Z"
+                fill="var(--ember-soft)"
+                stroke="var(--ember)"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              />
+              <path
+                className="ss-shield-check"
+                d="M13 23 L18 29 L28 16"
+                fill="none"
+                stroke="var(--ember)"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div className="sendscene-steps" aria-hidden="true">
+        <span className={"ss-step" + (s === "proving" ? " on" : " done")}>Prove</span>
+        <span className={"ss-step" + (s === "signing" ? " on" : s === "broadcasting" ? " done" : "")}>Sign</span>
+        <span className={"ss-step" + (s === "broadcasting" ? " on" : "")}>Send</span>
+      </div>
+      <div className="sendscene-cap">{caption}</div>
+    </div>
+  );
+}
+
+/// Adapt a device-recorded send into the shape the detail modal reads. Device rows
+/// are always our own sends; `confs` carries the live confirmation count so the
+/// same modal can show "0-conf" or "12 confirmations" for a send the chain history
+/// hasn't attributed yet. The wallet's optimistic 0-conf list is the ONLY record
+/// of a send made with chain history off, so it must open real details, not bounce
+/// straight to the explorer.
+function localTxToRow(t: LocalTx): ChainHistoryRow & { confs?: number } {
+  return {
+    kind: "sent",
+    txid: t.txid,
+    daaScore: 0,
+    timestamp: t.ts,
+    amountSompi: Math.round(t.amountFc * 1e8),
+    amountZkas: t.amountFc,
+    feeSompi: Math.round(t.feeFc * 1e8),
+    recipient: t.to,
+    memo: null,
+    confs: t.confs,
+  };
+}
+
+function TxDetail({
+  row,
+  onClose,
+  onSendAgain,
+}: {
+  row: ChainHistoryRow & { confs?: number };
+  onClose: () => void;
+  onSendAgain?: (addr: string) => void;
+}) {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState("");
   const contact = findContact(row.recipient);
@@ -1305,6 +1392,20 @@ function TxDetail({ row, onClose, onSendAgain }: { row: ChainHistoryRow; onClose
           </div>
         )}
 
+        <div className="detail-row">
+          <span className="k">Status</span>
+          <span className="v">
+            {row.confs != null ? (
+              row.confs >= 1 ? (
+                <span className="conf-pill done">{row.confs} confirmation{row.confs === 1 ? "" : "s"}</span>
+              ) : (
+                <span className="conf-pill wait">Broadcast · awaiting confirmation</span>
+              )
+            ) : (
+              <span className="conf-pill done">Confirmed on-chain</span>
+            )}
+          </span>
+        </div>
         <div className="detail-row">
           <span className="k">When</span>
           <span className="v">{row.timestamp > 0 ? fmtTime(row.timestamp) : `DAA ${row.daaScore}`}</span>
@@ -2283,7 +2384,9 @@ function Send({
             <textarea value={unlock} onChange={(e) => setUnlock(e.target.value)} placeholder="64 hex characters" />
           </>
         )}
-        {status?.warming ? (
+        {busy ? (
+          <SendScene stage={stage ?? undefined} />
+        ) : status?.warming ? (
           <div className="msg warn small">
             <b>⚡ This send may take up to a minute</b> — your wallet is still speeding up. Later sends take seconds.
           </div>
@@ -2321,13 +2424,6 @@ function Send({
             {sendProgress.parts} transactions — {trimFc(sendProgress.sentFc.toFixed(8))} of{" "}
             {trimFc(sendProgress.totalFc.toFixed(8))} ZKAS confirmed so far. Keep this page open until it finishes.
           </p>
-        )}
-        {busy && (
-          <div className="stagebar" aria-hidden="true">
-            <span className={"stagedot " + (stage === "proving" ? "live" : "done")} />
-            <span className={"stagedot " + (stage === "signing" ? "live" : stage === "broadcasting" ? "done" : "")} />
-            <span className={"stagedot " + (stage === "broadcasting" ? "live" : "")} />
-          </div>
         )}
       </div>
     );
@@ -2631,7 +2727,7 @@ function History({
   const [recovering, setRecovering] = useState(false);
   const [askDisable, setAskDisable] = useState(false);
   const [err, setErr] = useState("");
-  const [detail, setDetail] = useState<ChainHistoryRow | null>(null);
+  const [detail, setDetail] = useState<(ChainHistoryRow & { confs?: number }) | null>(null);
   const [q, setQ] = useState("");
   const [kindFilter, setKindFilter] = useState<"all" | "received" | "sent" | "coinbase">("all");
   useEffect(() => {
@@ -2826,12 +2922,12 @@ function History({
       )}
       <div className="txlist">
         {pending.map((t) => (
-          <a
+          <button
             key={t.txid}
+            type="button"
             className={"txrow" + (t.txid === justSent ? " fresh" : "")}
-            href={`${EXPLORER}/txs/${t.txid}`}
-            target="_blank"
-            rel="noreferrer"
+            style={{ textAlign: "left", width: "100%", font: "inherit", color: "inherit" }}
+            onClick={() => setDetail(localTxToRow(t))}
           >
             <div className="txrow-main">
               <span className="txrow-amt">− {trimFc(t.amountFc.toFixed(8))} ZKAS</span>
@@ -2843,7 +2939,7 @@ function History({
               <span className="mono">to {shortAddr(t.to)}</span>
               <span>{fmtTime(t.ts)}</span>
             </div>
-          </a>
+          </button>
         ))}
         {chainRows.map((r) => (
           <button

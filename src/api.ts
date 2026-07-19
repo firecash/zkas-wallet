@@ -260,11 +260,24 @@ export interface ChainTx {
   accepting_block_blue_score?: number;
 }
 
+/// Base URL of the public chain (explorer) API.
+///
+/// On the hosted web page it is same-origin (`/chain`, nginx-proxied). Anywhere
+/// the page is NOT served from wallet.zkas.info — the Capacitor mobile shell
+/// (capacitor://localhost) AND the Tauri desktop shell (tauri://localhost) — that
+/// same-origin path resolves to a scheme that serves no such route, the fetch
+/// fails, and every broadcast payment is stuck reading "0-conf" forever because
+/// its confirmation lookup can never succeed. Detecting only Capacitor missed the
+/// desktop app entirely. Both native shells must reach the public host directly.
+function chainBase(): string {
+  const native = isNative() || "__TAURI_INTERNALS__" in globalThis;
+  return native ? "https://wallet.zkas.info/chain" : window.location.origin + "/chain";
+}
+
 /** Confirmations for a broadcast txid, or null if the chain doesn't know it yet. */
 export async function chainTx(txid: string): Promise<ChainTx | null> {
   try {
-    const base = isNative() ? "https://wallet.zkas.info/chain" : window.location.origin + "/chain";
-    const r = await fetch(`${base}/transactions/${txid}`);
+    const r = await fetch(`${chainBase()}/transactions/${txid}`);
     if (!r.ok) return null; // not mined yet (the API 502s on an unknown tx)
     return (await r.json()) as ChainTx;
   } catch {

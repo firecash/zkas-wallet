@@ -17,28 +17,64 @@
   </head>
   <body>
     <!-- Inline boot splash: painted by the browser the instant the HTML loads,
-         before any JS is parsed, so opening the app is never a blank screen.
-         React replaces the whole #root content on mount. -->
+         before any JS is parsed, so opening the app is never a blank screen. A
+         shield drawing its own outline and ticking a checkmark, over the wordmark
+         and the wallet's promise — the same identity the React app opens into, so
+         the hand-off is seamless. React replaces the whole #root content on mount. -->
     <style>
-      html, body { background: #0b0b0f; }
+      html, body { background: #08080c; margin: 0; }
       .boot {
+        position: relative; overflow: hidden;
         min-height: 100vh; display: flex; flex-direction: column;
-        align-items: center; justify-content: center; gap: 14px;
-        color: #9090a0; font-family: system-ui, sans-serif; font-size: 14px;
+        align-items: center; justify-content: center; gap: 18px;
+        font-family: system-ui, -apple-system, sans-serif;
       }
-      .boot-mark { font-size: 34px; font-weight: 700; color: #f6f6f8; letter-spacing: -0.02em; }
+      /* A soft teal aurora, matching the app's background glow. */
+      .boot::before, .boot::after {
+        content: ""; position: absolute; border-radius: 50%;
+        filter: blur(60px); pointer-events: none;
+        animation: bootglow 6s ease-in-out infinite alternate;
+      }
+      .boot::before { width: 340px; height: 340px; top: 12%; left: 8%;
+        background: rgba(23,214,190,0.16); }
+      .boot::after { width: 300px; height: 300px; bottom: 10%; right: 6%;
+        background: rgba(62,230,209,0.10); animation-delay: -3s; }
+      @keyframes bootglow {
+        from { transform: translateY(-8px) scale(1); opacity: 0.8; }
+        to   { transform: translateY(10px) scale(1.1); opacity: 1; }
+      }
+      .boot-shield { position: relative; z-index: 1; filter: drop-shadow(0 0 16px rgba(23,214,190,0.25)); }
+      .boot-shield path { stroke: #17d6be; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .boot-outline { stroke-width: 2.5; stroke-dasharray: 150; stroke-dashoffset: 150;
+        animation: bootdraw 2s ease infinite; }
+      .boot-check { stroke-width: 2.5; stroke-dasharray: 34; stroke-dashoffset: 34;
+        animation: bootcheck 2s ease infinite; }
+      @keyframes bootdraw {
+        0% { stroke-dashoffset: 150; } 45% { stroke-dashoffset: 0; }
+        85% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0.5; }
+      }
+      @keyframes bootcheck {
+        0%, 40% { stroke-dashoffset: 34; } 70%, 100% { stroke-dashoffset: 0; }
+      }
+      .boot-mark { position: relative; z-index: 1;
+        font-size: 30px; font-weight: 700; color: #f6f6f8; letter-spacing: -0.02em; }
       .boot-mark span { color: #17d6be; }
-      .boot-spin {
-        width: 18px; height: 18px; border-radius: 50%;
-        border: 2px solid rgba(255,255,255,0.25); border-top-color: #17d6be;
-        animation: bootsp 0.7s linear infinite;
+      .boot-tag { position: relative; z-index: 1;
+        font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+        color: #7a7a8c; }
+      @media (prefers-reduced-motion: reduce) {
+        .boot::before, .boot::after, .boot-outline, .boot-check { animation: none; }
+        .boot-outline, .boot-check { stroke-dashoffset: 0; }
       }
-      @keyframes bootsp { to { transform: rotate(360deg); } }
     </style>
     <div id="root">
       <div class="boot">
+        <svg class="boot-shield" viewBox="0 0 48 56" width="60" height="70" aria-hidden="true">
+          <path class="boot-outline" d="M24 3 L44 11 V27 C44 41 35 51 24 55 C13 51 4 41 4 27 V11 Z" />
+          <path class="boot-check" d="M16 28 L22 35 L33 21" />
+        </svg>
         <div class="boot-mark"><span>Z</span>Kas</div>
-        <div class="boot-spin"></div>
+        <div class="boot-tag">Private · Fast</div>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>

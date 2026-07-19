@@ -261,6 +261,17 @@ a { color: var(--ember); }
 .copybtn { transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease; }
 .copybtn.copied { color: var(--good); border-color: var(--good); }
 
+/* Confirmation status pill in the transaction-detail modal. */
+.conf-pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.conf-pill.done { color: var(--good); background: rgba(53, 196, 106, 0.12); border: 1px solid rgba(53, 196, 106, 0.4); }
+.conf-pill.wait { color: var(--ember); background: var(--ember-soft); border: 1px solid rgba(23, 214, 190, 0.4); }
+
 /* First-open connecting state: a shield that draws its outline, then ticks a
    checkmark, over the two promises. Reads as "securing", not "waiting". */
 .connecting {
@@ -825,24 +836,163 @@ select { appearance: none; cursor: pointer; }
 .msg.warmbanner { font-size: 13px; }
 
 /* Send progress: three stage dots under the button (prove → sign → broadcast). */
-.stagebar {
+/* Send animation — a coin sealed into a shield, then fired down a light-trail.
+   Privacy (the shield closing over the value) and speed (the streak) in one scene. */
+.sendscene {
+  margin-top: 18px;
+  text-align: center;
+}
+.sendscene-stage {
+  position: relative;
+  height: 92px;
+  margin: 0 auto 6px;
+  max-width: 320px;
+  overflow: hidden;
+}
+/* The rail the payment travels along. */
+.ss-track {
+  position: absolute;
+  left: 8%; right: 8%; top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+  border-radius: 2px;
+}
+/* The payload — coin + shield as one unit — centred on the rail. Broadcast fires
+   THIS, so the shield always rides with the value it protects. */
+.ss-payload {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 48px; height: 54px;
+  margin: -27px 0 0 -24px;
+  z-index: 2;
+}
+/* The value coin. */
+.ss-coin {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 34px; height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--ember-hover), var(--ember));
+  color: var(--ember-ink);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 18px;
+  box-shadow: 0 0 18px var(--ember-soft);
+  animation: ss-coin-breathe 1.6s ease-in-out infinite;
+}
+.ss-coin-z { line-height: 1; }
+@keyframes ss-coin-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+/* The shield, overlaid on the coin, closing over it during proving/signing. */
+.ss-shield {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  opacity: 0;
+  filter: drop-shadow(0 0 10px var(--ember-soft));
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+}
+.ss-shield-check {
+  stroke-dasharray: 32;
+  stroke-dashoffset: 32;
+  transition: stroke-dashoffset 0.5s ease;
+}
+/* The speed streak that flares on broadcast. */
+.ss-streak {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 46%; height: 3px;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--ember), transparent);
+  border-radius: 3px;
+  opacity: 0;
+  z-index: 1;
+}
+.ss-spark {
+  position: absolute;
+  top: 50%;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--ember);
+  opacity: 0;
+  z-index: 1;
+}
+.ss-spark-1 { margin-top: -10px; }
+.ss-spark-2 { margin-top: 3px; }
+.ss-spark-3 { margin-top: 9px; }
+
+/* Stage: PROVING — coin breathing, shield fading in and sealing over it. */
+.sendscene.s-proving .ss-shield { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+.sendscene.s-proving .ss-shield-check { stroke-dashoffset: 32; }
+
+/* Stage: SIGNING — shield fully sealed, checkmark drawn. */
+.sendscene.s-signing .ss-shield { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+.sendscene.s-signing .ss-shield-check { stroke-dashoffset: 0; }
+.sendscene.s-signing .ss-coin { animation: ss-coin-breathe 0.8s ease-in-out infinite; }
+
+/* Stage: BROADCASTING — the whole sealed payload fires off down the rail. */
+.sendscene.s-broadcasting .ss-shield { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.sendscene.s-broadcasting .ss-shield-check { stroke-dashoffset: 0; }
+.sendscene.s-broadcasting .ss-payload { animation: ss-fire 1.1s cubic-bezier(0.5, 0, 0.2, 1) infinite; }
+.sendscene.s-broadcasting .ss-streak { animation: ss-streak 1.1s cubic-bezier(0.5, 0, 0.2, 1) infinite; }
+.sendscene.s-broadcasting .ss-spark { animation: ss-spark 1.1s ease-out infinite; }
+.sendscene.s-broadcasting .ss-spark-2 { animation-delay: 0.08s; }
+.sendscene.s-broadcasting .ss-spark-3 { animation-delay: 0.16s; }
+@keyframes ss-fire {
+  0%   { transform: translateX(0)    scale(1);   opacity: 1; }
+  55%  { transform: translateX(70px) scale(0.7); opacity: 1; }
+  72%  { transform: translateX(110px) scale(0.35); opacity: 0; }
+  73%  { transform: translateX(-70px) scale(0.6); opacity: 0; }
+  100% { transform: translateX(0)    scale(1);   opacity: 1; }
+}
+@keyframes ss-streak {
+  0%   { transform: translateY(-50%) scaleX(0); opacity: 0; }
+  40%  { transform: translateY(-50%) scaleX(1); opacity: 0.9; }
+  70%  { transform: translateY(-50%) scaleX(1); opacity: 0; }
+  100% { transform: translateY(-50%) scaleX(0); opacity: 0; }
+}
+@keyframes ss-spark {
+  0%   { left: 50%; opacity: 0; }
+  30%  { opacity: 1; }
+  100% { left: 88%; opacity: 0; }
+}
+/* Step labels under the scene. */
+.sendscene-steps {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
-.stagedot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-  transition: background 0.2s ease;
+.ss-step {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  transition: all 0.25s ease;
 }
-.stagedot.done { background: var(--ember); opacity: 0.45; }
-.stagedot.live { background: var(--ember); animation: pulse 1s ease-in-out infinite; }
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.35); opacity: 0.6; }
+.ss-step.on { color: var(--ember-ink); background: var(--ember); border-color: var(--ember); }
+.ss-step.done { color: var(--ember); border-color: rgba(23, 214, 190, 0.4); }
+.sendscene-cap {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 320px;
+  margin: 0 auto;
+  min-height: 2.6em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ss-coin, .ss-shield, .ss-streak, .ss-spark { animation: none !important; }
 }
 
 /* Rescan callout — the recovery action, on Receive and History. Deliberately a
