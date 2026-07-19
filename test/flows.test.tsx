@@ -87,15 +87,16 @@ describe("history", () => {
 });
 
 describe("receive", () => {
-  it("builds a payment request the sender's wallet can read", async () => {
+  it("shows the address, a copy action, and the privacy assurance", async () => {
     const user = userEvent.setup();
     await mountApp();
-    await screen.findByRole("tab", { name: "Receive" });
-    await user.click(await screen.findByText(/Request a specific amount/));
-    const amount = await screen.findByPlaceholderText("0.00");
-    await user.type(amount, "2.5");
-    // The link must carry the amount, or the request is decorative.
-    await waitFor(() => expect(screen.getByText(/amount=2.5/)).toBeInTheDocument());
+    await user.click(await screen.findByRole("tab", { name: "Receive" }));
+    // The address itself, and the one-tap copy the sharing flow depends on.
+    expect(await screen.findByText(/Copy address/)).toBeInTheDocument();
+    // The privacy promise that distinguishes this wallet, right where you share.
+    expect(screen.getByText(/Nobody can see this coming/i)).toBeInTheDocument();
+    // The removed "request a specific amount" flow must be gone, not merely hidden.
+    expect(screen.queryByText(/Request a specific amount/i)).toBeNull();
   });
 });
 

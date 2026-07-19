@@ -32,7 +32,7 @@ import {
   type DesktopConfig,
 } from "./desktop";
 import { makeBackup, readBackup } from "./backup";
-import { currentTheme, setTheme, type Theme } from "./theme";
+import { ACCENTS, currentAccent, currentTheme, setAccent, setTheme, type Accent, type Theme } from "./theme";
 import { wipeWalletState } from "./walletstate";
 import {
   activeToken,
@@ -114,15 +114,6 @@ function parsePaymentUri(text: string): { address: string; amount?: string; memo
 /// Build the payment URI a payee hands out: address plus whatever they want
 /// filled in for the payer. Everything after the address is a request, not a
 /// commitment — the payer's wallet shows it and they can change it.
-function buildPaymentUri(address: string, opts: { amount?: string; memo?: string; label?: string }): string {
-  const p = new URLSearchParams();
-  if (opts.amount && parseAmount(opts.amount) > 0) p.set("amount", opts.amount);
-  if (opts.memo?.trim()) p.set("memo", opts.memo.trim());
-  if (opts.label?.trim()) p.set("label", opts.label.trim());
-  const qs = p.toString();
-  return qs ? `${address}?${qs}` : address;
-}
-
 // Read the clipboard for a paste button (mobile keyboards make long addresses
 // painful to type). Returns "" if the browser/WebView denies clipboard read.
 async function pasteText(): Promise<string> {
@@ -219,6 +210,55 @@ function sameStatus(a: Status, b: Status): boolean {
 function sameTxs(a: LocalTx[], b: LocalTx[]): boolean {
   if (a.length !== b.length) return false;
   return a.every((x, i) => x.txid === b[i].txid && x.confs === b[i].confs && x.pending === b[i].pending);
+}
+
+/// Animate a balance from its previous value to the new one.
+///
+/// A balance that snaps is a balance you can miss. Counting it up draws the eye to
+/// exactly the thing the user opened the wallet for, and makes an arriving payment
+/// feel like it lands rather than like a re-render. Short and eased-out, so it
+/// reads as motion rather than as a delay: the true figure is on screen in 600ms.
+///
+/// The FIRST value is never animated — the wallet opening should show your balance,
+/// not count up to it from zero — and anything under a tenth of a coin snaps, so
+/// dust and rounding do not jitter the hero all day.
+function useCountUp(value: number): number {
+  const [shown, setShown] = useState(value);
+  const from = useRef(value);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      from.current = value;
+      setShown(value);
+      return;
+    }
+    const start = from.current;
+    const delta = value - start;
+    if (Math.abs(delta) < 0.1 || prefersReducedMotion()) {
+      from.current = value;
+      setShown(value);
+      return;
+    }
+    const t0 = performance.now();
+    const DUR = 600;
+    let raf = 0;
+    const step = (now: number) => {
+      const p = Math.min(1, (now - t0) / DUR);
+      // easeOutCubic: fast to begin, settling gently onto the real number.
+      const eased = 1 - Math.pow(1 - p, 3);
+      setShown(start + delta * eased);
+      if (p < 1) raf = requestAnimationFrame(step);
+      else from.current = value;
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return shown;
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 /// How many recent device-recorded sends one poll will look up confirmations for.
@@ -488,14 +528,37 @@ export default function App() {
       <Header status={status} reachable={reachable} />
       <WalletBar />
       <HostedNotice />
-      {/* First-ever open (nothing cached yet): a visible connecting state while the
-          first status call is in flight, never a stretch of empty page. */}
+      {/* First-ever open (nothing cached yet): a designed connecting state while the
+          first status call is in flight, never a stretch of empty page. A shield
+          drawing itself, over the wallet's two promises. */}
       {reachable === null && !status && (
-        <div className="card center">
-          <p className="muted" style={{ margin: 0 }}>
-            <span className="spin" style={{ verticalAlign: -3, marginRight: 8 }} />
-            Connecting to your wallet…
-          </p>
+        <div className="card connecting">
+          <div className="connect-shield" aria-hidden="true">
+            <svg viewBox="0 0 48 56" width="52" height="60">
+              <path
+                className="connect-shield-path"
+                d="M24 2 L44 10 V26 C44 40 35 50 24 54 C13 50 4 40 4 26 V10 Z"
+                fill="none"
+                stroke="var(--ember)"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+              />
+              <path
+                className="connect-shield-check"
+                d="M16 27 L22 34 L33 20"
+                fill="none"
+                stroke="var(--ember)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div className="connect-title">Opening your private wallet</div>
+          <div className="connect-sub">
+            <span className="connect-pill">Zero-knowledge</span>
+            <span className="connect-pill">Seconds to sync</span>
+          </div>
         </div>
       )}
       {reachable === false && <Setup />}
@@ -946,10 +1009,16 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // value is NOT spendable yet, so it only counts toward maturing.
   const maturing = maturingFc(status) + pendingIn;
   const spendable = spendableFc(status) - outflow;
+  const animBal = useCountUp(shownBal);
   return (
     <div className="card balance">
+      <div className="balance-glow" aria-hidden="true" />
+      <div className="balance-label">
+        <span className="shield-badge" aria-hidden="true" />
+        Shielded balance
+      </div>
       <div className="amt">
-        {trimFc(shownBal.toFixed(8))}
+        {trimFc(animBal.toFixed(8))}
         <span className="unit">ZKAS</span>
       </div>
       <div className="sub">
@@ -1351,9 +1420,14 @@ function SettingsPane({ status }: { status: Status }) {
 /// expect and nobody has to discover.
 function AppearanceCard() {
   const [t, setT] = useState<Theme>(currentTheme());
+  const [a, setA] = useState<Accent>(currentAccent());
   const choose = (next: Theme) => {
     setTheme(next);
     setT(next);
+  };
+  const chooseAccent = (next: Accent) => {
+    setAccent(next);
+    setA(next);
   };
   return (
     <div className="card">
@@ -1362,10 +1436,29 @@ function AppearanceCard() {
         ZKas is dark by default. Light is here if you want it — it does not follow your system, so nothing changes
         under you unexpectedly.
       </p>
-      <div className="filterbar" style={{ marginBottom: 0 }}>
+      <div className="filterbar" style={{ marginBottom: 18 }}>
         {(["dark", "light"] as Theme[]).map((opt) => (
           <button key={opt} className={"chip" + (t === opt ? " on" : "")} onClick={() => choose(opt)}>
             {opt === "dark" ? "Dark" : "Light"}
+          </button>
+        ))}
+      </div>
+      <h3 style={{ marginTop: 0 }}>Accent</h3>
+      <p className="muted small" style={{ marginTop: 0, marginBottom: 12 }}>
+        The color your balance, buttons and highlights glow with. Teal is the ZKas signature.
+      </p>
+      <div className="swatches">
+        {(Object.keys(ACCENTS) as Accent[]).map((opt) => (
+          <button
+            key={opt}
+            className={"swatch" + (a === opt ? " on" : "")}
+            style={{ ["--sw" as string]: ACCENTS[opt].base }}
+            onClick={() => chooseAccent(opt)}
+            aria-label={ACCENTS[opt].label}
+            aria-pressed={a === opt}
+            title={ACCENTS[opt].label}
+          >
+            <span className="swatch-dot" />
           </button>
         ))}
       </div>
@@ -1747,40 +1840,28 @@ function RescanButton({ label, hint }: { label: string; hint: string }) {
 
 function Receive({ status }: { status: Status }) {
   const addr = status.address || "";
-  // A payment REQUEST: the address plus what you are asking for. Without this the
-  // Receive tab can only hand over an address and hope the payer types the right
-  // number — the commonest way a payment goes wrong is a wrong amount, and it is
-  // entirely avoidable.
-  const [reqAmount, setReqAmount] = useState("");
-  const [reqMemo, setReqMemo] = useState("");
-  const [reqOpen, setReqOpen] = useState(false);
-  const uri = buildPaymentUri(addr, { amount: reqAmount, memo: reqMemo });
-  const isRequest = uri !== addr;
   // The address QR never changes, so it's cached after the first render and shows
   // instantly on every later open — no beat where the card has a QR-shaped hole.
   const [qr, setQr] = useState(() => (addr && localStorage.getItem("qr_" + addr)) || "");
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!addr) return; // never blank an already-rendered QR on a transient empty poll
-    // Plain address: served from cache so the card never has a QR-shaped hole.
-    // A request QR changes with every keystroke, so it is generated live and not
-    // cached (there would be nothing to reuse).
-    const cached = !isRequest ? localStorage.getItem("qr_" + addr) : null;
+    const cached = localStorage.getItem("qr_" + addr);
     if (cached) {
       setQr(cached);
       return;
     }
-    QRCode.toDataURL(uri, { margin: 1, width: 440 })
+    QRCode.toDataURL(addr, { margin: 1, width: 440 })
       .then((url) => {
         setQr(url);
         try {
-          if (!isRequest) localStorage.setItem("qr_" + addr, url);
+          localStorage.setItem("qr_" + addr, url);
         } catch {
           /* best-effort cache */
         }
       })
       .catch(() => {});
-  }, [addr, uri, isRequest]);
+  }, [addr]);
   const copy = async () => {
     await copyText(addr);
     setCopied(true);
@@ -1792,55 +1873,24 @@ function Receive({ status }: { status: Status }) {
       <p className="muted small" style={{ marginTop: 0 }}>
         Share this address or QR to receive ZKAS. Every payment to it is private.
       </p>
-      <div className="qr">{qr && <img src={qr} alt="address QR" onClick={copy} style={{ cursor: "pointer" }} />}</div>
+      <div className="qr qr-shield">
+        {qr && <img src={qr} alt="address QR" onClick={copy} style={{ cursor: "pointer" }} />}
+      </div>
       <label>Your shielded address</label>
       <div className="addr" onClick={copy} style={{ cursor: "pointer" }} title="Tap to copy">
         {addr}
       </div>
-      <button className="btn ghost small" style={{ marginTop: 12 }} onClick={copy}>
-        {copied ? "Copied ✓" : isRequest ? "Copy payment request" : "Copy address"}
+      <button className={"btn ghost small copybtn" + (copied ? " copied" : "")} style={{ marginTop: 12 }} onClick={copy}>
+        {copied ? "Copied ✓" : "Copy address"}
       </button>
 
-      {/* Payment request: ask for a specific amount, with a note for the payer.
-          Their wallet fills both in from the QR or the link. */}
-      <div style={{ height: 1, background: "var(--border)", margin: "18px 0" }} />
-      {reqOpen ? (
-        <>
-          <h2 style={{ fontSize: 17, marginTop: 0 }}>Request a payment</h2>
-          <label>Amount (ZKAS) — optional</label>
-          <input
-            value={reqAmount}
-            onChange={(e) => setReqAmount(sanitizeAmountInput(e.target.value))}
-            placeholder="0.00"
-            inputMode="decimal"
-          />
-          <label>Note for the payer — optional</label>
-          <input
-            value={reqMemo}
-            onChange={(e) => setReqMemo(e.target.value.slice(0, 200))}
-            placeholder="e.g. Invoice 41"
-          />
-          {isRequest && (
-            <>
-              <label>Payment link</label>
-              <div className="addr" style={{ fontSize: 12 }} onClick={() => copyText(uri)} title="Tap to copy">
-                {uri}
-              </div>
-              <p className="muted small">
-                The QR above now carries this request. Anything you fill in is a suggestion the payer can still change —
-                and the note is sealed to you both, never on-chain.
-              </p>
-            </>
-          )}
-          <button className="btn ghost small" onClick={() => { setReqOpen(false); setReqAmount(""); setReqMemo(""); }}>
-            Clear request
-          </button>
-        </>
-      ) : (
-        <button className="btn ghost small" onClick={() => setReqOpen(true)}>
-          Request a specific amount
-        </button>
-      )}
+      <div className="privacy-note">
+        <span className="privacy-note-mark" aria-hidden="true" />
+        <span>
+          <b>Nobody can see this coming.</b> Amounts, sender and recipient are sealed by zero-knowledge proofs — the
+          chain records that a valid payment happened, never who paid what to whom.
+        </span>
+      </div>
 
       <RescanButton label="Payment not showing up?" hint="Re-read the chain for this wallet — recovers anything the local view is missing." />
 

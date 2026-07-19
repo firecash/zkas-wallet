@@ -15,6 +15,10 @@
   --ember: #17d6be;
   --ember-hover: #3ee6d1;
   --ember-soft: rgba(23, 214, 190, 0.12);
+  /* Text that sits ON the accent fill (buttons, active tab). Overridden per accent
+     by theme.ts; this default matches the teal identity so the first paint is
+     correct before the script runs. */
+  --ember-ink: #04211c;
   --good: #35c46a;
   --bad: #f2604a;
   --radius: 18px;
@@ -138,17 +142,211 @@ a { color: var(--ember); }
 }
 .card h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 14px; font-weight: 600; }
 
-/* Balance hero */
+/* Balance hero.
+   The one thing the user opens the wallet to see, so it gets the strongest
+   material in the app: a soft aurora of the brand teal drifting behind the number,
+   a shielded-balance label with a lock mark, and a figure that counts to its value
+   (see useCountUp) so an arriving payment reads as landing, not as a re-render. */
 .balance {
+  position: relative;
+  overflow: hidden;
   text-align: center;
-  padding: 30px 20px;
-  background: linear-gradient(180deg, rgba(23, 214, 190, 0.05), transparent 65%), var(--surface);
+  padding: 34px 20px 30px;
+  background: linear-gradient(180deg, rgba(23, 214, 190, 0.06), transparent 62%), var(--surface);
+}
+/* The drifting glow. Two offset radial pools, slowly breathing, clipped by the
+   card — enough motion to feel alive, too slow to distract. */
+.balance-glow {
+  position: absolute;
+  inset: -40% -20% auto -20%;
+  height: 150%;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 42% at 25% 30%, rgba(23, 214, 190, 0.18), transparent 70%),
+    radial-gradient(34% 38% at 78% 20%, rgba(62, 230, 209, 0.12), transparent 72%);
+  filter: blur(6px);
+  animation: aurora 14s ease-in-out infinite alternate;
+}
+@keyframes aurora {
+  0%   { transform: translate3d(-4%, -2%, 0) scale(1);    opacity: 0.9; }
+  50%  { transform: translate3d(3%, 2%, 0)  scale(1.08);  opacity: 1; }
+  100% { transform: translate3d(5%, -1%, 0) scale(1.04);  opacity: 0.85; }
+}
+.balance > *:not(.balance-glow) { position: relative; z-index: 1; }
+.balance-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+/* A small padlock drawn in CSS — no icon font, no external asset (CSP-safe). */
+.shield-badge {
+  width: 12px; height: 13px;
+  position: relative;
+  flex: none;
+}
+.shield-badge::before {
+  content: "";
+  position: absolute; left: 1px; right: 1px; bottom: 0;
+  height: 8px; border-radius: 2px;
+  background: var(--ember);
+}
+.shield-badge::after {
+  content: "";
+  position: absolute; left: 3px; right: 3px; top: 0;
+  height: 7px;
+  border: 1.6px solid var(--ember);
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
 }
 /* clamp: a long balance ("123456.12345678") must shrink on a 360px phone
-   instead of clipping outside the hero card. */
-.balance .amt { font-size: clamp(30px, 9.5vw, 46px); font-weight: 700; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+   instead of clipping outside the hero card. tabular-nums keeps the digits from
+   reflowing horizontally on every frame while the count-up runs. */
+.balance .amt {
+  font-size: clamp(32px, 9.8vw, 48px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
 .balance .amt .unit { font-size: clamp(16px, 4.5vw, 22px); color: var(--muted); margin-left: 8px; font-weight: 500; }
 .balance .sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+/* Privacy assurance on the Receive card. Reinforces the one promise that
+   distinguishes this wallet, right where a person shares their address. */
+.privacy-note {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  margin-top: 18px;
+  padding: 13px 15px;
+  border-radius: var(--radius-sm);
+  background: var(--ember-soft);
+  border: 1px solid rgba(23, 214, 190, 0.22);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.privacy-note b { color: var(--ember); font-weight: 600; }
+.privacy-note-mark {
+  flex: none;
+  width: 18px; height: 18px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--ember);
+  position: relative;
+  box-shadow: 0 0 0 4px var(--ember-soft);
+}
+/* An eye with a slash — "unseen" — in pure CSS. */
+.privacy-note-mark::before {
+  content: "";
+  position: absolute; inset: 5px 3px;
+  border: 1.6px solid var(--ember-ink);
+  border-radius: 50% / 60%;
+}
+.privacy-note-mark::after {
+  content: "";
+  position: absolute; left: 2px; top: 8px;
+  width: 14px; height: 1.6px;
+  background: var(--ember-ink);
+  transform: rotate(-45deg);
+  transform-origin: left center;
+}
+.copybtn { transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease; }
+.copybtn.copied { color: var(--good); border-color: var(--good); }
+
+/* First-open connecting state: a shield that draws its outline, then ticks a
+   checkmark, over the two promises. Reads as "securing", not "waiting". */
+.connecting {
+  text-align: center;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.connect-shield {
+  filter: drop-shadow(0 0 12px var(--ember-soft));
+  margin-bottom: 8px;
+}
+.connect-shield-path {
+  stroke-dasharray: 150;
+  stroke-dashoffset: 150;
+  animation: draw-shield 1.5s ease forwards infinite;
+}
+.connect-shield-check {
+  stroke-dasharray: 34;
+  stroke-dashoffset: 34;
+  animation: draw-check 1.5s ease forwards infinite;
+}
+@keyframes draw-shield {
+  0%   { stroke-dashoffset: 150; }
+  45%  { stroke-dashoffset: 0; }
+  85%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0.55; }
+}
+@keyframes draw-check {
+  0%, 40%  { stroke-dashoffset: 34; }
+  70%      { stroke-dashoffset: 0; }
+  100%     { stroke-dashoffset: 0; }
+}
+.connect-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.connect-sub { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+.connect-pill {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ember);
+  background: var(--ember-soft);
+  border: 1px solid rgba(23, 214, 190, 0.22);
+  border-radius: 999px;
+  padding: 5px 11px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .connect-shield-path, .connect-shield-check { animation: none; stroke-dashoffset: 0; }
+}
+
+/* Accent swatches (Appearance). A row of color chips; the chosen one wears a ring
+   of its own color and lifts. */
+.swatches { display: flex; gap: 12px; flex-wrap: wrap; }
+.swatch {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  transition: transform 0.14s ease, box-shadow 0.16s ease;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.swatch-dot {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--sw);
+  transition: transform 0.14s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+.swatch:hover { transform: translateY(-2px); }
+.swatch:hover .swatch-dot { transform: scale(1.08); }
+.swatch.on {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--sw), 0 4px 14px color-mix(in srgb, var(--sw) 45%, transparent);
+}
+.swatch.on .swatch-dot { transform: scale(1.12); }
+@media (prefers-reduced-motion: reduce) {
+  .swatch, .swatch-dot { transition: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .balance-glow { animation: none; }
+}
 
 /* Address row */
 .addr {
@@ -205,8 +403,21 @@ a { color: var(--ember); }
   white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.tabs button:hover:not(.active) { color: var(--ink); }
-.tabs button.active { background: var(--ember); color: #04211c; }
+.tabs button:hover:not(.active) { color: var(--ink); background: var(--ember-soft); }
+.tabs button.active {
+  background: var(--ember);
+  color: var(--ember-ink);
+  box-shadow: 0 2px 12px rgba(23, 214, 190, 0.35);
+  animation: tab-pop 0.32s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+@keyframes tab-pop {
+  0%   { transform: scale(0.9); }
+  60%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabs button.active { animation: none; }
+}
 
 /* The settings tab is a glyph, not a word: at the shared 13px it read as a
    speck next to three text labels, and a gear is the one control people scan
@@ -250,7 +461,7 @@ select { appearance: none; cursor: pointer; }
   gap: 8px;
   width: 100%;
   background: var(--ember);
-  color: #04211c;
+  color: var(--ember-ink);
   border: none;
   border-radius: 999px;
   padding: 13px 18px;
@@ -259,13 +470,19 @@ select { appearance: none; cursor: pointer; }
   cursor: pointer;
   font-family: inherit;
   margin-top: 18px;
-  transition: background 0.12s ease;
+  transition: background 0.12s ease, transform 0.08s ease, box-shadow 0.18s ease;
 }
-.btn:hover { background: var(--ember-hover); }
+.btn:hover { background: var(--ember-hover); box-shadow: 0 6px 20px rgba(23, 214, 190, 0.28); }
+/* A real press: the button dips under the finger, then springs back. Cheap
+   tactility that makes the primary action feel physical on tap. */
+.btn:active:not(:disabled) { transform: translateY(1px) scale(0.985); box-shadow: none; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--ink); }
-.btn.ghost:hover { border-color: var(--ember); background: transparent; }
+.btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--ink); box-shadow: none; }
+.btn.ghost:hover { border-color: var(--ember); background: var(--ember-soft); box-shadow: none; }
 .btn.small { width: auto; padding: 8px 16px; font-size: 13px; margin-top: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled) { transform: none; }
+}
 
 .row { display: flex; gap: 10px; }
 /* min-width:0 lets a flex child (e.g. a mono input holding a long URL) shrink
@@ -495,7 +712,17 @@ select { appearance: none; cursor: pointer; }
   padding: 12px 14px;
   transition: border-color 0.12s ease;
 }
-.txrow:hover { border-color: var(--ember); }
+.txrow {
+  transition: border-color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+}
+.txrow:hover {
+  border-color: var(--ember);
+  transform: translateX(3px);
+  box-shadow: -3px 0 0 0 var(--ember);
+}
+@media (prefers-reduced-motion: reduce) {
+  .txrow:hover { transform: none; box-shadow: none; }
+}
 .txrow-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .txrow-amt { font-weight: 600; font-size: 14px; }
 .txrow-badge {
