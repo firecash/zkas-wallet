@@ -11,10 +11,11 @@
 # TestFlight then gives installs to up to 10,000 testers via a simple link.
 
 name: ios
+# Manual only: iOS is not a shipping platform, so a release tag must not drag a
+# failing iOS job along with it. Dispatch this by hand if you want to check the
+# app still builds for iOS.
 on:
   workflow_dispatch:
-  push:
-    tags: ["v*"]
 
 jobs:
   build:
