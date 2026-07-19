@@ -63,6 +63,11 @@ export interface Status {
   // Synced, but still doing the one-time witness warm-up that makes sends fast.
   // Sends work during this (just slower). Older daemons omit it.
   warming?: boolean;
+  // The wallet's view was rebuilt through a node that has PRUNED part of its
+  // history: notes older than the node's pruning point exist on-chain but cannot
+  // be seen here, so the balance is a lower bound. The UI must say so — silence
+  // here is how "my coins vanished" happens. Older daemons omit it.
+  missing_history?: boolean;
   scanned_blocks: number;
   chain_len: number;
   balance_sompi: string;

@@ -985,6 +985,16 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // whole point of the snapshot below is that this state NEVER shows a zero.
   const restoring = status.scanned_blocks === 0 && !status.synced;
   const snap = restoring ? loadSnapshot() : null;
+  const pendingCount = txs.filter((t) => t.pending).length;
+  const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") + pendingIn - outflow);
+  // Spendable now vs still-maturing (shielded anchor depth ~10 min). Incoming 0-conf
+  // value is NOT spendable yet, so it only counts toward maturing.
+  const maturing = maturingFc(status) + pendingIn;
+  const spendable = spendableFc(status) - outflow;
+  // MUST be called before the `restoring` early return: a hook below it renders
+  // only on some renders, and the moment "restoring" flips off React throws
+  // #310 (more hooks than the previous render) and takes the whole UI down.
+  const animBal = useCountUp(shownBal);
   if (restoring) {
     return (
       <div className="card balance">
@@ -1003,13 +1013,6 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
       </div>
     );
   }
-  const pendingCount = txs.filter((t) => t.pending).length;
-  const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") + pendingIn - outflow);
-  // Spendable now vs still-maturing (shielded anchor depth ~10 min). Incoming 0-conf
-  // value is NOT spendable yet, so it only counts toward maturing.
-  const maturing = maturingFc(status) + pendingIn;
-  const spendable = spendableFc(status) - outflow;
-  const animBal = useCountUp(shownBal);
   return (
     <div className="card balance">
       <div className="balance-glow" aria-hidden="true" />
@@ -1040,6 +1043,13 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           " · synced"
         )}
       </div>
+      {status.missing_history && (
+        <div className="sub gapnote">
+          ⚠ The connected node has pruned part of this wallet's history, so older payments aren't visible here —
+          this balance is a <b>lower bound</b>. Your coins are safe on-chain. Don't rescan; connect through a node
+          with full history to see everything.
+        </div>
+      )}
       {!syncing && warming && (
         <div className="sub warmnote">⚡ Getting up to speed (~1–2 min) — after this, sends take seconds.</div>
       )}

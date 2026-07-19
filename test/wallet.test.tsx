@@ -37,6 +37,9 @@ function status(over: Partial<Status> = {}): Status {
 
 /** Count renders of the whole app, to catch a poll that re-renders needlessly. */
 let renderCount = 0;
+/** What the next status poll reports — lets a test walk the app through state
+ * transitions (restoring → synced) instead of a single frozen snapshot. */
+let statusOverride: Partial<Status> = {};
 
 vi.mock("../src/api", async (orig) => {
   const actual = await orig<typeof import("../src/api")>();
@@ -45,7 +48,7 @@ vi.mock("../src/api", async (orig) => {
     api: {
       status: vi.fn(async () => {
         renderCount++; // one poll = one status call
-        return status();
+        return status(statusOverride);
       }),
       history: vi.fn(async () => ({ recoverableHistory: true, total: 0, rows: [], pendingOutgoing: [] })),
       balance: vi.fn(async () => ({})),
@@ -88,10 +91,38 @@ beforeEach(() => {
   sessionStorage.clear();
   localStorage.setItem("wallet_token", "testtoken");
   renderCount = 0;
+  statusOverride = {};
   vi.useRealTimers();
 });
 
 describe("the wallet a user actually touches", () => {
+  it("survives the restoring → synced transition (React #310 regression)", async () => {
+    // The daemon after a restart reports zeros: the Balance card renders its
+    // "restoring your wallet" early return. When the next poll flips to synced,
+    // the card renders its full form — which once called a hook (useCountUp)
+    // BELOW the early return, so React saw more hooks than the previous render,
+    // threw minified error #310, and the entire UI went down. Walk exactly that
+    // transition.
+    statusOverride = { scanned_blocks: 0, synced: false };
+    await mountApp();
+    expect(await screen.findByText(/restoring your wallet/)).toBeInTheDocument();
+    statusOverride = {};
+    await waitFor(() => expect(screen.getByText(/Shielded balance/)).toBeInTheDocument(), { timeout: 6000 });
+    // And the balance itself is on screen, not an error card.
+    await waitFor(() => expect(screen.getByText(/5\b/)).toBeInTheDocument());
+  }, 15000);
+
+  it("says so when the node cannot serve the wallet's full history", async () => {
+    // A wallet rebuilt through a pruned node is BLIND to its older notes — the
+    // balance is a lower bound. Showing it as the whole truth is how 23K ZKAS
+    // "vanished" on 2026-07-19. The daemon now reports missing_history; the UI
+    // must warn, prominently, and tell the user not to rescan.
+    statusOverride = { missing_history: true };
+    await mountApp();
+    expect(await screen.findByText(/lower bound/)).toBeInTheDocument();
+    expect(screen.getByText(/coins are safe on-chain/)).toBeInTheDocument();
+  });
+
   it("opens on Receive and shows the address", async () => {
     await mountApp();
     expect(await screen.findByRole("tab", { name: "Receive" })).toBeInTheDocument();

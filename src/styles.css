@@ -835,6 +835,21 @@ select { appearance: none; cursor: pointer; }
 }
 .msg.warmbanner { font-size: 13px; }
 
+/* Incomplete-history warning: the node pruned blocks this wallet has notes in,
+   so the shown balance is a lower bound. Amber, boxed — must not be missable. */
+.gapnote {
+  margin: 10px auto 0;
+  max-width: 460px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: left;
+  color: #e8b04b;
+  background: rgba(232, 176, 75, 0.08);
+  border: 1px solid rgba(232, 176, 75, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
 /* Send progress: three stage dots under the button (prove → sign → broadcast). */
 /* Send animation — a coin sealed into a shield, then fired down a light-trail.
    Privacy (the shield closing over the value) and speed (the streak) in one scene. */

@@ -1,7 +1,7 @@
 {
   "name": "zkas-wallet",
   "private": true,
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Shielded web wallet for ZKas \u2014 a thin React/Vite SPA over the zkas-walletd daemon.",
   "license": "ISC",
   "homepage": "https://wallet.zkas.info",
@@ -19,7 +19,8 @@
     "mobile:sync": "npm run build && cap sync",
     "mobile:android": "npm run build && cap sync android && cap open android",
     "mobile:ios": "npm run build && cap sync ios && cap open ios",
-    "test": "vitest run"
+    "lint": "eslint src",
+    "test": "eslint src && vitest run"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",
@@ -34,6 +35,9 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^6.2.0",
+    "@typescript-eslint/parser": "^8.64.0",
+    "eslint": "^10.7.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "@tauri-apps/cli": "^2.11.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
