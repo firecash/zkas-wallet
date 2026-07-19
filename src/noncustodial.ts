@@ -20,6 +20,16 @@
 import { api } from "./api";
 import { fvkHex, verifyAndSignPayment, type Network } from "./signer";
 
+/// One transaction of a payment. A payment spread over many small notes needs
+/// several, and each carries only its own share of the total — so the wallet must
+/// record them individually rather than filing the whole amount under the first
+/// txid, which would claim a transaction paid far more than it did.
+export interface SendPart {
+  txid: string;
+  amount_sompi: number;
+  fee_sompi: number;
+}
+
 export interface SendResult {
   txid: string;
   amount_sompi: number;
@@ -27,6 +37,8 @@ export interface SendResult {
   /// Every transaction the payment took, oldest first. A payment spread over many
   /// small notes needs more than one — `txid` is the first of these.
   txids: string[];
+  /// The same transactions with their individual amounts and fees.
+  parts: SendPart[];
 }
 
 /// Sompi per ZKAS, for converting a remaining balance back to the FC-denominated
@@ -75,6 +87,7 @@ export async function sendNonCustodial(
   memo?: string,
 ): Promise<SendResult> {
   const fvk = await fvkHex(seedHex);
+  const sentParts: SendPart[] = [];
   const txids: string[] = [];
   let sent = 0;
   let fees = 0;
@@ -123,6 +136,7 @@ export async function sendNonCustodial(
     onStage?.("broadcasting", progress());
     const res = await api.submit(prep.session, sigs);
     txids.push(res.txid);
+    sentParts.push({ txid: res.txid, amount_sompi: res.amount_sompi, fee_sompi: res.fee_sompi });
     sent += res.amount_sompi;
     fees += res.fee_sompi;
 
@@ -137,5 +151,5 @@ export async function sendNonCustodial(
     }
   }
 
-  return { txid: txids[0], amount_sompi: sent, fee_sompi: fees, txids };
+  return { txid: txids[0], amount_sompi: sent, fee_sompi: fees, txids, parts: sentParts };
 }

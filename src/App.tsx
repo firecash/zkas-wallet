@@ -221,6 +221,11 @@ function sameTxs(a: LocalTx[], b: LocalTx[]): boolean {
   return a.every((x, i) => x.txid === b[i].txid && x.confs === b[i].confs && x.pending === b[i].pending);
 }
 
+/// How many recent device-recorded sends one poll will look up confirmations for.
+/// A payment split across many transactions produces a row each, and the poll runs
+/// once a second — this keeps that bounded without starving a normal wallet.
+const CONF_LOOKUP_LIMIT = 12;
+
 /// Which device-recorded sends History must still show as its own 0-conf rows.
 ///
 /// A device row is suppressed ONLY when the chain reports the same transaction as
@@ -369,9 +374,20 @@ export default function App() {
       saveStatusCache(s);
       setReachable(true);
       let list = reconcile(parseFloat(s.balance_fc || "0"), !!s.synced);
-      // Ask the chain about every send still shown as pending. This is what stops a
-      // confirmed transaction from being displayed as "0-conf" indefinitely.
-      for (const t of list.filter((x) => x.pending)) {
+      // Ask the chain about every send that has no confirmation count yet — NOT
+      // just the ones still flagged `pending`.
+      //
+      // `pending` means "the daemon's balance has not dropped yet", and `reconcile`
+      // clears it as soon as it does (~3 min) or after the 20-minute age-out. That
+      // is routinely BEFORE the chain has answered about the transaction, and the
+      // old filter then stopped asking forever, leaving `confs` undefined and the
+      // row rendering "0-conf" for the rest of its life. The two states are
+      // unrelated: one drives the optimistic balance, the other is display.
+      //
+      // Bounded to the most recent rows so a long history never turns one poll into
+      // hundreds of requests; older rows keep whatever they last learned.
+      const needsConfs = list.filter((x) => x.pending || x.confs == null).slice(0, CONF_LOOKUP_LIMIT);
+      for (const t of needsConfs) {
         const ct = await chainTx(t.txid);
         if (ct?.confirmations != null) list = applyChainStatus(t.txid, ct.confirmations);
       }
@@ -427,10 +443,16 @@ export default function App() {
   const [justSent, setJustSent] = useState<string | null>(null);
   // "Send again" from a transaction carries the recipient across to the form.
   const [sendPrefill, setSendPrefill] = useState<string | null>(null);
+  // A payment arrives here as one row per transaction it took — usually one, but
+  // several when the amount needed more notes than a single transaction can spend.
   const onSent = useCallback(
-    (tx: Omit<LocalTx, "pending">) => {
-      setTxs(recordSend(tx));
-      setJustSent(tx.txid);
+    (sent: Omit<LocalTx, "pending">[]) => {
+      let list = loadTxs();
+      for (const tx of sent) list = recordSend(tx);
+      setTxs(list);
+      // Highlight the first transaction of the payment: it is the one the History
+      // tab scrolls to, and the parts are recorded newest-first above it.
+      setJustSent(sent[0]?.txid ?? null);
       setTab("history");
       successFeedback();
       refresh();
@@ -1990,7 +2012,7 @@ function Send({
   prefillTo,
 }: {
   status: Status | null;
-  onSent: (tx: Omit<LocalTx, "pending">) => void;
+  onSent: (sent: Omit<LocalTx, "pending">[]) => void;
   prefillTo?: string | null;
 }) {
   const [to, setTo] = useState(prefillTo ?? "");
@@ -2125,15 +2147,35 @@ function Send({
       // The one moment the user certainly knows who they just paid — ask now,
       // not in an address book they will never open.
       if (!findContact(toAddr)) setSaveAddr(toAddr);
-      onSent({
-        txid: r.txid,
-        to: toAddr,
-        amountFc: amt,
-        feeFc: paidFeeFc,
-        ts: Date.now(),
-        preFc: reliablePreFc(status),
-        spentFc: amt + paidFeeFc,
-      });
+      // Record ONE ROW PER TRANSACTION. A payment whose notes don't fit a single
+      // transaction is broadcast as several, and filing the whole amount under the
+      // first txid was wrong twice over: the row claimed a transaction had paid far
+      // more than it did, and the remaining transactions went unrecorded entirely —
+      // invisible on a device with chain history off. It also made the payment
+      // disappear, since the first txid landing on-chain retired a row standing in
+      // for all of them.
+      const parts = r.parts?.length
+        ? r.parts
+        : [{ txid: r.txid, amount_sompi: Math.round(amt * 1e8), fee_sompi: Math.round(paidFeeFc * 1e8) }];
+      const now = Date.now();
+      // `preFc` is the pre-send balance the optimistic subtraction is measured
+      // against, so it belongs to the payment as a whole, not to each part.
+      const pre = reliablePreFc(status);
+      onSent(
+        parts.map((p) => {
+          const partAmt = p.amount_sompi / 1e8;
+          const partFee = p.fee_sompi / 1e8;
+          return {
+            txid: p.txid,
+            to: toAddr,
+            amountFc: partAmt,
+            feeFc: partFee,
+            ts: now,
+            preFc: pre,
+            spentFc: partAmt + partFee,
+          };
+        }),
+      );
     } catch (e) {
       setError((e as Error).message);
       setConfirming(false);
