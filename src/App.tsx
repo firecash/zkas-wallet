@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, chainTx, getBase, setBase, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
+import { api, chainTx, getBase, setBase, normalizeDaemonInput, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
 import {
@@ -3163,23 +3163,25 @@ function History({
 /// the desktop app had with custom nodes, just softer.
 function DaemonSetting() {
   const [open, setOpen] = useState(false);
-  const [base, setB] = useState(getBase());
+  const [base, setB] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const current = getBase();
-  const own = current.includes("127.0.0.1") || current.includes("localhost");
+  const own = current.includes("127.0.0.1") || current.includes("localhost") || !current.includes("wallet.zkas.info");
 
-  const save = async (url: string) => {
+  // Accept a bare IP/host and fill in http:// and :8501 for the user, so "just
+  // paste your node's address" works. An empty box resets to the hosted default.
+  const save = async (raw: string) => {
     setBusy(true);
     setError("");
+    const url = normalizeDaemonInput(raw);
     try {
-      if (url.trim()) {
-        const target = url.trim().replace(/\/$/, "");
-        // Prove something walletd-shaped answers there before committing.
+      if (url) {
+        // Prove a wallet service actually answers there before committing to it.
         const ctl = new AbortController();
         const timer = setTimeout(() => ctl.abort(), 5000);
         try {
-          const r = await fetch(`${target}/health`, { signal: ctl.signal });
+          const r = await fetch(`${url}/health`, { signal: ctl.signal });
           if (!r.ok) throw new Error(`answered ${r.status}`);
         } finally {
           clearTimeout(timer);
@@ -3189,7 +3191,10 @@ function DaemonSetting() {
       location.reload();
     } catch (e) {
       const detail = (e as Error).name === "AbortError" ? "timed out after 5s" : (e as Error).message;
-      setError(`No wallet service answering at that URL (${detail}). Nothing was changed — still using ${current}.`);
+      setError(
+        `Couldn't reach a wallet service at ${url} (${detail}). Make sure zkas-walletd is running there and the ` +
+          `port is open. Nothing was changed — still using ${current}.`,
+      );
       setBusy(false);
     }
   };
@@ -3202,29 +3207,46 @@ function DaemonSetting() {
           style={{ width: "100%", justifyContent: "space-between", textTransform: "none", letterSpacing: 0 }}
           onClick={() => setOpen(!open)}
         >
-          <span className="daemon-url">Node &amp; wallet service: <span className="mono">{current}</span></span>
+          <span className="daemon-url">Connect to your own node</span>
           <span className="muted daemon-mode">{own ? "your own ✓" : "hosted"} {open ? "▲" : "▼"}</span>
         </button>
       </h2>
       {open && (
         <>
           <p className="muted small" style={{ marginTop: 14 }}>
-            Your seed signs on this device either way. But the hosted service still sees your <b>viewing key</b> — it
-            can watch your balance and history. To use your own node from this device, run{" "}
-            <code>zkas-walletd</code> next to it (it does the chain scanning; your node provides the blocks) and point
-            this at it — e.g. <span className="mono">http://192.168.1.20:8501</span> on your home network.
+            Your seed always signs on this device. But the hosted service still sees your <b>viewing key</b> — it can
+            watch your balance and history. To keep even that private, run <code>zkas-walletd</code> on your own node
+            and connect this wallet straight to it.
+          </p>
+          <p className="muted small">
+            Just enter your node's <b>IP address</b> — we add the rest. Currently using{" "}
+            <span className="mono">{current}</span>.
           </p>
           {error && <div className="msg err">{error}</div>}
-          <label>Wallet service URL</label>
+          <label>Your node's IP address (or hostname)</label>
           <div className="row">
-            <input value={base} onChange={(e) => setB(e.target.value)} className="mono" placeholder="http://127.0.0.1:8501" />
-            <button className="btn small" style={{ flex: "0 0 auto" }} disabled={busy} onClick={() => save(base)}>
-              {busy ? <span className="spin" /> : "Test & save"}
+            <input
+              value={base}
+              onChange={(e) => setB(e.target.value)}
+              className="mono"
+              placeholder="185.147.157.125"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            <button className="btn small" style={{ flex: "0 0 auto" }} disabled={busy || !base.trim()} onClick={() => save(base)}>
+              {busy ? <span className="spin" /> : "Connect"}
             </button>
           </div>
-          <button className="btn ghost small" style={{ marginTop: 10 }} disabled={busy} onClick={() => save("")}>
-            Reset to hosted default
-          </button>
+          <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
+            Uses port {DEFAULT_WALLETD_PORT} by default — add <span className="mono">:port</span> only if you changed it.
+          </p>
+          {!own && (
+            <button className="btn ghost small" style={{ marginTop: 12 }} disabled={busy} onClick={() => save("")}>
+              Reset to hosted default
+            </button>
+          )}
         </>
       )}
     </div>

@@ -40,6 +40,31 @@ export function setBase(url: string) {
   else localStorage.setItem("walletd_base", url.replace(/\/$/, ""));
 }
 
+/** The default port a self-hosted `zkas-walletd` listens on. */
+export const DEFAULT_WALLETD_PORT = 8501;
+
+/**
+ * Turn whatever the user typed into their own node's box into a full wallet-service
+ * URL. The point is that "just paste your node's IP" works — nobody should have to
+ * remember `http://` and `:8501`. Accepts, and normalizes to `http://<host>:8501`:
+ *   185.147.157.125            → http://185.147.157.125:8501
+ *   185.147.157.125:8501       → http://185.147.157.125:8501   (explicit port kept)
+ *   mynode.example.com         → http://mynode.example.com:8501
+ *   http(s)://…                → passed through (only trailing slash trimmed)
+ * Returns "" for empty input (meaning: fall back to the hosted default).
+ */
+export function normalizeDaemonInput(raw: string): string {
+  let s = raw.trim().replace(/\/+$/, "");
+  if (!s) return "";
+  // Already a URL — respect the user's scheme/port exactly.
+  if (/^https?:\/\//i.test(s)) return s;
+  // Bare host or host:port. Add a port only when the host has none. IPv6 in
+  // brackets ([::1]:8501) keeps its own colons; a lone host gets the default.
+  const hasPort = /^\[.*\]:\d+$/.test(s) || (!s.includes("[") && /:\d+$/.test(s));
+  if (!hasPort) s = `${s}:${DEFAULT_WALLETD_PORT}`;
+  return `http://${s}`;
+}
+
 // A random per-browser wallet token. On the hosted daemon this selects THIS
 // browser's wallet; losing it (clearing storage) means restoring from seed.
 export function getToken(): string {
