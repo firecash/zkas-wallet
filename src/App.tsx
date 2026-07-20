@@ -1058,13 +1058,6 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           " · synced"
         )}
       </div>
-      {status.missing_history && (
-        <div className="sub gapnote">
-          ⚠ The connected node has pruned part of this wallet's history, so older payments aren't visible here —
-          this balance is a <b>lower bound</b>. Your coins are safe on-chain. Don't rescan; connect through a node
-          with full history to see everything.
-        </div>
-      )}
       {!syncing && warming && (
         <div className="sub warmnote">⚡ Getting up to speed (~1–2 min) — after this, sends take seconds.</div>
       )}
