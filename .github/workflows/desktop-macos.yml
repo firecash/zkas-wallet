@@ -13,7 +13,9 @@ name: desktop-macos
 on:
   workflow_dispatch:
   push:
-    tags: ["desktop-v*"]
+    # Fire on the single release tag so desktop assets land on the SAME release
+    # as the mobile/web build (v0.3.11 etc.), not a separate desktop-v* release.
+    tags: ["v*"]
 
 jobs:
   build:
