@@ -272,6 +272,10 @@ const CONF_LOOKUP_LIMIT = 12;
 /// answers means this txid will never resolve (dropped send, record from a
 /// previous chain), and retrying it forever starves rows that can.
 const CONF_MAX_TRIES = 120;
+/// A temporary explorer/API outage must not permanently freeze a real recent send
+/// at `0-conf` after CONF_MAX_TRIES. Keep retrying recent rows; the cap remains for
+/// old/dead records so they cannot starve current payments.
+const CONF_RECENT_RETRY_MS = 60 * 60 * 1000;
 
 /// Which device-recorded sends History must still show as its own 0-conf rows.
 ///
@@ -440,7 +444,17 @@ export default function App() {
       // budget forever); and each fetch carries its own 4s timeout (in chainTx)
       // so one hung request cannot stall the poll.
       const needsConfs = list
-        .filter((x) => x.pending || (x.confs == null && (x.confTries ?? 0) < CONF_MAX_TRIES))
+        .filter(
+          (x) =>
+            x.pending ||
+            // `0` is a real API answer while the tx is in mempool, but it is not a
+            // terminal state. The old `confs == null` test stopped polling as soon
+            // as reconcile cleared `pending`, freezing a mined tx at 0-conf forever.
+            // Keep every recent send live (including 0 and positive counts); only
+            // old unanswered/dead rows are governed by the retry cap.
+            Date.now() - x.ts < CONF_RECENT_RETRY_MS ||
+            (x.confs == null && (x.confTries ?? 0) < CONF_MAX_TRIES),
+        )
         .slice(0, CONF_LOOKUP_LIMIT);
       const answers = await Promise.all(needsConfs.map(async (t) => [t.txid, await chainTx(t.txid)] as const));
       for (const [txid, ct] of answers) {
