@@ -1189,6 +1189,7 @@ function Onboard({
   const [mode, setMode] = useState<"choose" | "import" | "backup">("choose");
   const [importHex, setImportHex] = useState("");
   const [birthday, setBirthday] = useState("");
+  const [createdDate, setCreatedDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -1218,12 +1219,27 @@ function Onboard({
   // Import is the same deal: the seed stays here, only the viewing key is
   // registered. Birthday 0 (the default) makes the daemon scan the full chain so
   // an old wallet's historical notes are all recovered.
+  //
+  // The chain runs at 1 block per second, so a DAA height is (almost exactly) a
+  // number of seconds — which means a plain calendar date converts straight into a
+  // wallet birthday. Nobody knows their block height; everybody knows roughly when
+  // they made the wallet. Two days of margin absorb timezones and fuzzy memory —
+  // scanning a couple of days too much costs seconds, skipping a day too much
+  // costs notes.
+  const birthdayFromInputs = (): number => {
+    if (birthday.trim()) return Number(birthday.trim()); // exact height wins
+    if (createdDate && status?.daa_score) {
+      const ageSec = Math.floor((Date.now() - new Date(createdDate + "T00:00:00").getTime()) / 1000);
+      if (ageSec > 0) return Math.max(0, Math.floor(status.daa_score - ageSec - 2 * 86400));
+    }
+    return 0;
+  };
   const doImport = async () => {
     setBusy(true);
     setError("");
     try {
       const seed = importHex.trim();
-      await api.watch(await fvkHex(seed), birthday.trim() ? Number(birthday.trim()) : 0);
+      await api.watch(await fvkHex(seed), birthdayFromInputs());
       setDeviceSeed(seed);
       onImported();
     } catch (e) {
@@ -1248,7 +1264,9 @@ function Onboard({
         <h2>Import wallet</h2>
         <label>Recovery seed (64 hex characters)</label>
         <textarea value={importHex} onChange={(e) => setImportHex(e.target.value)} placeholder="e.g. 0a1b2c…" />
-        <label>Wallet birthday — block height (optional, speeds up sync)</label>
+        <label>When was this wallet created? (optional — makes sync much faster)</label>
+        <input type="date" value={createdDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setCreatedDate(e.target.value)} />
+        <label>Advanced — exact block height (overrides the date)</label>
         <input
           value={birthday}
           onChange={(e) => setBirthday(e.target.value.replace(/[^0-9]/g, ""))}
@@ -1256,8 +1274,9 @@ function Onboard({
           inputMode="numeric"
         />
         <div className="msg small" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--muted)" }}>
-          Set this to the block height around when the wallet first received funds to skip scanning older history.
-          Leave blank to scan from the start. Spending always re-checks the full chain, so funds are never missed.
+          The scan starts a safe margin before the date you pick, so nothing is missed — leave both blank to scan the
+          whole chain. If this wallet has been used on this service before (any device), sync resumes instantly
+          regardless.
         </div>
         {error && <div className="msg err">{error}</div>}
         <div className="row">
