@@ -318,8 +318,13 @@ const MISSING_TOLERANCE = 10;
 /// desktop window (and the mobile PWA, which is not `isNative()`) still benefits.
 const MOBILE_SCROLL_MAX_WIDTH = 720;
 
-function scrollToPane() {
-  if (typeof window === "undefined" || window.innerWidth > MOBILE_SCROLL_MAX_WIDTH) return;
+// `force` scrolls on every width, not just mobile: the post-send jump to History
+// must land on the "Sent" banner at the top of the pane even on a wide desktop
+// window, which the mobile-only gate would otherwise leave scrolled to wherever
+// the tall Send form left it (reported live: send lands at the bottom of History).
+function scrollToPane(force = false) {
+  if (typeof window === "undefined") return;
+  if (!force && window.innerWidth > MOBILE_SCROLL_MAX_WIDTH) return;
   requestAnimationFrame(() => {
     document.querySelector(".pane")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -525,6 +530,10 @@ export default function App() {
       setTab("history");
       successFeedback();
       refresh();
+      // Land at the top of History (the "Sent" banner) on every width — the tab
+      // effect's scrollToPane is mobile-only and would leave a desktop window
+      // scrolled to the bottom where the Send form's send button sat.
+      scrollToPane(true);
     },
     [refresh],
   );
