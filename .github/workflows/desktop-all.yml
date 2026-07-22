@@ -60,7 +60,7 @@ jobs:
           path: wallet
       - uses: actions/checkout@v4
         with:
-          repository: firecash/firecash-rusty
+          repository: firecash/zkas-rusty
           path: rusty-kaspa
 
       - uses: actions/setup-node@v4
