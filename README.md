@@ -1,7 +1,7 @@
-# firecash-wallet
+# zkas-wallet
 
 A lightweight web **and mobile** wallet for
-**[FireCash](https://github.com/firecash/firecash-rusty)** — the private-by-default,
+**[ZKas](https://github.com/firecash/zkas-rusty)** — the private-by-default,
 shielded (Orchard / Halo 2) rusty-kaspa fork. Create a wallet, receive to a shielded
 address, and send private payments straight from the browser or a native iOS/Android app.
 
@@ -14,7 +14,7 @@ address, and send private payments straight from the browser or a native iOS/And
 > or keep funds in a **paper wallet** (cold). See [Custody model](#custody-model).
 
 This is a static React + Vite single-page app. It holds no keys itself — it is a thin
-UI over a **[`firecash-walletd`](https://github.com/firecash/firecash-rusty)** daemon,
+UI over a **[`zkas-walletd`](https://github.com/firecash/zkas-rusty)** daemon,
 which owns the seed, scans the chain, builds Orchard proofs, and submits transactions.
 
 ## Features
@@ -35,16 +35,16 @@ overridable in the UI):
 
 | Mode | Daemon | Who holds the seed | Notes |
 |---|---|---|---|
-| **Hosted** (default) | same-origin `/<origin>/daemon` → `firecash-walletd` on the server | the hosted daemon, keyed by a **random per-browser token** | zero-install; clearing browser storage loses the token — restore from seed |
+| **Hosted** (default) | same-origin `/<origin>/daemon` → `zkas-walletd` on the server | the hosted daemon, keyed by a **random per-browser token** | zero-install; clearing browser storage loses the token — restore from seed |
 | **Self-hosted** | your own `http://127.0.0.1:8501` | **only your machine** | fully non-custodial; the seed never leaves localhost |
 | **Mobile** (native app) | hosted daemon by default, or your own | same as the mode you point it at | Capacitor wrap of this SPA — see [`MOBILE.md`](./MOBILE.md) |
 
-To go self-hosted, run `firecash-walletd` locally (see the
-[core repo](https://github.com/firecash/firecash-rusty#firecash-walletd--wallet-daemon-rest-powers-the-web-wallet))
+To go self-hosted, run `zkas-walletd` locally (see the
+[core repo](https://github.com/firecash/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet))
 and set the daemon URL to `http://127.0.0.1:8501`.
 
 > **🔑 On-device keys — partly live.** The **Local** tab now runs entirely in your browser
-> (WebAssembly, [`firecash-signer`](https://github.com/firecash/firecash-signer)): generate a
+> (WebAssembly, [`zkas-signer`](https://github.com/firecash/zkas-signer)): generate a
 > cold wallet, derive an address, and sign messages **without the seed ever leaving your
 > device**. **Verify** is also fully client-side. What still uses the daemon is **balance and
 > sending**, because a shielded spend needs a zero-knowledge proof. The seed never has to be on
@@ -53,7 +53,7 @@ and set the daemon URL to `http://127.0.0.1:8501`.
 > prove+sign (Route B). Details in [`MOBILE.md`](./MOBILE.md) and the core repo's
 > `docs/NON_CUSTODIAL_WALLET.md`.
 
-> **⚠️ Testnet.** FireCash is currently a test network — coins have no value and the chain
+> **⚠️ Testnet.** ZKas is currently a test network — coins have no value and the chain
 > may be reset. Your **recovery seed is the only way to restore a wallet**: back it up offline.
 
 ## Quick start (development)
@@ -63,11 +63,11 @@ npm install
 npm run dev      # Vite dev server (default http://localhost:5173)
 ```
 
-You need a reachable `firecash-walletd`. For local development, run one and allow the
+You need a reachable `zkas-walletd`. For local development, run one and allow the
 dev origin:
 
 ```bash
-firecash-walletd --network mainnet --rpc-server 127.0.0.1:16110 \
+zkas-walletd --network mainnet --rpc-server 127.0.0.1:16110 \
   --wallet-dir ./fc-wallets --listen 127.0.0.1:8501 \
   --allow-origin http://localhost:5173
 ```
@@ -81,7 +81,7 @@ npm run build    # type-checks (tsc -b) then emits a static bundle to dist/
 ```
 
 `dist/` is a fully static site — serve it from any web server / CDN. The hosted
-deployment serves `dist/` and reverse-proxies `/daemon/` to `firecash-walletd`.
+deployment serves `dist/` and reverse-proxies `/daemon/` to `zkas-walletd`.
 
 ## Configuration
 
@@ -113,15 +113,15 @@ Requests carry `X-Wallet-Token`. See `src/api.ts` for the typed client.
   self-hosted mode it never leaves your machine; in hosted mode the daemon is trusted.
   The [non-custodial roadmap](#custody-model) moves the seed onto the device so even the
   hosted server cannot spend.
-- `firecash-walletd` is hardened: CORS is locked to `--allow-origin`, the wallet token is
+- `zkas-walletd` is hardened: CORS is locked to `--allow-origin`, the wallet token is
   required, and seeds can be encrypted at rest with `--wallet-secret`. Always launch it
   with the exact origin you serve this app from.
 - Never paste your recovery seed into any site other than a wallet daemon you trust.
 
 ## Related repositories
 
-- **[firecash-rusty](https://github.com/firecash/firecash-rusty)** — node, miner,
-  `firecash-walletd`, explorer API
+- **[zkas-rusty](https://github.com/firecash/zkas-rusty)** — node, miner,
+  `zkas-walletd`, explorer API
 - **[firecash-explorer](https://github.com/firecash/firecash-explorer)** — block explorer SPA
 - **[firecash-pool](https://github.com/firecash/firecash-pool)** — stratum mining pool
 
