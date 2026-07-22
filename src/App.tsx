@@ -730,7 +730,7 @@ function HostedNotice() {
       <span className="warnbar-icon" aria-hidden="true">🔒</span>
       <div>
         Signed on your device — <b>your seed never leaves it</b>. Max security:{" "}
-        <a href="https://github.com/firecash/firecash-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet"
+        <a href="https://github.com/firecash/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet"
            target="_blank" rel="noreferrer">self-host</a>{" "}
         ·{" "}
         <a href="https://zkas.info/paper-wallet.html" target="_blank" rel="noreferrer">paper wallet</a>.
@@ -1665,7 +1665,7 @@ function AboutCard() {
         ZKas Wallet — every balance and payment shielded by Orchard zero-knowledge proofs. Your spending key is held on
         this device and never sent anywhere.
       </p>
-      <a href="https://github.com/firecash/firecash-wallet" target="_blank" rel="noreferrer">
+      <a href="https://github.com/firecash/zkas-wallet" target="_blank" rel="noreferrer">
         Source code
       </a>
       {" · "}
