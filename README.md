@@ -122,8 +122,8 @@ Requests carry `X-Wallet-Token`. See `src/api.ts` for the typed client.
 
 - **[zkas-rusty](https://github.com/firecash/zkas-rusty)** — node, miner,
   `zkas-walletd`, explorer API
-- **[firecash-explorer](https://github.com/firecash/firecash-explorer)** — block explorer SPA
-- **[firecash-pool](https://github.com/firecash/firecash-pool)** — stratum mining pool
+- **[firecash-explorer](https://github.com/firecash/zkas-explorer)** — block explorer SPA
+- **[firecash-pool](https://github.com/firecash/zkas-pool)** — stratum mining pool
 
 ## Tech
 
