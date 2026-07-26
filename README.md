@@ -53,8 +53,8 @@ and set the daemon URL to `http://127.0.0.1:8501`.
 > prove+sign (Route B). Details in [`MOBILE.md`](./MOBILE.md) and the core repo's
 > `docs/NON_CUSTODIAL_WALLET.md`.
 
-> **⚠️ Testnet.** ZKas is currently a test network — coins have no value and the chain
-> may be reset. Your **recovery seed is the only way to restore a wallet**: back it up offline.
+> **⚠️ Mainnet.** ZKas is live on mainnet. Your **recovery seed is the only way to
+> restore a wallet**: back it up offline.
 
 ## Quick start (development)
 

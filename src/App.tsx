@@ -146,11 +146,8 @@ function parseAmount(s: string): number {
 }
 
 const EXPLORER = "https://explorer.zkas.info";
-// Beta signal: the chain runs as mainnet internally (addresses, signing, the node),
-// but while it's still being hardened we surface the network to users as "testnet"
-// so nobody treats it as final. Display-only — does not affect address derivation
-// or which network the daemon/signer actually use.
-const NET_LABEL = "testnet";
+// Display-only label; address derivation and signing use the daemon's network.
+const NET_LABEL = "mainnet";
 
 type Tab = "receive" | "send" | "history" | "signatures" | "settings";
 const TAB_LABEL: Record<Tab, string> = {
