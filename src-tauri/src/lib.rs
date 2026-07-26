@@ -214,6 +214,9 @@ impl Engine {
             // The passphrase the user unlocked with. `None` only in the
             // pre-passphrase (plaintext) case, which the UI pushes users off.
             wallet_secret: self.secret.clone(),
+            // Embedded daemon is loopback-only: no HTTPS, no bearer gate.
+            tls: None,
+            require_bearer: None,
         };
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         self.shutdown = Some(tx);
