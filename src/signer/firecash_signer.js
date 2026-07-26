@@ -173,6 +173,161 @@ function takeFromExternrefTable0(idx) {
     return value;
 }
 /**
+ * Generate a brand-new wallet: a random 32-byte seed (browser CSPRNG) and its
+ * `zkas:` address. Retries the negligibly-rare case where a random seed is
+ * not a valid Orchard spending key.
+ * @param {string} network
+ * @returns {Wallet}
+ */
+export function new_wallet(network) {
+    const ptr0 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.new_wallet(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return Wallet.__wrap(ret[0]);
+}
+
+/**
+ * Derive the `zkas:` address for an existing seed on a network.
+ * @param {string} seed_hex
+ * @param {string} network
+ * @returns {string}
+ */
+export function address_from_seed(seed_hex, network) {
+    let deferred4_0;
+    let deferred4_1;
+    try {
+        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.address_from_seed(ptr0, len0, ptr1, len1);
+        var ptr3 = ret[0];
+        var len3 = ret[1];
+        if (ret[3]) {
+            ptr3 = 0; len3 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred4_0 = ptr3;
+        deferred4_1 = len3;
+        return getStringFromWasm0(ptr3, len3);
+    } finally {
+        wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+    }
+}
+
+/**
+ * Sign `message`, proving control of the seed's address on `network`. The
+ * returned `signature_hex` is `fvk ‖ sig`, interoperable with `shielded-pay` and
+ * the mining-pool claim verifier.
+ * @param {string} seed_hex
+ * @param {string} network
+ * @param {string} message
+ * @returns {Signature}
+ */
+export function sign(seed_hex, network, message) {
+    const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passStringToWasm0(message, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.sign(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return Signature.__wrap(ret[0]);
+}
+
+/**
+ * Verify that `signature_hex` (`fvk ‖ sig`) proves control of `address` over
+ * `message`. Returns `true` iff valid. The network is taken from the address
+ * prefix, matching how the signature was produced.
+ * @param {string} address
+ * @param {string} message
+ * @param {string} signature_hex
+ * @returns {boolean}
+ */
+export function verify(address, message, signature_hex) {
+    const ptr0 = passStringToWasm0(address, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(message, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passStringToWasm0(signature_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.verify(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0] !== 0;
+}
+
+/**
+ * The wallet's full viewing key (`ak ‖ nk ‖ rivk`, 96 bytes) as hex, derived from
+ * the seed on-device. Send this to the daemon's non-custodial `/prepare` endpoint so
+ * it can scan watch-only and build the payment proof. Grants viewing, not spend.
+ * @param {string} seed_hex
+ * @returns {string}
+ */
+export function fvk_hex(seed_hex) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.fvk_hex(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * Device half of a **non-custodial payment**. Given the wallet seed and, from the
+ * server's `prepare` response, a spend's `alpha` randomizer and the payment `sighash`,
+ * returns the 64-byte RedPallas spend-auth signature (hex). The seed never leaves the
+ * device; the server applies this signature and broadcasts. No proving circuit.
+ * @param {string} seed_hex
+ * @param {string} alpha_hex
+ * @param {string} sighash_hex
+ * @returns {string}
+ */
+export function sign_spend_auth(seed_hex, alpha_hex, sighash_hex) {
+    let deferred5_0;
+    let deferred5_1;
+    try {
+        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(alpha_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(sighash_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.sign_spend_auth(ptr0, len0, ptr1, len1, ptr2, len2);
+        var ptr4 = ret[0];
+        var len4 = ret[1];
+        if (ret[3]) {
+            ptr4 = 0; len4 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred5_0 = ptr4;
+        deferred5_1 = len4;
+        return getStringFromWasm0(ptr4, len4);
+    } finally {
+        wasm.__wbindgen_free(deferred5_0, deferred5_1, 1);
+    }
+}
+
+/**
  * **The anti-blind-signing entry point** for the non-custodial send.
  *
  * Given the server's `prepare` response, this VERIFIES on the device — using only the
@@ -233,172 +388,14 @@ export function verify_and_sign_payment(seed_hex, network, to_address, amount_so
 }
 
 /**
- * Verify that `signature_hex` (`fvk ‖ sig`) proves control of `address` over
- * `message`. Returns `true` iff valid. The network is taken from the address
- * prefix, matching how the signature was produced.
- * @param {string} address
- * @param {string} message
- * @param {string} signature_hex
- * @returns {boolean}
+ * Initialize Rust panic handler in console mode.
+ *
+ * This will output additional debug information during a panic to the console.
+ * This function should be called right after loading WASM libraries.
+ * @category General
  */
-export function verify(address, message, signature_hex) {
-    const ptr0 = passStringToWasm0(address, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(message, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passStringToWasm0(signature_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.verify(ptr0, len0, ptr1, len1, ptr2, len2);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return ret[0] !== 0;
-}
-
-/**
- * Derive the `zkas:` address for an existing seed on a network.
- * @param {string} seed_hex
- * @param {string} network
- * @returns {string}
- */
-export function address_from_seed(seed_hex, network) {
-    let deferred4_0;
-    let deferred4_1;
-    try {
-        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len1 = WASM_VECTOR_LEN;
-        const ret = wasm.address_from_seed(ptr0, len0, ptr1, len1);
-        var ptr3 = ret[0];
-        var len3 = ret[1];
-        if (ret[3]) {
-            ptr3 = 0; len3 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred4_0 = ptr3;
-        deferred4_1 = len3;
-        return getStringFromWasm0(ptr3, len3);
-    } finally {
-        wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
-    }
-}
-
-/**
- * Generate a brand-new wallet: a random 32-byte seed (browser CSPRNG) and its
- * `zkas:` address. Retries the negligibly-rare case where a random seed is
- * not a valid Orchard spending key.
- * @param {string} network
- * @returns {Wallet}
- */
-export function new_wallet(network) {
-    const ptr0 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.new_wallet(ptr0, len0);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return Wallet.__wrap(ret[0]);
-}
-
-/**
- * Sign `message`, proving control of the seed's address on `network`. The
- * returned `signature_hex` is `fvk ‖ sig`, interoperable with `shielded-pay` and
- * the mining-pool claim verifier.
- * @param {string} seed_hex
- * @param {string} network
- * @param {string} message
- * @returns {Signature}
- */
-export function sign(seed_hex, network, message) {
-    const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passStringToWasm0(message, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.sign(ptr0, len0, ptr1, len1, ptr2, len2);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return Signature.__wrap(ret[0]);
-}
-
-/**
- * Device half of a **non-custodial payment**. Given the wallet seed and, from the
- * server's `prepare` response, a spend's `alpha` randomizer and the payment `sighash`,
- * returns the 64-byte RedPallas spend-auth signature (hex). The seed never leaves the
- * device; the server applies this signature and broadcasts. No proving circuit.
- * @param {string} seed_hex
- * @param {string} alpha_hex
- * @param {string} sighash_hex
- * @returns {string}
- */
-export function sign_spend_auth(seed_hex, alpha_hex, sighash_hex) {
-    let deferred5_0;
-    let deferred5_1;
-    try {
-        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(alpha_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(sighash_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len2 = WASM_VECTOR_LEN;
-        const ret = wasm.sign_spend_auth(ptr0, len0, ptr1, len1, ptr2, len2);
-        var ptr4 = ret[0];
-        var len4 = ret[1];
-        if (ret[3]) {
-            ptr4 = 0; len4 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred5_0 = ptr4;
-        deferred5_1 = len4;
-        return getStringFromWasm0(ptr4, len4);
-    } finally {
-        wasm.__wbindgen_free(deferred5_0, deferred5_1, 1);
-    }
-}
-
-/**
- * The wallet's full viewing key (`ak ‖ nk ‖ rivk`, 96 bytes) as hex, derived from
- * the seed on-device. Send this to the daemon's non-custodial `/prepare` endpoint so
- * it can scan watch-only and build the payment proof. Grants viewing, not spend.
- * @param {string} seed_hex
- * @returns {string}
- */
-export function fvk_hex(seed_hex) {
-    let deferred3_0;
-    let deferred3_1;
-    try {
-        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.fvk_hex(ptr0, len0);
-        var ptr2 = ret[0];
-        var len2 = ret[1];
-        if (ret[3]) {
-            ptr2 = 0; len2 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred3_0 = ptr2;
-        deferred3_1 = len2;
-        return getStringFromWasm0(ptr2, len2);
-    } finally {
-        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
-    }
-}
-
-/**
- * r" Deferred promise - an object that has `resolve()` and `reject()`
- * r" functions that can be called outside of the promise body.
- * r" WARNING: This function uses `eval` and can not be used in environments
- * r" where dynamically-created code can not be executed such as web browser
- * r" extensions.
- * r" @category General
- * @returns {Promise<any>}
- */
-export function defer() {
-    const ret = wasm.defer();
-    return ret;
+export function initConsolePanicHook() {
+    wasm.initConsolePanicHook();
 }
 
 /**
@@ -430,17 +427,6 @@ export function presentPanicHookLogs() {
 }
 
 /**
- * Initialize Rust panic handler in console mode.
- *
- * This will output additional debug information during a panic to the console.
- * This function should be called right after loading WASM libraries.
- * @category General
- */
-export function initConsolePanicHook() {
-    wasm.initConsolePanicHook();
-}
-
-/**
  * Configuration for the WASM32 bindings runtime interface.
  * @see {@link IWASM32BindingsConfig}
  * @category General
@@ -451,6 +437,20 @@ export function initWASM32Bindings(config) {
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
+}
+
+/**
+ * r" Deferred promise - an object that has `resolve()` and `reject()`
+ * r" functions that can be called outside of the promise body.
+ * r" WARNING: This function uses `eval` and can not be used in environments
+ * r" where dynamically-created code can not be executed such as web browser
+ * r" extensions.
+ * r" @category General
+ * @returns {Promise<any>}
+ */
+export function defer() {
+    const ret = wasm.defer();
+    return ret;
 }
 
 /**
@@ -702,6 +702,53 @@ export class Address {
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.address_validate(ptr0, len0);
         return ret !== 0;
+    }
+}
+
+const HashFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_hash_free(ptr >>> 0, 1));
+/**
+ * @category General
+ */
+export class Hash {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        HashFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_hash_free(ptr, 0);
+    }
+    /**
+     * @param {string} hex_str
+     */
+    constructor(hex_str) {
+        const ptr0 = passStringToWasm0(hex_str, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.hash_constructor(ptr0, len0);
+        this.__wbg_ptr = ret >>> 0;
+        HashFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @returns {string}
+     */
+    toString() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.hash_toString(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
     }
 }
 
