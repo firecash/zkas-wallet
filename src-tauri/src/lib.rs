@@ -217,6 +217,12 @@ impl Engine {
             // Embedded daemon is loopback-only: no HTTPS, no bearer gate.
             tls: None,
             require_bearer: None,
+            // Merge small notes in the background, at the daemon's own default
+            // ceiling. Proving costs ~2.4 core-seconds PER NOTE SPENT, so a
+            // wallet that accumulates hundreds of small notes — a miner paid per
+            // block, say — gets slower to send from every day unless something
+            // consolidates them. `None` would disable that silently.
+            auto_consolidate: Some(zkas_walletd::AUTO_CONSOLIDATE_DEFAULT),
         };
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         self.shutdown = Some(tx);
