@@ -1,6 +1,6 @@
 [package]
 name = "zkas-desktop"
-version = "0.3.10"
+version = "0.3.14"
 description = "ZKas desktop wallet — the shielded wallet engine embedded in a native shell"
 edition = "2021"
 license = "ISC"
