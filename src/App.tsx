@@ -494,7 +494,12 @@ export default function App() {
         const t = localStorage.getItem("wallet_token");
         if (t) ensureRegistered(t, s.address);
       }
-      if (s.has_wallet && s.scanned_blocks > 0 && snapshotDirty(s)) {
+      // ONLY snapshot a SYNCED wallet. A mid-scan balance is a partial count that
+      // climbs from zero, so saving it overwrote the last known good figure with a
+      // fraction of it — the safety net eating itself. A pool wallet rescanning at
+      // 5% saved "29,703" over the true "423,997", and from then on even the
+      // fallback was wrong.
+      if (s.has_wallet && s.synced && s.scanned_blocks > 0 && snapshotDirty(s)) {
         saveSnapshot({
           balanceFc: parseFloat(s.balance_fc || "0"),
           spendableFc: spendableFc(s),
@@ -980,6 +985,51 @@ function useHeldAmount(amount: number, minMs = 4000) {
   return { shown, amount: on ? amount : last.current };
 }
 
+/// Seconds left in a chain scan, from the rate actually observed on this device.
+/// The old copy promised "a few minutes"; a note-heavy wallet rescanning from
+/// genesis takes over an hour, and being told "a few minutes" for an hour is how
+/// a slow-but-healthy rebuild reads as a hang. Measure, don't guess. Returns null
+/// until there is enough movement to quote honestly.
+function useScanEta(scanned: number, total: number, active: boolean): number | null {
+  const samples = useRef<{ t: number; n: number }[]>([]);
+  const [eta, setEta] = useState<number | null>(null);
+  useEffect(() => {
+    if (!active || total <= 0) {
+      samples.current = [];
+      setEta(null);
+      return;
+    }
+    const now = Date.now();
+    const s = samples.current;
+    // A fresh rescan walks the counter backwards — the old rate says nothing
+    // about the new scan, so start over rather than blend them.
+    if (s.length && scanned < s[s.length - 1].n) s.length = 0;
+    if (!s.length || scanned !== s[s.length - 1].n) s.push({ t: now, n: scanned });
+    // Rolling ~2-minute window, so the estimate tracks the rate right now rather
+    // than an average dragged down by a slow start.
+    while (s.length > 2 && now - s[0].t > 120_000) s.shift();
+    const first = s[0];
+    const secs = (now - first.t) / 1000;
+    const done = scanned - first.n;
+    // Quoting a number off the first two fast pages produces "30 seconds left"
+    // on an hour-long scan, which is worse than saying nothing.
+    if (secs < 20 || done <= 0) return;
+    setEta(Math.round(Math.max(0, total - scanned) / (done / secs)));
+  }, [scanned, total, active]);
+  return eta;
+}
+
+/// Coarse on purpose — a scan rate wobbles, and a precise-looking figure that
+/// keeps changing is less trustworthy than a rounded one that holds.
+function fmtEta(secs: number): string {
+  if (secs < 45) return "under a minute left";
+  const m = Math.round(secs / 60);
+  if (m < 60) return `~${m} min left`;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  return rem ? `~${h}h ${rem}m left` : `~${h}h left`;
+}
+
 function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // NB: every hook here runs BEFORE the `restoring` early return below. That
   // return comes and goes with the daemon's scan state, so a hook placed after
@@ -1019,7 +1069,16 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // gone, even for two seconds, is far worse than a card that changes twice; the
   // whole point of the snapshot below is that this state NEVER shows a zero.
   const restoring = status.scanned_blocks === 0 && !status.synced;
-  const snap = restoring ? loadSnapshot() : null;
+  const snap = loadSnapshot();
+  // A scan in progress reports the value found SO FAR, climbing from zero to the
+  // real total. Rendering that as the balance is how a healthy rescan reads as a
+  // theft: a pool wallet mid-rebuild showed "29,703 ZKAS" under a small "syncing
+  // 5%" while the true figure was 423,997. So while the running count is still
+  // below the last confirmed figure, the confirmed figure stays the headline and
+  // the partial is labelled as progress.
+  const partialFc = parseFloat(status.balance_fc || "0");
+  const rebuilding = !status.synced && (restoring || (!!snap && partialFc < snap.balanceFc * 0.995));
+  const eta = useScanEta(status.scanned_blocks, status.chain_len, !status.synced);
   const pendingCount = txs.filter((t) => t.pending).length;
   const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") + pendingIn - outflow);
   // Spendable now vs still-maturing (shielded anchor depth ~10 min). Incoming 0-conf
@@ -1030,20 +1089,35 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // only on some renders, and the moment "restoring" flips off React throws
   // #310 (more hooks than the previous render) and takes the whole UI down.
   const animBal = useCountUp(shownBal);
-  if (restoring) {
+  if (rebuilding) {
     return (
       <div className="card balance">
+        <div className="balance-glow" aria-hidden="true" />
+        <div className="balance-label">
+          <span className="shield-badge" aria-hidden="true" />
+          Shielded balance
+        </div>
         <div className="amt">
           {snap ? trimFc(snap.balanceFc.toFixed(8)) : "—"}
           <span className="unit">ZKAS</span>
         </div>
         <div className="sub">
+          {snap ? "last confirmed balance · " : ""}
           <span className="spin" style={{ width: 11, height: 11 }} />{" "}
-          {snap ? "last known balance — restoring your wallet…" : "restoring your wallet…"}
+          {restoring ? "rebuilding…" : `rebuilding ${pct}%`}
+        </div>
+        <div className="syncbar">
+          <div className="syncbar-fill" style={{ width: `${Math.max(2, pct)}%` }} />
         </div>
         <div className="sub" style={{ marginTop: 8, fontSize: 12 }}>
-          Your coins are on-chain and safe. The wallet is rebuilding its private view of them; this can take a few
-          minutes after a server restart.
+          Re-checked {trimFc(partialFc.toFixed(8))} ZKAS so far across {status.note_count} note
+          {status.note_count === 1 ? "" : "s"}
+          {eta ? ` · ${fmtEta(eta)}` : ""}
+        </div>
+        <div className="sub" style={{ marginTop: 6, fontSize: 12 }}>
+          Your coins are on-chain and safe — the wallet is re-deriving its private view of them from the chain, and the
+          figure above climbs to your real balance as it goes. A full rescan of a busy wallet can take an hour or more;
+          you can close this and come back.
         </div>
       </div>
     );
@@ -1199,8 +1273,11 @@ function Onboard({
   onCreated: (seed: string, address: string) => void;
   onImported: () => void;
 }) {
-  const [mode, setMode] = useState<"choose" | "import" | "backup">("choose");
+  const [mode, setMode] = useState<"choose" | "import" | "backup" | "restorefile">("choose");
   const [importHex, setImportHex] = useState("");
+  const [restoreJson, setRestoreJson] = useState("");
+  const [restoreName, setRestoreName] = useState("");
+  const [restorePass, setRestorePass] = useState("");
   const [birthday, setBirthday] = useState("");
   const [createdDate, setCreatedDate] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1262,6 +1339,62 @@ function Onboard({
     }
   };
 
+  // Web restore: the encrypted backup .json is decrypted here with the passphrase
+  // (readBackup), yielding the real 64-hex seed + the wallet's birthday. This is the
+  // path a web user needs after clearing browser data — the desktop app has its own
+  // folder-based restore, but the web app had none, so users wrongly pasted the
+  // file's base64 ciphertext into the seed box.
+  const doRestoreFile = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      if (!restoreJson.trim()) throw new Error("Choose your backup .json file first.");
+      const { seedHex, birthday } = await readBackup(restoreJson, restorePass);
+      await api.watch(await fvkHex(seedHex), birthday);
+      setDeviceSeed(seedHex);
+      onImported();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (mode === "restorefile") {
+    return (
+      <div className="card">
+        <h2>Restore from backup file</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Select the encrypted <code>.json</code> backup you saved, then enter its passphrase. The seed is
+          decrypted on this device — the file and passphrase never leave your browser.
+        </p>
+        {error && <div className="msg err">{error}</div>}
+        <label>Backup file (.json)</label>
+        <input
+          type="file"
+          accept="application/json,.json"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            setRestoreName(f.name);
+            f.text().then(setRestoreJson).catch(() => setError("Could not read that file."));
+          }}
+        />
+        {restoreName && <div className="muted" style={{ fontSize: "0.85em" }}>Selected: {restoreName}</div>}
+        <label>Backup passphrase</label>
+        <input type="password" value={restorePass} onChange={(e) => setRestorePass(e.target.value)} placeholder="the passphrase you set when backing up" />
+        <div className="row" style={{ gap: 8, marginTop: 12 }}>
+          <button className="btn ghost" onClick={() => setMode("choose")}>
+            Back
+          </button>
+          <button className="btn" disabled={busy || !restoreJson.trim() || !restorePass} onClick={doRestoreFile}>
+            {busy ? <span className="spin" /> : "Restore wallet"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (mode === "backup") {
     return (
       <div className="card">
@@ -1319,6 +1452,11 @@ function Onboard({
           list rather than hunting for a file — the reason to write backups at all. */}
       {isDesktop() && (
         <button className="btn ghost" onClick={() => setMode("backup")}>
+          Restore from backup file
+        </button>
+      )}
+      {!isDesktop() && (
+        <button className="btn ghost" onClick={() => setMode("restorefile")}>
           Restore from backup file
         </button>
       )}
