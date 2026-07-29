@@ -3,9 +3,10 @@
 A lightweight web **and mobile** wallet for
 **[ZKas](https://github.com/firecash/zkas-rusty)** — the private-by-default,
 shielded (Orchard / Halo 2) rusty-kaspa fork. Create a wallet, receive to a shielded
-address, and send private payments straight from the browser or a native iOS/Android app.
+address, and send private payments straight from the browser, the desktop app, or the
+native Android app.
 
-**Live:** https://wallet.firecash.info · **Mobile:** see [`MOBILE.md`](./MOBILE.md)
+**Live:** https://wallet.zkas.info · **Mobile:** see [`MOBILE.md`](./MOBILE.md)
 
 > **⚠️ The hosted web wallet is not fully secure.** In hosted mode a remote daemon
 > holds your seed and can spend your funds, and any browser wallet is exposed to
@@ -21,8 +22,8 @@ which owns the seed, scans the chain, builds Orchard proofs, and submits transac
 
 - **Create / import** a shielded wallet from a 32-byte recovery seed, with a one-time
   seed-backup step.
-- **Receive** — shows your `firecash:` shielded address and a QR code.
-- **Send** — private Orchard payments; amount in `$firecash`, optional fee.
+- **Receive** — shows your `zkas:` shielded address and a QR code.
+- **Send** — private Orchard payments; amount in ZKAS, optional fee.
 - **Balance & sync** — live balance, note count, and scan progress, polled every few seconds.
 - **Sign / verify** — prove control of an address without spending (viewing-key disclosure).
 - **Self-hosted or hosted** — point it at your own local daemon for full non-custodiality,
@@ -35,23 +36,26 @@ overridable in the UI):
 
 | Mode | Daemon | Who holds the seed | Notes |
 |---|---|---|---|
-| **Hosted** (default) | same-origin `/<origin>/daemon` → `zkas-walletd` on the server | the hosted daemon, keyed by a **random per-browser token** | zero-install; clearing browser storage loses the token — restore from seed |
-| **Self-hosted** | your own `http://127.0.0.1:8501` | **only your machine** | fully non-custodial; the seed never leaves localhost |
-| **Mobile** (native app) | hosted daemon by default, or your own | same as the mode you point it at | Capacitor wrap of this SPA — see [`MOBILE.md`](./MOBILE.md) |
+| **Hosted web** (default) | same-origin `/<origin>/daemon` → `zkas-walletd` on the server | **the hosted daemon**, keyed by a random per-browser token | zero-install, but the daemon can spend — small amounts only. Clearing browser storage loses the token; restore from seed |
+| **Self-hosted web** | your own `http://127.0.0.1:8501` | **only your machine** | fully non-custodial; the seed never leaves localhost |
+| **Desktop** (Tauri app) | an **embedded** `zkas-walletd`, on a random loopback port with a per-install token | **only your machine** | fully non-custodial; seed files live in the OS app-data dir and are decrypted at load by a passphrase that is never written. mac / Linux / Windows |
+| **Mobile** (Android app) | hosted or your own — either way **watch-only** | **only your device** | non-custodial: the seed is generated on-device (WebAssembly) and the daemon is registered with the **full viewing key only**, so it can watch and build proofs but **cannot sign or spend**. See [`MOBILE.md`](./MOBILE.md) |
+| **Paper** (cold) | none | **you, offline** | derive an address and receive with no daemon at all; import the seed later to spend |
 
 To go self-hosted, run `zkas-walletd` locally (see the
 [core repo](https://github.com/firecash/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet))
 and set the daemon URL to `http://127.0.0.1:8501`.
 
-> **🔑 On-device keys — partly live.** The **Local** tab now runs entirely in your browser
-> (WebAssembly, [`zkas-signer`](https://github.com/firecash/zkas-signer)): generate a
-> cold wallet, derive an address, and sign messages **without the seed ever leaving your
-> device**. **Verify** is also fully client-side. What still uses the daemon is **balance and
-> sending**, because a shielded spend needs a zero-knowledge proof. The seed never has to be on
-> the server: Orchard splits a spend into **prove** (viewing key only) and **sign** (spend key
-> only), so the next step is server-proves / device-signs (Route A), then fully local
-> prove+sign (Route B). Details in [`MOBILE.md`](./MOBILE.md) and the core repo's
-> `docs/NON_CUSTODIAL_WALLET.md`.
+> **🔑 Keeping the server powerless.** Only the **hosted web default** trusts a remote daemon
+> with the seed. Everywhere else the seed stays with you: the web **Local** tab runs the
+> [`zkas-signer`](https://github.com/firecash/zkas-signer) in your browser (WebAssembly) to
+> generate a cold wallet, derive an address and sign/verify **without the seed leaving your
+> device**; the **desktop** app runs its own loopback daemon; and the **mobile** app is fully
+> non-custodial via Orchard's split — **prove** needs only the viewing key, **sign** needs the
+> spend key, so the phone signs and the daemon (viewing key only) can never spend. This is live
+> and verified on mainnet — details in [`MOBILE.md`](./MOBILE.md) and the core repo's
+> `docs/NON_CUSTODIAL_WALLET.md`. The remaining cost of a hosted daemon is **privacy** (it sees
+> your viewing key), not **custody**.
 
 > **⚠️ Mainnet.** ZKas is live on mainnet. Your **recovery seed is the only way to
 > restore a wallet**: back it up offline.
