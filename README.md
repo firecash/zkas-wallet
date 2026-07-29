@@ -8,11 +8,17 @@ native Android app.
 
 **Live:** https://wallet.zkas.info · **Mobile:** see [`MOBILE.md`](./MOBILE.md)
 
-> **⚠️ The hosted web wallet is not fully secure.** In hosted mode a remote daemon
-> holds your seed and can spend your funds, and any browser wallet is exposed to
-> page-tampering/XSS. Use it only if you have no better option, and only for small
-> amounts. For real security, run your own daemon (self-hosted), use the mobile app,
-> or keep funds in a **paper wallet** (cold). See [Custody model](#custody-model).
+> **⚠️ The hosted web wallet is non-custodial, but not bulletproof.** The daemon
+> **cannot spend your funds** — your seed is generated in your browser, only the
+> *viewing* key is sent to the server, and every spend is signed on your device
+> (the server proves, the phone/browser signs). A malicious server can refuse
+> service or watch your balance, but it **cannot move a coin**. What it *could* do
+> is serve tampered page code that reads your seed out of browser storage — so a
+> strict Content-Security-Policy is enforced, but the residual "you trust the code
+> the server hands you each visit" risk is inherent to any website. For the
+> strongest guarantee, run your own daemon (self-hosted), use the desktop or mobile
+> app (fixed, signed code), or keep funds in a **paper wallet** (cold). See
+> [Custody model](#custody-model).
 
 This is a static React + Vite single-page app. It holds no keys itself — it is a thin
 UI over a **[`zkas-walletd`](https://github.com/firecash/zkas-rusty)** daemon,
@@ -36,7 +42,7 @@ overridable in the UI):
 
 | Mode | Daemon | Who holds the seed | Notes |
 |---|---|---|---|
-| **Hosted web** (default) | same-origin `/<origin>/daemon` → `zkas-walletd` on the server | **the hosted daemon**, keyed by a random per-browser token | zero-install, but the daemon can spend — small amounts only. Clearing browser storage loses the token; restore from seed |
+| **Hosted web** (default) | same-origin `/<origin>/daemon` → `zkas-walletd` on the server | **only your browser** — the daemon gets the viewing key, not the seed | non-custodial: the seed is generated in-browser and the device signs, so the daemon **cannot spend**. Residual risk is the served page code (mitigated by a strict CSP) and the seed sitting in browser storage — back it up and clear storage loses nothing but the local copy |
 | **Self-hosted web** | your own `http://127.0.0.1:8501` | **only your machine** | fully non-custodial; the seed never leaves localhost |
 | **Desktop** (Tauri app) | an **embedded** `zkas-walletd`, on a random loopback port with a per-install token | **only your machine** | fully non-custodial; seed files live in the OS app-data dir and are decrypted at load by a passphrase that is never written. mac / Linux / Windows |
 | **Mobile** (Android app) | hosted or your own — either way **watch-only** | **only your device** | non-custodial: the seed is generated on-device (WebAssembly) and the daemon is registered with the **full viewing key only**, so it can watch and build proofs but **cannot sign or spend**. See [`MOBILE.md`](./MOBILE.md) |
@@ -113,13 +119,22 @@ Requests carry `X-Wallet-Token`. See `src/api.ts` for the typed client.
 
 ## Security notes
 
-- Today the seed is generated and stored **by the daemon**, never by this page. In
-  self-hosted mode it never leaves your machine; in hosted mode the daemon is trusted.
-  The [non-custodial roadmap](#custody-model) moves the seed onto the device so even the
-  hosted server cannot spend.
+- The seed is generated **in your browser** (the `zkas-signer` WASM), stored locally,
+  and **never sent to the daemon** — the daemon only receives the *viewing* key. Every
+  spend is checked and signed on-device: the device recomputes each output note's
+  commitment from the server's disclosure, refuses any output that isn't to your
+  recipient or your own change, caps the fee, and signs a sighash it recomputes itself.
+  So a compromised daemon **cannot move funds or trick you into signing** — the worst it
+  can do is stop serving or watch your balance. (Legacy wallets created under the old
+  hosted model still have their seed on the daemon until they are restored to a device.)
+- The page enforces a strict **Content-Security-Policy** (`script-src 'self'` + the WASM
+  and one hashed inline bootstrap; `connect-src` same-origin + localhost only), so an
+  injected script can neither run nor exfiltrate the seed to another host. The one risk a
+  website can't fully remove is the server serving tampered code — for that, prefer the
+  desktop/mobile app (fixed, signed builds) or self-host.
 - `zkas-walletd` is hardened: CORS is locked to `--allow-origin`, the wallet token is
-  required, and seeds can be encrypted at rest with `--wallet-secret`. Always launch it
-  with the exact origin you serve this app from.
+  required, and any seed it does hold (self-host / legacy) can be encrypted at rest with
+  `--wallet-secret`. Always launch it with the exact origin you serve this app from.
 - Never paste your recovery seed into any site other than a wallet daemon you trust.
 
 ## Related repositories

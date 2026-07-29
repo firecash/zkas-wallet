@@ -87,13 +87,17 @@
       (function () {
         var ok = false;
         try {
+          // No eval-based syntax probe here: it needs CSP 'unsafe-eval', which we
+          // do NOT grant (a wallet holding a seed in localStorage must keep the
+          // script surface minimal). Any engine with BigInt + WebAssembly +
+          // crypto.getRandomValues already supports the es2020 syntax the bundle
+          // uses, so these capability checks are a sufficient gate on their own.
           ok =
             typeof BigInt === "function" &&
             typeof WebAssembly === "object" &&
             typeof Promise !== "undefined" &&
             typeof crypto !== "undefined" &&
             typeof crypto.getRandomValues === "function";
-          if (ok) new Function("return a?.b ?? 0;"); // es2020 syntax the bundle uses
         } catch (e) {
           ok = false;
         }
