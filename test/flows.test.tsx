@@ -107,7 +107,7 @@ describe("balance truthfulness", () => {
     current = base({ scanned_blocks: 0, synced: false, balance_fc: "0", note_count: 0 });
     await mountApp();
     // The last known balance is shown, explicitly marked as such.
-    expect(await screen.findByText(/restoring your wallet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/rebuilding/i)).toBeInTheDocument();
     expect(screen.queryByText("0.00000000")).toBeNull();
   });
 

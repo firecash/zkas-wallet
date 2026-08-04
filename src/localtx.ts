@@ -15,6 +15,10 @@ export type LocalTx = {
   ts: number; // unix ms, when broadcast
   preFc: number; // daemon balance_fc at send time (still includes the spent notes)
   spentFc: number; // amountFc + feeFc — total leaving the wallet
+  // Groups the chunks of ONE payment: every chunk shares the payId and the same
+  // preFc, so `reconcile` must release their subtractions CUMULATIVELY (see there).
+  // Undefined on records from before payIds existed — treated as its own group.
+  payId?: string;
   // true until the DAEMON'S balance actually reflects the spend — this is what drives
   // the optimistic subtraction. Cleared ONLY by `reconcile` (daemon balance dropped, or
   // age-out), NEVER by chain confirmations: a shielded spend confirms on-chain in ~1s but
@@ -94,27 +98,58 @@ export function bumpConfTry(txid: string): LocalTx[] {
   return txs;
 }
 
+// A pending spend that the CHAIN has confirmed keeps its subtraction much longer:
+// the money is provably gone on-chain, so expiring it would re-credit spendable
+// funds that do not exist (congestion or a daemon rescan can delay the daemon's
+// own balance drop well past 20 minutes). It still expires eventually so the
+// balance self-heals to the daemon's truth if the drop never becomes visible
+// (e.g. masked by funds received in the same window).
+const PENDING_CONFIRMED_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+
 /**
- * Fallback reconciliation for sends the chain hasn't answered about (yet). Still clears
- * on the balance drop when that signal is trustworthy — `preFc` must be a balance the
- * daemon actually knew — and ages out stale pendings so nothing can get stuck forever.
+ * Reconciliation that owns the optimistic subtraction. Clears a row when the
+ * daemon's own balance has fallen enough to cover it — `preFc` must be a balance
+ * the daemon actually knew — and ages out stale pendings so nothing gets stuck.
+ *
+ * Chunks of one payment share a payId AND the same preFc stamp, so the drop test
+ * is CUMULATIVE per payment, oldest chunk first: the observed drop must cover the
+ * sum of the chunks up to that row. Testing each row on its own released every
+ * chunk's subtraction the moment the FIRST chunk's drop arrived, and the rest
+ * popped back into the displayed balance minutes before the daemon accounted for
+ * them — spendable money that did not exist.
  */
 export function reconcile(daemonFc: number, synced: boolean): LocalTx[] {
   const now = Date.now();
-  let changed = false;
-  const txs = loadTxs().map((t) => {
-    if (!t.pending) return t;
-    // preFc <= 0 means the balance was unknown (wallet loading) when this was recorded,
-    // so the drop test below is meaningless for it — leave it to the chain / the age-out.
-    const dropSeen = t.preFc > 0 && synced && daemonFc <= t.preFc - t.spentFc + EPS;
-    if (dropSeen || now - t.ts > PENDING_MAX_AGE_MS) {
-      changed = true;
-      return { ...t, pending: false };
+  const txs = loadTxs();
+  // Group pending rows by payment (a row without a payId is its own group).
+  const groups = new Map<string, LocalTx[]>();
+  for (const t of txs) {
+    if (!t.pending) continue;
+    const g = t.payId ?? t.txid;
+    const arr = groups.get(g);
+    if (arr) arr.push(t);
+    else groups.set(g, [t]);
+  }
+  const clear = new Set<string>();
+  for (const rows of groups.values()) {
+    // Oldest first: the daemon's balance reflects chunks in broadcast order.
+    rows.sort((a, b) => a.ts - b.ts);
+    const preFc = Math.max(...rows.map((r) => r.preFc));
+    // preFc <= 0 means the balance was unknown (wallet loading) when these were
+    // recorded, so the drop test is meaningless — leave those to the age-out.
+    const drop = preFc > 0 && synced ? preFc - daemonFc : 0;
+    let cumulative = 0;
+    for (const r of rows) {
+      cumulative += r.spentFc;
+      const dropCovers = drop > 0 && drop >= cumulative - EPS;
+      const maxAge = r.confs != null ? PENDING_CONFIRMED_MAX_AGE_MS : PENDING_MAX_AGE_MS;
+      if (dropCovers || now - r.ts > maxAge) clear.add(r.txid);
     }
-    return t;
-  });
-  if (changed) save(txs);
-  return txs;
+  }
+  if (clear.size === 0) return txs;
+  const next = txs.map((t) => (t.pending && clear.has(t.txid) ? { ...t, pending: false } : t));
+  save(next);
+  return next;
 }
 
 /** Total still-pending outflow — the amount to subtract from the daemon balance. */

@@ -19,6 +19,7 @@ const PER_WALLET_PREFIXES = [
   "contacts_", // address book
   "local_txs_", // on-device record of sends
   "last_known_", // balance snapshot shown while the daemon reloads
+  "birthday_", // scan birthday remembered for backup files
   "app_lock_v1_", // legacy per-wallet lock record (superseded by the device lock)
 ];
 

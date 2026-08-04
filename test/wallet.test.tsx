@@ -105,7 +105,7 @@ describe("the wallet a user actually touches", () => {
     // transition.
     statusOverride = { scanned_blocks: 0, synced: false };
     await mountApp();
-    expect(await screen.findByText(/restoring your wallet/)).toBeInTheDocument();
+    expect(await screen.findByText(/rebuilding/)).toBeInTheDocument();
     statusOverride = {};
     await waitFor(() => expect(screen.getByText(/Shielded balance/)).toBeInTheDocument(), { timeout: 6000 });
     // And the balance itself is on screen, not an error card.

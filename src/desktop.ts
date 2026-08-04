@@ -74,7 +74,11 @@ export function vaultStatus(): Promise<VaultStatus> {
 export async function unlockVault(passphrase: string): Promise<DesktopConfig> {
   const cfg = await invoke<DesktopConfig>("unlock", { passphrase });
   localStorage.setItem("walletd_base", cfg.base);
-  localStorage.setItem("wallet_token", cfg.token);
+  // Same rule as initDesktop: the shell token is the FIRST wallet, not the only
+  // one. Unlocking restarted the daemon but changed nothing about which wallet
+  // the user had selected — writing it here switched them back to wallet #1 on
+  // every unlock.
+  if (!localStorage.getItem("wallet_token")) localStorage.setItem("wallet_token", cfg.token);
   return cfg;
 }
 
@@ -82,7 +86,9 @@ export async function unlockVault(passphrase: string): Promise<DesktopConfig> {
 export async function setPassphrase(passphrase: string): Promise<DesktopConfig> {
   const cfg = await invoke<DesktopConfig>("set_passphrase", { passphrase });
   localStorage.setItem("walletd_base", cfg.base);
-  localStorage.setItem("wallet_token", cfg.token);
+  // Preserve the active wallet, exactly like unlockVault — encrypting at rest is
+  // not a wallet switch.
+  if (!localStorage.getItem("wallet_token")) localStorage.setItem("wallet_token", cfg.token);
   return cfg;
 }
 

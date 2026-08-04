@@ -8,6 +8,8 @@ import { ToastHost } from "./toast";
 import { applyStoredTheme } from "./theme";
 import { initDesktop, isDesktop, vaultStatus } from "./desktop";
 import { FirstRunNode, needsNodeChoice } from "./FirstRunNode";
+import { listWallets } from "./wallets";
+import { loadStatusCache } from "./api";
 import "./styles.css";
 
 // On desktop the wallet is gated behind a passphrase: the embedded daemon does
@@ -97,6 +99,22 @@ async function boot() {
 
   // Theme before first paint so a light-theme user never sees a dark flash.
   applyStoredTheme();
+
+  // QR images are cached per address and were only ever swept when a wallet was
+  // removed — addresses of long-gone wallets accumulated forever. Keep entries
+  // for addresses this device still knows (registry + cached status); the rest
+  // are regenerated on demand.
+  try {
+    const known = new Set(listWallets().map((w) => w.address).filter((a): a is string => !!a));
+    const cached = loadStatusCache();
+    if (cached?.address) known.add(cached.address);
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k?.startsWith("qr_") && !known.has(k.slice(3))) localStorage.removeItem(k);
+    }
+  } catch {
+    /* best-effort housekeeping — a cache miss is regenerated anyway */
+  }
 
   // Ask the browser not to evict our storage. Safari deletes a site's
   // localStorage after 7 days without a visit — and for an on-device wallet

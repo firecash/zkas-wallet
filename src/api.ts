@@ -93,6 +93,9 @@ export interface Status {
   // be seen here, so the balance is a lower bound. The UI must say so — silence
   // here is how "my coins vanished" happens. Older daemons omit it.
   missing_history?: boolean;
+  // Watch-only wallet: the daemon holds the viewing key only. Surfaced as a badge
+  // so a restored/read-only wallet never looks like it can spend. Older daemons omit it.
+  watch_only?: boolean;
   scanned_blocks: number;
   chain_len: number;
   balance_sompi: string;
@@ -171,6 +174,10 @@ export interface PrepareResp {
   fee_sompi_exact?: string;
   remaining_sompi_exact?: string;
   spend_auth: { index: number; alpha: string }[];
+  // False when the daemon had to fall back to a watch-only chain replay for this
+  // prepare (minutes on a long chain) instead of its live wallet view — usually a
+  // token↔FVK mismatch. Older daemons omit it; treat absent as fast.
+  fast_path?: boolean;
   bundle_hex: string;
   disclosure: {
     spend_value: number;
@@ -181,88 +188,130 @@ export interface PrepareResp {
   }[];
 }
 
-async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 10_000): Promise<T> {
   let res: Response;
   const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
   if (body) headers["Content-Type"] = "application/json";
+  // Hard ceiling on every daemon call: `status` runs inside the 1-second poll, and
+  // one hung connection (mobile network, sleeping proxy) used to freeze the whole
+  // poll — balance, sync, and sends all stuck behind it. Slow calls (proving,
+  // cold wallet loads) pass a larger `timeoutMs`; chainTx has its own 4s bound.
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
   try {
     res = await fetch(getBase() + path, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      signal: ctl.signal,
     });
   } catch (e) {
+    if (ctl.signal.aborted) throw new Error("The wallet service is not responding (timed out).");
     throw new Error("Cannot reach the wallet daemon. (" + (e as Error).message + ")");
+  } finally {
+    clearTimeout(timer);
   }
   const text = await res.text();
-  const data = text ? JSON.parse(text) : {};
-  if (!res.ok) throw new Error(data.error || `${res.status} ${res.statusText}`);
+  // A proxy error page (nginx 502, captive portal) is HTML, not JSON — parsing it
+  // raw threw `SyntaxError: Unexpected token '<'` straight at the user. Report the
+  // HTTP status instead; only parse when there is a body to parse.
+  let data: { error?: string } & Record<string, unknown> = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`The wallet service returned an invalid response (${res.status}).`);
+    }
+  }
+  if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : `${res.status} ${res.statusText}`);
   return data as T;
 }
 
 export const api = {
   status: () => req<Status>("GET", "/api/status"),
   balance: () => req<Balance>("GET", "/api/wallet/balance"),
-  create: () => req<{ address: string; seed_hex: string; network: string; warning: string }>("POST", "/api/wallet/create", {}),
+  // Wallet registration/load can take minutes on the hosted daemon (a cold wallet
+  // loads its scan state from disk, then catches up to the tip) — hence 2-3 min
+  // ceilings here vs the 10s default for lightweight calls.
+  create: () =>
+    req<{ address: string; seed_hex: string; network: string; warning: string }>("POST", "/api/wallet/create", {}, 120_000),
   // Register a WATCH-ONLY wallet: the daemon gets the 96-byte viewing key only —
   // enough to sync the wallet and prove spends, powerless to authorize them. The
   // seed stays on this device. This is how the wallet is created/restored now;
   // `create`/`import` (which put the seed on the server) remain only for a
   // self-hosted daemon you run yourself.
   watch: (fvk_hex: string, birthday?: number) =>
-    req<{ address: string }>("POST", "/api/wallet/watch", { fvk_hex, birthday: birthday ?? 0 }),
-  reveal: () => req<{ address: string; seed_hex: string; network: string }>("GET", "/api/wallet/reveal"),
+    req<{ address: string }>("POST", "/api/wallet/watch", { fvk_hex, birthday: birthday ?? 0 }, 180_000),
+  reveal: () => req<{ address: string; seed_hex: string; network: string }>("GET", "/api/wallet/reveal", undefined, 30_000),
   import: (seed_hex: string, birthday?: number) =>
-    req<{ address: string; seed_hex: string; network: string; warning: string }>("POST", "/api/wallet/import", {
-      seed_hex,
-      birthday: birthday && birthday > 0 ? Math.floor(birthday) : 0,
-    }),
+    req<{ address: string; seed_hex: string; network: string; warning: string }>(
+      "POST",
+      "/api/wallet/import",
+      {
+        seed_hex,
+        birthday: birthday && birthday > 0 ? Math.floor(birthday) : 0,
+      },
+      120_000,
+    ),
   // `memo` rides inside the recipient's encrypted note — readable by them, and by
   // this wallet only if recoverable history is on. The daemon has always accepted
-  // it; the UI simply never offered it.
+  // it; the UI simply never offered it. Custodial send proves in-daemon — allow
+  // the same 5-minute ceiling as prepare.
   send: (to: string, amount_fc: number, fee?: number, memo?: string) =>
-    req<{ txid: string; amount_sompi: number; fee_sompi: number }>("POST", "/api/wallet/send", {
-      to,
-      amount_fc,
-      fee,
-      memo: memo?.trim() ? memo.trim() : undefined,
-    }),
+    req<{ txid: string; amount_sompi: number; fee_sompi: number }>(
+      "POST",
+      "/api/wallet/send",
+      {
+        to,
+        amount_fc,
+        fee,
+        memo: memo?.trim() ? memo.trim() : undefined,
+      },
+      300_000,
+    ),
   // Non-custodial payment (mobile / hardened): the daemon builds the proof from the
   // FVK and returns per-spend randomizers to sign on-device; see noncustodial.ts.
-  // `allow_partial` opts into chunking: a standard transaction can only spend 6 notes,
-  // so a wallet holding many small notes cannot pay a large amount at once. With it the
+  // `allow_partial` opts into chunking: one standard transaction can spend at most
+  // ~38 notes (the node's 500,000-mass standard cap), so a wallet holding many small
+  // notes cannot always pay a large amount at once. With it the
   // daemon pays what one transaction carries and reports `remaining_sompi`; the caller
   // repeats until 0 (see sendNonCustodial). Without it the daemon errors instead — so a
   // caller that does not loop can never mistake a partial payment for a complete one.
   // `amountSompi` is an exact integer (bigint), sent as a decimal string so no
   // floating-point coin amount ever crosses the wire. The one float→integer
   // conversion happens where the user's decimal input is parsed, not here.
+  // Proving is the slow step (~seconds per note) — 5-minute ceiling.
   prepare: (fvk_hex: string, to: string, amountSompi: bigint, fee?: number, memo?: string, allow_partial?: boolean) =>
-    req<PrepareResp>("POST", "/api/wallet/prepare", {
-      fvk_hex,
-      to,
-      amount_sompi: amountSompi.toString(),
-      fee,
-      memo: memo?.trim() ? memo.trim() : undefined,
-      allow_partial,
-    }),
+    req<PrepareResp>(
+      "POST",
+      "/api/wallet/prepare",
+      {
+        fvk_hex,
+        to,
+        amount_sompi: amountSompi.toString(),
+        fee,
+        memo: memo?.trim() ? memo.trim() : undefined,
+        allow_partial,
+      },
+      300_000,
+    ),
   submit: (session: string, sigs: { index: number; sig: string }[]) =>
-    req<{ txid: string; amount_sompi: number; fee_sompi: number }>("POST", "/api/wallet/submit", { session, sigs }),
+    req<{ txid: string; amount_sompi: number; fee_sompi: number }>("POST", "/api/wallet/submit", { session, sigs }, 60_000),
   sign: (message: string) =>
-    req<{ address: string; message: string; signature: string; note: string }>("POST", "/api/wallet/sign", { message }),
+    req<{ address: string; message: string; signature: string; note: string }>("POST", "/api/wallet/sign", { message }, 15_000),
   // Chain-derived history: recovered from the blocks themselves during scan
   // (coinbase mints, received notes, and — via the OVK — own sends), so unlike
   // the device-local send list it survives a seed restore and other devices.
-  history: () => req<ChainHistory>("GET", "/api/wallet/history"),
+  history: () => req<ChainHistory>("GET", "/api/wallet/history", undefined, 30_000),
   // History is opt-in: enabling stores a readable transaction record in the
   // wallet's scan data (and makes sends OVK-recoverable); disabling erases it.
   setHistoryEnabled: (on: boolean) =>
-    req<{ recoverableHistory: boolean }>("POST", "/api/wallet/settings", { recoverable_history: on }),
+    req<{ recoverableHistory: boolean }>("POST", "/api/wallet/settings", { recoverable_history: on }, 15_000),
   // Re-derive the wallet from the chain itself (from its birthday): backfills
   // history rows and recovers anything the incremental view lost.
-  rescan: () => req<{ rescanning: boolean }>("POST", "/api/wallet/rescan", {}),
+  rescan: () => req<{ rescanning: boolean }>("POST", "/api/wallet/rescan", {}, 30_000),
   verify: (address: string, message: string, signature: string) =>
-    req<{ valid: boolean; reason: string | null }>("POST", "/api/verify", { address, message, signature }),
+    req<{ valid: boolean; reason: string | null }>("POST", "/api/verify", { address, message, signature }, 15_000),
 };
 
 export interface ChainHistoryRow {

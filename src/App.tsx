@@ -17,7 +17,7 @@ import {
   type LocalTx,
 } from "./localtx";
 import { fvkHex, generateWallet, signLocal, verifyLocal, type Network } from "./signer";
-import { sendNonCustodial, type SendStage, type SendProgress } from "./noncustodial";
+import { sendNonCustodial, PartialSendError, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import {
   backupWallet,
   initDesktop,
@@ -85,11 +85,15 @@ export async function copyText(text: string) {
 // decode happens on-device at send time, but this catches the obvious typo/paste
 // mistakes instantly so the user gets a red/green cue while typing.
 function looksLikeAddress(a: string): boolean {
-  // A shielded address is a fixed-size Orchard payload → 79 bech32 chars after the
-  // HRP. Use a tolerant lower bound (not an exact 79) so this stays a typo guard,
-  // not a second decoder — the real validation is the on-device decode at send time.
+  // A shielded address is a fixed-size Orchard payload → 79 bech32 chars after
+  // the HRP (transparent payloads are shorter). The old guard accepted ANY length
+  // ≥70 and the full [0-9a-z] range — including 1, b, i, o, which bech32 forbids —
+  // so a typo'd address got the green border and only failed at send time with a
+  // raw decode error. Restrict to the bech32 charset and a sane length window;
+  // this stays a guard, not a second decoder — the real validation is the
+  // on-device decode at send time.
   const s = a.trim();
-  return /^(zkas|firecash)(test)?:[0-9a-z]{70,}$/.test(s);
+  return /^(zkas|firecash)(test|sim|dev)?:[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{60,80}$/.test(s);
 }
 
 // A scanned QR may be a bare address ("zkas:pxvt…") or a payment URI carrying
@@ -198,6 +202,10 @@ function sameStatus(a: Status, b: Status): boolean {
     a.pending_out_fc === b.pending_out_fc &&
     a.note_count === b.note_count &&
     a.error === b.error &&
+    // Warnings/badges: a lower-bound balance (pruned node) or watch-only state
+    // must appear and clear reactively, not on the next unrelated change.
+    a.missing_history === b.missing_history &&
+    a.watch_only === b.watch_only &&
     // Scan progress only matters while it is being shown as progress.
     (a.synced ? true : a.scanned_blocks === b.scanned_blocks && a.chain_len === b.chain_len)
   );
@@ -289,6 +297,24 @@ export function visibleDeviceRows(txs: LocalTx[], chainRows: { txid: string; kin
   return txs.filter((t) => !sentOnChain.has(t.txid));
 }
 
+/// Confirmation badge for a device-recorded send. Lookups stop ~1h after
+/// broadcast (CONF_RECENT_RETRY_MS): a live count frozen mid-life would read
+/// "7 confs" months later, so it settles to "confirmed". A txid the chain never
+/// answered for after CONF_MAX_TRIES is not "0-conf" — it was never seen, and
+/// saying otherwise claims a dead send is still live.
+function confBadge(t: LocalTx): string {
+  const confs = t.confs ?? 0;
+  if (confs >= 1) {
+    return Date.now() - t.ts > CONF_RECENT_RETRY_MS ? "confirmed" : `${confs} conf${confs === 1 ? "" : "s"}`;
+  }
+  if (t.confs == null && (t.confTries ?? 0) >= CONF_MAX_TRIES) return "not seen on-chain";
+  return "0-conf";
+}
+
+/// History renders windowed: a miner wallet accrues thousands of chain rows and
+/// a multi-thousand-button list makes the tab unusable (and the phone hot).
+const HISTORY_PAGE = 50;
+
 /// Last snapshot written, so an unchanged balance does not rewrite localStorage
 /// once a second for the lifetime of the app.
 let lastSnapshotKey = "";
@@ -360,6 +386,13 @@ export default function App() {
   const lastBalance = useRef<number | null>(null);
   // Consecutive polls answering "no wallet"; see the guard in `refresh`.
   const missingPolls = useRef(0);
+  // Consecutive FAILED status calls. One network blip must not flip the app to
+  // the "can't reach the wallet service" screen — that unmounts the whole wallet
+  // (a half-filled Send form included) and oscillates on a flaky connection.
+  const failedPolls = useRef(0);
+  // Notification permission is requested only once a wallet actually exists —
+  // a prompt before that is noise users refuse, and a refusal is sticky.
+  const notifAsked = useRef(false);
   const toast = useToast();
   const announce = useCallback(
     (deltaFc: number) => {
@@ -425,7 +458,14 @@ export default function App() {
         return prev && sameStatus(prev, next) ? prev : next;
       });
       saveStatusCache(s);
+      failedPolls.current = 0;
       setReachable(true);
+      // Ask for notification permission only once a wallet actually exists —
+      // before that the prompt is noise users refuse, and a refusal is sticky.
+      if (s.has_wallet && !notifAsked.current) {
+        notifAsked.current = true;
+        void ensureNotificationPermission();
+      }
       let list = reconcile(parseFloat(s.balance_fc || "0"), !!s.synced);
       // Ask the chain about every send that has no confirmation count yet — NOT
       // just the ones still flagged `pending`.
@@ -509,7 +549,13 @@ export default function App() {
         });
       }
     } catch {
-      setReachable(false);
+      // One failed poll (a flaky mobile hop, a proxy 502, a slow cold load) used
+      // to flip the whole app to the "can't reach the wallet service" screen
+      // INSTANTLY — unmounting the wallet (and a half-filled Send form) and
+      // oscillating every second on a bad connection. Ride out a few failures;
+      // the last-known UI stays up meanwhile, and a real outage still surfaces.
+      failedPolls.current += 1;
+      if (failedPolls.current >= 5) setReachable(false);
     }
   }, []);
 
@@ -521,14 +567,17 @@ export default function App() {
   const [sendPrefill, setSendPrefill] = useState<string | null>(null);
   // A payment arrives here as one row per transaction it took — usually one, but
   // several when the amount needed more notes than a single transaction can spend.
+  // `opts.stay` records the rows WITHOUT the jump to History: a partially-sent
+  // payment must keep the Send screen mounted so its error stays visible.
   const onSent = useCallback(
-    (sent: Omit<LocalTx, "pending">[]) => {
+    (sent: Omit<LocalTx, "pending">[], opts?: { stay?: boolean }) => {
       let list = loadTxs();
       for (const tx of sent) list = recordSend(tx);
       setTxs(list);
       // Highlight the first transaction of the payment: it is the one the History
       // tab scrolls to, and the parts are recorded newest-first above it.
       setJustSent(sent[0]?.txid ?? null);
+      if (opts?.stay) return;
       setTab("history");
       successFeedback();
       refresh();
@@ -552,10 +601,9 @@ export default function App() {
 
   useEffect(() => {
     refresh();
-    // Ask for notification permission once the wallet is actually in use, not at
-    // first paint — a permission prompt before the user has a wallet is noise
-    // they will refuse, and a refusal is sticky.
-    ensureNotificationPermission();
+    // Notification permission is NOT requested here: it fires from `refresh` once
+    // a wallet actually exists — a prompt before that is noise users refuse, and
+    // a refusal is sticky.
     // 1s, not 4s: the daemon now sees a payment in the mempool within a second of it
     // being broadcast, so a slow poll here would be the only thing left making a payment
     // feel sluggish. The call is a cheap read of in-memory state.
@@ -636,11 +684,20 @@ export default function App() {
           {/* key remounts the pane on tab switch so the entrance transition plays. */}
           <div className="pane appear" key={tab}>
             {tab === "receive" && <Receive status={status} />}
-            {tab === "send" && <Send status={status} onSent={onSent} prefillTo={sendPrefill} />}
+            {tab === "send" && (
+              <Send
+                status={status}
+                onSent={onSent}
+                prefillTo={sendPrefill}
+                onPrefillConsumed={() => setSendPrefill(null)}
+                outflow={pendingTotal(txs)}
+              />
+            )}
             {tab === "history" && (
               <History
                 txs={txs}
                 justSent={justSent}
+                synced={!!status?.synced}
                 onSendAnother={(prefill) => {
                   setJustSent(null);
                   setSendPrefill(prefill ?? null);
@@ -690,6 +747,26 @@ export function setDeviceSeed(seed: string) {
     return;
   }
   localStorage.setItem(deviceSeedKey(), seed);
+}
+
+/// The wallet's scan birthday (DAA height) remembered per token. Backup files
+/// must carry it — a backup written with birthday 0 makes every restore rescan
+/// from genesis (minutes to an hour) even for a wallet born yesterday. Written
+/// at watch/restore time, swept with the rest of the wallet's state.
+function birthdayKey(): string {
+  return `birthday_${localStorage.getItem("wallet_token") || "default"}`;
+}
+function rememberBirthday(daa: number): void {
+  if (!(daa > 0)) return;
+  try {
+    localStorage.setItem(birthdayKey(), String(Math.floor(daa)));
+  } catch {
+    /* best-effort — a missing birthday just means a longer rescan on restore */
+  }
+}
+function walletBirthday(): number {
+  const v = Number(localStorage.getItem(birthdayKey()) || "0");
+  return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
 }
 
 /// Thrown when this device has no key for the wallet and the daemon has none to
@@ -1119,6 +1196,12 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           figure above climbs to your real balance as it goes. A full rescan of a busy wallet can take an hour or more;
           you can close this and come back.
         </div>
+        {status.missing_history && (
+          <div className="msg warn">
+            This node has pruned old history, so the rebuilt balance may come out a <b>lower bound</b>. Your coins are
+            on-chain — rescan from a node that serves full history to see everything.
+          </div>
+        )}
       </div>
     );
   }
@@ -1184,6 +1267,13 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
             Balances appear as the wallet scans the chain — your funds are safe.
           </div>
         </>
+      )}
+      {status.missing_history && (
+        <div className="msg warn">
+          This balance is a <b>lower bound</b>: the wallet's view was rebuilt through a node that has pruned old
+          history, so notes created long ago may be missing from it. Your coins are safe on-chain — rescan only from
+          a node that serves full history (rebuilding through this one would come out just as blind).
+        </div>
       )}
       {status.error && <div className="msg err">{status.error}</div>}
     </div>
@@ -1297,6 +1387,7 @@ function Onboard({
       // the whole chain for history this wallet cannot have.
       const birthday = status?.daa_score ?? 0;
       await api.watch(await fvkHex(w.seedHex), birthday);
+      rememberBirthday(birthday);
       setDeviceSeed(w.seedHex);
       onCreated(w.seedHex, w.address);
     } catch (e) {
@@ -1329,7 +1420,9 @@ function Onboard({
     setError("");
     try {
       const seed = importHex.trim();
-      await api.watch(await fvkHex(seed), birthdayFromInputs());
+      const b = birthdayFromInputs();
+      await api.watch(await fvkHex(seed), b);
+      rememberBirthday(b);
       setDeviceSeed(seed);
       onImported();
     } catch (e) {
@@ -1351,6 +1444,7 @@ function Onboard({
       if (!restoreJson.trim()) throw new Error("Choose your backup .json file first.");
       const { seedHex, birthday } = await readBackup(restoreJson, restorePass);
       await api.watch(await fvkHex(seedHex), birthday);
+      rememberBirthday(birthday);
       setDeviceSeed(seedHex);
       onImported();
     } catch (e) {
@@ -1876,9 +1970,11 @@ function ContactPicker({ onPick, onClose }: { onPick: (c: Contact) => void; onCl
   );
 }
 
-/// Name an address, from wherever the user just met it.
-function SaveContactDialog({ address, onClose }: { address: string; onClose: () => void }) {
-  const [name, setName] = useState(findContact(address)?.name ?? "");
+/// Name an address, from wherever the user just met it. `initialName` prefills a
+/// SUGGESTED name (e.g. a QR's `label`) — a claim by the payee, never auto-saved:
+/// the user confirms it here explicitly.
+function SaveContactDialog({ address, initialName, onClose }: { address: string; initialName?: string; onClose: () => void }) {
+  const [name, setName] = useState(findContact(address)?.name ?? initialName ?? "");
   const [note, setNote] = useState(findContact(address)?.note ?? "");
   const toast = useToast();
   return createPortal(
@@ -2423,10 +2519,17 @@ function Send({
   status,
   onSent,
   prefillTo,
+  onPrefillConsumed,
+  outflow,
 }: {
   status: Status | null;
-  onSent: (sent: Omit<LocalTx, "pending">[]) => void;
+  onSent: (sent: Omit<LocalTx, "pending">[], opts?: { stay?: boolean }) => void;
   prefillTo?: string | null;
+  onPrefillConsumed?: () => void;
+  // Still-pending outgoing value the hero already subtracts from the balance —
+  // the Send form must validate against the same figure, or Max/overspend allow
+  // an amount the daemon will reject (two balances on one screen).
+  outflow: number;
 }) {
   const [to, setTo] = useState(prefillTo ?? "");
   const [amount, setAmount] = useState("");
@@ -2437,6 +2540,16 @@ function Send({
   // Offered after a successful send to an unknown address — the moment the user
   // actually knows who it was.
   const [saveAddr, setSaveAddr] = useState<string | null>(null);
+  // A name SUGGESTED by a scanned QR's `label` — the payee's claim, not a contact.
+  // Only ever prefills the save dialog; never auto-saved (that made the wallet
+  // vouch for a stranger's address with its own anti-phishing cue).
+  const [suggestedName, setSuggestedName] = useState<string | null>(null);
+  // Consume a "Send again" prefill exactly once — otherwise every later visit to
+  // this tab silently resurrects the old recipient (a mis-send waiting to happen).
+  useEffect(() => {
+    if (prefillTo) onPrefillConsumed?.();
+    // Mount-only by design.
+  }, []);
   const contact = findContact(to);
   // Paying yourself is valid (it merges notes) but is nearly always a paste
   // mistake, and silently burning a fee for it is the kind of thing a wallet
@@ -2476,14 +2589,15 @@ function Send({
   }, [confirming]);
 
   /// Apply a scanned/pasted payment request: address plus whatever the payee
-  /// asked for. Their `label` is a suggestion for THIS device's address book,
-  /// never sent anywhere.
+  /// asked for. Their `label` is only a SUGGESTION for this device's address
+  /// book — auto-saving it made the wallet vouch for a stranger's address with
+  /// its own "from your contacts" trust cue, forgeable by whoever printed the QR.
   const applyRequest = useCallback((text: string) => {
     const { address, amount: amt, memo: m, label } = parsePaymentUri(text);
     setTo(address);
     if (amt) setAmount(amt);
     if (m) setMemo(m);
-    if (label && address && !findContact(address)) addContact(label, address);
+    if (label && address && !findContact(address)) setSuggestedName(label);
   }, []);
 
   const onScan = useCallback(
@@ -2497,8 +2611,10 @@ function Send({
   // A send can only draw on SPENDABLE (matured) funds, not the full balance — so
   // Max, the overspend check, and messaging all use spendable, and the total's
   // maturing remainder is surfaced separately so "you have money but can't send it"
-  // is never a mystery.
-  const spendable = spendableFc(status);
+  // is never a mystery. The pending outflow comes off too: the hero subtracts it,
+  // and validating against the raw figure let Max fill an amount the daemon then
+  // rejected with a raw insufficient-funds error.
+  const spendable = spendableFc(status) - outflow;
   const maturing = maturingFc(status);
   const amt = parseAmount(amount);
   const addrOk = looksLikeAddress(to);
@@ -2521,6 +2637,31 @@ function Send({
   };
 
   const doSend = async () => {
+    // Rows for one payment: ONE ROW PER TRANSACTION (see the recording comment
+    // below), all stamped with the payment's shared preFc and a payId, so
+    // `reconcile` releases their subtractions CUMULATIVELY — the first chunk's
+    // balance drop must not release every chunk's subtraction at once.
+    const buildRows = (parts: SendPart[], toAddr: string): Omit<LocalTx, "pending">[] => {
+      const now = Date.now();
+      // `preFc` is the pre-send balance the optimistic subtraction is measured
+      // against, so it belongs to the payment as a whole, not to each part.
+      const pre = reliablePreFc(status);
+      const payId = `pay_${now.toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      return parts.map((p) => {
+        const partAmt = p.amount_sompi / 1e8;
+        const partFee = p.fee_sompi / 1e8;
+        return {
+          txid: p.txid,
+          to: toAddr,
+          amountFc: partAmt,
+          feeFc: partFee,
+          ts: now,
+          preFc: pre,
+          spentFc: partAmt + partFee,
+          payId,
+        };
+      });
+    };
     setBusy(true);
     setError("");
     try {
@@ -2570,27 +2711,19 @@ function Send({
       const parts = r.parts?.length
         ? r.parts
         : [{ txid: r.txid, amount_sompi: Math.round(amt * 1e8), fee_sompi: Math.round(paidFeeFc * 1e8) }];
-      const now = Date.now();
-      // `preFc` is the pre-send balance the optimistic subtraction is measured
-      // against, so it belongs to the payment as a whole, not to each part.
-      const pre = reliablePreFc(status);
-      onSent(
-        parts.map((p) => {
-          const partAmt = p.amount_sompi / 1e8;
-          const partFee = p.fee_sompi / 1e8;
-          return {
-            txid: p.txid,
-            to: toAddr,
-            amountFc: partAmt,
-            feeFc: partFee,
-            ts: now,
-            preFc: pre,
-            spentFc: partAmt + partFee,
-          };
-        }),
-      );
+      onSent(buildRows(parts, toAddr));
     } catch (e) {
-      setError((e as Error).message);
+      // A PartialSendError means ≥1 chunk was ALREADY broadcast — real money in
+      // flight. Record those rows (History + optimistic balance) BEFORE showing
+      // the error, or the balance keeps displaying funds that already left and
+      // invites a double-send. `stay` keeps this screen mounted so the error —
+      // and how much actually went — stays visible.
+      if (e instanceof PartialSendError && e.parts.length > 0) {
+        onSent(buildRows(e.parts, to.trim()), { stay: true });
+        setError(`${(e as Error).message} The part already broadcast is recorded in History.`);
+      } else {
+        setError((e as Error).message);
+      }
       setConfirming(false);
     } finally {
       setBusy(false);
@@ -2622,6 +2755,15 @@ function Send({
             {feeCustomSet ? Number((amt + feeCustom).toFixed(8)) : `≤ ${Number((amt + FEE_MAX_FC).toFixed(8))}`} ZKAS
           </span>
         </div>
+        {/* A fragmented wallet pays in several transactions and the fee range
+            above is PER transaction — say so before the user approves one fee
+            and gets debited several. */}
+        {(status?.note_count ?? 0) > 38 && !feeCustomSet && (
+          <div className="muted small" style={{ marginTop: 2 }}>
+            Your balance sits in {status!.note_count} notes. A large payment is sent as several transactions when it
+            doesn't fit in one — each carries its own network fee.
+          </div>
+        )}
         <label>To</label>
         {contact && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -2755,7 +2897,16 @@ function Send({
           onClose={() => setPickContact(false)}
         />
       )}
-      {saveAddr && <SaveContactDialog address={saveAddr} onClose={() => setSaveAddr(null)} />}
+      {saveAddr && (
+        <SaveContactDialog
+          address={saveAddr}
+          initialName={suggestedName ?? undefined}
+          onClose={() => {
+            setSaveAddr(null);
+            setSuggestedName(null);
+          }}
+        />
+      )}
       {scanning && <QrScanner onResult={onScan} onClose={() => setScanning(false)} />}
 
       <div className="amthead">
@@ -2975,26 +3126,35 @@ function History({
   txs,
   justSent,
   onSendAnother,
+  synced,
 }: {
   txs: LocalTx[];
   justSent?: string | null;
   onSendAnother?: (prefillAddress?: string) => void;
+  synced?: boolean;
 }) {
   // Chain-derived history (mints, receives, and OVK-recovered sends): fetched
   // from the daemon, so it survives a seed restore and shows on every device.
   const [chain, setChain] = useState<ChainHistory | null>(null);
   const [busy, setBusy] = useState(false);
-  // True from the moment history is enabled until the recovery scan produces
-  // rows — so the tab explains the wait instead of looking empty and broken.
+  // True from the moment history is enabled until the recovery scan finishes —
+  // so the tab explains the wait instead of looking empty and broken.
   const [recovering, setRecovering] = useState(false);
   const [askDisable, setAskDisable] = useState(false);
   const [err, setErr] = useState("");
   const [detail, setDetail] = useState<(ChainHistoryRow & { confs?: number }) | null>(null);
   const [q, setQ] = useState("");
   const [kindFilter, setKindFilter] = useState<"all" | "received" | "sent" | "coinbase">("all");
+  // Long histories render windowed — a miner wallet accrues thousands of rows
+  // and a multi-thousand-button list makes the tab unusable.
+  const [showAll, setShowAll] = useState(false);
   useEffect(() => {
-    if (recovering && (chain?.rows.length ?? 0) > 0) setRecovering(false);
-  }, [recovering, chain]);
+    // Clear on the first recovered row OR on sync completing — a wallet with no
+    // recoverable history legitimately produces ZERO rows, and gating only on
+    // rows left the tab claiming "recovering…" forever (with no way to turn
+    // history back off).
+    if (recovering && ((chain?.rows.length ?? 0) > 0 || synced)) setRecovering(false);
+  }, [recovering, chain, synced]);
   useEffect(() => {
     let live = true;
     const pull = () => api.history().then((h) => live && setChain(h)).catch(() => {});
@@ -3128,7 +3288,7 @@ function History({
               ? "Recovering your history from the chain — this takes a minute or two. Rows appear here as the scan catches up; you can leave this tab."
               : "Nothing yet. Mints, payments you receive, and sends from this wallet all show up here — recovered from the chain itself, so this list follows your seed, not this device."}
         </p>
-        {chain !== null && !recovering && (
+        {chain !== null && (
           <button className="btn ghost small" onClick={() => setAskDisable(true)} disabled={busy}>
             Turn history off
           </button>
@@ -3193,9 +3353,7 @@ function History({
           >
             <div className="txrow-main">
               <span className="txrow-amt">− {trimFc(t.amountFc.toFixed(8))} ZKAS</span>
-              <span className={"txrow-badge " + ((t.confs ?? 0) >= 1 ? "done" : "pending")}>
-                {(t.confs ?? 0) >= 1 ? `${t.confs} conf${t.confs === 1 ? "" : "s"}` : "0-conf"}
-              </span>
+              <span className={"txrow-badge " + ((t.confs ?? 0) >= 1 ? "done" : "pending")}>{confBadge(t)}</span>
             </div>
             <div className="txrow-sub">
               <span className="mono">to {shortAddr(t.to)}</span>
@@ -3203,7 +3361,7 @@ function History({
             </div>
           </button>
         ))}
-        {chainRows.map((r) => (
+        {(showAll ? chainRows : chainRows.slice(0, HISTORY_PAGE)).map((r) => (
           <button
             key={r.txid + r.kind}
             type="button"
@@ -3240,6 +3398,11 @@ function History({
           </button>
         ))}
       </div>
+      {!showAll && chainRows.length > HISTORY_PAGE && (
+        <button className="btn ghost small" onClick={() => setShowAll(true)}>
+          Show all {chainRows.length} rows
+        </button>
+      )}
       {heldTxids > 0 && (
         <p className="muted small" style={{ marginTop: 14 }}>
           {heldTxids} outgoing transaction{heldTxids === 1 ? "" : "s"} in flight — {trimFc(heldZkas.toFixed(8))} ZKAS
@@ -3830,7 +3993,10 @@ function DeviceSeedBackup() {
     if (pass !== confirmPass) return setErr("The two passphrases do not match.");
     setBusy(true);
     try {
-      const doc = await makeBackup(seed, pass, "mainnet", 0);
+      // Carry the wallet's real scan birthday (remembered at watch/restore time):
+      // a backup saying 0 makes every restore rescan from GENESIS — minutes to an
+      // hour — even for a wallet born yesterday.
+      const doc = await makeBackup(seed, pass, "mainnet", walletBirthday());
       if (isDesktop()) {
         setDone(await writeBackupFile(doc));
       } else {
@@ -3935,6 +4101,7 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
       // Register the viewing key with the daemon and keep the seed on-device —
       // the same shape as a freshly created wallet, so spending works after this.
       await api.watch(await fvkHex(seedHex), birthday);
+      rememberBirthday(birthday);
       setDeviceSeed(seedHex);
       setOk(true);
     } catch (e) {
@@ -4166,23 +4333,31 @@ function DesktopEngineDown() {
         The usual cause is a custom node address that isn't reachable — the engine waits for its node before it can
         serve the wallet. Switching back to the public node fixes that without touching your wallet:
       </p>
-      <button
-        className="btn"
-        disabled={busy}
-        onClick={async () => {
-          setBusy(true);
-          setErr(null);
-          try {
-            await setNodeSource("remote");
-            location.reload();
-          } catch (e) {
-            setErr(String((e as Error)?.message ?? e));
-            setBusy(false);
-          }
-        }}
-      >
-        {busy ? "Switching…" : "Use the public node"}
-      </button>
+      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        <button
+          className="btn"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setErr(null);
+            try {
+              await setNodeSource("remote");
+              location.reload();
+            } catch (e) {
+              setErr(String((e as Error)?.message ?? e));
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Switching…" : "Use the public node"}
+        </button>
+        {/* A plain retry first: the engine also fails for transient reasons, and
+            the only remedy used to discard the user's custom-node config just to
+            find out. */}
+        <button className="btn ghost" disabled={busy} onClick={() => location.reload()}>
+          Retry
+        </button>
+      </div>
       {err && <div className="msg warn">{err}</div>}
       <p className="muted small">If it still doesn't start after that, restart the app once more.</p>
     </div>

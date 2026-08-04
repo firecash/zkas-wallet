@@ -83,7 +83,9 @@ export async function ensureNotificationPermission(): Promise<boolean> {
 export function notifyOs(title: string, body: string): void {
   try {
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      new Notification(title, { body, icon: "/icon-192.png" });
+      // BASE_URL, not "/…": the app is built with base "./" and the native shells
+      // serve it from capacitor:// / tauri:// roots where an absolute path 404s.
+      new Notification(title, { body, icon: `${import.meta.env.BASE_URL}icon-192.png` });
     }
   } catch {
     /* notifications are a nicety, never a failure path */
