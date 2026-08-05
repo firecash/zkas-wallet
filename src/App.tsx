@@ -379,6 +379,11 @@ export default function App() {
   // A freshly created seed, held at the top level so the 4-second status poll
   // (which flips has_wallet true) can never unmount the backup screen mid-copy.
   const [freshSeed, setFreshSeed] = useState<{ seed: string; address: string } | null>(null);
+  // The daemon lost this wallet's registration AND this device holds no key to
+  // auto-repair with: show a recovery screen, never a bare "create a new wallet"
+  // over someone's existing wallet.
+  const [walletLost, setWalletLost] = useState(false);
+  const recoveryNeeded = useRef(false);
   // On-device send history; drives the optimistic (0-conf) balance and History tab.
   const [txs, setTxs] = useState<LocalTx[]>(() => loadTxs());
   // Last CONFIRMED balance seen while synced — the baseline for "money arrived".
@@ -461,6 +466,11 @@ export default function App() {
         // device is the wallet.
         if (denied && !transient && repairAttempts.current < 3 && getDeviceSeed()) repairNeeded.current = true;
         const holdForRepair = denied && repairAttempts.current > 0 && now - lastRepairAt.current < 20_000 && !!getDeviceSeed();
+        // The hold is ending and no repair can run (this device holds no key for
+        // the wallet): do NOT drop to "create a new wallet" — surface the
+        // recovery screen instead. A user watching their wallet vanish into
+        // onboarding panic-creates over the existing one.
+        if (denied && !transient && !holdForRepair && !(repairAttempts.current < 3 && getDeviceSeed())) recoveryNeeded.current = true;
         const next =
           denied && (transient || holdForRepair)
             ? { ...stable, has_wallet: true, address: s.address ?? prev.address }
@@ -493,6 +503,14 @@ export default function App() {
             /* a later poll re-arms while attempts remain */
           }
         })();
+      }
+      // The wallet is back on the daemon (repair succeeded or never lost) — any
+      // recovery screen must go. And the inverse: the updater flagged that the
+      // hold expired with no repair possible → show recovery, not onboarding.
+      if (s.has_wallet && s.address) setWalletLost(false);
+      if (recoveryNeeded.current) {
+        recoveryNeeded.current = false;
+        setWalletLost(true);
       }
       saveStatusCache(s);
       failedPolls.current = 0;
@@ -695,7 +713,10 @@ export default function App() {
       {reachable && freshSeed && (
         <SeedBackup seed={freshSeed.seed} address={freshSeed.address} onDone={() => setFreshSeed(null)} />
       )}
-      {reachable && !freshSeed && status && !status.has_wallet && (
+      {reachable && !freshSeed && walletLost && (
+        <RecoverWallet onRecovered={refresh} onStartOver={() => setWalletLost(false)} />
+      )}
+      {reachable && !freshSeed && !walletLost && status && !status.has_wallet && (
         <Onboard status={status} onCreated={(seed, address) => setFreshSeed({ seed, address })} onImported={refresh} />
       )}
       {reachable && !freshSeed && status && status.has_wallet && (
@@ -1452,6 +1473,79 @@ function networkOf(status: Status | null): Network {
   return status?.network === "testnet" ? "testnet" : "mainnet";
 }
 
+/// The daemon lost this wallet's registration and this device holds no key to
+/// auto-repair with. The worst possible answer is a bare "create a new wallet"
+/// — the user panic-creates over their existing wallet. Show the cached address,
+/// take the seed, VERIFY it matches the address, re-register, rebuild.
+function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; onStartOver: () => void }) {
+  const cached = loadStatusCache();
+  const [seed, setSeed] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const recover = async () => {
+    setErr("");
+    const s = seed.trim();
+    if (!/^[0-9a-fA-F]{64}$/.test(s)) return setErr("That doesn't look like a recovery seed (64 hex characters).");
+    setBusy(true);
+    try {
+      // Never re-register the WRONG wallet over this token: the seed must derive
+      // the address this device was showing.
+      if (cached?.address) {
+        const net: Network = cached.address.startsWith("zkastest:") ? "testnet" : "mainnet";
+        const addr = await addressFromSeed(s, net);
+        if (addr !== cached.address) {
+          setErr(`That seed belongs to a different wallet (${shortAddr(addr)}). Check it and try again.`);
+          return;
+        }
+      }
+      await api.watch(await fvkHex(s), walletBirthday());
+      setDeviceSeed(s);
+      onRecovered();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="card">
+      <h2>Recover your wallet</h2>
+      <div className="msg warn">
+        The wallet service lost this wallet's registration (server maintenance). <b>Your coins are on-chain and
+        safe</b> — this device just needs to re-register the wallet from its recovery seed.
+      </div>
+      {cached?.address && (
+        <>
+          <label>This wallet's address</label>
+          <div className="addr" style={{ fontSize: 12 }}>
+            {cached.address}
+          </div>
+        </>
+      )}
+      <label>Recovery seed (64 hex characters)</label>
+      <textarea
+        value={seed}
+        onChange={(e) => setSeed(e.target.value)}
+        placeholder="The seed saved when this wallet was created"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
+      />
+      {err && <div className="msg err">{err}</div>}
+      <button className="btn" disabled={busy || !seed.trim()} onClick={recover}>
+        {busy ? "Recovering…" : "Recover wallet"}
+      </button>
+      <p className="muted small">
+        After recovery the wallet rebuilds its private view from the chain — the balance climbs back over the next
+        minutes. Nothing is sent anywhere; the seed stays on this device.
+      </p>
+      <button className="linkbtn" onClick={onStartOver}>
+        Not your wallet? Create or import a different one
+      </button>
+    </div>
+  );
+}
+
 function Onboard({
   status,
   onCreated,
@@ -1480,6 +1574,15 @@ function Onboard({
     setBusy(true);
     setError("");
     try {
+      // Never create over a key this device still holds: creating registers a NEW
+      // wallet under the SAME token and would replace the old seed in storage.
+      // The switcher's "Add another wallet" mints a fresh token instead.
+      if (getDeviceSeed()) {
+        setError(
+          "This device already holds a wallet key. Restore that wallet instead — or use the wallet switcher's 'Add another wallet' so nothing is overwritten.",
+        );
+        return;
+      }
       const w = await generateWallet(networkOf(status));
       // Born now: the daemon fast-syncs from the current tip instead of scanning
       // the whole chain for history this wallet cannot have.
