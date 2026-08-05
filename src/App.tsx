@@ -16,7 +16,7 @@ import {
   loadSnapshot,
   type LocalTx,
 } from "./localtx";
-import { fvkHex, generateWallet, signLocal, verifyLocal, type Network } from "./signer";
+import { fvkHex, generateWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
 import { sendNonCustodial, PartialSendError, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import {
   backupWallet,
@@ -2721,6 +2721,21 @@ function Send({
             return;
           }
           seed = unlock.trim();
+          // Verify the seed actually belongs to THIS wallet before keeping it.
+          // A user with several wallets WILL paste the wrong one eventually —
+          // and without this check the payment below is driven by the pasted
+          // seed's FVK, i.e. it would spend FROM THAT OTHER WALLET while the UI
+          // showed this one. The on-device address derivation costs nothing.
+          if (status?.address) {
+            const seedAddr = await addressFromSeed(seed, networkOf(status));
+            if (seedAddr !== status.address) {
+              setConfirming(false);
+              setError(
+                "That seed belongs to a different wallet — it does not unlock this one. Check which wallet you are restoring, or switch to the wallet that seed belongs to.",
+              );
+              return;
+            }
+          }
           setDeviceSeed(seed);
           setUnlock("");
           setNeedSeed(false);
