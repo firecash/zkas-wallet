@@ -115,6 +115,12 @@ export function unlockedDeviceSeed(): string | null {
   return unlocked?.[activeToken()] ?? null;
 }
 
+/** Every unsealed seed this session, by token (null while locked). Lets the
+ * wallet recover a seed orphaned under a stale token — see findOrphanedSeed. */
+export function allUnlockedSeeds(): Record<string, string> | null {
+  return unlocked;
+}
+
 /**
  * Seal a seed that arrived while the device is unlocked — a wallet just created,
  * imported or restored. Without this, `setDeviceSeed` had nowhere to put a new
@@ -137,7 +143,10 @@ export async function enableLock(secret: string, kind: "pin" | "passphrase"): Pr
   const wallets: Record<string, Sealed> = {};
   for (const [token, seedHex] of Object.entries(seeds)) wallets[token] = await seal(seedHex, secret);
   write({ version: 2, kind, wallets });
-  for (const token of Object.keys(seeds)) localStorage.removeItem(`device_seed_${token}`);
+  for (const token of Object.keys(seeds)) {
+    localStorage.removeItem(`device_seed_${token}`);
+    localStorage.removeItem(`seed_unsealed_${token}`); // sealed properly now — the fallback flag must not outlive it
+  }
   unlocked = seeds; // stay usable for the rest of this session
   sessionSecret = secret;
 }

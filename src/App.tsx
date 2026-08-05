@@ -54,7 +54,7 @@ import {
   updateContact,
   type Contact,
 } from "./contacts";
-import { disableLock, enableLock, forgetWalletLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed } from "./applock";
+import { disableLock, enableLock, forgetWalletLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed, allUnlockedSeeds } from "./applock";
 import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReconfigure } from "./bgsync";
 import logo from "./assets/zkas-logo.png";
 
@@ -769,10 +769,18 @@ function deviceSeedKey(): string {
 }
 export function getDeviceSeed(): string {
   // With the app lock on, the seed exists only in memory for the current
-  // session — nothing readable is left in storage to fall back to.
+  // session — nothing readable is left in storage to fall back to. One
+  // exception: the `seed_unsealed_` fallback, written when sealing a new
+  // wallet's key FAILED (an auto-lock raced its creation). That copy is the
+  // difference between a flagged-but-saved key and a lost wallet, so it is
+  // readable even while locked.
   const unlocked = unlockedDeviceSeed();
   if (unlocked) return unlocked;
-  if (isLockEnabled()) return "";
+  if (isLockEnabled()) {
+    const token = localStorage.getItem("wallet_token") || "default";
+    if (localStorage.getItem(`seed_unsealed_${token}`)) return localStorage.getItem(deviceSeedKey()) || "";
+    return "";
+  }
   return localStorage.getItem(deviceSeedKey()) || "";
 }
 export function setDeviceSeed(seed: string) {
@@ -784,7 +792,16 @@ export function setDeviceSeed(seed: string) {
   // outcome than any it was protecting against.
   if (isLockEnabled()) {
     const token = localStorage.getItem("wallet_token") || "default";
-    void sealNewSeed(token, seed);
+    void sealNewSeed(token, seed).then((ok) => {
+      if (!ok) {
+        // Sealing failed (an auto-lock raced this creation/import). NEVER drop a
+        // key silently again: fall back to plaintext storage and flag it, so the
+        // key survives and the state is discoverable. Losing the key is worse
+        // than storing it unsealed — that is the principle this path exists on.
+        localStorage.setItem(deviceSeedKey(), seed);
+        localStorage.setItem(`seed_unsealed_${token}`, "1");
+      }
+    });
     return;
   }
   localStorage.setItem(deviceSeedKey(), seed);
@@ -810,18 +827,55 @@ function walletBirthday(): number {
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
 }
 
+/// A seed stored under a STALE token. Token rotations and the registry/switcher
+/// era could orphan `device_seed_<oldToken>` while the active token holds
+/// nothing — the wallet then claims "this device doesn't hold the key" while
+/// the key is RIGHT HERE under another key name, and without this scan the
+/// coins are stuck forever. Match every on-device seed by derived address and
+/// reattach the match to the active token.
+async function findOrphanedSeed(expectedAddress: string): Promise<string> {
+  const candidates = new Set<string>();
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k?.startsWith("device_seed_")) {
+      const v = localStorage.getItem(k);
+      if (v && /^[0-9a-fA-F]{64}$/.test(v)) candidates.add(v.trim());
+    }
+  }
+  // Unsealed lock-record seeds too (a locked device's seeds live only in memory).
+  for (const v of Object.values(allUnlockedSeeds() ?? {})) candidates.add(v.trim());
+  if (candidates.size === 0) return "";
+  const net: Network = expectedAddress.startsWith("zkastest:") ? "testnet" : "mainnet";
+  for (const seed of candidates) {
+    try {
+      if ((await addressFromSeed(seed, net)) === expectedAddress) return seed;
+    } catch {
+      /* not a usable seed — keep looking */
+    }
+  }
+  return "";
+}
+
 /// Thrown when this device has no key for the wallet and the daemon has none to
 /// give (a watch-only wallet opened on a new device) — the caller then asks the
 /// user to restore it from their seed.
 export const SEED_REQUIRED = "SEED_REQUIRED";
 
-/// The seed to sign with. From this device's storage first; for wallets created
-/// under the old hosted model the daemon still holds one, so fall back to it once
-/// and remember it here. A watch-only wallet on a fresh device has neither — the
-/// user must restore from their backup.
-export async function resolveDeviceSeed(): Promise<string> {
+/// The seed to sign with. From this device's storage first; then a stale-token
+/// orphan scan (the key may be present under another token — that is the
+/// difference between "lost" and "misfiled"); then, for wallets created under
+/// the old hosted model, the daemon's custodial copy; a watch-only wallet on a
+/// fresh device has none of these — the user must restore from their backup.
+export async function resolveDeviceSeed(expectedAddress?: string): Promise<string> {
   const stored = getDeviceSeed();
   if (stored) return stored;
+  if (expectedAddress) {
+    const orphan = await findOrphanedSeed(expectedAddress);
+    if (orphan) {
+      setDeviceSeed(orphan); // reattach under the active token
+      return orphan;
+    }
+  }
   try {
     const r = await api.reveal();
     setDeviceSeed(r.seed_hex);
@@ -1832,7 +1886,7 @@ function SettingsPane({ status }: { status: Status }) {
       <ContactsCard />
       <AppLockSetting />
       <BackgroundSyncCard />
-      <RevealSeedCard />
+      <RevealSeedCard expectedAddress={status.address ?? undefined} />
       {isDesktop() ? (
         <>
           <VaultSetting />
@@ -2343,7 +2397,7 @@ function Receive({ status }: { status: Status }) {
 /// passphrase (even though the app is already unlocked — this is exactly the
 /// moment to re-prove it's the owner holding the phone); without one, an
 /// explicit are-you-somewhere-private confirmation stands in the way instead.
-function RevealSeedCard() {
+function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
   const [step, setStep] = useState<"idle" | "gate" | "shown">("idle");
   const [pass, setPass] = useState("");
   const [seed, setSeed] = useState("");
@@ -2365,8 +2419,10 @@ function RevealSeedCard() {
           return;
         }
       }
-      // The seed lives on this device, not on the server.
-      setSeed(await resolveDeviceSeed());
+      // The seed lives on this device, not on the server. The address lets a
+      // seed orphaned under a stale token be found and reattached (see
+      // resolveDeviceSeed) instead of wrongly claiming the key is gone.
+      setSeed(await resolveDeviceSeed(expectedAddress));
       setStep("shown");
       setPass("");
     } catch (e) {
@@ -2711,7 +2767,7 @@ function Send({
       // Only a wallet restored on a NEW device has to be unlocked once.
       let seed: string;
       try {
-        seed = await resolveDeviceSeed();
+        seed = await resolveDeviceSeed(status?.address ?? undefined);
       } catch (e) {
         if ((e as Error).message === SEED_REQUIRED) {
           if (!/^[0-9a-fA-F]{64}$/.test(unlock.trim())) {
@@ -3069,7 +3125,7 @@ function Sign({ status, embedded }: { status: Status | null; embedded?: boolean 
     setError("");
     setResult(null);
     try {
-      const seed = await resolveDeviceSeed();
+      const seed = await resolveDeviceSeed(status?.address ?? undefined);
       const net: Network = status?.network === "mainnet" ? "mainnet" : "testnet";
       const r = await signLocal(seed, net, message);
       setResult({ address: r.address, signature: r.signatureHex });
@@ -4081,6 +4137,9 @@ function DeviceSeedBackup() {
   const [err, setErr] = useState("");
   const [done, setDone] = useState<{ path: string; folder: string } | null>(null);
   const [mode, setMode] = useState<"backup" | "restore">("backup");
+  // The last backup document, kept so the native (clipboard) path can offer
+  // "copy again" without re-encrypting.
+  const [lastDoc, setLastDoc] = useState("");
   const seed = getDeviceSeed();
 
   if (!seed) {
@@ -4102,8 +4161,17 @@ function DeviceSeedBackup() {
       // a backup saying 0 makes every restore rescan from GENESIS — minutes to an
       // hour — even for a wallet born yesterday.
       const doc = await makeBackup(seed, pass, "mainnet", walletBirthday());
+      setLastDoc(doc);
       if (isDesktop()) {
         setDone(await writeBackupFile(doc));
+      } else if (isNative()) {
+        // A Capacitor WebView has NO download manager: the browser path below
+        // silently saves NOTHING on a phone while the confirmation claims a
+        // file exists — the classic "I made a backup" that is nowhere, which
+        // is how wallets end up unbacked-up. On native the backup goes to the
+        // clipboard with explicit paste-it-somewhere instructions instead.
+        await copyText(doc);
+        setDone({ path: "", folder: "" });
       } else {
         // Browser: hand it over as a download instead of writing a file.
         const url = URL.createObjectURL(new Blob([doc], { type: "application/json" }));
@@ -4124,6 +4192,27 @@ function DeviceSeedBackup() {
   };
 
   if (done) {
+    // Native clipboard path: no file was written (a WebView can't); the backup
+    // only exists on the clipboard until the user pastes it somewhere.
+    if (!done.path && !done.folder) {
+      return (
+        <>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            <b>Your backup is copied.</b> Paste it somewhere safe right now — a password manager, a syncing notes
+            app, a message to yourself. Nothing was saved as a file on this phone. The text is encrypted: useless
+            without the backup passphrase.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+            <button className="btn small" onClick={() => void copyText(lastDoc)}>
+              Copy again
+            </button>
+            <button className="btn ghost small" onClick={() => setDone(null)}>
+              Done
+            </button>
+          </div>
+        </>
+      );
+    }
     return (
       <>
         <p className="muted small" style={{ marginTop: 0 }}>
@@ -4162,7 +4251,7 @@ function DeviceSeedBackup() {
       {err && <div className="msg err">{err}</div>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button className="btn" onClick={run} disabled={busy || !pass}>
-          {busy ? "Encrypting…" : "Create backup file"}
+          {busy ? "Encrypting…" : isNative() ? "Copy encrypted backup" : "Create backup file"}
         </button>
         {isDesktop() && (
           <button className="btn ghost" onClick={() => setMode("restore")} disabled={busy}>
