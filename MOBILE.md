@@ -91,3 +91,20 @@ messages, with no daemon at all.
   fetch and works offline and under the `capacitor://` scheme.
 - On native there is no same-origin `/daemon` to proxy to, so `src/api.ts` defaults to the hosted
   daemon's absolute URL. A self-hoster overrides it in the app.
+
+## Background sync (Android, opt-in)
+
+Settings → **Background sync** registers a `WorkManager` periodic wake (~every 15 min, network
+required — the platform minimum) implemented in `android/.../BackgroundSyncPlugin.java` +
+`SyncWorker.java`, toggled from `src/bgsync.ts`. Each wake does ONE `GET /api/status`:
+
+- it **touches** the wallet, so the daemon keeps its scan caught up (walletd only actively syncs
+  wallets a client touched recently — this is what makes the next app open instant), and
+- it compares balance + pending-in against the last value and posts a **local notification** when
+  a payment arrived (channel `payments`; Android 13+ notification permission is requested when the
+  feature is turned on, and a denial just keeps the sync silent).
+
+No key material is involved — the worker holds only the wallet token (the same read credential the
+app uses) against a watch-only daemon. The first wake records a baseline and announces nothing, so
+enabling it never fires a "you received your entire balance" notification. Wallet switches and
+daemon-URL changes reload the app, and the boot path re-points the worker at the active wallet.

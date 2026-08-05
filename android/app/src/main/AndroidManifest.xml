@@ -45,5 +45,9 @@
          paste/manual entry if the permission is denied. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Optional background sync announces incoming payments while the app is
+         closed. Runtime-asked on Android 13+ when the user turns the feature on;
+         a denial just keeps the sync silent. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

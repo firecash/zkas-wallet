@@ -55,6 +55,7 @@ import {
   type Contact,
 } from "./contacts";
 import { disableLock, enableLock, forgetWalletLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed } from "./applock";
+import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReconfigure } from "./bgsync";
 import logo from "./assets/zkas-logo.png";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -601,6 +602,10 @@ export default function App() {
 
   useEffect(() => {
     refresh();
+    // Keep Android's background-sync worker pointed at the ACTIVE wallet and
+    // current daemon URL — wallet switches and daemon changes reload the app,
+    // so this one boot-time call covers every rotation.
+    void bgSyncReconfigure();
     // Notification permission is NOT requested here: it fires from `refresh` once
     // a wallet actually exists — a prompt before that is noise users refuse, and
     // a refusal is sticky.
@@ -1790,6 +1795,7 @@ function SettingsPane({ status }: { status: Status }) {
     <>
       <ContactsCard />
       <AppLockSetting />
+      <BackgroundSyncCard />
       <RevealSeedCard />
       {isDesktop() ? (
         <>
@@ -3651,6 +3657,54 @@ function VaultSetting() {
 /// This is the phone's real protection: the seed lives in this app's storage, so
 /// a lock that only hid the UI would leave it readable to anyone with the
 /// device's data or a backup of it. Sealed, a locked app holds nothing spendable.
+/// Android only: an opt-in periodic native wake (~every 15 min) that keeps the
+/// daemon-side scan warm and posts a local notification when a payment lands
+/// while the app is closed (see bgsync.ts). Off by default — a convenience worth
+/// a little battery is the user's to choose, not ours to take.
+function BackgroundSyncCard() {
+  const [on, setOn] = useState(bgSyncEnabled());
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  if (!bgSyncAvailable()) return null;
+  const toggle = async () => {
+    setBusy(true);
+    setErr("");
+    try {
+      if (on) {
+        await bgSyncDisable();
+        setOn(false);
+      } else {
+        await bgSyncEnable();
+        setOn(true);
+      }
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="card">
+      <h2>Background sync</h2>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        While on, the phone wakes briefly about every 15 minutes — even with the app closed — to keep your wallet
+        caught up and to show a notification when a payment arrives. Off, the wallet catches up when you open the
+        app. Light on battery; the seed stays on this device either way.
+      </p>
+      <button className={"btn small" + (on ? " ghost" : "")} disabled={busy} onClick={toggle}>
+        {busy ? "…" : on ? "Turn background sync off" : "Turn background sync on"}
+      </button>
+      {on && (
+        <p className="muted small" style={{ marginTop: 8 }}>
+          On. Android may delay the wake when the battery is low — payments are never lost, the notification is
+          simply later.
+        </p>
+      )}
+      {err && <div className="msg err">{err}</div>}
+    </div>
+  );
+}
+
 function AppLockSetting() {
   const [enabled, setEnabled] = useState(isLockEnabled());
   const [kind, setKind] = useState<"pin" | "passphrase">("pin");
