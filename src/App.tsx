@@ -387,6 +387,15 @@ export default function App() {
   const lastBalance = useRef<number | null>(null);
   // Consecutive polls answering "no wallet"; see the guard in `refresh`.
   const missingPolls = useRef(0);
+  // Auto-repair state: when the daemon has genuinely forgotten this token's
+  // wallet (server-side GC, a wiped wallet dir, a fresh hosted instance) but
+  // this device holds the seed, we re-register the viewing key ourselves
+  // instead of dumping the user into onboarding. Capped attempts so a real
+  // removal (which wipes the device seed — so it never reaches this path) and
+  // a permanently-refusing daemon both still end at onboarding.
+  const repairAttempts = useRef(0);
+  const lastRepairAt = useRef(0);
+  const repairNeeded = useRef(false);
   // Consecutive FAILED status calls. One network blip must not flip the app to
   // the "can't reach the wallet service" screen — that unmounts the whole wallet
   // (a half-filled Send form included) and oscillates on a flaky connection.
@@ -439,11 +448,21 @@ export default function App() {
         // guard used to be unconditional, so a wallet the user had deliberately
         // removed was resurrected on every poll and the app looked like it had
         // ignored them. After MISSING_TOLERANCE consecutive denials we believe it.
-        if (s.has_wallet && s.address) missingPolls.current = 0;
-        else missingPolls.current += 1;
+        if (s.has_wallet && s.address) {
+          missingPolls.current = 0;
+          repairAttempts.current = 0;
+        } else missingPolls.current += 1;
         const transient = missingPolls.current <= MISSING_TOLERANCE;
+        const denied = !!prev?.has_wallet && (!s.has_wallet || !s.address);
+        // Out of grace with a wallet on record: if this device holds the seed,
+        // the daemon has LOST the registration — re-register the viewing key
+        // (fired just below the setStatus, never inside it) and hold the wallet
+        // UI while the repair is in flight. The server is disposable; the
+        // device is the wallet.
+        if (denied && !transient && repairAttempts.current < 3 && getDeviceSeed()) repairNeeded.current = true;
+        const holdForRepair = denied && repairAttempts.current > 0 && now - lastRepairAt.current < 20_000 && !!getDeviceSeed();
         const next =
-          prev?.has_wallet && (!s.has_wallet || !s.address) && transient
+          denied && (transient || holdForRepair)
             ? { ...stable, has_wallet: true, address: s.address ?? prev.address }
             : stable;
         // Return the PREVIOUS object when nothing meaningful moved, so React
@@ -458,6 +477,23 @@ export default function App() {
         // only what is actually displayed.
         return prev && sameStatus(prev, next) ? prev : next;
       });
+      // Fire the armed auto-repair OUTSIDE the state updater (updaters must be
+      // pure): re-register this wallet's viewing key from the device seed, with
+      // the remembered birthday so the rescan starts at the wallet's birth, not
+      // genesis. The poll's own hold keeps the wallet UI up meanwhile.
+      if (repairNeeded.current) {
+        repairNeeded.current = false;
+        repairAttempts.current += 1;
+        lastRepairAt.current = Date.now();
+        void (async () => {
+          try {
+            const seed = getDeviceSeed();
+            if (seed) await api.watch(await fvkHex(seed), walletBirthday());
+          } catch {
+            /* a later poll re-arms while attempts remain */
+          }
+        })();
+      }
       saveStatusCache(s);
       failedPolls.current = 0;
       setReachable(true);

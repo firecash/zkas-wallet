@@ -123,6 +123,19 @@ describe("the wallet a user actually touches", () => {
     expect(screen.getByText(/coins are safe on-chain/)).toBeInTheDocument();
   });
 
+  it("re-registers from the device seed when the daemon forgets the wallet", async () => {
+    // The server is disposable: if the hosted daemon loses/GCs this token's
+    // wallet, the app must re-watch from the device seed (with the remembered
+    // birthday) instead of dumping the user into onboarding.
+    localStorage.setItem("device_seed_testtoken", "ab".repeat(32));
+    await mountApp();
+    await screen.findByRole("tab", { name: "Receive" });
+    statusOverride = { has_wallet: false, address: null };
+    const { api } = await import("../src/api");
+    // After the 10-poll missing tolerance, the poll fires the automatic re-watch.
+    await waitFor(() => expect(api.watch).toHaveBeenCalled(), { timeout: 20000 });
+  }, 30000);
+
   it("opens on Receive and shows the address", async () => {
     await mountApp();
     expect(await screen.findByRole("tab", { name: "Receive" })).toBeInTheDocument();
