@@ -1446,7 +1446,10 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
 /// The signer's network name for the daemon's chain (only mainnet/testnet exist
 /// for address encoding; anything else is a devnet using the testnet HRP).
 function networkOf(status: Status | null): Network {
-  return status?.network === "mainnet" ? "mainnet" : "testnet";
+  // Default MAINNET on anything unexpected: the on-device signer only signs
+  // mainnet, so a missing/odd network string must fail toward the chain
+  // everything actually runs on, not toward a testnet that cannot sign.
+  return status?.network === "testnet" ? "testnet" : "mainnet";
 }
 
 function Onboard({
@@ -1634,8 +1637,11 @@ function Onboard({
         (zk-SNARK) transaction.
       </p>
       {error && <div className="msg err">{error}</div>}
-      <button className="btn" disabled={busy} onClick={create}>
-        {busy ? <span className="spin" /> : "Create new wallet"}
+      {/* Creating before the first status answer means birthday 0 — a brand-new
+          wallet would then scan ALL 850k+ blocks for history it cannot have.
+          Wait for the chain tip so the birthday anchors at "now". */}
+      <button className="btn" disabled={busy || !status?.daa_score} onClick={create}>
+        {busy ? <span className="spin" /> : status?.daa_score ? "Create new wallet" : "Connecting…"}
       </button>
       {/* Desktop keeps backups in a known folder, so restoring is a pick from a
           list rather than hunting for a file — the reason to write backups at all. */}
