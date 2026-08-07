@@ -1454,7 +1454,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           measured live, the first send after a cold open spent 122s locating coins
           on top of a ~5 min background pass — a wallet that promises two minutes and
           takes six has lied, which is worse than quoting nothing. */}
-      {view.phase === "almost-ready" && <div className="sub warmnote">⚡ {view.detail}</div>}
+      <div className="sub warmnote notice-slot">{view.phase === "almost-ready" ? `⚡ ${view.detail}` : ""}</div>
       <div className="sub notice-slot" style={{ color: "var(--ember)" }}>
         {inNotice.shown
           ? `+${trimFc(inNotice.amount.toFixed(8))} ZKAS arriving — confirmed, settling into your wallet`
@@ -1468,13 +1468,17 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
               : `sent — on its way${pendingCount > 1 ? ` · ${pendingCount} payments` : ""}`)
           : ""}
       </div>
-      {maturing > 0.00000001 && (
-        <div className="sub" style={{ marginTop: 6 }}>
-          {trimFc(Math.max(0, spendable).toFixed(8))} ready to spend ·{" "}
-          <span style={{ color: "var(--ember)" }}>{trimFc(maturing.toFixed(8))} arriving</span> — coins become
-          spendable about 10 minutes after they land.
-        </div>
-      )}
+      <div className="sub notice-slot">
+        {maturing > 0.00000001 ? (
+          <>
+            {trimFc(Math.max(0, spendable).toFixed(8))} ready to spend ·{" "}
+            <span style={{ color: "var(--ember)" }}>{trimFc(maturing.toFixed(8))} arriving</span> — coins become
+            spendable about 10 minutes after they land.
+          </>
+        ) : (
+          ""
+        )}
+      </div>
       {syncing && (
         <>
           <div
@@ -3311,21 +3315,9 @@ function Send({
 
       <div className="amthead">
         <label style={{ margin: 0 }}>Amount (ZKAS)</label>
-        <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-          <button
-            type="button"
-            className="linkbtn"
-            aria-label="Fee settings"
-            title="Fee settings"
-            style={feeCustomSet ? undefined : { color: "var(--muted)" }}
-            onClick={() => setShowFeeCfg(!showFeeCfg)}
-          >
-            ⚙{feeCustomSet ? ` ${feeCustom}` : ""}
-          </button>
-          <button type="button" className="linkbtn" onClick={setMax}>
-            Max
-          </button>
-        </div>
+        <button type="button" className="linkbtn" onClick={setMax}>
+          Max
+        </button>
       </div>
       <input
         value={amount}
@@ -3334,6 +3326,42 @@ function Send({
         inputMode="decimal"
         style={overspend ? { borderColor: "var(--bad)" } : undefined}
       />
+
+      {/* The fee control used to be a bare gear glyph in a 13px zero-padding link
+          button: no label, a tap target a third of the 44px minimum, and clicking it
+          revealed the fee field further down the form PAST the memo field — so the
+          control and the thing it controlled were nowhere near each other. Reported as:
+          users do not understand they have to click it to set the fee.
+          It now says what it is, shows the current value, is a real touch target, and
+          opens the field directly beneath itself. */}
+      <button
+        type="button"
+        className="feerow"
+        aria-expanded={showFeeCfg}
+        aria-controls="fee-config"
+        onClick={() => setShowFeeCfg(!showFeeCfg)}
+      >
+        <span className="feerow-label">Network fee</span>
+        <span className="feerow-value">
+          {feeCustomSet ? `${feeCustom} ZKAS` : "Automatic"}
+          <span className={"feerow-chev" + (showFeeCfg ? " open" : "")} aria-hidden="true" />
+        </span>
+      </button>
+      {showFeeCfg && (
+        <div id="fee-config">
+          <input
+            value={customFee}
+            onChange={(e) => setCustomFee(e.target.value.replace(/[^0-9.]/g, ""))}
+            placeholder={`Automatic (${FEE_FC}–${FEE_MAX_FC})`}
+            inputMode="decimal"
+            autoFocus
+          />
+          <div className="fieldhint muted">
+            Leave this empty and the wallet picks the fee for you. Set a higher one only if a payment came back with a
+            fee error — anything below the network minimum is raised automatically, so this cannot break a payment.
+          </div>
+        </div>
+      )}
 
       <label>Private note (optional)</label>
       <input
@@ -3345,21 +3373,6 @@ function Send({
       <div className="fieldhint">
         Sealed inside the recipient's encrypted note — only they can read it. Never appears on-chain or on the explorer.
       </div>
-      {showFeeCfg && (
-        <>
-          <label>Custom network fee (ZKAS) — optional</label>
-          <input
-            value={customFee}
-            onChange={(e) => setCustomFee(e.target.value.replace(/[^0-9.]/g, ""))}
-            placeholder={`automatic (${FEE_FC}–${FEE_MAX_FC})`}
-            inputMode="decimal"
-          />
-          <div className="fieldhint muted">
-            Leave empty for automatic. If a send bounced with a fee error, set a higher fee here — fees below the
-            network minimum are raised automatically, so this can't break a send.
-          </div>
-        </>
-      )}
       {overspend && blockedByMaturing && (
         <div className="fieldhint bad">
           Only {trimFc(spendable.toFixed(8))} is ready to spend right now — {trimFc(maturing.toFixed(8))} is still

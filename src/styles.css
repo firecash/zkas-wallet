@@ -236,9 +236,25 @@ a { color: var(--ember); }
 /* Same reasoning for the transient money notices. They come and go on their own
    dwell timers, and each arrival used to push everything below it down. Reserving
    one line each keeps the card a stable height whether or not they are showing. */
+/* Reserved space for the lines that come and go on their own timers: incoming and
+   outgoing payment notices, the maturing split, the getting-ready note.
+   TWO lines, not one. The first attempt reserved a single line, but the real strings
+   ("12.34567890 ZKAS sent — confirmed, updating your balance shortly") wrap on a
+   phone, so the slot still grew and shrank and the card still jumped — which is
+   exactly what this was supposed to stop. Sized for the wrapped case. */
 .balance .notice-slot {
-  min-height: 1.5em;
+  min-height: 2.9em;
   margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+/* Nothing to say right now: keep the space, drop the margin, so an idle wallet does
+   not carry four empty gaps. */
+.balance .notice-slot:empty {
+  min-height: 0;
+  margin-top: 0;
 }
 
 /* Privacy assurance on the Receive card. Reinforces the one promise that
@@ -1344,3 +1360,51 @@ select { appearance: none; cursor: pointer; }
 .walletbar-name { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .walletbar-chev { color: var(--muted); font-size: 12px; }
 .avatar.sm { width: 26px; height: 26px; font-size: 12px; }
+
+/* Network-fee disclosure row on the Send form.
+   Replaces a bare ⚙ glyph in a 13px zero-padding link button — unlabelled, and a tap
+   target roughly a third of the 44px minimum, so people did not know it was there or
+   that it was tappable. A control nobody can find is the same as one that does not
+   exist. This one names itself, shows its current value, and looks pressable. */
+.feerow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;          /* comfortably over the 44px touch minimum */
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+.feerow:hover { border-color: var(--ember); }
+.feerow:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+.feerow-label { color: var(--muted); }
+.feerow-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 600;
+}
+/* A chevron drawn in CSS — no icon font, no external asset (CSP-safe), and it turns
+   so the row reads as a disclosure rather than a value that happens to be there. */
+.feerow-chev {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 140ms ease;
+}
+.feerow-chev.open { transform: rotate(-135deg) translate(-2px, -2px); }
+@media (prefers-reduced-motion: reduce) {
+  .feerow-chev { transition: none; }
+}
