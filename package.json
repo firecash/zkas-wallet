@@ -16,11 +16,12 @@
     "preview": "vite preview",
     "mobile:add:android": "cap add android",
     "mobile:add:ios": "cap add ios",
-    "mobile:sync": "npm run build && cap sync",
-    "mobile:android": "npm run build && cap sync android && cap open android",
-    "mobile:ios": "npm run build && cap sync ios && cap open ios",
+    "mobile:sync": "npm run build && cap sync && npm run check:signer",
+    "mobile:android": "npm run build && cap sync android && npm run check:signer && cap open android",
+    "mobile:ios": "npm run build && cap sync ios && npm run check:signer && cap open ios",
     "lint": "eslint src",
-    "test": "eslint src && vitest run"
+    "test": "eslint src && vitest run",
+    "check:signer": "node scripts/check-signer-genesis.mjs ${ZKAS_GENESIS:-b63f7fe8e50402af34790265e299bb1ba63e943b91a59a670e5971b7a9e84e6f}"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",
