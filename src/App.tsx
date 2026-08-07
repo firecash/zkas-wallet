@@ -1254,14 +1254,34 @@ function useScanEta(scanned: number, total: number, active: boolean): number | n
     if (!s.length || scanned !== s[s.length - 1].n) s.push({ t: now, n: scanned });
     // Rolling ~2-minute window, so the estimate tracks the rate right now rather
     // than an average dragged down by a slow start.
-    while (s.length > 2 && now - s[0].t > 120_000) s.shift();
-    const first = s[0];
-    const secs = (now - first.t) / 1000;
-    const done = scanned - first.n;
-    // Quoting a number off the first two fast pages produces "30 seconds left"
-    // on an hour-long scan, which is worse than saying nothing.
-    if (secs < 20 || done <= 0) return;
-    setEta(Math.round(Math.max(0, total - scanned) / (done / secs)));
+    while (s.length > 3 && now - s[0].t > 120_000) s.shift();
+
+    // MEDIAN of the per-interval rates, not the endpoint average.
+    //
+    // The endpoint average is wrong here, and wrong in the direction that makes the
+    // wallet lie. A scan does not advance evenly: resuming a checkpoint, skipping to a
+    // birthday, or the first few cached pages all move the counter a long way in one
+    // poll. Averaged end to end, that single burst sets the rate for the whole window —
+    // reported live as "44.8% · about 1 minute left" when ~580,000 blocks remained and
+    // the real answer was closer to nine minutes.
+    //
+    // A median is unmoved by one outlier interval, so a burst is ignored and the figure
+    // reflects the rate the scan is ACTUALLY sustaining. Needs a few intervals to mean
+    // anything, hence the sample floor — and saying nothing is always allowed.
+    if (s.length < 4) return;
+    const spanSecs = (now - s[0].t) / 1000;
+    if (spanSecs < 20) return;
+    const rates: number[] = [];
+    for (let i = 1; i < s.length; i++) {
+      const dt = (s[i].t - s[i - 1].t) / 1000;
+      const dn = s[i].n - s[i - 1].n;
+      if (dt > 0.5 && dn > 0) rates.push(dn / dt);
+    }
+    if (rates.length < 3) return;
+    rates.sort((a, b) => a - b);
+    const rate = rates[Math.floor(rates.length / 2)];
+    if (!(rate > 0)) return;
+    setEta(Math.round(Math.max(0, total - scanned) / rate));
   }, [scanned, total, active]);
   return eta;
 }
@@ -3604,23 +3624,37 @@ function History({
   // Long histories render windowed — a miner wallet accrues thousands of rows
   // and a multi-thousand-button list makes the tab unusable.
   const [showAll, setShowAll] = useState(false);
+  // Set while the recovery scan is genuinely in flight. Enabling history starts a
+  // rescan, but the daemon takes a moment to report itself unsynced — so `synced` was
+  // still TRUE on the very next render and the tab declared recovery finished
+  // immediately, showing an empty history as if it were complete. That is the reported
+  // "enabled history, received coins not there": the rows arrived seconds later and
+  // nothing was watching for them any more.
+  const sawUnsynced = useRef(false);
   useEffect(() => {
-    // Clear on the first recovered row OR on sync completing — a wallet with no
-    // recoverable history legitimately produces ZERO rows, and gating only on
-    // rows left the tab claiming "recovering…" forever (with no way to turn
-    // history back off).
-    if (recovering && ((chain?.rows.length ?? 0) > 0 || synced)) setRecovering(false);
+    if (!recovering) {
+      sawUnsynced.current = false;
+      return;
+    }
+    if (!synced) sawUnsynced.current = true;
+    // Finished when rows actually arrived, or when a scan that we WATCHED START has
+    // completed. A wallet with no recoverable history legitimately produces zero rows,
+    // so rows alone cannot be the only exit.
+    if ((chain?.rows.length ?? 0) > 0 || (synced && sawUnsynced.current)) setRecovering(false);
   }, [recovering, chain, synced]);
   useEffect(() => {
     let live = true;
     const pull = () => api.history().then((h) => live && setChain(h)).catch(() => {});
     pull();
-    const t = setInterval(pull, 15_000);
+    // 15s is fine for a settled wallet, but a recovery scan writes rows continuously
+    // for minutes — at that cadence the tab sat empty long enough to look broken. Poll
+    // hard while recovering, idle otherwise.
+    const t = setInterval(pull, recovering ? 2_000 : 15_000);
     return () => {
       live = false;
       clearInterval(t);
     };
-  }, []);
+  }, [recovering]);
 
   // History is opt-in: nothing readable is stored until the user activates it,
   // and turning it off erases the stored record immediately.
@@ -3637,6 +3671,10 @@ function History({
       await api.setHistoryEnabled(on);
       if (on) {
         await api.rescan();
+        // Mark recovery BEFORE the fetch below. The rescan is asynchronous on the
+        // daemon, so that fetch returns the pre-rescan (empty) history — which is
+        // correct to display, but only if the tab knows more is coming. The 2s poll
+        // above then fills it in.
         setRecovering(true);
       }
       setChain(await api.history());
@@ -3682,7 +3720,20 @@ function History({
   // Sends this device recorded itself (localtx, in this browser/app's storage).
   // These exist and are readable with chain history OFF — they never left the
   // device. Chain-recovered history is the separate, permissioned thing.
-  const hasDeviceRows = pending.length > 0;
+  // Everything this DEVICE recorded itself, not just what is still unconfirmed.
+  //
+  // This counted only `pending` — sends not yet seen on chain — so the moment a send
+  // confirmed it vanished from a history-off wallet and the tab reverted to the
+  // "turn history on" wall of text, as if the device had never known about it. It did:
+  // localtx rows live in this app's own storage and are readable with chain history
+  // off, because they never left the device.
+  const deviceRows = txs.filter((t) => {
+    if (kindFilter !== "all" && kindFilter !== "sent") return false;
+    if (!needle) return true;
+    const who = `${displayName(t.to, "")} ${t.to}`.toLowerCase();
+    return who.includes(needle) || t.amountFc.toFixed(8).includes(needle) || t.txid.toLowerCase().includes(needle);
+  });
+  const hasDeviceRows = deviceRows.length > 0;
 
   // Notes locked by sends still awaiting chain confirmation. Their value includes
   // the change coming back, so this is shown as "held", never as an amount sent —
@@ -3705,7 +3756,9 @@ function History({
           </p>
         )}
         <p className="muted small" style={{ marginTop: 0 }}>
-          Transaction history is <b>off</b> — the private default. Nothing about your payments is stored anywhere.
+          Transaction history is <b>off</b> — the private default. No readable record of your payments is kept: no
+          dates, no recipients, no memos. (Your unspent coins themselves are of course still held by the wallet, and
+          on-chain everything stays shielded either way.)
         </p>
         <p className="muted small">
           Turn it on and this wallet keeps a readable record — amounts, dates, and for your own sends the recipient and
@@ -3799,7 +3852,11 @@ function History({
         <p className="muted small">Nothing matches that filter.</p>
       )}
       <div className="txlist">
-        {pending.map((t) => (
+        {/* Every send this device recorded, not only the unconfirmed ones. A confirmed
+            send used to disappear from a history-off wallet entirely — the device knew
+            about it the whole time. Chain-recovered rows are listed separately below,
+            and `notYetOnChain` keeps the two from showing the same payment twice. */}
+          {(historyOff ? deviceRows : pending).map((t) => (
           <button
             key={t.txid}
             type="button"
@@ -3817,9 +3874,13 @@ function History({
             </div>
           </button>
         ))}
-        {(showAll ? chainRows : chainRows.slice(0, HISTORY_PAGE)).map((r) => (
+        {(showAll ? chainRows : chainRows.slice(0, HISTORY_PAGE)).map((r, ri) => (
           <button
-            key={r.txid + r.kind}
+            // Index included deliberately: one transaction can produce several rows of
+            // the same kind (multiple notes received in one payment), and duplicate keys
+            // make React reorder and remount rows — which is what made the list jump
+            // around as the 15s poll replaced it.
+            key={`${r.txid}:${r.kind}:${ri}`}
             type="button"
             className="txrow"
             style={{ textAlign: "left", width: "100%", font: "inherit", color: "inherit" }}
