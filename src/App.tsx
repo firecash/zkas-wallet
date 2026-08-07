@@ -121,14 +121,32 @@ function parsePaymentUri(text: string): { address: string; amount?: string; memo
 /// Build the payment URI a payee hands out: address plus whatever they want
 /// filled in for the payer. Everything after the address is a request, not a
 /// commitment — the payer's wallet shows it and they can change it.
-// Read the clipboard for a paste button (mobile keyboards make long addresses
-// painful to type). Returns "" if the browser/WebView denies clipboard read.
-async function pasteText(): Promise<string> {
+/// Read the clipboard for a paste button (mobile keyboards make long addresses
+/// painful to type).
+///
+/// Programmatic READ is far less available than write: Firefox exposes
+/// `readText` only to extensions, Safari gates it behind a permission prompt tied
+/// to a user gesture, some WebViews refuse it outright, and on a non-secure origin
+/// `navigator.clipboard` is not defined at all. There is no fallback the way
+/// `copyText` has one — `execCommand("paste")` is blocked everywhere on purpose,
+/// because a page that could silently read your clipboard would be a menace.
+///
+/// This used to return "" on every one of those, so the button did NOTHING: no
+/// text, no error, no clue. Reported as "paste doesn't work on some platforms",
+/// which is exactly right and exactly invisible. Now the caller can tell "the
+/// clipboard was empty" from "this browser won't let me" and say so.
+type PasteResult = { ok: true; text: string } | { ok: false; reason: "unavailable" | "denied" | "empty" };
+
+async function pasteText(): Promise<PasteResult> {
+  if (!navigator.clipboard?.readText) return { ok: false, reason: "unavailable" };
+  let text: string;
   try {
-    return (await navigator.clipboard.readText()).trim();
+    text = (await navigator.clipboard.readText()).trim();
   } catch {
-    return "";
+    // Denied, dismissed, or unsupported at runtime — indistinguishable by design.
+    return { ok: false, reason: "denied" };
   }
+  return text ? { ok: true, text } : { ok: false, reason: "empty" };
 }
 
 /// Keep a money field to something that can actually be a number: digits, one
@@ -1401,7 +1419,12 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         {trimFc(animBal.toFixed(8))}
         <span className="unit">ZKAS</span>
       </div>
-      <div className="sub">
+      {/* Fixed height, deliberately. This line's content changes as the wallet
+          works — "Ready" one second, "Setting up 44% · about 5 minutes left" the
+          next — and with height driven by content the whole card grew and shrank
+          under the user's eyes, shoving everything below it up and down. Reserving
+          the space costs a few pixels and stops the page moving. */}
+      <div className="sub balance-status">
         {/* Note count is OUR unit, not the user's — they have an amount, not
             "notes". It stays only where it explains something (fees, why a big
             payment needs splitting), not in the headline. */}
@@ -1421,19 +1444,19 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           on top of a ~5 min background pass — a wallet that promises two minutes and
           takes six has lied, which is worse than quoting nothing. */}
       {view.phase === "almost-ready" && <div className="sub warmnote">⚡ {view.detail}</div>}
-      {inNotice.shown && (
-        <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
-          +{trimFc(inNotice.amount.toFixed(8))} ZKAS incoming — confirmed on-chain, settling into your wallet
-        </div>
-      )}
-      {outNotice.shown && (
-        <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
-          {trimFc(outNotice.amount.toFixed(8))} ZKAS{" "}
-          {outConfirmed
-            ? "sent — confirmed, updating your balance shortly"
-            : `sent — on its way${pendingCount > 1 ? ` · ${pendingCount} payments` : ""}`}
-        </div>
-      )}
+      <div className="sub notice-slot" style={{ color: "var(--ember)" }}>
+        {inNotice.shown
+          ? `+${trimFc(inNotice.amount.toFixed(8))} ZKAS arriving — confirmed, settling into your wallet`
+          : ""}
+      </div>
+      <div className="sub notice-slot" style={{ color: "var(--ember)" }}>
+        {outNotice.shown
+          ? `${trimFc(outNotice.amount.toFixed(8))} ZKAS ` +
+            (outConfirmed
+              ? "sent — confirmed, updating your balance shortly"
+              : `sent — on its way${pendingCount > 1 ? ` · ${pendingCount} payments` : ""}`)
+          : ""}
+      </div>
       {maturing > 0.00000001 && (
         <div className="sub" style={{ marginTop: 6 }}>
           {trimFc(Math.max(0, spendable).toFixed(8))} ready to spend ·{" "}
@@ -2821,15 +2844,29 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
   }, [onResult]);
 
   return (
-    <div className="scan-overlay" role="dialog" aria-label="Scan address QR code">
-      <div className="scan-frame">
-        <video ref={videoRef} className="scan-video" muted playsInline />
-        <div className="scan-reticle" />
+    <div className="scan-overlay" role="dialog" aria-modal="true" aria-label="Scan address QR code">
+      {/* Full-bleed camera, with the dimming and the frame drawn OVER it. The old
+          layout put a 320px square of video in the middle of a black screen: the
+          feed was cropped to a narrow slice of a 16:9 sensor so it was hard to aim,
+          and the reticle's dim-everything-outside shadow was clipped away entirely
+          by the frame's `overflow: hidden`, so none of it did what it looked like
+          it was meant to do. */}
+      <video ref={videoRef} className="scan-video" muted playsInline />
+      <div className="scan-mask" aria-hidden="true">
+        <div className="scan-window">
+          <span className="scan-corner tl" />
+          <span className="scan-corner tr" />
+          <span className="scan-corner bl" />
+          <span className="scan-corner br" />
+          <span className="scan-laser" />
+        </div>
       </div>
-      <p className="scan-hint">{err || "Point the camera at the recipient's address QR"}</p>
-      <button type="button" className="btn ghost" style={{ maxWidth: 220 }} onClick={onClose}>
-        {err ? "Close" : "Cancel"}
-      </button>
+      <div className="scan-ui">
+        <p className="scan-hint">{err || "Point the camera at the recipient's address QR code"}</p>
+        <button type="button" className="btn ghost scan-cancel" onClick={onClose}>
+          {err ? "Close" : "Cancel"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -2850,6 +2887,7 @@ function Send({
   // an amount the daemon will reject (two balances on one screen).
   outflow: number;
 }) {
+  const toast = useToast();
   const [to, setTo] = useState(prefillTo ?? "");
   const [amount, setAmount] = useState("");
   // Private note to the recipient, sealed inside their encrypted note. Supported
@@ -3195,8 +3233,24 @@ function Send({
           type="button"
           className="inlinebtn"
           onClick={async () => {
-            const t = await pasteText();
-            if (t) applyRequest(t);
+            const r = await pasteText();
+            if (r.ok) {
+              applyRequest(r.text);
+              return;
+            }
+            // Never fail silently. Focusing the field is the useful part: the OS
+            // paste gesture always works even where programmatic read does not, so
+            // put the cursor where they need it and tell them to use it.
+            toRef.current?.focus();
+            if (r.reason === "empty") {
+              toast.show("info", "Clipboard is empty", "Copy the address first, then tap Paste.");
+            } else {
+              toast.show(
+                "bad",
+                "This browser won't share the clipboard",
+                "Press and hold the address field, then choose Paste.",
+              );
+            }
           }}
         >
           Paste

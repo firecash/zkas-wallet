@@ -218,6 +218,29 @@ a { color: var(--ember); }
 .balance .amt .unit { font-size: clamp(16px, 4.5vw, 22px); color: var(--muted); margin-left: 8px; font-weight: 500; }
 .balance .sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
 
+/* The wallet's state line, at a FIXED height.
+   Its text changes as the wallet works — "Ready", then "Setting up 44% · about 5
+   minutes left", then "Ready" again. With height driven by content, every one of
+   those transitions resized the balance card and shoved the whole page up and
+   down. Two lines of room is enough for the longest state on a narrow phone;
+   centring keeps a one-line state optically where a one-line state belongs. */
+.balance .balance-status {
+  min-height: 2.9em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  text-wrap: balance;
+}
+/* Same reasoning for the transient money notices. They come and go on their own
+   dwell timers, and each arrival used to push everything below it down. Reserving
+   one line each keeps the card a stable height whether or not they are showing. */
+.balance .notice-slot {
+  min-height: 1.5em;
+  margin-top: 6px;
+}
+
 /* Privacy assurance on the Receive card. Reinforces the one promise that
    distinguishes this wallet, right where a person shares their address. */
 .privacy-note {
@@ -675,32 +698,75 @@ select { appearance: none; cursor: pointer; }
   inset: 0;
   z-index: 100;
   background: #000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  padding: calc(20px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
-}
-.scan-frame {
-  position: relative;
-  width: min(80vw, 320px);
-  aspect-ratio: 1 / 1;
-  border-radius: 20px;
   overflow: hidden;
-  background: #111;
 }
+/* The camera fills the screen. Aiming a QR code is a physical act — the more of
+   the sensor the user can see, the faster they land it. */
 .scan-video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.scan-reticle {
+/* Everything outside the window, dimmed. The dimming is a huge spread shadow on
+   the window itself, so it must NOT sit inside an `overflow: hidden` box — that
+   was the bug: the effect existed and was clipped to invisibility. */
+.scan-mask {
   position: absolute;
-  inset: 12%;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.scan-window {
+  position: relative;
+  width: min(72vw, 300px);
+  aspect-ratio: 1 / 1;
+  border-radius: 22px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.62);
+}
+/* Corner brackets rather than a full border: they read as "put the code here"
+   without a frame line competing with the code's own quiet zone. */
+.scan-corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
   border: 3px solid var(--ember);
-  border-radius: 16px;
-  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.35);
+}
+.scan-corner.tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: 22px 0 0 0; }
+.scan-corner.tr { top: -1px; right: -1px; border-left: 0; border-bottom: 0; border-radius: 0 22px 0 0; }
+.scan-corner.bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; border-radius: 0 0 0 22px; }
+.scan-corner.br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 22px 0; }
+/* A slow sweep, so a camera that has not locked on yet still looks alive. */
+.scan-laser {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--ember), transparent);
+  box-shadow: 0 0 12px var(--ember);
+  animation: scansweep 2.6s ease-in-out infinite alternate;
+}
+@keyframes scansweep {
+  from { top: 12%; opacity: 0.35; }
+  50%  { opacity: 1; }
+  to   { top: 88%; opacity: 0.35; }
+}
+/* Controls sit below the window, clear of the safe areas. */
+.scan-ui {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 20px calc(24px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.55) 45%);
 }
 .scan-hint {
   color: #f6f6f8;
@@ -709,6 +775,11 @@ select { appearance: none; cursor: pointer; }
   max-width: 320px;
   line-height: 1.5;
   margin: 0;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+.scan-cancel { max-width: 220px; }
+@media (prefers-reduced-motion: reduce) {
+  .scan-laser { animation: none; top: 50%; }
 }
 
 /* Transaction history list (on-device sends). */
