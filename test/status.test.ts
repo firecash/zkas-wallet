@@ -95,3 +95,30 @@ describe("what the wallet tells the user it is doing", () => {
     expect(formatDuration(40_000)).toBe("several hours");
   });
 });
+
+describe("progress that visibly moves", () => {
+  // Reported live: "first seconds it synced fast, now it takes longer, sometimes it
+  // looks stuck although it advances". That was an accurate description of a whole-
+  // number percent on a ~1.04M-block chain: at the measured ~250–800 blocks/s one
+  // percent takes 13–42 SECONDS, so the display genuinely did not move for that long.
+  it("shows a finer figure than a whole percent", () => {
+    const v = walletStatus({ ...base, synced: false, scannedBlocks: 624_000, chainLen: 1_000_000, haveConfirmedBalance: false });
+    expect(v.pct).toBe(62); // the coarse figure still exists for the bar width
+    expect(v.pctFine).toBe("62.4%"); // ...but the user reads this one
+  });
+
+  it("never rounds up to 100% while blocks remain", () => {
+    const v = walletStatus({ ...base, synced: false, scannedBlocks: 999_999, chainLen: 1_000_000, haveConfirmedBalance: false });
+    expect(v.pctFine).toBe("99.9%");
+    expect(walletStatus({ ...base, scannedBlocks: 1_000_000, chainLen: 1_000_000, synced: false, haveConfirmedBalance: false }).pctFine).toBe(
+      "100.0%",
+    );
+  });
+
+  it("carries a block count, so something moves on every poll", () => {
+    const v = walletStatus({ ...base, synced: false, scannedBlocks: 624_000, chainLen: 1_000_000, haveConfirmedBalance: false });
+    expect(v.progress).toEqual({ scanned: 624_000, total: 1_000_000 });
+    // A settled wallet has no progress to show.
+    expect(walletStatus(base).progress).toBeNull();
+  });
+});

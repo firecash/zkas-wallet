@@ -1380,7 +1380,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           {/* "rebuilding" is the wrong word for a wallet that has never scanned —
               nothing is being re-done, and it implies something was lost. */}
           {view.label}
-          {view.pct != null ? ` · ${view.pct}%` : ""}
+          {view.pctFine ? ` · ${view.pctFine}` : ""}
         </div>
         <div
           className="syncbar"
@@ -1395,6 +1395,17 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         <div className="sub" style={{ marginTop: 8, fontSize: 12 }}>
           Found {trimFc(partialFc.toFixed(8))} ZKAS so far
           {view.eta ? ` · ${view.eta}` : ""}
+          {/* A block count that moves on EVERY poll. Even at one decimal the percent
+              can hold still for seconds on a million-block chain, and a figure that
+              does not move is read as a hang no matter what the words say. */}
+          {view.progress && (
+            <>
+              <br />
+              <span style={{ fontVariantNumeric: "tabular-nums", opacity: 0.8 }}>
+                block {view.progress.scanned.toLocaleString()} of {view.progress.total.toLocaleString()}
+              </span>
+            </>
+          )}
         </div>
         <div className="sub" style={{ marginTop: 6, fontSize: 12 }}>
           {view.detail} You can close this and come back — it keeps going.
@@ -1431,7 +1442,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         {view.tone === "busy" ? (
           <>
             <span className="spin" style={{ width: 11, height: 11 }} /> {view.label}
-            {view.pct != null && view.pct < 99 ? ` ${view.pct}%` : ""}
+            {view.pctFine ? ` ${view.pctFine}` : ""}
             {view.eta ? ` · ${view.eta}` : ""}
           </>
         ) : (

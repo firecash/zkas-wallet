@@ -45,6 +45,18 @@ export interface WalletStatusView {
   detail: string;
   /// 0..100 when there is real progress to show, else null.
   pct: number | null;
+  /// The same progress as a finer figure for display, e.g. "62.4%".
+  ///
+  /// A whole-number percent is the wrong resolution for this scan. Measured on the
+  /// live daemon it advances at ~250–800 blocks/s against a ~1.04 M-block chain, so
+  /// one percent takes 13–42 SECONDS. The bar sat motionless for up to forty seconds
+  /// at a time and users reported it as "stuck, although it advances" — which was an
+  /// exactly correct description of what they could see. One decimal moves every few
+  /// seconds, which is the difference between "working" and "hung".
+  pctFine: string | null;
+  /// Blocks scanned and total, so there is always a number visibly moving even when
+  /// the percentage has not ticked.
+  progress: { scanned: number; total: number } | null;
   /// Human duration, already formatted, or null when genuinely unknown.
   eta: string | null;
   tone: "ok" | "busy";
@@ -72,8 +84,19 @@ function pctOf(scanned: number, total: number): number | null {
   return Math.max(0, Math.min(100, Math.round((scanned / total) * 100)));
 }
 
+/// One decimal, floored — never round UP to "100.0%" while work remains, which is
+/// the single most frustrating thing a progress display can do.
+function pctFineOf(scanned: number, total: number): string | null {
+  if (!(total > 0) || !(scanned >= 0)) return null;
+  const raw = Math.max(0, Math.min(100, (scanned / total) * 100));
+  const floored = Math.floor(raw * 10) / 10;
+  return `${(scanned < total ? Math.min(floored, 99.9) : 100).toFixed(1)}%`;
+}
+
 export function walletStatus(s: StatusInput): WalletStatusView {
   const pct = pctOf(s.scannedBlocks, s.chainLen);
+  const pctFine = pctFineOf(s.scannedBlocks, s.chainLen);
+  const progress = s.chainLen > 0 ? { scanned: s.scannedBlocks, total: s.chainLen } : null;
   const eta = s.etaSeconds != null ? `${formatDuration(s.etaSeconds)} left` : null;
 
   if (!s.online) {
@@ -82,6 +105,8 @@ export function walletStatus(s: StatusInput): WalletStatusView {
       label: "Can't reach the network",
       detail: "Your coins are safe on the chain. The wallet will reconnect on its own.",
       pct: null,
+      pctFine: null,
+      progress: null,
       eta: null,
       tone: "busy",
       balanceIsFinal: false,
@@ -97,6 +122,8 @@ export function walletStatus(s: StatusInput): WalletStatusView {
       label: "Opening your wallet",
       detail: "Loading your wallet. This usually takes a few seconds.",
       pct: null,
+      pctFine: null,
+      progress: null,
       eta: null,
       tone: "busy",
       balanceIsFinal: false,
@@ -113,6 +140,8 @@ export function walletStatus(s: StatusInput): WalletStatusView {
         detail:
           "Reading the chain to find the coins that belong to you. The amount below is what it has found so far — it is not your final balance yet.",
         pct,
+        pctFine,
+        progress,
         eta,
         tone: "busy",
         balanceIsFinal: false,
@@ -125,6 +154,8 @@ export function walletStatus(s: StatusInput): WalletStatusView {
       label: "Catching up",
       detail: "Checking the chain for new payments. Your balance is up to date as of the last check.",
       pct,
+      pctFine,
+      progress,
       eta,
       tone: "busy",
       balanceIsFinal: false,
@@ -139,6 +170,8 @@ export function walletStatus(s: StatusInput): WalletStatusView {
       detail:
         "Your balance is up to date. The wallet is still getting ready to pay — your first payment will take a few minutes, later ones take seconds.",
       pct: null,
+      pctFine: null,
+      progress: null,
       eta: null,
       tone: "busy",
       balanceIsFinal: true,
@@ -151,6 +184,8 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     label: "Ready",
     detail: "Your balance is up to date.",
     pct: null,
+    pctFine: null,
+    progress: null,
     eta: null,
     tone: "ok",
     balanceIsFinal: true,
