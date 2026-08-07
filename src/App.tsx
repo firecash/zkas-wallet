@@ -1277,6 +1277,33 @@ function fmtEta(secs: number): string {
   return rem ? `~${h}h ${rem}m left` : `~${h}h left`;
 }
 
+/// Seconds elapsed since `on` became true; null while it is false. For states the
+/// daemon reports no progress for, where the only honest figure is how long it has been.
+function useElapsedWhile(on: boolean): number | null {
+  const [secs, setSecs] = useState<number | null>(null);
+  const since = useRef<number | null>(null);
+  useEffect(() => {
+    if (!on) {
+      since.current = null;
+      setSecs(null);
+      return;
+    }
+    if (since.current == null) since.current = Date.now();
+    const tick = () => setSecs(Math.floor((Date.now() - (since.current ?? Date.now())) / 1000));
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [on]);
+  return secs;
+}
+
+/// A daemon message that describes work in progress rather than a fault. Such a
+/// message must never be rendered as an error — see the call site.
+function isTransientNote(msg: string): boolean {
+  const m = msg.trim();
+  return /[….]{1,3}$/.test(m) && m === m.toLowerCase() && m.length < 40;
+}
+
 function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // NB: every hook here runs BEFORE the `restoring` early return below. That
   // return comes and goes with the daemon's scan state, so a hook placed after
@@ -1284,6 +1311,9 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // than expected" crash, on exactly the path a user hits after a restart.
   const syncing = useMinDwell(!status.synced, 5000);
   const warming = useMinDwell(!!status.warming, 6000);
+  // How long this wallet has been getting ready. The daemon publishes no progress for
+  // it, so the honest thing to show is elapsed time — see `status.ts`.
+  const warmingSeconds = useElapsedWhile(warming);
   // The displayed balance folds in what the CHAIN has already confirmed but the
   // wallet's tree has not ingested yet (the daemon's 0-conf preview of the
   // unsettled window), so a received payment lands here seconds after it is mined.
@@ -1351,6 +1381,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
     warming: !!status.warming,
     haveConfirmedBalance: !!snap,
     etaSeconds: eta,
+    warmingSeconds,
   });
   const pendingCount = txs.filter((t) => t.pending).length;
   const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") + pendingIn - outflow);
@@ -1463,9 +1494,10 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
       <div className="sub notice-slot" style={{ color: "var(--ember)" }}>
         {outNotice.shown
           ? `${trimFc(outNotice.amount.toFixed(8))} ZKAS ` +
-            (outConfirmed
-              ? "sent — confirmed, updating your balance shortly"
-              : `sent — on its way${pendingCount > 1 ? ` · ${pendingCount} payments` : ""}`)
+            // "updating your balance shortly" said nothing a user needed and was the
+            // longest string in the card, so it wrapped to a second line and was the
+            // thing that made the box change size. "Confirmed" is the whole message.
+            (outConfirmed ? "sent — confirmed" : `sent — on its way${pendingCount > 1 ? ` · ${pendingCount} payments` : ""}`)
           : ""}
       </div>
       <div className="sub notice-slot">
@@ -1509,7 +1541,15 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           a node that serves full history (rebuilding through this one would come out just as blind).
         </div>
       )}
-      {status.error && <div className="msg err">{status.error}</div>}
+      {/* Only real faults get the red box.
+          The daemon used to put transient states here — "updating…", "loading…" —
+          which are set whenever its sync loop happens to hold the wallet lock. That
+          flickered on and off with the lock, so a perfectly healthy wallet strobed a
+          red error under its balance. Fixed in the daemon, but a client must not be
+          one version away from doing that to somebody again: a lower-case message
+          ending in an ellipsis is a progress note, not a failure, and the status line
+          above already says what the wallet is doing. */}
+      {status.error && !isTransientNote(status.error) && <div className="msg err">{status.error}</div>}
     </div>
   );
 }

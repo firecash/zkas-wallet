@@ -33,6 +33,8 @@ export interface StatusInput {
   haveConfirmedBalance: boolean;
   /// Seconds remaining from a measured scan rate, or null if not yet known.
   etaSeconds: number | null;
+  /// How long this wallet has been in the getting-ready state, if known.
+  warmingSeconds?: number | null;
 }
 
 export type WalletPhase = "offline" | "opening" | "setting-up" | "catching-up" | "almost-ready" | "ready";
@@ -164,11 +166,15 @@ export function walletStatus(s: StatusInput): WalletStatusView {
   }
 
   if (s.warming) {
+    // Elapsed rather than a promise. There is no progress counter behind this state, so
+    // any "about N minutes" would be invented — and a wallet that says two minutes and
+    // takes six has lied. A number that is simply TRUE ("2m so far") still answers the
+    // real question, which is "is this moving or is it stuck".
+    const waited = s.warmingSeconds != null && s.warmingSeconds >= 5 ? ` (${formatDuration(s.warmingSeconds)} so far)` : "";
     return {
       phase: "almost-ready",
       label: "Almost ready",
-      detail:
-        "Your balance is up to date. The wallet is still getting ready to pay — your first payment will take a few minutes, later ones take seconds.",
+      detail: `Your balance is up to date. The wallet is getting ready to pay${waited} — the first payment is the slow one, later ones take seconds.`,
       pct: null,
       pctFine: null,
       progress: null,
