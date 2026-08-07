@@ -26,8 +26,6 @@ import { seal, unseal, type Sealed } from "./backup";
 const LOCK_KEY = "app_lock_v2";
 /** Legacy per-wallet records, migrated on unlock. */
 const LEGACY_PREFIX = "app_lock_v1_";
-/** Re-lock after this long in the background. Phones get put down, handed over. */
-const AUTO_LOCK_MS = 3 * 60 * 1000;
 
 interface LockRecord {
   version: 2;
@@ -49,7 +47,6 @@ let unlocked: Record<string, string> | null = null;
  * never written anywhere.
  */
 let sessionSecret: string | null = null;
-let backgroundedAt = 0;
 
 function record(): LockRecord | null {
   try {
@@ -213,19 +210,12 @@ export function forgetWalletLock(token: string): void {
 }
 
 /**
- * Re-lock after the app has been in the background a while. Called once at
- * startup; harmless on desktop/web where the events simply fire less.
+ * Compatibility hook for the app boot sequence. Automatic background locking
+ * is intentionally disabled; explicit lock still works.
  */
 export function installAutoLock(onLocked: () => void): void {
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      backgroundedAt = Date.now();
-      return;
-    }
-    if (backgroundedAt && Date.now() - backgroundedAt > AUTO_LOCK_MS && isLockEnabled() && isUnlocked()) {
-      lock();
-      onLocked();
-    }
-    backgroundedAt = 0;
-  });
+  // Automatic background locking is disabled. The user can still lock the app
+  // explicitly; keeping this hook as a no-op preserves the boot API and avoids
+  // surprise relocks while switching tabs or returning to a mobile app.
+  void onLocked;
 }

@@ -106,15 +106,20 @@ describe("balance truthfulness", () => {
     saveSnapshot({ balanceFc: 5, spendableFc: 5, maturingFc: 0, noteCount: 1, ts: Date.now() });
     current = base({ scanned_blocks: 0, synced: false, balance_fc: "0", note_count: 0 });
     await mountApp();
-    // The last known balance is shown, explicitly marked as such.
-    expect(await screen.findByText(/rebuilding/i)).toBeInTheDocument();
+    // The last known balance is shown, and the wallet says it is still working
+    // rather than presenting the daemon's zeros as an empty wallet. Asserted on
+    // MEANING, not wording: the exact phrasing lives in `status.ts` and is allowed
+    // to improve without breaking this guarantee.
+    expect(await screen.findByText(/opening your wallet|setting up|catching up/i)).toBeInTheDocument();
     expect(screen.queryByText("0.00000000")).toBeNull();
   });
 
-  it("separates spendable from maturing so 'why can't I send' is answerable", async () => {
+  it("separates what can be spent now from what is still arriving", async () => {
     current = base({ balance_fc: "5.00000000", spendable_fc: "1.00000000", maturing_fc: "4.00000000" });
     await mountApp();
-    expect(await screen.findByText(/maturing/i)).toBeInTheDocument();
+    // "maturing" was our word for it; a user reads "ready to spend" and "arriving".
+    expect(await screen.findByText(/ready to spend/i)).toBeInTheDocument();
+    expect(await screen.findByText(/arriving/i)).toBeInTheDocument();
   });
 });
 

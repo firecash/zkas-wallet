@@ -18,6 +18,7 @@ import {
 } from "./localtx";
 import { fvkHex, generateWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
 import { sendNonCustodial, PartialSendError, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
+import { walletStatus } from "./status";
 import {
   backupWallet,
   initDesktop,
@@ -309,7 +310,9 @@ function confBadge(t: LocalTx): string {
     return Date.now() - t.ts > CONF_RECENT_RETRY_MS ? "confirmed" : `${confs} conf${confs === 1 ? "" : "s"}`;
   }
   if (t.confs == null && (t.confTries ?? 0) >= CONF_MAX_TRIES) return "not seen on-chain";
-  return "0-conf";
+  // "0-conf" is exchange jargon. What the user needs to know is that the payment has
+  // left and is waiting to be included in a block.
+  return "sending…";
 }
 
 /// History renders windowed: a miner wallet accrues thousands of chain rows and
@@ -401,6 +404,10 @@ export default function App() {
   const repairAttempts = useRef(0);
   const lastRepairAt = useRef(0);
   const repairNeeded = useRef(false);
+  // A status poll can overlap the previous one while a cold wallet is loading.
+  // Keep one repair operation in flight; otherwise several polls can all call
+  // `/watch` and start duplicate reloads for the same wallet.
+  const repairInFlight = useRef(false);
   // Consecutive FAILED status calls. One network blip must not flip the app to
   // the "can't reach the wallet service" screen — that unmounts the whole wallet
   // (a half-filled Send form included) and oscillates on a flaky connection.
@@ -464,16 +471,34 @@ export default function App() {
         // (fired just below the setStatus, never inside it) and hold the wallet
         // UI while the repair is in flight. The server is disposable; the
         // device is the wallet.
-        if (denied && !transient && repairAttempts.current < 3 && getDeviceSeed()) repairNeeded.current = true;
-        const holdForRepair = denied && repairAttempts.current > 0 && now - lastRepairAt.current < 20_000 && !!getDeviceSeed();
+        // Out of grace with a wallet on record: the daemon has LOST the
+        // registration. Arm a SILENT repair — the direct device seed, or the
+        // orphan scan (the key can sit under a stale token; see
+        // findOrphanedSeed). The user must never see a recovery prompt for a
+        // key this device already holds.
+        const registeredAddress = listWallets().find((w) => w.token === activeToken())?.address ?? null;
+        const cachedAddress = prev?.address ?? loadStatusCache()?.address ?? registeredAddress;
+        const hasLocalKey = !!(getDeviceSeed() || cachedAddress);
+        // A cold boot can answer `has_wallet:false` before the first successful
+        // status, so `denied` is false even though the cached wallet is known.
+        // Treat that as the same recoverable server-side registration loss once
+        // the normal transient grace has elapsed.
+        const missingKnownWallet = (!s.has_wallet || !s.address) && !!cachedAddress;
+        if ((denied || missingKnownWallet) && !transient && repairAttempts.current < 3 && hasLocalKey && !repairInFlight.current)
+          repairNeeded.current = true;
+        const holdForRepair =
+          (denied || missingKnownWallet) &&
+          hasLocalKey &&
+          (repairInFlight.current || (repairAttempts.current > 0 && now - lastRepairAt.current < 20_000));
         // The hold is ending and no repair can run (this device holds no key for
-        // the wallet): do NOT drop to "create a new wallet" — surface the
-        // recovery screen instead. A user watching their wallet vanish into
-        // onboarding panic-creates over the existing one.
-        if (denied && !transient && !holdForRepair && !(repairAttempts.current < 3 && getDeviceSeed())) recoveryNeeded.current = true;
+        // the wallet under ANY token): do NOT drop to "create a new wallet" —
+        // surface the recovery screen instead. A user watching their wallet
+        // vanish into onboarding panic-creates over the existing one.
+        if ((denied || missingKnownWallet) && !transient && !holdForRepair && !(repairAttempts.current < 3 && hasLocalKey))
+          recoveryNeeded.current = true;
         const next =
-          denied && (transient || holdForRepair)
-            ? { ...stable, has_wallet: true, address: s.address ?? prev.address }
+          (denied || missingKnownWallet) && (transient || holdForRepair)
+            ? { ...stable, has_wallet: true, address: s.address ?? prev?.address ?? cachedAddress }
             : stable;
         // Return the PREVIOUS object when nothing meaningful moved, so React
         // bails out instead of re-rendering.
@@ -491,16 +516,27 @@ export default function App() {
       // pure): re-register this wallet's viewing key from the device seed, with
       // the remembered birthday so the rescan starts at the wallet's birth, not
       // genesis. The poll's own hold keeps the wallet UI up meanwhile.
+      // Fire the armed repair OUTSIDE the state updater (updaters must be
+      // pure). Silent order: the active token's seed, then an orphan scan by
+      // the last-known address (stale-token misfiles) — the user is only ever
+      // asked for a seed when this device genuinely holds none.
       if (repairNeeded.current) {
         repairNeeded.current = false;
         repairAttempts.current += 1;
         lastRepairAt.current = Date.now();
+        repairInFlight.current = true;
         void (async () => {
           try {
-            const seed = getDeviceSeed();
+            let seed = getDeviceSeed();
+            if (!seed) {
+              const addr = loadStatusCache()?.address;
+              if (addr) seed = await findOrphanedSeed(addr);
+            }
             if (seed) await api.watch(await fvkHex(seed), walletBirthday());
           } catch {
             /* a later poll re-arms while attempts remain */
+          } finally {
+            repairInFlight.current = false;
           }
         })();
       }
@@ -1270,8 +1306,34 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // below the last confirmed figure, the confirmed figure stays the headline and
   // the partial is labelled as progress.
   const partialFc = parseFloat(status.balance_fc || "0");
-  const rebuilding = !status.synced && (restoring || (!!snap && partialFc < snap.balanceFc * 0.995));
+  // A wallet that has never finished a scan has no snapshot — `saveSnapshot` runs
+  // only for a SYNCED wallet, and rightly so. But that left the first scan, which is
+  // the longest and most anxious one a user ever sits through, as the ONE case with
+  // no protection: with no snapshot to compare against, this fell through to the
+  // settled card below and rendered the climbing partial as the headline balance
+  // under a small "syncing 44%". That is the exact failure the comment above
+  // describes — a healthy scan reading as a theft — just reached by the other door.
+  // Reported live 2026-08-07: "34.75 ZKAS · 2 shielded notes · syncing 44%", where
+  // 34.75 was a fraction of the real figure.
+  //
+  // So: while a scan is genuinely incomplete and we have nothing confirmed to show,
+  // present it as progress, never as a balance.
+  const firstScan = !snap;
+  const rebuilding = !status.synced && (restoring || firstScan || (!!snap && partialFc < snap.balanceFc * 0.995));
   const eta = useScanEta(status.scanned_blocks, status.chain_len, !status.synced);
+  // One model decides what state this wallet is in and how to name it — see
+  // `status.ts`. The booleans above still drive WHICH card renders (they encode
+  // hard-won detail about partial counts); `view` supplies every word the user
+  // reads, so the wording cannot drift between branches again.
+  const view = walletStatus({
+    online: true, // this card only renders once a poll has produced a status
+    synced: status.synced,
+    scannedBlocks: status.scanned_blocks,
+    chainLen: status.chain_len,
+    warming: !!status.warming,
+    haveConfirmedBalance: !!snap,
+    etaSeconds: eta,
+  });
   const pendingCount = txs.filter((t) => t.pending).length;
   const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") + pendingIn - outflow);
   // Spendable now vs still-maturing (shielded anchor depth ~10 min). Incoming 0-conf
@@ -1297,20 +1359,27 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         <div className="sub">
           {snap ? "last confirmed balance · " : ""}
           <span className="spin" style={{ width: 11, height: 11 }} />{" "}
-          {restoring ? "rebuilding…" : `rebuilding ${pct}%`}
+          {/* "rebuilding" is the wrong word for a wallet that has never scanned —
+              nothing is being re-done, and it implies something was lost. */}
+          {view.label}
+          {view.pct != null ? ` · ${view.pct}%` : ""}
         </div>
-        <div className="syncbar">
+        <div
+          className="syncbar"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={firstScan ? "Scanning the chain for this wallet's notes" : "Rebuilding this wallet's view of the chain"}
+        >
           <div className="syncbar-fill" style={{ width: `${Math.max(2, pct)}%` }} />
         </div>
         <div className="sub" style={{ marginTop: 8, fontSize: 12 }}>
-          Re-checked {trimFc(partialFc.toFixed(8))} ZKAS so far across {status.note_count} note
-          {status.note_count === 1 ? "" : "s"}
-          {eta ? ` · ${fmtEta(eta)}` : ""}
+          Found {trimFc(partialFc.toFixed(8))} ZKAS so far
+          {view.eta ? ` · ${view.eta}` : ""}
         </div>
         <div className="sub" style={{ marginTop: 6, fontSize: 12 }}>
-          Your coins are on-chain and safe — the wallet is re-deriving its private view of them from the chain, and the
-          figure above climbs to your real balance as it goes. A full rescan of a busy wallet can take an hour or more;
-          you can close this and come back.
+          {view.detail} You can close this and come back — it keeps going.
         </div>
         {status.missing_history && (
           <div className="msg warn">
@@ -1333,27 +1402,25 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         <span className="unit">ZKAS</span>
       </div>
       <div className="sub">
-        {status.note_count} shielded note{status.note_count === 1 ? "" : "s"}
-        {syncing ? (
+        {/* Note count is OUR unit, not the user's — they have an amount, not
+            "notes". It stays only where it explains something (fees, why a big
+            payment needs splitting), not in the headline. */}
+        {view.tone === "busy" ? (
           <>
-            {" · "}
-            <span className="spin" style={{ width: 11, height: 11 }} />{" "}
-            {/* "syncing 100%" reads as stuck — at the top of the scan the remaining
-                work is ingesting the last few blocks, so say what's happening. */}
-            {pct >= 99 ? "finalizing sync…" : `syncing ${pct}%`}
-          </>
-        ) : warming ? (
-          <>
-            {" · "}synced{" · "}
-            <span className="spin" style={{ width: 11, height: 11 }} /> <span className="warmtag">speeding up sends</span>
+            <span className="spin" style={{ width: 11, height: 11 }} /> {view.label}
+            {view.pct != null && view.pct < 99 ? ` ${view.pct}%` : ""}
+            {view.eta ? ` · ${view.eta}` : ""}
           </>
         ) : (
-          " · synced"
+          view.label
         )}
       </div>
-      {!syncing && warming && (
-        <div className="sub warmnote">⚡ Getting up to speed (~1–2 min) — after this, sends take seconds.</div>
-      )}
+      {/* The wording lives in `status.ts` with every other state, so this can no
+          longer drift from what the headline says. It used to promise "~1–2 min";
+          measured live, the first send after a cold open spent 122s locating coins
+          on top of a ~5 min background pass — a wallet that promises two minutes and
+          takes six has lied, which is worse than quoting nothing. */}
+      {view.phase === "almost-ready" && <div className="sub warmnote">⚡ {view.detail}</div>}
       {inNotice.shown && (
         <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
           +{trimFc(inNotice.amount.toFixed(8))} ZKAS incoming — confirmed on-chain, settling into your wallet
@@ -1363,24 +1430,37 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         <div className="sub" style={{ marginTop: 6, color: "var(--ember)" }}>
           {trimFc(outNotice.amount.toFixed(8))} ZKAS{" "}
           {outConfirmed
-            ? "sent — confirmed on-chain, updating your balance shortly"
-            : `sent — broadcast${pendingCount > 1 ? ` · ${pendingCount} sends` : ""} (0-conf)`}
+            ? "sent — confirmed, updating your balance shortly"
+            : `sent — on its way${pendingCount > 1 ? ` · ${pendingCount} payments` : ""}`}
         </div>
       )}
       {maturing > 0.00000001 && (
         <div className="sub" style={{ marginTop: 6 }}>
-          {trimFc(Math.max(0, spendable).toFixed(8))} spendable now ·{" "}
-          <span style={{ color: "var(--ember)" }}>{trimFc(maturing.toFixed(8))} maturing</span> — shielded coins are
-          spendable ~10 min after they arrive.
+          {trimFc(Math.max(0, spendable).toFixed(8))} ready to spend ·{" "}
+          <span style={{ color: "var(--ember)" }}>{trimFc(maturing.toFixed(8))} arriving</span> — coins become
+          spendable about 10 minutes after they land.
         </div>
       )}
       {syncing && (
         <>
-          <div className="syncbar">
+          <div
+            className="syncbar"
+            role="progressbar"
+            aria-valuenow={pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Wallet sync progress"
+          >
             <div className="syncbar-fill" style={{ width: `${Math.max(2, pct)}%` }} />
           </div>
           <div className="sub" style={{ marginTop: 8, fontSize: 12 }}>
             Balances appear as the wallet scans the chain — your funds are safe.
+            {/* The estimate was computed for every syncing wallet but only ever
+                rendered in the rebuild card, so the plain sync — where a user sits
+                watching a percentage that barely moves — was the one case with no
+                idea how long. `useScanEta` says nothing until it has 20s of real
+                rate, so an absent value here means "not known yet", not "instant". */}
+            {eta ? ` ${fmtEta(eta)}.` : ""}
           </div>
         </>
       )}
@@ -1509,10 +1589,11 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
   };
   return (
     <div className="card">
-      <h2>Recover your wallet</h2>
-      <div className="msg warn">
-        The wallet service lost this wallet's registration (server maintenance). <b>Your coins are on-chain and
-        safe</b> — this device just needs to re-register the wallet from its recovery seed.
+      <h2>Reconnect your wallet</h2>
+      <div className="msg ok">
+        <b>Nothing is lost.</b> Your coins are on-chain and only your seed can ever move them. The wallet service
+        restarted and forgot this wallet's registration — reconnecting takes a moment, then your balance rebuilds
+        itself automatically.
       </div>
       {cached?.address && (
         <>
@@ -1533,11 +1614,11 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
       />
       {err && <div className="msg err">{err}</div>}
       <button className="btn" disabled={busy || !seed.trim()} onClick={recover}>
-        {busy ? "Recovering…" : "Recover wallet"}
+        {busy ? "Reconnecting…" : "Reconnect wallet"}
       </button>
       <p className="muted small">
-        After recovery the wallet rebuilds its private view from the chain — the balance climbs back over the next
-        minutes. Nothing is sent anywhere; the seed stays on this device.
+        The seed is checked on this device against the address above and never sent anywhere. After reconnecting, the
+        wallet rebuilds its view from the chain — the balance climbs back over the next minutes.
       </p>
       <button className="linkbtn" onClick={onStartOver}>
         Not your wallet? Create or import a different one
@@ -1779,12 +1860,30 @@ function Onboard({
 /// beat is emphasised; the scene loops so a long multi-note send stays alive.
 function SendScene({ stage }: { stage?: SendStage }) {
   const s = stage ?? "proving";
+  // Elapsed seconds on the long step. "Proving" is named for the Halo 2 proof, but
+  // the proof is the FAST part (~2s): most of the wait is the daemon locating each
+  // spent note's position in the chain, which on a wallet whose witnesses are cold
+  // takes a minute or two. Measured live 2026-08-07: 122.0s witnessing, 2.4s proof.
+  //
+  // With no elapsed time and no explanation, a two-minute wait under the words
+  // "Building your zero-knowledge proof" reads as a hang, and the user starts
+  // wondering whether their money is stuck. It is not — nothing has been sent and
+  // nothing can be lost at this stage — so say so, and keep a number moving.
+  const [secs, setSecs] = useState(0);
+  useEffect(() => {
+    setSecs(0);
+    const t = setInterval(() => setSecs((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [s]);
+  const slow = s === "proving" && secs >= 15;
   const caption =
     s === "signing"
       ? "Signing on your device — your key never leaves it"
       : s === "broadcasting"
         ? "Sealed and shielded — broadcasting to the network"
-        : "Building your zero-knowledge proof — nobody will see amount or recipient";
+        : slow
+          ? "Locating your coins in the chain — this can take a minute or two"
+          : "Building your zero-knowledge proof — nobody will see amount or recipient";
   return (
     <div className={"sendscene s-" + s} role="status" aria-live="polite">
       <div className="sendscene-stage" aria-hidden="true">
@@ -1826,6 +1925,19 @@ function SendScene({ stage }: { stage?: SendStage }) {
         <span className={"ss-step" + (s === "broadcasting" ? " on" : "")}>Send</span>
       </div>
       <div className="sendscene-cap">{caption}</div>
+      {/* aria-hidden: the container is an aria-live region, and a counter ticking
+          once a second would have a screen reader read the whole scene every
+          second. The caption above changes rarely and carries the meaning. */}
+      {secs >= 5 && (
+        <div className="sendscene-cap sendscene-elapsed" aria-hidden="true">
+          {secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`}
+        </div>
+      )}
+      {slow && (
+        <div className="sendscene-cap sendscene-reassure" aria-hidden="true">
+          Nothing has been sent yet and nothing can be lost — keep this open.
+        </div>
+      )}
     </div>
   );
 }
@@ -3014,7 +3126,8 @@ function Send({
           <SendScene stage={stage ?? undefined} />
         ) : status?.warming ? (
           <div className="msg warn small">
-            <b>⚡ This send may take up to a minute</b> — your wallet is still speeding up. Later sends take seconds.
+            <b>⚡ This first payment will take a few minutes</b> — the wallet has to locate your coins in the chain
+            before it can spend them. It only does this once; later payments take seconds.
           </div>
         ) : (
           <div className="msg ok small">
@@ -3184,9 +3297,9 @@ function Send({
       )}
       {overspend && blockedByMaturing && (
         <div className="fieldhint bad">
-          Only {trimFc(spendable.toFixed(8))} is spendable right now — {trimFc(maturing.toFixed(8))} is still maturing
-          (shielded coins can be spent ~10 min after they arrive, incl. your change from a recent send). It'll be
-          available shortly.
+          Only {trimFc(spendable.toFixed(8))} is ready to spend right now — {trimFc(maturing.toFixed(8))} is still
+          arriving. Coins become spendable about 10 minutes after they land, including the change from a payment you
+          just made. It'll be ready shortly.
         </div>
       )}
       {overspend && !blockedByMaturing && (
@@ -3203,13 +3316,16 @@ function Send({
       )}
 
       {!status?.synced && (
-        <div className="msg warn small">Wallet is still syncing — you can send once it finishes.</div>
+        <div className="msg warn small">
+          Still catching up with the chain — you can pay once it finishes, so the wallet knows about all your coins.
+        </div>
       )}
       {status?.synced && status?.warming && (
         <div className="msg warn warmbanner">
-          <b>⚡ First send may take up to a minute.</b>
+          <b>⚡ Your first payment will take a few minutes.</b>
           <br />
-          Your wallet is speeding up right now (~1–2 min). After that, sends take seconds.
+          The wallet is locating your coins in the chain — it does this once, then payments take seconds. You can
+          start the payment now; just leave the screen open.
         </div>
       )}
       {error && <div className="msg err">{error}</div>}

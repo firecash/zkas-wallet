@@ -1006,6 +1006,24 @@ select { appearance: none; cursor: pointer; }
   margin: 0 auto;
   min-height: 2.6em;
 }
+/* Elapsed time on the long step. Tabular figures so the number does not jitter
+   the layout as digits change under the user's eyes. */
+.sendscene-elapsed {
+  min-height: 0;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+  letter-spacing: 0.02em;
+}
+/* Shown once the wait is long enough to worry someone. Deliberately quiet — it is
+   reassurance, not an alert. */
+.sendscene-reassure {
+  min-height: 0;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ember);
+  opacity: 0.9;
+}
 @media (prefers-reduced-motion: reduce) {
   .ss-coin, .ss-shield, .ss-streak, .ss-spark { animation: none !important; }
 }

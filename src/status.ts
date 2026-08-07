@@ -1,0 +1,159 @@
+// One place that decides what the wallet is DOING and how to say it.
+//
+// Before this, the answer was assembled inline in the balance card from half a dozen
+// independent booleans — `restoring`, `rebuilding`, `syncing`, `warming`, `finalizing`
+// — each with its own wording invented at the call site. That produced states no user
+// could interpret ("rebuilding 44%", "speeding up sends"), states that contradicted
+// each other in the same frame, and time estimates that existed in one branch and not
+// the one users actually sat in.
+//
+// Three rules, learned from what went wrong live:
+//
+//  1. NEVER present an unfinished count as a balance. A scan reports what it has found
+//     SO FAR, climbing from zero. Rendered as a headline it reads as theft — a user
+//     watched "34.75 ZKAS" under a small "syncing 44%" when the real figure was far
+//     higher, and a pool wallet showed 29,703 against a true 423,997. `balanceIsFinal`
+//     is the single flag that decides this, and it is false whenever we are not sure.
+//
+//  2. Say how long, or say nothing — never guess. `etaSeconds` comes from a measured
+//     rate; absent means "not known yet", and the UI must not invent a number.
+//
+//  3. No jargon. The user does not have a "commitment tree", they have coins. Words
+//     like rebuilding, warming, witness, anchor and 0-conf are ours, not theirs.
+
+export interface StatusInput {
+  /// Daemon reachable and answering at all.
+  online: boolean;
+  synced: boolean;
+  scannedBlocks: number;
+  chainLen: number;
+  /// Daemon is still making this wallet fast to spend from (cold witnesses).
+  warming: boolean;
+  /// A confirmed balance from a previous completed sync, if we have ever had one.
+  haveConfirmedBalance: boolean;
+  /// Seconds remaining from a measured scan rate, or null if not yet known.
+  etaSeconds: number | null;
+}
+
+export type WalletPhase = "offline" | "opening" | "setting-up" | "catching-up" | "almost-ready" | "ready";
+
+export interface WalletStatusView {
+  phase: WalletPhase;
+  /// Two or three words. The state, as a person would name it.
+  label: string;
+  /// One plain sentence: what is happening and what it means for them.
+  detail: string;
+  /// 0..100 when there is real progress to show, else null.
+  pct: number | null;
+  /// Human duration, already formatted, or null when genuinely unknown.
+  eta: string | null;
+  tone: "ok" | "busy";
+  /// May the balance be shown as THE balance? False while any count is partial.
+  balanceIsFinal: boolean;
+  /// True while the wallet cannot yet spend, so Send can explain rather than fail.
+  canSpend: boolean;
+}
+
+/// Coarse on purpose. A scan rate wobbles, and a precise figure that keeps changing
+/// is trusted less than a rounded one that holds still.
+export function formatDuration(secs: number): string {
+  if (!Number.isFinite(secs) || secs < 0) return "";
+  if (secs < 45) return "less than a minute";
+  const m = Math.round(secs / 60);
+  if (m < 60) return `about ${m} minute${m === 1 ? "" : "s"}`;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  if (h >= 6) return `several hours`;
+  return rem ? `about ${h}h ${rem}m` : `about ${h} hour${h === 1 ? "" : "s"}`;
+}
+
+function pctOf(scanned: number, total: number): number | null {
+  if (!(total > 0) || !(scanned >= 0)) return null;
+  return Math.max(0, Math.min(100, Math.round((scanned / total) * 100)));
+}
+
+export function walletStatus(s: StatusInput): WalletStatusView {
+  const pct = pctOf(s.scannedBlocks, s.chainLen);
+  const eta = s.etaSeconds != null ? `${formatDuration(s.etaSeconds)} left` : null;
+
+  if (!s.online) {
+    return {
+      phase: "offline",
+      label: "Can't reach the network",
+      detail: "Your coins are safe on the chain. The wallet will reconnect on its own.",
+      pct: null,
+      eta: null,
+      tone: "busy",
+      balanceIsFinal: false,
+      canSpend: false,
+    };
+  }
+
+  // No progress figure yet: the wallet is being loaded and genuinely knows nothing.
+  // The daemon answers zeros here, which is "I don't know yet", never "you have none".
+  if (!s.synced && s.scannedBlocks === 0) {
+    return {
+      phase: "opening",
+      label: "Opening your wallet",
+      detail: "Loading your wallet. This usually takes a few seconds.",
+      pct: null,
+      eta: null,
+      tone: "busy",
+      balanceIsFinal: false,
+      canSpend: false,
+    };
+  }
+
+  if (!s.synced) {
+    // Never scanned to completion: everything on screen is a running count.
+    if (!s.haveConfirmedBalance) {
+      return {
+        phase: "setting-up",
+        label: "Setting up your wallet",
+        detail:
+          "Reading the chain to find the coins that belong to you. The amount below is what it has found so far — it is not your final balance yet.",
+        pct,
+        eta,
+        tone: "busy",
+        balanceIsFinal: false,
+        canSpend: false,
+      };
+    }
+    // Has a confirmed figure from before, and is checking the chain since then.
+    return {
+      phase: "catching-up",
+      label: "Catching up",
+      detail: "Checking the chain for new payments. Your balance is up to date as of the last check.",
+      pct,
+      eta,
+      tone: "busy",
+      balanceIsFinal: false,
+      canSpend: false,
+    };
+  }
+
+  if (s.warming) {
+    return {
+      phase: "almost-ready",
+      label: "Almost ready",
+      detail:
+        "Your balance is up to date. The wallet is still getting ready to pay — your first payment will take a few minutes, later ones take seconds.",
+      pct: null,
+      eta: null,
+      tone: "busy",
+      balanceIsFinal: true,
+      canSpend: true,
+    };
+  }
+
+  return {
+    phase: "ready",
+    label: "Ready",
+    detail: "Your balance is up to date.",
+    pct: null,
+    eta: null,
+    tone: "ok",
+    balanceIsFinal: true,
+    canSpend: true,
+  };
+}

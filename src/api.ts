@@ -154,7 +154,16 @@ export interface Balance {
   synced: boolean;
   scanned_blocks: number;
   chain_len: number;
-  notes: { position: number; value: number }[];
+  /// How many notes the wallet holds. Always present.
+  note_count: number;
+  /// The full per-note list — sent ONLY when the request asks for it (`?notes=1`).
+  ///
+  /// It used to come back on every poll: ~10.5 MB on a wallet with 273K notes, on
+  /// the most frequently called endpoint in the app, serialised while the daemon
+  /// held that wallet's lock. Nothing here ever read it — this interface declared
+  /// it and no component touched it — so the daemon now omits it by default.
+  /// Ask for it only if something genuinely needs per-note detail.
+  notes?: { position: number; value: number }[];
   updated_unix: number;
   error: string | null;
 }

@@ -105,7 +105,11 @@ describe("the wallet a user actually touches", () => {
     // transition.
     statusOverride = { scanned_blocks: 0, synced: false };
     await mountApp();
-    expect(await screen.findByText(/rebuilding/)).toBeInTheDocument();
+    // Match either wording: the card says "rebuilding" for a wallet that has synced
+    // before and "starting/scanning" for one that never has (no snapshot to compare
+    // against). Which word appears is not what this test guards — landing in the
+    // early-return branch at all is, because that is where the hook-order bug lived.
+    expect(await screen.findByText(/opening your wallet|setting up|catching up/i)).toBeInTheDocument();
     statusOverride = {};
     await waitFor(() => expect(screen.getByText(/Shielded balance/)).toBeInTheDocument(), { timeout: 6000 });
     // And the balance itself is on screen, not an error card.
