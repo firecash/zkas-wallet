@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ZKas Wallet",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "identifier": "info.zkas.wallet",
   "build": {
     "frontendDist": "../dist",
@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:* http: https:"
     }
   },
   "bundle": {
@@ -35,7 +35,7 @@
     "macOS": {
       "minimumSystemVersion": "10.15"
     },
-    "shortDescription": "ZKas shielded wallet",
-    "longDescription": "Non-custodial desktop wallet for ZKas — every balance and payment shielded by Orchard zero-knowledge proofs. Connect to the public node or run your own."
+    "shortDescription": "ZKas wallet, node and mining",
+    "longDescription": "Non-custodial ZKas desktop wallet with a managed local node, direct ZKAS mining, and KAS + ZKAS merged mining."
   }
 }

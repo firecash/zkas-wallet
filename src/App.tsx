@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, chainTx, getBase, setBase, normalizeDaemonInput, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
+import { api, chainTx, getBase, setBase, normalizeDaemonInput, walletdTransportError, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
 import {
@@ -16,7 +16,7 @@ import {
   loadSnapshot,
   type LocalTx,
 } from "./localtx";
-import { fvkHex, generateWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
+import { ensureSigner, fvkHex, generateWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
 import { sendNonCustodial, PartialSendError, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, arrivalAmount } from "./status";
 import { exportFile, exportMessage } from "./exportfile";
@@ -58,7 +58,10 @@ import {
 } from "./contacts";
 import { disableLock, enableLock, forgetWalletLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed, allUnlockedSeeds } from "./applock";
 import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReconfigure } from "./bgsync";
-import logo from "./assets/zkas-logo.png";
+import { getTxLabel, setTxLabel } from "./txlabels";
+import { takePaymentLink } from "./paymentlinks";
+import { nodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
+import { ArrowDownLeft, ArrowUpRight, ChevronDown, Server, Settings, ShieldAlert, Trash2, WalletCards } from "lucide-react";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
 // hidden textarea so "copy" never dies with an unhandled rejection on a phone.
@@ -171,9 +174,6 @@ function parseAmount(s: string): number {
 }
 
 const EXPLORER = "https://explorer.zkas.info";
-// Display-only label; address derivation and signing use the daemon's network.
-const NET_LABEL = "mainnet";
-
 type Tab = "receive" | "send" | "history" | "signatures" | "settings";
 const TAB_LABEL: Record<Tab, string> = {
   receive: "Receive",
@@ -183,7 +183,7 @@ const TAB_LABEL: Record<Tab, string> = {
   // address — and split across two tabs they each looked like a whole feature
   // while together they crowded out the three that matter.
   signatures: "Signatures",
-  settings: "⚙",
+  settings: "Settings",
 };
 
 /// Desktop has a window; a phone has a thumb's width. Sign and Verify are real
@@ -307,6 +307,19 @@ const CONF_MAX_TRIES = 120;
 /// old/dead records so they cannot starve current payments.
 const CONF_RECENT_RETRY_MS = 60 * 60 * 1000;
 
+function nextConfirmationPoll(tx: LocalTx, confirmations: number | null): number {
+  const age = Date.now() - tx.ts;
+  if (confirmations != null && confirmations > 0) {
+    if (age < 2 * 60_000) return 5_000;
+    if (age < 10 * 60_000) return 15_000;
+    return 60_000;
+  }
+  if (age < 30_000) return 1_000;
+  if (age < 2 * 60_000) return 2_000;
+  if (age < 10 * 60_000) return 5_000;
+  return 30_000;
+}
+
 /// Which device-recorded sends History must still show as its own 0-conf rows.
 ///
 /// A device row is suppressed ONLY when the chain reports the same transaction as
@@ -415,10 +428,6 @@ export default function App() {
   const recoveryNeeded = useRef(false);
   // On-device send history; drives the optimistic (0-conf) balance and History tab.
   const [txs, setTxs] = useState<LocalTx[]>(() => loadTxs());
-  // Last CONFIRMED balance seen while synced — the baseline for "money arrived".
-  // Starts null so the first poll of a session establishes it silently instead of
-  // announcing the user's entire balance as an incoming payment.
-  const lastBalance = useRef<number | null>(null);
   // Consecutive polls answering "no wallet"; see the guard in `refresh`.
   const missingPolls = useRef(0);
   // Auto-repair state: when the daemon has genuinely forgotten this token's
@@ -445,15 +454,41 @@ export default function App() {
   /// arrival and not the scan still finding notes. null until the first final reading.
   const lastFinalBalance = useRef<number | null>(null);
   const toast = useToast();
-  const announce = useCallback(
-    (deltaFc: number) => {
-      const amount = `${trimFc(deltaFc.toFixed(8))} ZKAS`;
-      toast.show("good", `Received ${amount}`, "Settling into your wallet — spendable in ~10 minutes.");
-      notifyOs("ZKas payment received", `${amount} arrived in your wallet.`);
-      successFeedback();
-    },
-    [toast],
-  );
+  const refreshInFlight = useRef(false);
+  const confirmationNextAt = useRef(new Map<string, number>());
+  const confirmationInFlight = useRef(new Set<string>());
+
+  const pollConfirmations = useCallback(async (list: LocalTx[]) => {
+    const now = Date.now();
+    const eligible = list
+      .filter(
+        (tx) =>
+          tx.pending ||
+          now - tx.ts < CONF_RECENT_RETRY_MS ||
+          (tx.confs == null && (tx.confTries ?? 0) < CONF_MAX_TRIES),
+      )
+      .filter(
+        (tx) =>
+          !confirmationInFlight.current.has(tx.txid) &&
+          (confirmationNextAt.current.get(tx.txid) ?? 0) <= now,
+      )
+      .slice(0, CONF_LOOKUP_LIMIT);
+    if (!eligible.length) return;
+
+    for (const tx of eligible) {
+      confirmationInFlight.current.add(tx.txid);
+      // Reserve before awaiting: another status tick cannot launch the same fetch.
+      confirmationNextAt.current.set(tx.txid, now + nextConfirmationPoll(tx, tx.confs ?? null));
+    }
+    const answers = await Promise.all(eligible.map(async (tx) => [tx, await chainTx(tx.txid)] as const));
+    let updated = loadTxs();
+    for (const [tx, answer] of answers) {
+      confirmationInFlight.current.delete(tx.txid);
+      confirmationNextAt.current.set(tx.txid, Date.now() + nextConfirmationPoll(tx, answer?.confirmations ?? null));
+      updated = answer?.confirmations != null ? applyChainStatus(tx.txid, answer.confirmations) : bumpConfTry(tx.txid);
+    }
+    setTxs((previous) => (sameTxs(previous, updated) ? previous : updated));
+  }, []);
 
   // Hysteresis timers: the 1s poll can flip `synced` and `warming` for a beat
   // (a block lands, the background warm re-runs) and rendering every flip made the
@@ -464,6 +499,8 @@ export default function App() {
   const warmingSince = useRef<number | null>(null);
 
   const refresh = useCallback(async () => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
     try {
       const s = await api.status();
       // Never let a transient poll un-render the wallet. While the daemon is reloading a
@@ -614,6 +651,7 @@ export default function App() {
           const amount = trimFc(gained.toFixed(8));
           notifyOs("ZKAS received", `+${amount} ZKAS arrived in your wallet.`);
           toast.show("good", `Received ${amount} ZKAS`);
+          successFeedback();
         }
         lastFinalBalance.current = now;
       }
@@ -636,23 +674,6 @@ export default function App() {
       // (dead txids — dropped sends, pre-relaunch records — were eating the whole
       // budget forever); and each fetch carries its own 4s timeout (in chainTx)
       // so one hung request cannot stall the poll.
-      const needsConfs = list
-        .filter(
-          (x) =>
-            x.pending ||
-            // `0` is a real API answer while the tx is in mempool, but it is not a
-            // terminal state. The old `confs == null` test stopped polling as soon
-            // as reconcile cleared `pending`, freezing a mined tx at 0-conf forever.
-            // Keep every recent send live (including 0 and positive counts); only
-            // old unanswered/dead rows are governed by the retry cap.
-            Date.now() - x.ts < CONF_RECENT_RETRY_MS ||
-            (x.confs == null && (x.confTries ?? 0) < CONF_MAX_TRIES),
-        )
-        .slice(0, CONF_LOOKUP_LIMIT);
-      const answers = await Promise.all(needsConfs.map(async (t) => [t.txid, await chainTx(t.txid)] as const));
-      for (const [txid, ct] of answers) {
-        list = ct?.confirmations != null ? applyChainStatus(txid, ct.confirmations) : bumpConfTry(txid);
-      }
       // A poll has no authority to DELETE this device's own send record — it only
       // ever updates confirmations and the pending flag. `reconcile` re-reads
       // localStorage under `wallet_token`, so if that key is momentarily absent or
@@ -662,20 +683,9 @@ export default function App() {
       // painted the row from the initial `useState(loadTxs)` snapshot and the first
       // 1-second poll wiped it. Rows are removed only by an explicit wallet wipe.
       setTxs((prev) => (sameTxs(prev, list) ? prev : list.length === 0 && prev.length > 0 ? prev : list));
-      // Announce money ARRIVING. A payment landing is the most important event a
-      // wallet has, and on a shielded chain the wallet is the only thing that can
-      // report it — no explorer can see it, no email arrives. Compared against the
-      // last confirmed balance and only while synced, so a mid-scan number climbing
-      // toward the truth is not narrated as a stream of payments.
-      const conf = parseFloat(s.balance_fc || "0");
-      if (s.synced && s.scanned_blocks > 0) {
-        const prev = lastBalance.current;
-        if (prev !== null && conf > prev + 1e-8) {
-          const delta = conf - prev;
-          announce(delta);
-        }
-        lastBalance.current = conf;
-      }
+      // Confirmation lookups have their own schedule and never hold the one-second
+      // balance/sync poll hostage to a slow explorer request.
+      void pollConfirmations(list);
       // Remember a balance the daemon actually knows, so a later reload/restart — when
       // it answers with zeros while rebuilding — has something honest to show instead.
       // Keep the wallet registry in step: a wallet that existed before the
@@ -707,8 +717,10 @@ export default function App() {
       // the last-known UI stays up meanwhile, and a real outage still surfaces.
       failedPolls.current += 1;
       if (failedPolls.current >= 5) setReachable(false);
+    } finally {
+      refreshInFlight.current = false;
     }
-  }, []);
+  }, [pollConfirmations]);
 
   // Called by Send the instant a tx is broadcast: record it, jump straight to
   // History (highlighting the new row) so the confirmations can be watched
@@ -716,6 +728,19 @@ export default function App() {
   const [justSent, setJustSent] = useState<string | null>(null);
   // "Send again" from a transaction carries the recipient across to the form.
   const [sendPrefill, setSendPrefill] = useState<string | null>(null);
+  useEffect(() => {
+    const open = () => {
+      const request = takePaymentLink();
+      if (!request) return;
+      setJustSent(null);
+      setSendPrefill(request);
+      setTab("send");
+      scrollToPane(true);
+    };
+    open();
+    window.addEventListener("zkas-payment-link", open);
+    return () => window.removeEventListener("zkas-payment-link", open);
+  }, []);
   // A payment arrives here as one row per transaction it took — usually one, but
   // several when the amount needed more notes than a single transaction can spend.
   // `opts.stay` records the rows WITHOUT the jump to History: a partially-sent
@@ -746,7 +771,7 @@ export default function App() {
   // Warm the signer WASM in the background right after first paint, so the first
   // send/sign never waits on its (lazily-chunked) download + compile.
   useEffect(() => {
-    const t = setTimeout(() => import("./signer").then((s) => s.ensureSigner()).catch(() => {}), 800);
+    const t = setTimeout(() => void ensureSigner().catch(() => {}), 800);
     return () => clearTimeout(t);
   }, []);
 
@@ -767,10 +792,12 @@ export default function App() {
   }, [refresh]);
 
   return (
-    <div className="wrap">
-      <Header status={status} reachable={reachable} />
-      <WalletBar />
-      <HostedNotice />
+    <div className={`wrap wallet-wrap${status?.has_wallet ? " has-wallet" : ""}`}>
+      <div className="wallet-topline">
+        <WalletBar />
+        <ConnectionButton />
+        <HostedNotice />
+      </div>
       {/* First-ever open (nothing cached yet): a designed connecting state while the
           first status call is in flight, never a stretch of empty page. A shield
           drawing itself, over the wallet's two promises. */}
@@ -816,8 +843,9 @@ export default function App() {
         <Onboard status={status} onCreated={(seed, address) => setFreshSeed({ seed, address })} onImported={refresh} />
       )}
       {reachable && !freshSeed && status && status.has_wallet && (
-        <>
-          <BalanceHero status={status} txs={txs} />
+        <div className="wallet-dashboard">
+          <section className="wallet-overview" aria-label="Wallet balance and actions">
+            <BalanceHero status={status} txs={txs} />
           {/* The two things people open a wallet to DO, as the two biggest targets on
               the screen.
               Before this they were tabs — 13px text in a 9px-padded pill, the same
@@ -827,29 +855,31 @@ export default function App() {
               balance, and leaves the tabs for browsing.
               Send explains itself rather than failing: while the wallet cannot spend yet
               it is disabled and says why, instead of accepting a tap and erroring. */}
-          <div className="quick-actions">
-            <button
-              className="qa qa-receive"
-              onClick={() => setTab("receive")}
-              aria-label="Receive ZKAS"
-            >
-              <span className="qa-icon" aria-hidden="true">↓</span>
-              <span className="qa-label">Receive</span>
-            </button>
-            <button
-              className="qa qa-send"
-              onClick={() => setTab("send")}
-              // Same condition as `canSpend` in the status model: a synced wallet may
-              // spend, including while it is still warming up. An unsynced one may not,
-              // because it does not yet know about all of its own notes.
-              disabled={!status.synced}
-              aria-label="Send ZKAS"
-            >
-              <span className="qa-icon" aria-hidden="true">↑</span>
-              <span className="qa-label">Send</span>
-            </button>
-          </div>
-          <div className="tabs" role="tablist" aria-label="Wallet sections">
+            <div className="quick-actions">
+              <button
+                className="qa qa-receive"
+                onClick={() => setTab("receive")}
+                aria-label="Receive ZKAS"
+              >
+                <ArrowDownLeft className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
+                <span className="qa-label">Receive</span>
+              </button>
+              <button
+                className="qa qa-send"
+                onClick={() => setTab("send")}
+                // Same condition as `canSpend` in the status model: a synced wallet may
+                // spend, including while it is still warming up. An unsynced one may not,
+                // because it does not yet know about all of its own notes.
+                disabled={!status.synced}
+                aria-label="Send ZKAS"
+              >
+                <ArrowUpRight className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
+                <span className="qa-label">Send</span>
+              </button>
+            </div>
+          </section>
+          <section className="wallet-workspace" aria-label="Wallet activity">
+            <div className="tabs" role="tablist" aria-label="Wallet sections">
             {TABS.map((t) => (
               <button
                 key={t}
@@ -866,10 +896,10 @@ export default function App() {
                   setTab(TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length]);
                 }}
               >
-                {TAB_LABEL[t]}
+                {t === "settings" ? <Settings aria-hidden="true" size={20} strokeWidth={2.4} /> : TAB_LABEL[t]}
               </button>
             ))}
-          </div>
+            </div>
           {/* Receive and Send are reached by the buttons above, so no tab is lit while
               one is open. That needs its own way out — without it the only escape is a
               tab that changes the subject. */}
@@ -879,7 +909,7 @@ export default function App() {
             </button>
           )}
           {/* key remounts the pane on tab switch so the entrance transition plays. */}
-          <div className="pane appear" key={tab}>
+            <div className="pane appear" key={tab}>
             {tab === "receive" && <Receive status={status} />}
             {tab === "send" && (
               <Send
@@ -904,14 +934,10 @@ export default function App() {
             )}
             {tab === "signatures" && <Signatures status={status} />}
             {tab === "settings" && <SettingsPane status={status} />}
-          </div>
-        </>
+            </div>
+          </section>
+        </div>
       )}
-      {/* No wallet yet: the daemon/node picker must still be reachable, since a
-          user pointing the app at their own node is exactly who has no wallet
-          on the default one. */}
-      {reachable && status && !status.has_wallet && !freshSeed && (isDesktop() ? <NodeSourceSetting /> : <DaemonSetting />)}
-      <Footer />
     </div>
   );
 }
@@ -1042,24 +1068,16 @@ export async function resolveDeviceSeed(expectedAddress?: string): Promise<strin
 }
 
 function HostedNotice() {
-  // The native shells say only that the seed stays put. They ARE the app, so the
-  // browser warning below does not apply to them and the recommendation would be
-  // nonsense — and screen space is tight enough that an inapplicable sentence costs
-  // more than it explains.
-  if (isNative()) {
-    return (
-      <div className="warnbar" role="note">
-        <span className="warnbar-icon" aria-hidden="true">🔒</span>
-        <div>Signed on your device — <b>your seed never leaves it</b>.</div>
-      </div>
-    );
-  }
+  // Installed builds already are the safer recommendation. Repeating that fact on
+  // every screen spends scarce phone space and made the Tauri app look like a web
+  // wallet, so only the actual browser gets this note.
+  if (isDesktop() || isNative()) return null;
   // Web: one calm line, one recommendation. Whatever goes here is parked permanently
   // above the balance, so anything beyond a single sentence pushes the actual wallet
   // below the fold — which is what a multi-line version of this used to do.
   return (
     <div className="warnbar" role="note">
-      <span className="warnbar-icon" aria-hidden="true">🔒</span>
+      <ShieldAlert className="warnbar-icon" aria-hidden="true" size={17} strokeWidth={2.2} />
       <div>
         {/* Say which is safer, and WHY — the difference is real and specific, and stating
             it plainly is worth more than a vague "strongest setup".
@@ -1084,30 +1102,14 @@ function HostedNotice() {
             then a compromised server can make that promise false. It is a guarantee only
             the signed app can make, so only the app makes it. Saying it here would be
             exactly the kind of assurance somebody relies on and later regrets. */}
-        A browser is the least secure place to keep a wallet —{" "}
+        Browser wallet. {" "}
         <b>
-          <a href="https://github.com/firecash/firecash-wallet/releases" target="_blank" rel="noreferrer">
-            consider getting the app
+          <a href="https://github.com/firecash/zkas-wallet/releases" target="_blank" rel="noreferrer">
+            Get the safer app
           </a>
         </b>
         .
       </div>
-    </div>
-  );
-}
-
-function Header({ status, reachable }: { status: Status | null; reachable: boolean | null }) {
-  const node = reachable && status?.node_connected;
-  return (
-    <div className="brand">
-      <img src={logo} alt="ZKas" />
-      <h1>
-        <span className="em">Z</span>Kas Wallet
-      </h1>
-      <span className="tag">
-        <span className={"dot " + (node ? "on" : "off")} />
-        {reachable === false ? "daemon offline" : node ? `${NET_LABEL} · node live` : "node offline"}
-      </span>
     </div>
   );
 }
@@ -1139,13 +1141,186 @@ function WalletBar() {
   return (
     <>
       <button className="walletbar" onClick={() => setOpen(true)} aria-label="Switch wallet">
-        <span className="avatar sm">{(current?.label.match(/\d+/)?.[0] ?? "1").toString()}</span>
+        <WalletCards aria-hidden="true" size={18} strokeWidth={2.2} />
         <span className="walletbar-name">{current?.label ?? "Wallet"}</span>
         <span className="walletbar-chev" aria-hidden="true">
-          ▾
+          <ChevronDown size={16} strokeWidth={2.2} />
         </span>
       </button>
       {open && <WalletSwitcher onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+/**
+ * The connection is daily-use state, not a buried preference. On desktop this
+ * selects the ZKAS node read by the embedded wallet engine. On web/mobile it
+ * selects a hosted or self-run walletd. The two are deliberately separate:
+ * pointing the desktop webview at an arbitrary walletd would bypass the
+ * embedded, locally-held wallet and weaken the desktop custody model.
+ */
+function ConnectionButton() {
+  const desktop = isDesktop();
+  const [open, setOpen] = useState(false);
+  const [cfg, setCfg] = useState<DesktopConfig | null>(null);
+  const [profiles, setProfiles] = useState<EndpointProfile[]>([]);
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const refresh = useCallback(async () => {
+    if (desktop) {
+      setProfiles(nodeProfiles.load());
+      setCfg(await initDesktop());
+    } else {
+      setProfiles(walletdProfiles.load());
+    }
+  }, [desktop]);
+
+  useEffect(() => {
+    void refresh().catch(() => undefined);
+  }, [refresh]);
+
+  const currentBase = getBase();
+  const hosted = !desktop && (currentBase.includes("wallet.zkas.info") || currentBase.endsWith("/daemon"));
+  const currentProfile = profiles.find((profile) => {
+    const current = desktop ? cfg?.node_addr : currentBase;
+    return current?.replace(/\/$/, "").toLowerCase() === profile.address.replace(/\/$/, "").toLowerCase();
+  });
+  const label = desktop
+    ? cfg?.mode === "local" ? "Local node" : cfg?.mode === "custom" ? currentProfile?.name ?? "My node" : "Public node"
+    : hosted ? "Hosted" : currentProfile?.name ?? "My walletd";
+
+  const switchDesktop = async (mode: "remote" | "local" | "custom", profile?: EndpointProfile) => {
+    setBusy(true);
+    setError("");
+    try {
+      const next = await setNodeSource(mode, profile?.address);
+      setCfg(next);
+      setOpen(false);
+      location.reload();
+    } catch (e) {
+      setError((e as Error).message || String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const switchWalletd = async (raw: string) => {
+    setBusy(true);
+    setError("");
+    try {
+      const url = normalizeDaemonInput(raw);
+      const transportError = walletdTransportError(url);
+      if (transportError) throw new Error(transportError);
+      if (url) {
+        const ctl = new AbortController();
+        const timer = window.setTimeout(() => ctl.abort(), 5_000);
+        try {
+          const response = await fetch(`${url}/health`, { signal: ctl.signal });
+          if (!response.ok) throw new Error(`walletd answered ${response.status}`);
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+      setBase(url);
+      setOpen(false);
+      location.reload();
+    } catch (e) {
+      setError((e as Error).name === "AbortError" ? "Connection timed out after 5 seconds." : (e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const add = async () => {
+    if (!address.trim()) return;
+    if (desktop) {
+      setBusy(true);
+      setError("");
+      try {
+        const next = await setNodeSource("custom", address);
+        nodeProfiles.save(name, next.node_addr);
+        setCfg(next);
+        setOpen(false);
+        location.reload();
+      } catch (e) {
+        setError((e as Error).message || String(e));
+        setBusy(false);
+      }
+      return;
+    }
+    const normalized = normalizeDaemonInput(address);
+    await switchWalletd(normalized);
+    walletdProfiles.save(name, normalized);
+  };
+
+  return (
+    <>
+      <button className="connection-button" onClick={() => { setOpen(true); void refresh(); }} aria-label={`Connection: ${label}`}>
+        <Server aria-hidden="true" size={17} strokeWidth={2.2} />
+        <span><small>{desktop ? "Node" : "Wallet service"}</small><b>{label}</b></span>
+        <ChevronDown aria-hidden="true" size={15} />
+      </button>
+      {open && createPortal(
+        <div className="modalwrap" onClick={() => !busy && setOpen(false)}>
+          <div className="card modalcard connection-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="connection-modal-head">
+              <div><span className="eyebrow">Connection</span><h2>{desktop ? "Choose a ZKAS node" : "Choose a wallet service"}</h2></div>
+              <span className="status-pill good">{label}</span>
+            </div>
+            <p className="muted small">
+              {desktop
+                ? "The wallet engine and keys stay inside this app. This only changes where it reads the chain."
+                : `Hosted is easiest. A walletd you run yourself keeps your viewing key and wallet scan on your own machine. ${isNative() ? "This installed app accepts HTTPS or plain HTTP on your LAN." : "In a browser, your walletd must use HTTPS; install the app to use plain HTTP on a LAN."}`}
+            </p>
+
+            <div className="connection-list">
+              <button className={`connection-option ${(desktop ? cfg?.mode === "remote" : hosted) ? "active" : ""}`} disabled={busy} onClick={() => desktop ? void switchDesktop("remote") : void switchWalletd("")}>
+                <span><b>{desktop ? "ZKAS public node" : "Hosted wallet service"}</b><small>Works immediately</small></span><span>{(desktop ? cfg?.mode === "remote" : hosted) ? "Connected" : "Use"}</span>
+              </button>
+              {desktop && (
+                <button className={`connection-option ${cfg?.mode === "local" ? "active" : ""}`} disabled={busy} onClick={() => {
+                  if (!cfg?.node_running) {
+                    setOpen(false);
+                    location.hash = "#/node";
+                    return;
+                  }
+                  void switchDesktop("local");
+                }}>
+                  <span><b>Managed local node</b><small>Runs and syncs on this computer</small></span><span>{cfg?.mode === "local" ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
+                </button>
+              )}
+              {profiles.map((profile) => {
+                const active = desktop ? cfg?.mode === "custom" && currentProfile?.id === profile.id : currentProfile?.id === profile.id;
+                return <div className={`connection-option saved ${active ? "active" : ""}`} key={profile.id}>
+                  <button disabled={busy} onClick={() => desktop ? void switchDesktop("custom", profile) : void switchWalletd(profile.address)}>
+                    <span><b>{profile.name}</b><small className="mono">{profile.address}</small></span><span>{active ? "Connected" : "Use"}</span>
+                  </button>
+                  <button className="connection-remove" aria-label={`Remove ${profile.name}`} disabled={busy || active} onClick={() => {
+                    (desktop ? nodeProfiles : walletdProfiles).remove(profile.id);
+                    setProfiles(desktop ? nodeProfiles.load() : walletdProfiles.load());
+                  }}><Trash2 size={16} /></button>
+                </div>;
+              })}
+            </div>
+
+            <div className="connection-add">
+              <h3>Add {desktop ? "node" : "walletd"}</h3>
+              <div className="connection-add-grid">
+                <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name · Home node" />
+                <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={desktop ? "192.168.1.20:16110" : isNative() ? "192.168.1.20:8501" : "https://wallet.example.com"} />
+                <button className="btn small" disabled={busy || !address.trim()} onClick={() => void add()}>{busy ? "Checking…" : "Save & connect"}</button>
+              </div>
+            </div>
+            {desktop && !cfg?.node_binary && <p className="muted small">Managed local node is not installed yet. The Mine and Node screens can install the verified release automatically.</p>}
+            {error && <div className="msg err">{error}</div>}
+            <button className="btn ghost small" disabled={busy} onClick={() => setOpen(false)}>Close</button>
+          </div>
+        </div>,
+        document.body,
+      )}
     </>
   );
 }
@@ -1640,11 +1815,11 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
       </div>
       <div className="sub notice-slot">
         {maturing > 0.00000001 ? (
-          <>
+          <span>
             {trimFc(Math.max(0, spendable).toFixed(8))} ready to spend ·{" "}
             <span style={{ color: "var(--ember)" }}>{trimFc(maturing.toFixed(8))} arriving</span> — coins become
             spendable about 10 minutes after they land.
-          </>
+          </span>
         ) : (
           ""
         )}
@@ -2070,8 +2245,7 @@ function Onboard({
     <div className="card center">
       <h2>Welcome</h2>
       <p className="muted" style={{ marginTop: 0 }}>
-        Create a fresh shielded wallet, or restore one you already have. Every ZKas transfer is a private Orchard
-        (zk-SNARK) transaction.
+        Create a new wallet or restore yours. Every ZKAS payment is private.
       </p>
       {error && <div className="msg err">{error}</div>}
       {/* Creating before the first status answer means birthday 0 — a brand-new
@@ -2220,13 +2394,17 @@ function TxDetail({
   row,
   onClose,
   onSendAgain,
+  onLabelSaved,
 }: {
   row: ChainHistoryRow & { confs?: number };
   onClose: () => void;
   onSendAgain?: (addr: string) => void;
+  onLabelSaved?: () => void;
 }) {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState("");
+  const [label, setLabel] = useState(() => getTxLabel(row.txid));
+  const [labelState, setLabelState] = useState("");
   const contact = findContact(row.recipient);
   const kind = row.kind === "coinbase" ? "Mined" : row.kind === "received" ? "Received" : "Sent";
   const sign = row.kind === "sent" ? "−" : "+";
@@ -2262,6 +2440,22 @@ function TxDetail({
             ) : (
               <span className="conf-pill done">Confirmed on-chain</span>
             )}
+          </span>
+        </div>
+        <div className="detail-row tx-label-row">
+          <label className="k" htmlFor="tx-label">Private label</label>
+          <span className="v tx-label-editor">
+            <input id="tx-label" value={label} maxLength={160} placeholder="Order, customer, purpose…" onChange={(event) => { setLabel(event.target.value); setLabelState(""); }} />
+            <button className="btn ghost small" onClick={() => {
+              try {
+                setTxLabel(row.txid, label);
+                setLabelState("Saved on this device");
+                onLabelSaved?.();
+              } catch (error) {
+                setLabelState((error as Error).message);
+              }
+            }}>Save</button>
+            {labelState && <small>{labelState}</small>}
           </span>
         </div>
         <div className="detail-row">
@@ -2308,7 +2502,7 @@ function TxDetail({
               Send again
             </button>
           )}
-          <a className="btn ghost small" href={`${EXPLORER}/txs/${row.txid}`} target="_blank" rel="noreferrer">
+          <a className="btn ghost small" href={`#/explore/tx/${row.txid}`}>
             View on explorer
           </a>
         </div>
@@ -2330,7 +2524,7 @@ function TxDetail({
 /// data the wallet already holds — nothing is uploaded to produce it.
 function historyCsv(rows: ChainHistoryRow[]): string {
   const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  const head = ["kind", "amount_zkas", "fee_zkas", "time_utc", "daa_score", "counterparty", "memo", "txid"];
+  const head = ["kind", "amount_zkas", "fee_zkas", "time_utc", "daa_score", "counterparty", "memo", "private_label", "txid"];
   const lines = rows.map((r) =>
     [
       r.kind,
@@ -2340,6 +2534,7 @@ function historyCsv(rows: ChainHistoryRow[]): string {
       String(r.daaScore),
       displayName(r.recipient, r.recipient ?? ""),
       r.memo ?? "",
+      getTxLabel(r.txid),
       r.txid,
     ]
       .map(esc)
@@ -2471,23 +2666,6 @@ function AboutCard() {
       <a href={EXPLORER} target="_blank" rel="noreferrer">
         Explorer
       </a>
-    </div>
-  );
-}
-
-/// One honest line. It used to claim the wallet "lives in this browser" and is
-/// "connected to ZKas's public node" — both wrong in the desktop app, in the
-/// native app, and for anyone pointed at their own node.
-function Footer() {
-  return (
-    <div className="footer">
-      ZKas · shielded by default
-      {!isDesktop() && !isNative() && (
-        <>
-          <br />
-          This wallet lives in this browser — back up your seed to open it elsewhere.
-        </>
-      )}
     </div>
   );
 }
@@ -3118,11 +3296,12 @@ function Send({
   outflow: number;
 }) {
   const toast = useToast();
-  const [to, setTo] = useState(prefillTo ?? "");
-  const [amount, setAmount] = useState("");
+  const initialRequest = prefillTo ? parsePaymentUri(prefillTo) : null;
+  const [to, setTo] = useState(initialRequest?.address ?? "");
+  const [amount, setAmount] = useState(initialRequest?.amount ?? "");
   // Private note to the recipient, sealed inside their encrypted note. Supported
   // by the daemon since day one; the UI simply never offered it.
-  const [memo, setMemo] = useState("");
+  const [memo, setMemo] = useState(initialRequest?.memo ?? "");
   const [pickContact, setPickContact] = useState(false);
   // Offered after a successful send to an unknown address — the moment the user
   // actually knows who it was.
@@ -3130,7 +3309,7 @@ function Send({
   // A name SUGGESTED by a scanned QR's `label` — the payee's claim, not a contact.
   // Only ever prefills the save dialog; never auto-saved (that made the wallet
   // vouch for a stranger's address with its own anti-phishing cue).
-  const [suggestedName, setSuggestedName] = useState<string | null>(null);
+  const [suggestedName, setSuggestedName] = useState<string | null>(initialRequest?.label ?? null);
   // Consume a "Send again" prefill exactly once — otherwise every later visit to
   // this tab silently resurrects the old recipient (a mis-send waiting to happen).
   useEffect(() => {
@@ -3772,11 +3951,13 @@ function History({
   // True from the moment history is enabled until the recovery scan finishes —
   // so the tab explains the wait instead of looking empty and broken.
   const [recovering, setRecovering] = useState(false);
+  const [askRecover, setAskRecover] = useState(false);
   const [askDisable, setAskDisable] = useState(false);
   const [err, setErr] = useState("");
   const [detail, setDetail] = useState<(ChainHistoryRow & { confs?: number }) | null>(null);
   const [q, setQ] = useState("");
   const [kindFilter, setKindFilter] = useState<"all" | "received" | "sent" | "coinbase">("all");
+  const [, setLabelRevision] = useState(0);
   // Long histories render windowed — a miner wallet accrues thousands of rows
   // and a multi-thousand-button list makes the tab unusable.
   const [showAll, setShowAll] = useState(false);
@@ -3853,6 +4034,7 @@ function History({
     return (
       who.toLowerCase().includes(needle) ||
       (r.memo ?? "").toLowerCase().includes(needle) ||
+      getTxLabel(r.txid).toLowerCase().includes(needle) ||
       r.amountZkas.toFixed(8).includes(needle) ||
       r.txid.toLowerCase().includes(needle)
     );
@@ -3870,7 +4052,7 @@ function History({
     if (kindFilter !== "all" && kindFilter !== "sent") return false;
     if (!needle) return true;
     const who = `${displayName(t.to, "")} ${t.to}`.toLowerCase();
-    return who.includes(needle) || t.amountFc.toFixed(8).includes(needle) || t.txid.toLowerCase().includes(needle);
+    return who.includes(needle) || getTxLabel(t.txid).toLowerCase().includes(needle) || t.amountFc.toFixed(8).includes(needle) || t.txid.toLowerCase().includes(needle);
   });
   const historyOff = chain !== null && !chain.recoverableHistory;
   // Sends this device recorded itself (localtx, in this browser/app's storage).
@@ -3887,9 +4069,8 @@ function History({
     if (kindFilter !== "all" && kindFilter !== "sent") return false;
     if (!needle) return true;
     const who = `${displayName(t.to, "")} ${t.to}`.toLowerCase();
-    return who.includes(needle) || t.amountFc.toFixed(8).includes(needle) || t.txid.toLowerCase().includes(needle);
+    return who.includes(needle) || getTxLabel(t.txid).toLowerCase().includes(needle) || t.amountFc.toFixed(8).includes(needle) || t.txid.toLowerCase().includes(needle);
   });
-  const hasDeviceRows = deviceRows.length > 0;
 
   // Notes locked by sends still awaiting chain confirmation. Their value includes
   // the change coming back, so this is shown as "held", never as an amount sent —
@@ -3897,45 +4078,7 @@ function History({
   const heldZkas = (chain?.pendingOutgoing ?? []).reduce((s, p) => s + p.amountZkas, 0);
   const heldTxids = new Set((chain?.pendingOutgoing ?? []).map((p) => p.txid)).size;
 
-  // Only take over the whole tab when there is genuinely nothing to show. If this
-  // device already kept its own record, show it — turning on chain recovery is a
-  // separate choice the user makes deliberately, not a toll gate on data they
-  // already have.
-  if (historyOff && !hasDeviceRows) {
-    return (
-      <div className="card">
-        <h2>History</h2>
-        {heldTxids > 0 && (
-          <p className="muted small">
-            {heldTxids} outgoing transaction{heldTxids === 1 ? "" : "s"} in flight — {trimFc(heldZkas.toFixed(8))} ZKAS
-            temporarily held until it confirms (returned automatically within ~1 hour if it never does).
-          </p>
-        )}
-        <p className="muted small" style={{ marginTop: 0 }}>
-          Transaction history is <b>off</b> — the private default. No readable record of your payments is kept: no
-          dates, no recipients, no memos. (Your unspent coins themselves are of course still held by the wallet, and
-          on-chain everything stays shielded either way.)
-        </p>
-        <p className="muted small">
-          Turn it on and this wallet keeps a readable record — amounts, dates, and for your own sends the recipient and
-          memo — saved with the wallet’s sync data, so it survives restarts and follows your seed. The risk you accept:
-          anyone who obtains this wallet’s access token or file can read that record. On-chain, transactions stay fully
-          shielded either way.
-        </p>
-        <button className="btn" onClick={() => setHistory(true)} disabled={busy}>
-          {busy ? "Enabling & recovering…" : "Enable history & recover"}
-        </button>
-        <p className="muted small" style={{ marginTop: 10 }}>
-          Enabling immediately re-reads the chain to recover everything your keys can still see — mints, payments
-          received, and sends made while history was on before. Takes a minute or two. Sends made while history was off
-          carry no record for anyone, so those recover as amounts without a recipient — not even you can recover who was
-          paid.
-        </p>
-      </div>
-    );
-  }
-
-  if (pending.length === 0 && chainRows.length === 0) {
+  if (!historyOff && pending.length === 0 && chainRows.length === 0) {
     return (
       <div className="card">
         <h2>History</h2>
@@ -3963,20 +4106,18 @@ function History({
   }
   return (
     <div className="card">
-      <h2>History</h2>
-      {historyOff && (
-        <div className="sentbanner appear" style={{ alignItems: "flex-start" }}>
-          <div>
-            <b>Showing this device's own record.</b>{" "}
-            <span className="muted small">
-              These are sends this app saved locally. Payments you received, mined coins, and sends from your other
-              devices aren't listed — recovering those means turning on stored history, which keeps a readable record
-              with the wallet's sync data.
-            </span>
-          </div>
-          <button className="btn ghost small" style={{ flex: "none" }} onClick={() => setHistory(true)} disabled={busy}>
-            {busy ? "Enabling…" : "Recover full history"}
+      <div className="history-heading">
+        <h2>History</h2>
+        {historyOff && (
+          <button className="btn ghost small" onClick={() => setAskRecover(true)} disabled={busy}>
+            {busy ? "Starting…" : "Recover full history"}
           </button>
+        )}
+      </div>
+      {historyOff && (
+        <div className="history-scope">
+          <b>On this device</b>
+          <span>{txs.length === 0 ? "No saved payments" : `${txs.length} saved payment${txs.length === 1 ? "" : "s"}`}</span>
         </div>
       )}
       {fresh && (
@@ -3994,7 +4135,7 @@ function History({
           )}
         </div>
       )}
-      {allRows.length > 3 && (
+      {(historyOff ? txs.length : allRows.length) > 3 && (
         <div className="filterbar">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, note or amount" />
           {(["all", "received", "sent", "coinbase"] as const).map((k) => (
@@ -4028,6 +4169,7 @@ function History({
               <span className="mono">to {shortAddr(t.to)}</span>
               <span>{fmtTime(t.ts)}</span>
             </div>
+            {getTxLabel(t.txid) && <div className="txrow-label">{getTxLabel(t.txid)}</div>}
           </button>
         ))}
         {(showAll ? chainRows : chainRows.slice(0, HISTORY_PAGE)).map((r, ri) => (
@@ -4068,8 +4210,14 @@ function History({
                 <span className="memo">“{r.memo}”</span>
               </div>
             )}
+            {getTxLabel(r.txid) && <div className="txrow-label">{getTxLabel(r.txid)}</div>}
           </button>
         ))}
+        {historyOff && txs.length > 0 && deviceRows.length === 0 && (
+          <div className="history-empty">
+            Nothing matches that filter.
+          </div>
+        )}
       </div>
       {!showAll && chainRows.length > HISTORY_PAGE && (
         <button className="btn ghost small" onClick={() => setShowAll(true)}>
@@ -4082,22 +4230,25 @@ function History({
           temporarily held until it confirms (returned automatically within ~1 hour if it never does).
         </p>
       )}
-      <RescanButton label="Something missing?" hint="Re-read the chain to rebuild this history and recover any funds the local view lost." />
+      {!historyOff && (
+        <>
+          <RescanButton label="Something missing?" hint="Re-read the chain to rebuild this history and recover any funds the local view lost." />
 
-      <p className="muted small" style={{ marginTop: 14 }}>
-        Recovered from the chain by your viewing key — only this wallet can see any of it. Tap a row to view it on the
-        explorer (which shows the shielded transaction, not its contents).{" "}
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            setAskDisable(true);
-          }}
-        >
-          Turn history off & erase
-        </a>
-      </p>
-      {allRows.length > 0 && (
+          <p className="muted small" style={{ marginTop: 14 }}>
+            Recovered from the chain by your viewing key. Tap a payment for details.{" "}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                setAskDisable(true);
+              }}
+            >
+              Turn history off & erase
+            </a>
+          </p>
+        </>
+      )}
+      {!historyOff && allRows.length > 0 && (
         <button
           className="btn ghost small"
           onClick={() => {
@@ -4127,6 +4278,7 @@ function History({
         <TxDetail
           row={detail}
           onClose={() => setDetail(null)}
+          onLabelSaved={() => setLabelRevision((value) => value + 1)}
           onSendAgain={(addr) => {
             setDetail(null);
             onSendAnother?.(addr);
@@ -4134,6 +4286,18 @@ function History({
         />
       )}
       {err && <div className="msg err">{err}</div>}
+      {askRecover && (
+        <ConfirmDialog
+          title="Recover full history?"
+          body="Full recovery saves readable payment details with this wallet. Anyone with access to its wallet data can read them. Payments remain private on-chain. Recovery may take a few minutes."
+          confirmLabel="Agree & recover"
+          onConfirm={() => {
+            setAskRecover(false);
+            void setHistory(true);
+          }}
+          onCancel={() => setAskRecover(false)}
+        />
+      )}
       {askDisable && (
         <ConfirmDialog
           title="Turn history off?"
@@ -4165,13 +4329,15 @@ function DaemonSetting() {
   const current = getBase();
   const own = current.includes("127.0.0.1") || current.includes("localhost") || !current.includes("wallet.zkas.info");
 
-  // Accept a bare IP/host and fill in http:// and :8501 for the user, so "just
-  // paste your node's address" works. An empty box resets to the hosted default.
+  // Accept a bare IP/host and fill in its platform-safe scheme plus :8501, so
+  // "just paste your node's address" works. Empty resets to hosted default.
   const save = async (raw: string) => {
     setBusy(true);
     setError("");
     const url = normalizeDaemonInput(raw);
     try {
+      const transportError = walletdTransportError(url);
+      if (transportError) throw new Error(transportError);
       if (url) {
         // Prove a wallet service actually answers there before committing to it.
         const ctl = new AbortController();
@@ -4215,17 +4381,17 @@ function DaemonSetting() {
             and connect this wallet straight to it.
           </p>
           <p className="muted small">
-            Just enter your node's <b>IP address</b> — we add the rest. Currently using{" "}
+            Just enter your node's <b>IP address</b> — we add the rest. {isNative() ? "The installed app supports HTTPS and plain HTTP LAN connections." : "The web wallet requires HTTPS; use the installed app for plain HTTP on a LAN."} Currently using{" "}
             <span className="mono">{current}</span>.
           </p>
           {error && <div className="msg err">{error}</div>}
-          <label>Your node's IP address (or hostname)</label>
+          <label>{isNative() ? "Walletd IP address or hostname" : "HTTPS walletd URL"}</label>
           <div className="row">
             <input
               value={base}
               onChange={(e) => setB(e.target.value)}
               className="mono"
-              placeholder="185.147.157.125"
+              placeholder={isNative() ? "192.168.1.20" : "https://wallet.example.com"}
               inputMode="url"
               autoCapitalize="none"
               autoCorrect="off"
@@ -4999,77 +5165,34 @@ function BackupWallet() {
 
 function NodeSourceSetting() {
   const [cfg, setCfg] = useState<DesktopConfig | null>(null);
-  const [addr, setAddr] = useState("");
-  const [binary, setBinary] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   useEffect(() => {
-    initDesktop().then((c) => {
-      if (c) {
-        setCfg(c);
-        setAddr(c.node_addr);
-        setBinary(c.node_binary ?? "");
-      }
-    });
+    initDesktop().then(setCfg).catch((e) => setErr(String(e)));
   }, []);
   if (!cfg) return null;
-  const pick = async (mode: "remote" | "custom" | "local") => {
+  const usePublic = async () => {
     setBusy(true);
     setErr("");
     try {
-      setCfg(await setNodeSource(mode, addr || undefined, binary || undefined));
+      await setNodeSource("remote");
+      location.reload();
     } catch (e) {
       setErr(String(e));
-    } finally {
       setBusy(false);
     }
   };
+  const source = cfg.mode === "local" ? "Managed local node" : cfg.mode === "custom" ? "Your node" : "ZKAS public node";
   return (
     <div className="card">
-      <h2>Node</h2>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        Your wallet engine runs inside this app — your seed and viewing key never leave this machine. Choose which
-        node it reads the chain through:
-      </p>
+      <h2>Wallet node</h2>
+      <div className="detail-row"><span className="k">Connected through</span><span className="v">{source}</span></div>
+      <div className="detail-row"><span className="k">gRPC</span><span className="v mono">{cfg.node_addr}</span></div>
+      <p className="muted small">The embedded wallet engine keeps your keys on this computer. Node changes are checked before the wallet switches.</p>
       <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-        {(["remote", "custom", "local"] as const).map((m) => (
-          <button
-            key={m}
-            disabled={busy}
-            className={"btn small" + (cfg.mode === m ? "" : " ghost")}
-            onClick={() => pick(m)}
-          >
-            {m === "remote" ? "ZKas public node" : m === "custom" ? "Custom node" : "Local node"}
-          </button>
-        ))}
+        <button className="btn small" onClick={() => { location.hash = "#/node"; }}>Manage local node</button>
+        {cfg.mode !== "remote" && <button className="btn small ghost" disabled={busy} onClick={() => void usePublic()}>{busy ? "Checking…" : "Use public node"}</button>}
       </div>
-      {cfg.mode === "custom" && (
-        <>
-          <label style={{ marginTop: 10 }}>Node gRPC (host:port)</label>
-          <div className="row">
-            <input value={addr} onChange={(e) => setAddr(e.target.value)} className="mono" placeholder="192.168.1.10:16110" />
-            <button className="btn small" style={{ flex: "0 0 auto" }} disabled={busy} onClick={() => pick("custom")}>
-              Apply
-            </button>
-          </div>
-        </>
-      )}
-      {cfg.mode === "local" && (
-        <>
-          <label style={{ marginTop: 10 }}>zkas-node binary path</label>
-          <div className="row">
-            <input value={binary} onChange={(e) => setBinary(e.target.value)} className="mono" placeholder="/usr/local/bin/zkas-node" />
-            <button className="btn small" style={{ flex: "0 0 auto" }} disabled={busy} onClick={() => pick("local")}>
-              Apply
-            </button>
-          </div>
-          <p className="muted small" style={{ marginTop: 8 }}>
-            {cfg.node_running
-              ? "Local node is running — the app supervises it and stops it on exit."
-              : "Node not running yet — set the binary path and Apply. It syncs the chain into this app's data folder."}
-          </p>
-        </>
-      )}
       {err && <div className="msg warn">{err}</div>}
     </div>
   );
@@ -5130,6 +5253,7 @@ function DesktopEngineDown() {
 
 function Setup() {
   const [base, setB] = useState(getBase());
+  const [error, setError] = useState("");
 
   // Desktop runs the wallet engine INSIDE the app, so "the hosted service is
   // down" is both wrong and unactionable there — and the URL box is meaningless,
@@ -5151,14 +5275,22 @@ function Setup() {
         <code>zkas-walletd</code> changes is <b>privacy</b>: the hosted service can see which wallet is asking about
         which blocks, and your own daemon sees only what you already know.
       </p>
+      <p className="muted small">{isNative() ? "The installed app accepts HTTPS and plain HTTP LAN addresses." : "The web wallet requires an HTTPS wallet-service URL."}</p>
+      {error && <div className="msg err">{error}</div>}
       <label>Daemon URL</label>
       <div className="row">
-        <input value={base} onChange={(e) => setB(e.target.value)} className="mono" placeholder="http://127.0.0.1:8501" />
+        <input value={base} onChange={(e) => setB(e.target.value)} className="mono" placeholder={isNative() ? "http://192.168.1.20:8501" : "https://wallet.example.com"} />
         <button
           className="btn small"
           style={{ flex: "0 0 auto" }}
           onClick={() => {
-            setBase(base);
+            const url = normalizeDaemonInput(base);
+            const transportError = walletdTransportError(url);
+            if (transportError) {
+              setError(transportError);
+              return;
+            }
+            setBase(url);
             location.reload();
           }}
         >

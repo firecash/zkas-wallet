@@ -10,6 +10,7 @@ const ADDRESS = "zkas:p8a4neush78c56rcqraed3esy280ar2xatee3zucz39hyyxgjz80ph6mfj
 const OTHER = "zkas:pxqyg2wne2q87knpg2z046azzvr6rfrlues72te646kx2ws0vmskk4q8ntweayy6ps6c9vg97fphz7y";
 
 let current: Status;
+let historyEnabled = true;
 function base(over: Partial<Status> = {}): Status {
   return {
     has_wallet: true, address: ADDRESS, network: "mainnet", node_connected: true,
@@ -32,8 +33,16 @@ vi.mock("../src/api", async (orig) => {
     ...actual,
     api: {
       status: vi.fn(async () => current),
-      history: vi.fn(async () => ({ recoverableHistory: true, total: historyRows.length, rows: historyRows, pendingOutgoing: [] })),
-      setHistoryEnabled: vi.fn(async () => ({ recoverableHistory: true })),
+      history: vi.fn(async () => ({
+        recoverableHistory: historyEnabled,
+        total: historyEnabled ? historyRows.length : 0,
+        rows: historyEnabled ? historyRows : [],
+        pendingOutgoing: [],
+      })),
+      setHistoryEnabled: vi.fn(async (on: boolean) => {
+        historyEnabled = on;
+        return { recoverableHistory: on };
+      }),
       rescan: vi.fn(async () => ({ rescanning: true })),
       watch: vi.fn(async () => ({ address: ADDRESS })),
       create: vi.fn(async () => ({ address: ADDRESS, seed_hex: "ab".repeat(32), network: "mainnet", warning: "" })),
@@ -62,6 +71,7 @@ beforeEach(() => {
   sessionStorage.clear();
   localStorage.setItem("wallet_token", "t1");
   current = base();
+  historyEnabled = true;
 });
 
 describe("history", () => {
@@ -83,6 +93,36 @@ describe("history", () => {
     await mountApp();
     await user.click(await screen.findByRole("tab", { name: "History" }));
     expect(await screen.findByText(/Bob/)).toBeInTheDocument();
+  });
+
+  it("defaults to this device's records and asks before full recovery", async () => {
+    const user = userEvent.setup();
+    historyEnabled = false;
+    localStorage.setItem("local_txs_t1", JSON.stringify([{
+      txid: "c".repeat(64),
+      to: OTHER,
+      amountFc: 1.25,
+      feeFc: 0.01,
+      ts: Date.now(),
+      preFc: 5,
+      spentFc: 1.26,
+      pending: false,
+      confs: 2,
+    }]));
+    await mountApp();
+
+    expect(await screen.findByText("On this device")).toBeInTheDocument();
+    expect(screen.getByText("1 saved payment")).toBeInTheDocument();
+    expect(screen.getByText(/− 1.25 ZKAS/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Recover full history" }));
+    expect(await screen.findByRole("heading", { name: "Recover full history?" })).toBeInTheDocument();
+    expect(screen.getByText(/Anyone with access to its wallet data can read them/)).toBeInTheDocument();
+
+    const { api } = await import("../src/api");
+    expect(api.rescan).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Agree & recover" }));
+    await waitFor(() => expect(api.rescan).toHaveBeenCalled());
   });
 });
 

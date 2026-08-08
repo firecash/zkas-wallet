@@ -43,11 +43,19 @@ export function setBase(url: string) {
 /** The default port a self-hosted `zkas-walletd` listens on. */
 export const DEFAULT_WALLETD_PORT = 8501;
 
+/** True for installed shells, where a user-selected HTTP walletd is not mixed
+ * content from a remote web page and is useful for private LAN deployments. */
+export function allowsInsecureWalletd(): boolean {
+  return "__TAURI_INTERNALS__" in globalThis || isNative();
+}
+
 /**
  * Turn whatever the user typed into their own node's box into a full wallet-service
  * URL. The point is that "just paste your node's IP" works — nobody should have to
- * remember `http://` and `:8501`. Accepts, and normalizes to `http://<host>:8501`:
- *   185.147.157.125            → http://185.147.157.125:8501
+ * remember a scheme or `:8501`. Installed apps use HTTP for LAN nodes; the web
+ * wallet uses HTTPS because an HTTPS page cannot safely load a cleartext daemon:
+ *   native: 185.147.157.125     → http://185.147.157.125:8501
+ *   web:    wallet.example.com  → https://wallet.example.com:8501
  *   185.147.157.125:8501       → http://185.147.157.125:8501   (explicit port kept)
  *   mynode.example.com         → http://mynode.example.com:8501
  *   http(s)://…                → passed through (only trailing slash trimmed)
@@ -58,11 +66,33 @@ export function normalizeDaemonInput(raw: string): string {
   if (!s) return "";
   // Already a URL — respect the user's scheme/port exactly.
   if (/^https?:\/\//i.test(s)) return s;
-  // Bare host or host:port. Add a port only when the host has none. IPv6 in
-  // brackets ([::1]:8501) keeps its own colons; a lone host gets the default.
-  const hasPort = /^\[.*\]:\d+$/.test(s) || (!s.includes("[") && /:\d+$/.test(s));
-  if (!hasPort) s = `${s}:${DEFAULT_WALLETD_PORT}`;
-  return `http://${s}`;
+  // Bare host or host:port. IPv6 must be bracketed in a URL. In particular,
+  // `::1` is an ADDRESS, not the host `:` with port 1 — the old final-`:digits`
+  // test produced the invalid URL `http://::1`. An explicit IPv6 port remains
+  // unambiguous only in the normal `[2001:db8::1]:9000` form.
+  if (s.startsWith("[")) {
+    if (!/^\[[^\]]+\](?::\d+)?$/.test(s)) return "";
+    if (!/:\d+$/.test(s)) s = `${s}:${DEFAULT_WALLETD_PORT}`;
+  } else if ((s.match(/:/g) || []).length > 1) {
+    s = `[${s}]:${DEFAULT_WALLETD_PORT}`;
+  } else if (!/:\d+$/.test(s)) {
+    s = `${s}:${DEFAULT_WALLETD_PORT}`;
+  }
+  return `${allowsInsecureWalletd() ? "http" : "https"}://${s}`;
+}
+
+/** Explain a transport choice before fetch turns it into an opaque mixed-content
+ * failure. Native shells permit HTTP; a browser connection must use HTTPS. */
+export function walletdTransportError(url: string): string | null {
+  if (!url || allowsInsecureWalletd()) return null;
+  try {
+    if (new URL(url).protocol !== "https:") {
+      return "The web wallet can connect only to an HTTPS wallet service. Use an HTTPS URL, or use the installed desktop/mobile app for a plain HTTP LAN connection.";
+    }
+  } catch {
+    return "Enter a valid HTTPS wallet-service URL.";
+  }
+  return null;
 }
 
 // A random per-browser wallet token. On the hosted daemon this selects THIS
@@ -110,7 +140,9 @@ export interface Status {
   // to ingest safely. The chain has confirmed these; the wallet's own tree has not
   // caught up yet. Older daemons omit them — absent means "nothing pending".
   pending_in_fc?: string;
+  pending_in_sompi?: string;
   pending_out_fc?: string;
+  pending_out_sompi?: string;
   note_count: number;
   updated_unix: number;
   error: string | null;
@@ -137,12 +169,37 @@ export function loadStatusCache(): Status | null {
     return null;
   }
 }
+const statusCacheWrites = new Map<string, { meaningful: string; at: number }>();
 export function saveStatusCache(s: Status) {
   // Only a status that shows a real wallet is worth reviving; caching a
   // transient "no wallet" answer would flash the onboarding screen at startup.
   if (!s.has_wallet || !s.address) return;
   try {
-    localStorage.setItem(statusCacheKey(), JSON.stringify(s));
+    const key = statusCacheKey();
+    // `updated_unix` and scan counters move constantly. Writing their fresh JSON
+    // synchronously every second wore localStorage (and blocked the UI thread) for
+    // no visible benefit. Balance/state changes still persist immediately; pure
+    // scan progress gets a five-second checkpoint.
+    const meaningful = [
+      s.address,
+      s.synced,
+      s.warming,
+      s.node_connected,
+      s.balance_sompi,
+      s.spendable_sompi,
+      s.maturing_sompi,
+      s.pending_in_sompi,
+      s.pending_out_sompi,
+      s.note_count,
+      s.error,
+      s.missing_history,
+      s.watch_only,
+    ].join("|");
+    const now = Date.now();
+    const previous = statusCacheWrites.get(key);
+    if (previous?.meaningful === meaningful && now - previous.at < 5_000) return;
+    localStorage.setItem(key, JSON.stringify(s));
+    statusCacheWrites.set(key, { meaningful, at: now });
   } catch {
     /* storage full/blocked — cache is best-effort */
   }
@@ -277,6 +334,26 @@ export const api = {
         memo: memo?.trim() ? memo.trim() : undefined,
       },
       300_000,
+    ),
+  // Efficient multi-recipient payout for a SELF-HOSTED custodial walletd. The
+  // hosted/default wallet is watch-only and correctly refuses this endpoint;
+  // non-custodial batch signing needs a prepare-many protocol and must never be
+  // emulated by uploading the seed.
+  sendMany: (payees: { to: string; amount_sompi: string; memo?: string }[], fee?: string) =>
+    req<{ txids: string[]; tx_count: number; payees: number; paid_sompi: number; fee_sompi: number }>(
+      "POST",
+      "/api/wallet/send_many",
+      { payees, fee },
+      900_000,
+    ),
+  // One server-side note merge. As above, this exists only when walletd owns a
+  // local seed. The normal app never sends its device seed to unlock this.
+  consolidate: (fee?: number) =>
+    req<{ txid: string; consolidated: number; value_sompi: number; notes_remaining: number }>(
+      "POST",
+      "/api/wallet/consolidate",
+      { fee },
+      600_000,
     ),
   // Non-custodial payment (mobile / hardened): the daemon builds the proof from the
   // FVK and returns per-spend randomizers to sign on-device; see noncustodial.ts.

@@ -1,6 +1,7 @@
-import { Component, StrictMode, useEffect, useState, type ReactNode } from "react";
+import { Component, lazy, StrictMode, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App";
+import { HashRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Blocks, HardDrive, LayoutGrid, Pickaxe, QrCode, Server, WalletCards } from "lucide-react";
 import { LockScreen } from "./LockScreen";
 import { AppLockScreen } from "./AppLockScreen";
 import { installAutoLock, isLockEnabled, isUnlocked } from "./applock";
@@ -9,8 +10,20 @@ import { applyStoredTheme } from "./theme";
 import { initDesktop, isDesktop, vaultStatus } from "./desktop";
 import { FirstRunNode, needsNodeChoice } from "./FirstRunNode";
 import { listWallets } from "./wallets";
-import { loadStatusCache } from "./api";
+import { isNative, loadStatusCache } from "./api";
+import { internalRouteFromLink, queuePaymentLink } from "./paymentlinks";
 import "./styles.css";
+
+// Every tool page used to ship in the first JavaScript download, including QR,
+// explorer, service-directory and mining code a user may never open. Load a
+// route when it is selected so the wallet itself reaches first paint sooner.
+const WalletApp = lazy(() => import("./App"));
+const NodeRunner = lazy(() => import("./pages/NodeRunner").then((module) => ({ default: module.NodeRunner })));
+const Mining = lazy(() => import("./pages/Mining").then((module) => ({ default: module.Mining })));
+const Explorer = lazy(() => import("./pages/Explorer").then((module) => ({ default: module.Explorer })));
+const Services = lazy(() => import("./pages/Services").then((module) => ({ default: module.Services })));
+const WalletTools = lazy(() => import("./pages/WalletTools").then((module) => ({ default: module.WalletTools })));
+const SelfHost = lazy(() => import("./pages/SelfHost").then((module) => ({ default: module.SelfHost })));
 
 // On desktop the wallet is gated behind a passphrase: the embedded daemon does
 // not run (and the seed cannot be decrypted) until the user unlocks. So the boot
@@ -32,7 +45,74 @@ function Root({ locked, askNode }: { locked: boolean; askNode: boolean }) {
   // Asked after unlock: the node choice changes what the daemon connects to,
   // and there is no point configuring a connection for a wallet still locked.
   if (!nodeChosen) return <FirstRunNode onDone={() => setNodeChosen(true)} />;
-  return <App />;
+
+  return (
+    <HashRouter>
+      <Suspense fallback={<div className="route-loading"><span className="spin" /> Opening…</div>}>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/" element={<WalletApp />} />
+            <Route path="/node" element={<NodeRunner />} />
+            <Route path="/mine" element={<Mining />} />
+            <Route path="/explore" element={<Explorer />} />
+            <Route path="/explore/:kind/:id" element={<Explorer />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/tools" element={<WalletTools />} />
+            <Route path="/self-host" element={<SelfHost />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </HashRouter>
+  );
+}
+
+function AppShell() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const desktop = isDesktop();
+  const android = isNative() && (globalThis as { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.() === "android";
+  const servicesTheme = location.pathname.startsWith("/services");
+  const pages = useMemo(() => [
+    { path: "/", label: "Wallet", icon: WalletCards },
+    ...(desktop ? [{ path: "/node", label: "Node", icon: Server }] : []),
+    { path: "/mine", label: "Mine", icon: Pickaxe },
+    { path: "/explore", label: "Explore", icon: Blocks },
+    { path: "/services", label: "Services", icon: LayoutGrid },
+    ...(!android ? [{ path: "/tools", label: "Pay", icon: QrCode }] : []),
+    ...(desktop ? [{ path: "/self-host", label: "Host", icon: HardDrive }] : []),
+  ], [android, desktop]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+      const index = Number(event.key) - 1;
+      if (Number.isInteger(index) && index >= 0 && index < pages.length) {
+        event.preventDefault();
+        navigate(pages[index].path);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navigate, pages]);
+  return (
+    <div className={`app-shell${desktop ? " desktop-shell" : ""}${servicesTheme ? " services-theme" : ""}`}>
+      <nav className="app-switcher" aria-label="Main">
+        <div className="app-nav-bar">
+          <button className="app-wordmark" onClick={() => navigate("/")} aria-label="ZKAS wallet home">
+            <span>Z</span>KAS
+          </button>
+          <div className="app-page-links">
+            {pages.map((page, index) => {
+              const active = location.pathname === page.path || (page.path === "/explore" && location.pathname.startsWith("/explore/"));
+              const Icon = page.icon;
+              return <button key={page.path} title={`${page.label}${desktop ? ` · Ctrl+${index + 1}` : ""}`} aria-current={active ? "page" : undefined} className={active ? "active" : ""} onClick={() => navigate(page.path)}><Icon aria-hidden="true" size={18} strokeWidth={1.8} /><span className="app-nav-label">{page.label}</span></button>;
+            })}
+          </div>
+        </div>
+      </nav>
+      <div className="app-shell-content"><Outlet /></div>
+    </div>
+  );
 }
 
 // A render error anywhere in the tree would otherwise unmount EVERYTHING —
@@ -135,6 +215,36 @@ async function boot() {
       </ToastHost>
     </StrictMode>,
   );
+
+  const openLink = (url: string) => {
+    const route = internalRouteFromLink(url);
+    if (route) {
+      location.hash = `#${route}`;
+      return;
+    }
+    if (queuePaymentLink(url)) location.hash = "#/";
+  };
+  const webPayment = new URLSearchParams(location.search).get("payment");
+  if (webPayment) {
+    openLink(webPayment);
+    history.replaceState(null, "", `${location.pathname}${location.hash}`);
+  }
+  if ((globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()) {
+    void import("@capacitor/app").then(async ({ App: CapacitorApp }) => {
+      const launch = await CapacitorApp.getLaunchUrl();
+      if (launch?.url) openLink(launch.url);
+      await CapacitorApp.addListener("appUrlOpen", ({ url }) => openLink(url));
+    }).catch(() => {});
+  }
+  // Installable web app with an OFFLINE UI shell. The service worker explicitly
+  // excludes every wallet/chain API, so offline never means showing cached money.
+  // Native bundles ship their assets with the application and already have a
+  // native background worker. A browser service worker inside Capacitor can
+  // retain an obsolete frontend after an app update, so only enable the PWA
+  // cache in an actual web browser.
+  if (!isDesktop() && !isNative() && "serviceWorker" in navigator && location.protocol === "https:") {
+    void navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
 }
 
 boot();

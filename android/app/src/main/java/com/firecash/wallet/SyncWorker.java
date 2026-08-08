@@ -68,16 +68,28 @@ public class SyncWorker extends Worker {
         if (!status.optBoolean("has_wallet", false)) return Result.success();
         // Balance + incoming-not-yet-settled: both are "money that is the user's",
         // and pending_in is how a just-broadcast payment is seen ~1s after it lands.
-        BigInteger total = new BigInteger(status.optString("balance_sompi", "0"))
-            .add(new BigInteger(status.optString("pending_in_sompi", "0")));
+        BigInteger total;
+        try {
+            total = new BigInteger(status.optString("balance_sompi", "0"))
+                .add(new BigInteger(status.optString("pending_in_sompi", "0")));
+        } catch (NumberFormatException e) {
+            // Malformed remote data is not a payment and must not crash/retry-loop
+            // a periodic worker. A later valid status refreshes the baseline.
+            return Result.success();
+        }
 
         String last = p.getString("lastTotalSompi", null);
         p.edit().putString("lastTotalSompi", total.toString()).apply();
+        WalletWidget.refreshAll(getApplicationContext());
         // First run only records the baseline — announcing the whole balance as
         // "received" is exactly the lie the in-app announcement avoids too.
-        if (last != null && total.compareTo(new BigInteger(last)) > 0) {
-            BigInteger delta = total.subtract(new BigInteger(last));
-            notifyPayment(formatZkas(delta));
+        if (last != null) {
+            try {
+                BigInteger previous = new BigInteger(last);
+                if (total.compareTo(previous) > 0) notifyPayment(formatZkas(total.subtract(previous)));
+            } catch (NumberFormatException ignored) {
+                // The valid current value written above repairs the baseline.
+            }
         }
         return Result.success();
     }

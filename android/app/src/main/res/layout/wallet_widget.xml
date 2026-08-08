@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:padding="16dp"
+    android:background="@drawable/widget_background">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ZKAS" android:textColor="#66F0B4" android:textStyle="bold" android:textSize="12sp" />
+    <TextView android:id="@+id/widget_balance" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Open to sync" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="22sp" android:maxLines="1" android:ellipsize="end" />
+    <TextView android:id="@+id/widget_state" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Tap to open wallet" android:textColor="#AAB2C0" android:textSize="11sp" />
+</LinearLayout>

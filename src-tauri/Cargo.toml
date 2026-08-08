@@ -9,18 +9,31 @@ license = "ISC"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-shell = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-autostart = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rand = "0.8"
 log = "0.4"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "net", "time"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "net", "time", "process", "io-util", "fs"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+futures-util = "0.3"
+sha2 = "0.10"
+hex = "0.4"
+zip = { version = "2.2", default-features = false, features = ["deflate"] }
 # The wallet daemon as a library: REST API + sync loops + Orchard engine.
 # Path dep: rusty-kaspa checked out as a sibling of this repo.
 zkas-walletd = { path = "../../rusty-kaspa/zkas-walletd" }
 kaspa-core = { path = "../../rusty-kaspa/core" }
+kaspa-addresses = { path = "../../rusty-kaspa/crypto/addresses" }
+kaspa-grpc-client = { path = "../../rusty-kaspa/rpc/grpc/client" }
+kaspa-rpc-core = { path = "../../rusty-kaspa/rpc/core" }
+kaspa-consensus-core = { path = "../../rusty-kaspa/consensus/core" }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

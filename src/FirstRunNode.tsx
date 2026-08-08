@@ -24,9 +24,8 @@ export function markNodeChoiceMade() {
 }
 
 export function FirstRunNode({ onDone }: { onDone: () => void }) {
-  const [mode, setMode] = useState<"remote" | "custom" | "local">("remote");
+  const [mode, setMode] = useState<"remote" | "custom">("remote");
   const [addr, setAddr] = useState("");
-  const [binary, setBinary] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -34,10 +33,9 @@ export function FirstRunNode({ onDone }: { onDone: () => void }) {
     e.preventDefault();
     setErr("");
     if (mode === "custom" && !addr.trim()) return setErr("Enter the address of your node (host:port).");
-    if (mode === "local" && !binary.trim()) return setErr("Choose the kaspad binary to run.");
     setBusy(true);
     try {
-      await setNodeSource(mode, addr.trim() || undefined, binary.trim() || undefined);
+      await setNodeSource(mode, addr.trim() || undefined);
       markNodeChoiceMade();
       onDone();
     } catch (e2) {
@@ -70,18 +68,11 @@ export function FirstRunNode({ onDone }: { onDone: () => void }) {
           </span>
         </label>
         {mode === "custom" && (
-          <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="127.0.0.1:16110" />
+          <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="127.0.0.1:16810" />
         )}
 
-        <label className="choice">
-          <input type="radio" checked={mode === "local"} onChange={() => setMode("local")} />
-          <span>
-            <b>Run a node here</b> — most private, and the wallet supervises it. Needs a kaspad binary and a full chain
-            download.
-          </span>
-        </label>
-        {mode === "local" && (
-          <input value={binary} onChange={(e) => setBinary(e.target.value)} placeholder="/path/to/kaspad" />
+        {mode === "remote" && (
+          <p className="muted small">You can install and switch to a fully managed local node from the Node page later.</p>
         )}
 
         {err && <div className="msg err">{err}</div>}

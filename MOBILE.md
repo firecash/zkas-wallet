@@ -1,7 +1,7 @@
-# FireCash mobile wallet
+# ZKas mobile wallet
 
-The FireCash wallet ships as a native **Android + iOS** app that wraps the same static SPA
-serving [wallet.firecash.info](https://wallet.firecash.info), via
+The ZKas wallet ships as a native **Android + iOS** app that wraps the same static SPA
+serving [wallet.zkas.info](https://wallet.zkas.info), via
 [**Capacitor**](https://capacitorjs.com/). One codebase, three targets (web, Android, iOS).
 
 **The app is non-custodial.** The seed is generated on the device, in WebAssembly, and is never
@@ -18,8 +18,8 @@ drives the SDK directly). iOS still needs macOS + Xcode.
 ```bash
 npm install
 
-# one-time: generate the iOS project (android/ is committed; ios/ is not)
-npm run mobile:add:ios            # macOS only
+# refresh both committed native projects after frontend/plugin changes
+npm run mobile:sync
 
 ./scripts/build-android.sh          # debug APK       → android/app/build/outputs/apk/debug/
 ./scripts/build-android.sh release  # signed APK+AAB  → .../apk/release/, .../bundle/release/
@@ -70,14 +70,18 @@ POST /api/wallet/submit {sigs}  ──────────► injects the si
 
 The daemon refuses every spend path for such a wallet (`/send`, `/consolidate`, `/sign`,
 `/reveal` → **403**): it has no seed to spend with. Verified end-to-end on mainnet — a
-watch-only-registered wallet spent 1 FC in tx
+watch-only-registered wallet spent 1 ZKAS in tx
 `35dd94a1d8d20d8b19e1b70531f105736071876945f04b2028d5b97fdeff43ff`, signed on the device.
 
 **Honest tradeoff:** the daemon sees the FVK, so it can *watch* your balance and history — a
-**privacy** cost, not a **custody** one. Run your own `firecash-walletd` (override the daemon URL
+**privacy** cost, not a **custody** one. Run your own `zkas-walletd` (override the daemon URL
 in the app) and even that goes away. Closing it for hosted users needs in-browser Halo 2 proving
 (large WASM, seconds-long proofs on a phone) — feasible (Zcash's WebZjs does it), and gated behind
 the same `bridgetree` work as the O(log N) witness rebuild.
+
+The installed Android and iOS apps may connect directly to `http://<LAN-IP>:8501`. This is
+intentional for a private network where a public TLS certificate is normally unavailable. The
+hosted web wallet requires HTTPS and rejects a cleartext walletd URL before trying to connect.
 
 The **Local** tab is fully offline: generate a cold wallet, derive an address, sign and verify
 messages, with no daemon at all.
@@ -91,6 +95,14 @@ messages, with no daemon at all.
   fetch and works offline and under the `capacitor://` scheme.
 - On native there is no same-origin `/daemon` to proxy to, so `src/api.ts` defaults to the hosted
   daemon's absolute URL. A self-hoster overrides it in the app.
+- iOS uses CSS safe-area insets with Capacitor's native content inset disabled, avoiding doubled
+  top/bottom spacing on notched phones and iPad split view.
+- The responsive shell uses five large bottom actions on phones. Desktop-only Node and Host
+  controls never consume mobile navigation space; narrow desktop windows retain a scrollable top bar.
+- `zkas:` and `firecash:` links open a pre-filled Send screen. Android also accepts shared payment
+  text and launcher shortcuts; iOS uses the same routes through Capacitor's URL bridge.
+- The browser PWA caches only static UI assets. Capacitor does not register that service worker,
+  preventing an installed native update from reopening an obsolete web bundle.
 
 ## Background sync (Android, opt-in)
 
@@ -108,3 +120,7 @@ No key material is involved — the worker holds only the wallet token (the same
 app uses) against a watch-only daemon. The first wake records a baseline and announces nothing, so
 enabling it never fires a "you received your entire balance" notification. Wallet switches and
 daemon-URL changes reload the app, and the boot path re-points the worker at the active wallet.
+
+The optional Android home widget reads that same last-synced balance from local preferences. It
+does not contact walletd itself and contains no key. If the saved value is missing or corrupt it
+shows “Open to sync” instead of crashing the launcher.

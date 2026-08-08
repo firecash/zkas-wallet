@@ -1,8 +1,8 @@
 # zkas-wallet
 
 A lightweight web **and mobile** wallet for
-**[ZKas](https://github.com/firecash/zkas-rusty)** — the private-by-default,
-shielded (Orchard / Halo 2) rusty-kaspa fork. Create a wallet, receive to a shielded
+**[ZKas](https://github.com/firecash/zkas-rusty)** — the private-by-default network
+combining GHOSTDAG/kHeavyHash with Orchard/Halo 2. Create a wallet, receive to a shielded
 address, and send private payments straight from the browser, the desktop app, or the
 native Android app.
 
@@ -34,6 +34,14 @@ which owns the seed, scans the chain, builds Orchard proofs, and submits transac
 - **Sign / verify** — prove control of an address without spending (viewing-key disclosure).
 - **Self-hosted or hosted** — point it at your own local daemon for full non-custodiality,
   or use the hosted daemon with a per-browser wallet token.
+- **All-in-one desktop** — install and supervise a local ZKas node, run direct
+  ZKAS or KAS+ZKAS mining, connect an ASIC, and inspect live service logs/status.
+- **In-app network explorer** — live BlockDAG/network/privacy data and block/transaction
+  details without pretending shielded addresses have public balances.
+- **Payments** — amount/memo request QR, POS mode, private transaction labels,
+  accounting export, and guarded self-hosted batch/consolidation tools.
+- **Platform integration** — desktop tray/start-on-boot, mobile payment links,
+  Android shortcuts/widget/background notifications, and a safe offline PWA shell.
 
 ## Custody model
 
@@ -43,17 +51,19 @@ overridable in the UI):
 | Mode | Daemon | Who holds the seed | Notes |
 |---|---|---|---|
 | **Hosted web** (default) | same-origin `/<origin>/daemon` → `zkas-walletd` on the server | **only your browser** — the daemon gets the viewing key, not the seed | non-custodial: the seed is generated in-browser and the device signs, so the daemon **cannot spend**. Residual risk is the served page code (mitigated by a strict CSP) and the seed sitting in browser storage — back it up and clear storage loses nothing but the local copy |
-| **Self-hosted web** | your own `http://127.0.0.1:8501` | **only your machine** | fully non-custodial; the seed never leaves localhost |
+| **Self-hosted web** | your own **HTTPS** walletd endpoint | **only your machine/server** | fully non-custodial. The hosted HTTPS page cannot connect to a cleartext HTTP service; use an installed app for HTTP on a LAN |
 | **Desktop** (Tauri app) | an **embedded** `zkas-walletd`, on a random loopback port with a per-install token | **only your machine** | fully non-custodial; seed files live in the OS app-data dir and are decrypted at load by a passphrase that is never written. mac / Linux / Windows |
-| **Mobile** (Android app) | hosted or your own — either way **watch-only** | **only your device** | non-custodial: the seed is generated on-device (WebAssembly) and the daemon is registered with the **full viewing key only**, so it can watch and build proofs but **cannot sign or spend**. See [`MOBILE.md`](./MOBILE.md) |
+| **Mobile** (Android/iOS app) | hosted HTTPS or your own HTTPS/**HTTP LAN** walletd | **only your device** | non-custodial: the seed is generated on-device (WebAssembly) and the daemon receives the **full viewing key only**. Installed apps permit a direct cleartext LAN service; the browser does not. See [`MOBILE.md`](./MOBILE.md) |
 | **Paper** (cold) | none | **you, offline** | derive an address and receive with no daemon at all; import the seed later to spend |
 
 To go self-hosted, run `zkas-walletd` locally (see the
 [core repo](https://github.com/firecash/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet))
-and set the daemon URL to `http://127.0.0.1:8501`.
+and select it from the connection control. Use HTTPS from the web wallet; the installed
+mobile app may use `http://<LAN-IP>:8501`. Desktop already runs walletd over private loopback HTTP
+and accepts custom chain-node endpoints as `host:port`.
 
-> **🔑 Keeping the server powerless.** Only the **hosted web default** trusts a remote daemon
-> with the seed. Everywhere else the seed stays with you: the web **Local** tab runs the
+> **🔑 Keeping the server powerless.** The current hosted wallet sends only a viewing key to
+> the remote daemon. The spend seed stays with you: the web **Local** tab runs the
 > [`zkas-signer`](https://github.com/firecash/zkas-signer) in your browser (WebAssembly) to
 > generate a cold wallet, derive an address and sign/verify **without the seed leaving your
 > device**; the **desktop** app runs its own loopback daemon; and the **mobile** app is fully
@@ -83,6 +93,19 @@ zkas-walletd --network mainnet --rpc-server 127.0.0.1:16110 \
 ```
 
 Then set the daemon URL in the app footer to `http://127.0.0.1:8501`.
+
+## All-in-one desktop
+
+The signed desktop application has seven focused pages: **Wallet**, **Node**, **Mine**,
+**Explore**, **Services**, **Pay** and **Host**. A beginner can install pinned, SHA-256-verified node/mining components
+from the UI; no binary paths or command-line flags are required. Advanced users
+can use existing ZKas and Kaspa gRPC nodes instead.
+
+The managed port layout deliberately keeps both chains separate: ZKas RPC/P2P is
+`16810/16811`, Kaspa parent RPC/P2P is `16110/16111`, and local ASIC Stratum is
+`5555` by default. RPC binds to loopback even when inbound P2P is enabled. See
+[`planfront2.txt`](./planfront2.txt) for the complete implementation, platform
+matrix, security rules and verified release sources.
 
 ## Build & deploy
 
@@ -114,6 +137,11 @@ Requests carry `X-Wallet-Token`. See `src/api.ts` for the typed client.
 | `GET`  | `/api/wallet/reveal` | reveal the recovery seed |
 | `POST` | `/api/wallet/import` | import from seed (`seed_hex`, optional `birthday`) |
 | `POST` | `/api/wallet/send` | send (`to`, `amount_fc`, optional `fee`) |
+| `POST` | `/api/wallet/send-many` | self-hosted batch payout |
+| `POST` | `/api/wallet/consolidate` | self-hosted note consolidation |
+| `POST` | `/api/wallet/watch` | register a viewing-key-only device wallet |
+| `POST` | `/api/wallet/prepare` | prepare/prove a device-signed payment |
+| `POST` | `/api/wallet/submit` | submit device signatures and broadcast |
 | `POST` | `/api/wallet/sign` | sign a message |
 | `POST` | `/api/verify` | verify a signature |
 
@@ -146,8 +174,9 @@ Requests carry `X-Wallet-Token`. See `src/api.ts` for the typed client.
 
 ## Tech
 
-React 19 · TypeScript · Vite · `qrcode`. No key material, no analytics, no external calls
-beyond your chosen daemon.
+React 19 · TypeScript · Vite · Tauri 2 · `qrcode`. No analytics. Network calls are
+limited to the selected wallet/node services, pinned component downloads and
+read-only chain data.
 
 ## License
 
