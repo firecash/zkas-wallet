@@ -16,41 +16,58 @@ on:
         description: "Release tag to attach the builds to"
         required: true
         default: "v0.3.1"
+      platforms:
+        description: "Comma-separated targets, or 'all' (windows-x86_64, linux-x86_64, linux-aarch64, macos-x86_64, macos-aarch64)"
+        required: false
+        default: "all"
   push:
     # Fire on the single release tag so desktop assets land on the SAME release
     # as the mobile/web build (v0.3.11 etc.), not a separate desktop-v* release.
     tags: ["v*"]
 
 jobs:
+  # Pick the matrix before spawning runners, so a request for one platform does not queue
+  # five. A job-level `if` cannot see the `matrix` context, so the selection has to happen
+  # here and be handed over as JSON.
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+    steps:
+      - id: pick
+        shell: bash
+        run: |
+          ALL='[
+            {"os":"windows-latest","name":"windows-x86_64","target":"x86_64-pc-windows-msvc","bundles":"msi,nsis"},
+            {"os":"ubuntu-22.04","name":"linux-x86_64","target":"x86_64-unknown-linux-gnu","bundles":"deb,appimage"},
+            {"os":"ubuntu-22.04-arm","name":"linux-aarch64","target":"aarch64-unknown-linux-gnu","bundles":"deb,appimage"},
+            {"os":"macos-14","name":"macos-x86_64","target":"x86_64-apple-darwin","bundles":"app,dmg"},
+            {"os":"macos-14","name":"macos-aarch64","target":"aarch64-apple-darwin","bundles":"app,dmg"}
+          ]'
+          WANT='${{ github.event.inputs.platforms }}'
+          # A tag push has no inputs, and must keep building everything.
+          if [ -z "$WANT" ] || [ "$WANT" = "all" ]; then
+            echo "matrix=$(echo "$ALL" | jq -c '{include: .}')" >> "$GITHUB_OUTPUT"
+          else
+            SEL=$(echo "$ALL" | jq -c --arg w "$WANT" '[ .[] | select( ($w | split(",") | map(gsub("^ +| +$";"")) ) as $n | .name as $x | $n | index($x) ) ]')
+            COUNT=$(echo "$SEL" | jq 'length')
+            if [ "$COUNT" -eq 0 ]; then
+              echo "No target matched '$WANT'. Valid: windows-x86_64 linux-x86_64 linux-aarch64 macos-x86_64 macos-aarch64" >&2
+              exit 1
+            fi
+            echo "Building $COUNT target(s): $(echo "$SEL" | jq -r '[.[].name] | join(", ")')"
+            echo "matrix=$(echo "$SEL" | jq -c '{include: .}')" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: setup
     permissions:
       contents: write
     strategy:
       # One platform failing must not deny the others a release — a missing
       # Windows build is bad, but withholding the Linux one too is worse.
       fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            name: windows-x86_64
-            target: x86_64-pc-windows-msvc
-            bundles: msi,nsis
-          - os: ubuntu-22.04
-            name: linux-x86_64
-            target: x86_64-unknown-linux-gnu
-            bundles: deb,appimage
-          - os: ubuntu-22.04-arm
-            name: linux-aarch64
-            target: aarch64-unknown-linux-gnu
-            bundles: deb,appimage
-          - os: macos-14
-            name: macos-x86_64
-            target: x86_64-apple-darwin
-            bundles: app,dmg
-          - os: macos-14
-            name: macos-aarch64
-            target: aarch64-apple-darwin
-            bundles: app,dmg
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
     steps:
       # The Tauri crate depends on ../../rusty-kaspa/zkas-walletd relative to
