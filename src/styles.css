@@ -1472,3 +1472,23 @@ select { appearance: none; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .qa:active:not(:disabled) { transform: none; }
 }
+
+/* A way out of Receive/Send, which no tab lights up any more. Quiet by design — it is
+   an escape hatch, not a call to action, and it must not compete with the primary
+   buttons that got you here. */
+.pane-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 14px;
+  padding: 8px 14px 8px 4px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 550;
+  cursor: pointer;
+  border-radius: 10px;
+}
+.pane-back:hover { color: var(--ink); background: var(--ember-soft); }

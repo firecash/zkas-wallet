@@ -90,7 +90,7 @@ describe("receive", () => {
   it("shows the address, a copy action, and the privacy assurance", async () => {
     const user = userEvent.setup();
     await mountApp();
-    await user.click(await screen.findByRole("tab", { name: "Receive" }));
+    await user.click(await screen.findByRole("button", { name: "Receive ZKAS" }));
     // The address itself, and the one-tap copy the sharing flow depends on.
     expect(await screen.findByText(/Copy address/)).toBeInTheDocument();
     // The privacy promise that distinguishes this wallet, right where you share.

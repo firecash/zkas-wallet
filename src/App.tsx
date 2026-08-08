@@ -198,9 +198,13 @@ const ROOMY = () => isDesktop() || (typeof window !== "undefined" && window.inne
 // a user's entire configuration surface sat under their money at all times, which
 // reads like a debug console rather than a wallet. Everything that is not
 // receiving, sending, or looking at history now lives behind the gear.
-const TABS: Tab[] = ROOMY()
-  ? ["receive", "send", "history", "signatures", "settings"]
-  : ["receive", "send", "history", "settings"];
+/// Receive and Send are NOT here: they are the two primary buttons under the balance.
+///
+/// Listing them again in the tab row put the same action on screen twice, two sizes and
+/// two styles apart, which reads as two different features rather than one. The tab row
+/// is now what it should always have been — where you go to LOOK at things — and the
+/// buttons are what you press to DO things.
+const TABS: Tab[] = ROOMY() ? ["history", "signatures", "settings"] : ["history", "settings"];
 
 /// Do two status snapshots differ in anything the UI renders?
 ///
@@ -381,7 +385,10 @@ export default function App() {
   // the 1s poll then corrects anything stale within a second.
   const [status, setStatus] = useState<Status | null>(() => loadStatusCache());
   const [reachable, setReachable] = useState<boolean | null>(() => (loadStatusCache() ? true : null));
-  const [tab, setTab] = useState<Tab>("receive");
+  // Opens on History, not Receive. "Receive" is now a button, and landing inside it
+  // meant every launch started with a QR code nobody asked for; what a person wants on
+  // opening a wallet is to see that their money is there and what happened to it.
+  const [tab, setTab] = useState<Tab>("history");
   // Switching tabs aligns the new pane under the tab bar so its form/content is
   // instantly usable — e.g. tapping Send lands you on the address field, not on
   // the balance hero with the form below the fold. Skipped on first render so
@@ -862,6 +869,14 @@ export default function App() {
               </button>
             ))}
           </div>
+          {/* Receive and Send are reached by the buttons above, so no tab is lit while
+              one is open. That needs its own way out — without it the only escape is a
+              tab that changes the subject. */}
+          {(tab === "receive" || tab === "send") && (
+            <button className="pane-back" onClick={() => setTab("history")} aria-label="Close">
+              ← Back
+            </button>
+          )}
           {/* key remounts the pane on tab switch so the entrance transition plays. */}
           <div className="pane appear" key={tab}>
             {tab === "receive" && <Receive status={status} />}

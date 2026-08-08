@@ -133,24 +133,32 @@ describe("the wallet a user actually touches", () => {
     // birthday) instead of dumping the user into onboarding.
     localStorage.setItem("device_seed_testtoken", "ab".repeat(32));
     await mountApp();
-    await screen.findByRole("tab", { name: "Receive" });
+    await screen.findByRole("button", { name: "Receive ZKAS" });
     statusOverride = { has_wallet: false, address: null };
     const { api } = await import("../src/api");
     // After the 10-poll missing tolerance, the poll fires the automatic re-watch.
     await waitFor(() => expect(api.watch).toHaveBeenCalled(), { timeout: 20000 });
   }, 30000);
 
-  it("opens on Receive and shows the address", async () => {
+  // Opening no longer lands inside Receive. A wallet's first screen should answer
+  // "is my money there and what happened to it", not present a QR code nobody asked
+  // for; receiving is now one deliberate tap away instead of the default state.
+  it("opens on the wallet itself, with Receive one tap away", async () => {
+    const user = userEvent.setup();
     await mountApp();
-    expect(await screen.findByRole("tab", { name: "Receive" })).toBeInTheDocument();
+    const receive = await screen.findByRole("button", { name: "Receive ZKAS" });
+    // Not already showing the address on launch...
+    expect(screen.queryByText(ADDRESS)).toBeNull();
+    // ...and one tap gets there.
+    await user.click(receive);
     await waitFor(() => expect(screen.getByText(ADDRESS)).toBeInTheDocument());
   });
 
   it("switches tabs, and Settings is reachable from the gear", async () => {
     const user = userEvent.setup();
     await mountApp();
-    await waitFor(() => expect(screen.getByRole("tab", { name: "Send" })).toBeInTheDocument());
-    await user.click(screen.getByRole("tab", { name: "Send" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send ZKAS" })).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Send ZKAS" }));
     expect(await screen.findByText(/Recipient shielded address/)).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Settings" }));
     expect(await screen.findByText(/App lock/)).toBeInTheDocument();
@@ -159,8 +167,8 @@ describe("the wallet a user actually touches", () => {
   it("keeps what the user typed while the 1s poll runs — the paste/scroll bug", async () => {
     const user = userEvent.setup();
     await mountApp();
-    await waitFor(() => expect(screen.getByRole("tab", { name: "Send" })).toBeInTheDocument());
-    await user.click(screen.getByRole("tab", { name: "Send" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send ZKAS" })).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Send ZKAS" }));
 
     const to = await screen.findByPlaceholderText("zkas:…");
     await user.type(to, OTHER);
@@ -178,8 +186,8 @@ describe("the wallet a user actually touches", () => {
   it("rejects a malformed amount instead of silently disabling Send", async () => {
     const user = userEvent.setup();
     await mountApp();
-    await waitFor(() => expect(screen.getByRole("tab", { name: "Send" })).toBeInTheDocument());
-    await user.click(screen.getByRole("tab", { name: "Send" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send ZKAS" })).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Send ZKAS" }));
     const amount = await screen.findByPlaceholderText("0.00");
     await user.type(amount, "1.2.3");
     expect(amount).toHaveValue("1.23"); // one decimal point survives
@@ -191,8 +199,8 @@ describe("the wallet a user actually touches", () => {
   it("warns when paying yourself", async () => {
     const user = userEvent.setup();
     await mountApp();
-    await waitFor(() => expect(screen.getByRole("tab", { name: "Send" })).toBeInTheDocument());
-    await user.click(screen.getByRole("tab", { name: "Send" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send ZKAS" })).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Send ZKAS" }));
     await user.type(await screen.findByPlaceholderText("zkas:…"), ADDRESS);
     expect(await screen.findByText(/your own address/i)).toBeInTheDocument();
   });
@@ -200,8 +208,8 @@ describe("the wallet a user actually touches", () => {
   it("fills amount and note from a scanned payment request", async () => {
     const user = userEvent.setup();
     await mountApp();
-    await waitFor(() => expect(screen.getByRole("tab", { name: "Send" })).toBeInTheDocument());
-    await user.click(screen.getByRole("tab", { name: "Send" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send ZKAS" })).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Send ZKAS" }));
     const to = await screen.findByPlaceholderText("zkas:…");
     // Paste a full request the way the QR scanner hands one over.
     fireEvent.change(to, { target: { value: `${OTHER}?amount=2.5&memo=Invoice%2041` } });
@@ -212,7 +220,7 @@ describe("the wallet a user actually touches", () => {
 
   it("does not offer a wallet switcher until a second wallet exists", async () => {
     await mountApp();
-    await waitFor(() => expect(screen.getByRole("tab", { name: "Receive" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Receive ZKAS" })).toBeInTheDocument());
     expect(screen.queryByLabelText("Switch wallet")).toBeNull();
 
     const { addWallet } = await import("../src/wallets");
@@ -242,7 +250,7 @@ describe("dialogs leave nothing behind", () => {
 
   it("never leaves a fixed overlay mounted on first paint", async () => {
     await mountApp();
-    await waitFor(() => expect(screen.getByRole("tab", { name: "Receive" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Receive ZKAS" })).toBeInTheDocument());
     expect(document.querySelector(".modalwrap")).toBeNull();
     expect(document.querySelector(".scan-overlay")).toBeNull();
   });
