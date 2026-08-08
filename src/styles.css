@@ -444,11 +444,15 @@ a { color: var(--ember); }
   background: transparent;
   border: none;
   color: var(--muted);
-  padding: 9px 12px;
+  /* 44px minimum, which is the smallest target a thumb hits reliably. These were
+     9px/13px — fine with a mouse, a coin-toss on a phone, and this row is now the
+     only way to reach History and Settings. */
+  min-height: 44px;
+  padding: 11px 14px;
   border-radius: 999px;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 550;
   font-family: inherit;
   white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease;
@@ -1407,4 +1411,64 @@ select { appearance: none; cursor: pointer; }
 .feerow-chev.open { transform: rotate(-135deg) translate(-2px, -2px); }
 @media (prefers-reduced-motion: reduce) {
   .feerow-chev { transition: none; }
+}
+
+/* ── Primary actions ──────────────────────────────────────────────────────────
+   Sending and receiving are what a wallet is FOR. They used to be two tabs — 13px
+   text in a 9px-padded pill, ranked equal with "History" and a settings gear, and
+   well under the ~44px a thumb reliably hits. This makes them the two largest
+   targets on the screen, directly under the balance, which is where every wallet
+   people actually rate highly puts them.
+
+   Receive leads visually (filled) because it is the safe, common action; Send is
+   outlined so the destructive-ish one takes a fraction more deliberation. */
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.qa {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 56px;                 /* comfortably above the 44px touch minimum */
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.qa-icon {
+  font-size: 19px;
+  line-height: 1;
+  font-weight: 800;
+}
+.qa-receive {
+  background: var(--ember);
+  color: var(--ember-ink);
+  box-shadow: 0 4px 18px rgba(23, 214, 190, 0.28);
+}
+.qa-receive:hover { filter: brightness(1.06); }
+.qa-send {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--border);
+}
+.qa-send:hover:not(:disabled) { background: var(--ember-soft); border-color: var(--ember); }
+.qa:active:not(:disabled) { transform: scale(0.975); }
+/* Disabled Send is a STATE, not a dead button: it stays legible so the status line
+   above it ("Setting up your wallet…") reads as the explanation. A greyed-out
+   control the user cannot read is just a broken one. */
+.qa:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qa:active:not(:disabled) { transform: none; }
 }

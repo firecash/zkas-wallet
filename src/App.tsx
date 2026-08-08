@@ -810,6 +810,37 @@ export default function App() {
       {reachable && !freshSeed && status && status.has_wallet && (
         <>
           <BalanceHero status={status} txs={txs} />
+          {/* The two things people open a wallet to DO, as the two biggest targets on
+              the screen.
+              Before this they were tabs — 13px text in a 9px-padded pill, the same
+              weight as "History" and the settings gear, and well under the ~44px a
+              thumb needs. Sending and receiving are not navigation; every wallet people
+              rate highly (Kaspium, Cake, Phantom) puts them here, directly under the
+              balance, and leaves the tabs for browsing.
+              Send explains itself rather than failing: while the wallet cannot spend yet
+              it is disabled and says why, instead of accepting a tap and erroring. */}
+          <div className="quick-actions">
+            <button
+              className="qa qa-receive"
+              onClick={() => setTab("receive")}
+              aria-label="Receive ZKAS"
+            >
+              <span className="qa-icon" aria-hidden="true">↓</span>
+              <span className="qa-label">Receive</span>
+            </button>
+            <button
+              className="qa qa-send"
+              onClick={() => setTab("send")}
+              // Same condition as `canSpend` in the status model: a synced wallet may
+              // spend, including while it is still warming up. An unsynced one may not,
+              // because it does not yet know about all of its own notes.
+              disabled={!status.synced}
+              aria-label="Send ZKAS"
+            >
+              <span className="qa-icon" aria-hidden="true">↑</span>
+              <span className="qa-label">Send</span>
+            </button>
+          </div>
           <div className="tabs" role="tablist" aria-label="Wallet sections">
             {TABS.map((t) => (
               <button
