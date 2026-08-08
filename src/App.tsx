@@ -1069,19 +1069,20 @@ function HostedNotice() {
             Not alarmist, because the seed genuinely never leaves the device either way —
             but a user choosing where to keep real money deserves to know the difference
             rather than discover it. */}
-        Signed on your device — <b>your seed never leaves it</b>.{" "}
+        {/* One recommendation, not a menu.
+            This had grown into a list — app, paper wallet, self-host — and a banner that
+            offers three options gives none of them any weight. Self-hosting is for a
+            handful of people and its links already live in the Daemon card; a paper
+            wallet answers a different question entirely. The one thing worth saying to
+            somebody holding real money in a browser tab is: the app is safer, go get it. */}
+        Signed on your device — <b>your seed never leaves it</b>. But a browser is the least
+        secure place to keep a wallet —{" "}
         <b>
-          For stronger security,{" "}
           <a href="https://github.com/firecash/firecash-wallet/releases" target="_blank" rel="noreferrer">
-            get the app
+            consider getting the app
           </a>
         </b>
-        : this page re-downloads its code from a server every visit, so it is only as safe as
-        that server. Also:{" "}
-        <a href="https://zkas.info/paper-wallet.html" target="_blank" rel="noreferrer">paper wallet</a>{" "}
-        ·{" "}
-        <a href="https://github.com/firecash/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet"
-           target="_blank" rel="noreferrer">self-host</a>.
+        .
       </div>
     </div>
   );
