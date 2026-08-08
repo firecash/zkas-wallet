@@ -4,4 +4,14 @@
     <string name="title_activity_main">ZKas Wallet</string>
     <string name="package_name">com.firecash.wallet</string>
     <string name="custom_url_scheme">com.firecash.wallet</string>
+    <string name="widget_description">Last synced ZKAS balance</string>
+    <!-- Launcher shortcuts. These MUST be resource references, not literals: AAPT rejects a
+         literal on shortcutShortLabel/shortcutLongLabel outright, which is what broke the
+         release build. Keeping them here is also what makes the shortcuts translatable. -->
+    <string name="shortcut_receive_short">Receive</string>
+    <string name="shortcut_receive_long">Request ZKAS payment</string>
+    <string name="shortcut_mine_short">Mining</string>
+    <string name="shortcut_mine_long">Open ZKAS mining</string>
+    <string name="shortcut_explore_short">Explorer</string>
+    <string name="shortcut_explore_long">Open ZKAS explorer</string>
 </resources>
