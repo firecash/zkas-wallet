@@ -1058,15 +1058,26 @@ function HostedNotice() {
     <div className="warnbar" role="note">
       <span className="warnbar-icon" aria-hidden="true">🔒</span>
       <div>
-        Signed on your device — <b>your seed never leaves it</b>. For the strongest setup,{" "}
-        {/* The app is the honest answer to "how do I make this safest", and it was the one
-            option not offered here. Self-hosting a daemon is a real answer for a handful of
-            people; installing the app is the answer for everyone else, and it was buried
-            behind a README anchor about REST endpoints. */}
-        <a href="https://github.com/firecash/firecash-wallet/releases" target="_blank" rel="noreferrer">
-          <b>get the app</b>
-        </a>{" "}
-        ·{" "}
+        {/* Say which is safer, and WHY — the difference is real and specific, and stating
+            it plainly is worth more than a vague "strongest setup".
+
+            A browser re-downloads the code that touches your seed on EVERY visit, so this
+            page can only ever be as trustworthy as the server that served it and the
+            connection that carried it. An installed app ships that code once, signed. Same
+            keys, same protocol; different amount of trust required per use.
+
+            Not alarmist, because the seed genuinely never leaves the device either way —
+            but a user choosing where to keep real money deserves to know the difference
+            rather than discover it. */}
+        Signed on your device — <b>your seed never leaves it</b>.{" "}
+        <b>
+          For stronger security,{" "}
+          <a href="https://github.com/firecash/firecash-wallet/releases" target="_blank" rel="noreferrer">
+            get the app
+          </a>
+        </b>
+        : this page re-downloads its code from a server every visit, so it is only as safe as
+        that server. Also:{" "}
         <a href="https://zkas.info/paper-wallet.html" target="_blank" rel="noreferrer">paper wallet</a>{" "}
         ·{" "}
         <a href="https://github.com/firecash/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet"
