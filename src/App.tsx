@@ -1041,8 +1041,10 @@ export async function resolveDeviceSeed(expectedAddress?: string): Promise<strin
 }
 
 function HostedNotice() {
-  // Mobile: keep it to one line — screen real estate is tight and the self-host
-  // links live in the Daemon card anyway. Web keeps the fuller explainer.
+  // The native shells say only that the seed stays put. They ARE the app, so the
+  // browser warning below does not apply to them and the recommendation would be
+  // nonsense — and screen space is tight enough that an inapplicable sentence costs
+  // more than it explains.
   if (isNative()) {
     return (
       <div className="warnbar" role="note">
@@ -1051,9 +1053,9 @@ function HostedNotice() {
       </div>
     );
   }
-  // Web: one calm line. The self-host and cold-storage links matter, but they don't
-  // deserve a red multi-line banner permanently parked above the balance — that just
-  // pushed the actual wallet below the fold.
+  // Web: one calm line, one recommendation. Whatever goes here is parked permanently
+  // above the balance, so anything beyond a single sentence pushes the actual wallet
+  // below the fold — which is what a multi-line version of this used to do.
   return (
     <div className="warnbar" role="note">
       <span className="warnbar-icon" aria-hidden="true">🔒</span>
@@ -1075,8 +1077,13 @@ function HostedNotice() {
             handful of people and its links already live in the Daemon card; a paper
             wallet answers a different question entirely. The one thing worth saying to
             somebody holding real money in a browser tab is: the app is safer, go get it. */}
-        Signed on your device — <b>your seed never leaves it</b>. But a browser is the least
-        secure place to keep a wallet —{" "}
+        {/* Deliberately does NOT claim the seed never leaves this device.
+            It said that until a user pointed out the sentence contradicted itself: if the
+            page re-downloads the code that touches the seed from a server on every visit,
+            then a compromised server can make that promise false. It is a guarantee only
+            the signed app can make, so only the app makes it. Saying it here would be
+            exactly the kind of assurance somebody relies on and later regrets. */}
+        A browser is the least secure place to keep a wallet —{" "}
         <b>
           <a href="https://github.com/firecash/firecash-wallet/releases" target="_blank" rel="noreferrer">
             consider getting the app
