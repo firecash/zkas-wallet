@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { walletStatus, formatDuration, type StatusInput } from "../src/status";
+import { walletStatus, formatDuration, arrivalAmount, type StatusInput } from "../src/status";
 
 const base: StatusInput = {
   online: true,
@@ -120,5 +120,33 @@ describe("progress that visibly moves", () => {
     expect(v.progress).toEqual({ scanned: 624_000, total: 1_000_000 });
     // A settled wallet has no progress to show.
     expect(walletStatus(base).progress).toBeNull();
+  });
+});
+
+describe("announcing money that arrives", () => {
+  // The rule that keeps this honest. A restoring wallet's balance climbs from zero as
+  // the scan finds its own notes; announcing those as arrivals would fire a burst of
+  // fake "you were paid" notifications at exactly the moment a user is most anxious.
+  it("never announces while the balance is still partial", () => {
+    expect(arrivalAmount(10, 40, false)).toBeNull();
+    expect(arrivalAmount(0, 423_997, false)).toBeNull();
+  });
+
+  it("treats the first final reading as a baseline, not a windfall", () => {
+    // Opening the app must not announce the entire existing balance.
+    expect(arrivalAmount(null, 1234.5, true)).toBeNull();
+  });
+
+  it("announces a genuine increase between two settled readings", () => {
+    expect(arrivalAmount(10, 12.5, true)).toBeCloseTo(2.5, 8);
+  });
+
+  it("stays quiet when the balance is unchanged or falls", () => {
+    expect(arrivalAmount(10, 10, true)).toBeNull();
+    expect(arrivalAmount(10, 4, true)).toBeNull(); // a send, not an arrival
+  });
+
+  it("ignores sub-sompi float noise", () => {
+    expect(arrivalAmount(10, 10 + 1e-12, true)).toBeNull();
   });
 });

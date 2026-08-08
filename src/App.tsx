@@ -18,7 +18,7 @@ import {
 } from "./localtx";
 import { fvkHex, generateWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
 import { sendNonCustodial, PartialSendError, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
-import { walletStatus } from "./status";
+import { walletStatus, arrivalAmount } from "./status";
 import {
   backupWallet,
   initDesktop,
@@ -433,6 +433,9 @@ export default function App() {
   // Notification permission is requested only once a wallet actually exists —
   // a prompt before that is noise users refuse, and a refusal is sticky.
   const notifAsked = useRef(false);
+  /// Last balance seen while the wallet was FULLY synced, so an arrival is a real
+  /// arrival and not the scan still finding notes. null until the first final reading.
+  const lastFinalBalance = useRef<number | null>(null);
   const toast = useToast();
   const announce = useCallback(
     (deltaFc: number) => {
@@ -495,7 +498,21 @@ export default function App() {
         // findOrphanedSeed). The user must never see a recovery prompt for a
         // key this device already holds.
         const registeredAddress = listWallets().find((w) => w.token === activeToken())?.address ?? null;
-        const cachedAddress = prev?.address ?? loadStatusCache()?.address ?? registeredAddress;
+        // Evidence THIS TOKEN has ever had a wallet, from token-scoped storage only.
+        //
+        // `prev` is the previous poll's status. Every path that changes wallet reloads
+        // the page, so today it always belongs to the active token — but nothing
+        // enforces that, and if a future switch ever skips the reload, `prev` becomes a
+        // previous WALLET's address. That address then feeds `missingKnownWallet` below,
+        // which forces `has_wallet: true` and displays it: a brand-new wallet showing
+        // the old one's address, and a repair that re-registers the old seed under the
+        // new token. Reported as "I create a new wallet and see the old one copied".
+        //
+        // So the DECISION uses only per-token evidence. `prev` is still allowed to fill
+        // the address in for display continuity below, but it can no longer be the
+        // reason we believe a wallet exists.
+        const tokenScopedAddress = loadStatusCache()?.address ?? registeredAddress;
+        const cachedAddress = tokenScopedAddress;
         const hasLocalKey = !!(getDeviceSeed() || cachedAddress);
         // A cold boot can answer `has_wallet:false` before the first successful
         // status, so `denied` is false even though the cached wallet is known.
@@ -574,6 +591,23 @@ export default function App() {
       if (s.has_wallet && !notifAsked.current) {
         notifAsked.current = true;
         void ensureNotificationPermission();
+      }
+      // Announce money ARRIVING. The wallet knew — the number changed — but it never
+      // said so, and a payment you have to notice yourself is a payment you distrust.
+      //
+      // Only ever compares two FINAL balances. A scan reports what it has found so far,
+      // climbing from zero, so comparing mid-scan would announce a "payment" for every
+      // note the wallet rediscovers about itself. `synced && !warming` is the same
+      // condition `balanceIsFinal` uses; the first final reading only sets the baseline.
+      if (s.synced && !s.warming && s.has_wallet) {
+        const now = parseFloat(s.balance_fc || "0");
+        const gained = arrivalAmount(lastFinalBalance.current, now, true);
+        if (gained !== null) {
+          const amount = trimFc(gained.toFixed(8));
+          notifyOs("ZKAS received", `+${amount} ZKAS arrived in your wallet.`);
+          toast.show("good", `Received ${amount} ZKAS`);
+        }
+        lastFinalBalance.current = now;
       }
       let list = reconcile(parseFloat(s.balance_fc || "0"), !!s.synced);
       // Ask the chain about every send that has no confirmation count yet — NOT
@@ -978,11 +1012,19 @@ function HostedNotice() {
     <div className="warnbar" role="note">
       <span className="warnbar-icon" aria-hidden="true">🔒</span>
       <div>
-        Signed on your device — <b>your seed never leaves it</b>. Max security:{" "}
-        <a href="https://github.com/firecash/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet"
-           target="_blank" rel="noreferrer">self-host</a>{" "}
+        Signed on your device — <b>your seed never leaves it</b>. For the strongest setup,{" "}
+        {/* The app is the honest answer to "how do I make this safest", and it was the one
+            option not offered here. Self-hosting a daemon is a real answer for a handful of
+            people; installing the app is the answer for everyone else, and it was buried
+            behind a README anchor about REST endpoints. */}
+        <a href="https://github.com/firecash/firecash-wallet/releases" target="_blank" rel="noreferrer">
+          <b>get the app</b>
+        </a>{" "}
         ·{" "}
-        <a href="https://zkas.info/paper-wallet.html" target="_blank" rel="noreferrer">paper wallet</a>.
+        <a href="https://zkas.info/paper-wallet.html" target="_blank" rel="noreferrer">paper wallet</a>{" "}
+        ·{" "}
+        <a href="https://github.com/firecash/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet"
+           target="_blank" rel="noreferrer">self-host</a>.
       </div>
     </div>
   );
