@@ -215,7 +215,17 @@ a { color: var(--ember); }
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
-.balance .amt .unit { font-size: clamp(16px, 4.5vw, 22px); color: var(--muted); margin-left: 8px; font-weight: 500; }
+/* The gap is `margin-left`, but the DOM now also carries a real space: `margin` moves
+   pixels and copy-paste and screen readers both read TEXT. Selecting the balance used
+   to yield "3ZKAS", and a screen reader said "three-zee-kay-ay-ess". `white-space:
+   pre` keeps that space from being collapsed away by the inline-flex layout. */
+.balance .amt .unit {
+  font-size: clamp(16px, 4.5vw, 22px);
+  color: var(--muted);
+  margin-left: 0;
+  white-space: pre;
+  font-weight: 500;
+}
 .balance .sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
 
 /* The wallet's state line, at a FIXED height.
@@ -1492,3 +1502,22 @@ select { appearance: none; cursor: pointer; }
   border-radius: 10px;
 }
 .pane-back:hover { color: var(--ink); background: var(--ember-soft); }
+
+/* The settled state, which is the state a healthy wallet is in almost all the time.
+   It used to be the word "Ready" in the same muted grey as every warning and notice
+   in the card — so "everything is fine" looked exactly like "something needs you".
+   A dot is read before a word is. */
+.status-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ember);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ember) 22%, transparent);
+  flex: 0 0 auto;
+}

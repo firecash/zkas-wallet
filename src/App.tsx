@@ -19,6 +19,7 @@ import {
 import { fvkHex, generateWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
 import { sendNonCustodial, PartialSendError, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, arrivalAmount } from "./status";
+import { exportFile, exportMessage } from "./exportfile";
 import {
   backupWallet,
   initDesktop,
@@ -1530,7 +1531,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         </div>
         <div className="amt">
           {snap ? trimFc(snap.balanceFc.toFixed(8)) : "—"}
-          <span className="unit">ZKAS</span>
+          <span className="unit"> ZKAS</span>
         </div>
         <div className="sub">
           {snap ? "last confirmed balance · " : ""}
@@ -1586,7 +1587,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
       </div>
       <div className="amt">
         {trimFc(animBal.toFixed(8))}
-        <span className="unit">ZKAS</span>
+        <span className="unit"> ZKAS</span>
       </div>
       {/* Fixed height, deliberately. This line's content changes as the wallet
           works — "Ready" one second, "Setting up 44% · about 5 minutes left" the
@@ -1604,7 +1605,17 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
             {view.eta ? ` · ${view.eta}` : ""}
           </>
         ) : (
-          view.label
+          // Settled: a calm dot, not a bare word.
+          //
+          // "Ready" alone sat directly under the balance in the same grey as every
+          // other line, so the most reassuring state the wallet has looked identical
+          // to a warning. A green dot is read before any word is, and it costs one
+          // glance instead of one read — which is the whole job of this line when
+          // nothing is wrong.
+          <span className="status-ok">
+            <span className="status-dot" aria-hidden="true" />
+            {view.label}
+          </span>
         )}
       </div>
       {/* The wording lives in `status.ts` with every other state, so this can no
@@ -1928,7 +1939,7 @@ function Onboard({
     setBusy(true);
     setError("");
     try {
-      if (!restoreJson.trim()) throw new Error("Choose your backup .json file first.");
+      if (!restoreJson.trim()) throw new Error("Choose your backup .json file, or paste the backup text.");
       const { seedHex, birthday } = await readBackup(restoreJson, restorePass);
       await api.watch(await fvkHex(seedHex), birthday);
       rememberBirthday(birthday);
@@ -1962,6 +1973,43 @@ function Onboard({
           }}
         />
         {restoreName && <div className="muted" style={{ fontSize: "0.85em" }}>Selected: {restoreName}</div>}
+        {/* Restore must accept the backup in the shape it LEFT in.
+            A backup taken on a phone can leave as clipboard text — that is the fallback
+            when no share sheet is available — and this screen used to accept a file and
+            nothing else. Backing up on mobile and then being unable to restore is the
+            worst possible outcome for a feature whose entire job is not losing a wallet. */}
+        <div className="row" style={{ gap: 8, marginTop: 10, alignItems: "center" }}>
+          <button
+            className="btn ghost small"
+            onClick={async () => {
+              try {
+                const text = await navigator.clipboard.readText();
+                if (!text.trim()) {
+                  setError("Your clipboard is empty.");
+                  return;
+                }
+                setRestoreJson(text);
+                setRestoreName("pasted from clipboard");
+                setError("");
+              } catch {
+                setError("Couldn't read the clipboard — paste the backup into the box below instead.");
+              }
+            }}
+          >
+            Paste backup
+          </button>
+          <span className="muted small">if you saved it as text</span>
+        </div>
+        <textarea
+          value={restoreJson}
+          onChange={(e) => {
+            setRestoreJson(e.target.value);
+            if (e.target.value.trim()) setRestoreName("pasted");
+          }}
+          placeholder='or paste the backup here — it starts with {"version"...'
+          rows={3}
+          style={{ marginTop: 8, fontFamily: "var(--mono, monospace)", fontSize: 12 }}
+        />
         <label>Backup passphrase</label>
         <input type="password" value={restorePass} onChange={(e) => setRestorePass(e.target.value)} placeholder="the passphrase you set when backing up" />
         <div className="row" style={{ gap: 8, marginTop: 12 }}>
@@ -2193,7 +2241,7 @@ function TxDetail({
         <h2 style={{ marginTop: 0 }}>{kind}</h2>
         <div className="amt" style={{ fontSize: 30, marginBottom: 10 }}>
           {sign} {trimFc(row.amountZkas.toFixed(8))}
-          <span className="unit">ZKAS</span>
+          <span className="unit"> ZKAS</span>
         </div>
 
         {row.memo && (
@@ -3718,6 +3766,7 @@ function History({
 }) {
   // Chain-derived history (mints, receives, and OVK-recovered sends): fetched
   // from the daemon, so it survives a seed restore and shows on every device.
+  const toast = useToast();
   const [chain, setChain] = useState<ChainHistory | null>(null);
   const [busy, setBusy] = useState(false);
   // True from the moment history is enabled until the recovery scan finishes —
@@ -4052,14 +4101,23 @@ function History({
         <button
           className="btn ghost small"
           onClick={() => {
-            // Built and downloaded on-device: exporting your own records must not
-            // mean handing them to a server.
-            const url = URL.createObjectURL(new Blob([historyCsv(allRows)], { type: "text/csv" }));
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `zkas-history-${new Date().toISOString().slice(0, 10)}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
+            // Built on-device: exporting your own records must not mean handing them
+            // to a server.
+            //
+            // Goes through `exportFile` because the `<a download>` this used to do is a
+            // silent no-op inside a Capacitor WebView and inside Tauri — the button
+            // worked on the web and did nothing at all on the apps, with no error to
+            // show for it. And it now SAYS what happened, so "nothing appeared" can
+            // never again be indistinguishable from success.
+            const name = `zkas-history-${new Date().toISOString().slice(0, 10)}.csv`;
+            void (async () => {
+              try {
+                const how = await exportFile(name, "text/csv", historyCsv(allRows));
+                toast.show("good", exportMessage(how, name));
+              } catch {
+                toast.show("bad", "Could not export the CSV on this device.");
+              }
+            })();
           }}
         >
           Export CSV
@@ -4679,19 +4737,20 @@ function DeviceSeedBackup() {
         // A Capacitor WebView has NO download manager: the browser path below
         // silently saves NOTHING on a phone while the confirmation claims a
         // file exists — the classic "I made a backup" that is nowhere, which
-        // is how wallets end up unbacked-up. On native the backup goes to the
-        // clipboard with explicit paste-it-somewhere instructions instead.
-        await copyText(doc);
-        setDone({ path: "", folder: "" });
+        // is how wallets end up unbacked-up.
+        //
+        // The native branch used to copy to the clipboard, which was the best available
+        // then. `exportFile` tries the real share sheet first — a backup the user can
+        // file away in Drive or mail to themselves is a backup that survives losing the
+        // phone, which a clipboard entry does not — and still falls back to the
+        // clipboard where sharing is unavailable.
+        const name = `zkas-wallet-backup-${Math.floor(Date.now() / 1000)}.json`;
+        const how = await exportFile(name, "application/json", doc);
+        setDone({ path: how === "copied" ? "" : name, folder: "" });
       } else {
-        // Browser: hand it over as a download instead of writing a file.
-        const url = URL.createObjectURL(new Blob([doc], { type: "application/json" }));
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `zkas-wallet-backup-${Math.floor(Date.now() / 1000)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        setDone({ path: a.download, folder: "" });
+        const name = `zkas-wallet-backup-${Math.floor(Date.now() / 1000)}.json`;
+        const how = await exportFile(name, "application/json", doc);
+        setDone({ path: how === "copied" ? "" : name, folder: "" });
       }
       setPass("");
       setConfirmPass("");
