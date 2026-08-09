@@ -11,13 +11,20 @@ import {
   type NodeStatus,
 } from "../desktop-services";
 import { ServiceLogsDialog } from "../components/ServiceLogsDialog";
+import {
+  BRIDGE_DASHBOARD_PORT,
+  MANAGED_KASPA_RPC,
+  MANAGED_ZKAS_RPC,
+  STANDALONE_ZKAS_RPC_EXAMPLE,
+  STRATUM_PORT,
+} from "../ports";
 
 type Mode = "solo" | "dual";
 type NodeMode = "local" | "custom";
 type Busy = "start" | "stop" | "cpu" | null;
 
-const DEFAULT_ZKAS_RPC = "127.0.0.1:16810";
-const DEFAULT_KASPA_RPC = "127.0.0.1:16110";
+const DEFAULT_ZKAS_RPC = MANAGED_ZKAS_RPC;
+const DEFAULT_KASPA_RPC = MANAGED_KASPA_RPC;
 
 function cleanHost(raw: string): string {
   return raw.trim().replace(/^stratum\+tcp:\/\//i, "").replace(/^https?:\/\//i, "").replace(/\/$/, "");
@@ -51,7 +58,7 @@ export function Mining() {
   const [kaspaMode, setKaspaMode] = useState<NodeMode>("local");
   const [kaspaAddress, setKaspaAddress] = useState("");
   const [kaspaRpc, setKaspaRpc] = useState(DEFAULT_KASPA_RPC);
-  const [stratumPort, setStratumPort] = useState(5555);
+  const [stratumPort, setStratumPort] = useState(STRATUM_PORT);
   const [shareDifficulty, setShareDifficulty] = useState(8192);
   const [lanIp, setLanIp] = useState<string | null>(null);
   const [externalHost, setExternalHost] = useState(() => localStorage.getItem("mining_external_host") ?? "");
@@ -270,7 +277,7 @@ export function Mining() {
             <button className={`choice-button ${zkasMode === "local" ? "selected" : ""}`} onClick={() => setZkasMode("local")} disabled={live}><strong>Automatic</strong><span>Install, run, and sync on this computer.</span></button>
             <button className={`choice-button ${zkasMode === "custom" ? "selected" : ""}`} onClick={() => setZkasMode("custom")} disabled={live}><strong>Existing node</strong><span>Use mining gRPC on your LAN or server.</span></button>
           </div>
-          {zkasMode === "custom" && <EndpointField label="ZKAS gRPC" value={zkasRpc} onChange={setZkasRpc} placeholder="192.168.1.20:16110" disabled={live} kind="zkas" />}
+          {zkasMode === "custom" && <EndpointField label="ZKAS gRPC" value={zkasRpc} onChange={setZkasRpc} placeholder={STANDALONE_ZKAS_RPC_EXAMPLE} disabled={live} kind="zkas" />}
         </div>
 
         {mode === "dual" && <div className="setup-section">
@@ -314,7 +321,7 @@ export function Mining() {
       </section>}
 
       <section className="control-card mining-live-card">
-        <div className="card-title-row"><div><h2>Live status</h2><p>{live ? "Updates every two seconds." : "Start mining to receive ASIC work."}</p></div><div className="mining-live-actions">{live && <a className="btn ghost compact" href="http://127.0.0.1:18114/" target="_blank" rel="noreferrer"><ExternalLink size={14} />Full dashboard</a>}<span className={`status-dot ${live ? "on" : ""}`} /></div></div>
+        <div className="card-title-row"><div><h2>Live status</h2><p>{live ? "Updates every two seconds." : "Start mining to receive ASIC work."}</p></div><div className="mining-live-actions">{live && <a className="btn ghost compact" href={`http://127.0.0.1:${BRIDGE_DASHBOARD_PORT}/`} target="_blank" rel="noreferrer"><ExternalLink size={14} />Full dashboard</a>}<span className={`status-dot ${live ? "on" : ""}`} /></div></div>
         <div className="metric-grid mining-metrics">
           <Metric label="Bridge" value={live ? "Running" : "Stopped"} />
           <Metric label="ZKAS node" value={nodeLabel} />

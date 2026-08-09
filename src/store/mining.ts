@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { STRATUM_PORT } from "../ports";
 
 export interface PoolStats {
   miners_active: number;
@@ -59,7 +60,7 @@ export const useMiningStore = create<MiningStore>((set) => ({
   sharesRejected: 0,
   blocksFound: 0,
   bestShare: 0,
-  stratumPort: 5555,
+  stratumPort: STRATUM_PORT,
   poolStats: null,
   minerStats: null,
 

@@ -35,6 +35,7 @@ import {
   type DesktopConfig,
 } from "./desktop";
 import { makeBackup, readBackup } from "./backup";
+import { MANAGED_ZKAS_RPC, STANDALONE_ZKAS_RPC_EXAMPLE } from "./ports";
 import { ACCENTS, currentAccent, currentTheme, setAccent, setTheme, type Accent, type Theme } from "./theme";
 import { wipeWalletState } from "./walletstate";
 import {
@@ -410,6 +411,7 @@ export default function App() {
   // the 1s poll then corrects anything stale within a second.
   const [status, setStatus] = useState<Status | null>(() => loadStatusCache());
   const [reachable, setReachable] = useState<boolean | null>(() => (loadStatusCache() ? true : null));
+  const [reachError, setReachError] = useState<string | null>(null);
   // Opens on History, not Receive. "Receive" is now a button, and landing inside it
   // meant every launch started with a QR code nobody asked for; what a person wants on
   // opening a wallet is to see that their money is there and what happened to it.
@@ -654,6 +656,7 @@ export default function App() {
       }
       saveStatusCache(s);
       failedPolls.current = 0;
+      setReachError(null);
       setReachable(true);
       // Ask for notification permission only once a wallet actually exists —
       // before that the prompt is noise users refuse, and a refusal is sticky.
@@ -733,14 +736,17 @@ export default function App() {
           ts: Date.now(),
         });
       }
-    } catch {
+    } catch (error) {
       // One failed poll (a flaky mobile hop, a proxy 502, a slow cold load) used
       // to flip the whole app to the "can't reach the wallet service" screen
       // INSTANTLY — unmounting the wallet (and a half-filled Send form) and
       // oscillating every second on a bad connection. Ride out a few failures;
       // the last-known UI stays up meanwhile, and a real outage still surfaces.
       failedPolls.current += 1;
-      if (failedPolls.current >= 5) setReachable(false);
+      if (failedPolls.current >= 5) {
+        setReachError((error as Error)?.message || String(error));
+        setReachable(false);
+      }
     } finally {
       refreshInFlight.current = false;
     }
@@ -855,7 +861,7 @@ export default function App() {
           </div>
         </div>
       )}
-      {reachable === false && <Setup />}
+      {reachable === false && <Setup error={reachError} />}
       {/* Seed backup takes priority and stays until dismissed — independent of has_wallet. */}
       {reachable && freshSeed && (
         <SeedBackup seed={freshSeed.seed} address={freshSeed.address} onDone={() => setFreshSeed(null)} />
@@ -1317,7 +1323,7 @@ function ConnectionButton() {
                   }
                   void switchDesktop("local");
                 }}>
-                  <span><b>Local wallet-history node</b><small>Managed here · gRPC 127.0.0.1:16810</small></span><span>{busy === "local" ? "Checking…" : cfg?.mode === "local" ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
+                  <span><b>Local wallet-history node</b><small>Managed here · gRPC {MANAGED_ZKAS_RPC}</small></span><span>{busy === "local" ? "Checking…" : cfg?.mode === "local" ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
                 </button>
               )}
               {profiles.map((profile) => {
@@ -1338,7 +1344,7 @@ function ConnectionButton() {
               <h3>Add {desktop ? "wallet-history node" : "walletd"}</h3>
               <div className={`connection-add-grid ${desktop ? "" : "walletd"}`}>
                 <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name · Home node" />
-                <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={desktop ? "192.168.1.20:16110" : isNative() ? "192.168.1.20:8501" : "https://wallet.example.com"} />
+                <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={desktop ? STANDALONE_ZKAS_RPC_EXAMPLE : isNative() ? `192.168.1.20:${DEFAULT_WALLETD_PORT}` : "https://wallet.example.com"} />
                 {!desktop && <input type="password" className="mono" value={bearer} onChange={(event) => setBearer(event.target.value)} placeholder="Access token · if required" autoCapitalize="none" autoCorrect="off" spellCheck={false} />}
                 <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? "Checking…" : "Save & connect"}</button>
               </div>
@@ -5246,25 +5252,29 @@ function NodeSourceSetting() {
 /// this screen: walletd serves cached wallet state while it reconnects. Keep an
 /// escape hatch here for local bind/config/runtime failures, but never claim the
 /// public node is guaranteed to repair an unrelated engine problem.
-function DesktopEngineDown() {
+function DesktopEngineDown({ requestError }: { requestError?: string | null }) {
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(requestError ?? null);
+  const [engineAlive, setEngineAlive] = useState<boolean | null>(null);
   const [showLogs, setShowLogs] = useState(false);
   useEffect(() => {
     let alive = true;
     desktopServices.walletdStatus()
       .then((status) => {
-        if (alive && status.error) setErr(status.error);
+        if (!alive) return;
+        setEngineAlive(status.running);
+        if (status.error) setErr(status.error);
       })
       .catch(() => undefined);
     return () => { alive = false; };
   }, []);
   return (
     <div className="card setup">
-      <h2>The wallet engine didn't start</h2>
+      <h2>{engineAlive ? "Wallet display lost its engine connection" : "The wallet engine didn't start"}</h2>
       <div className="msg warn">
-        ZKas Wallet runs its wallet engine inside this app, and it isn't answering. Your funds are safe on-chain —
-        this is a local problem, not a chain one.
+        {engineAlive
+          ? "The embedded wallet engine is running, but the display request failed. Retry reconnects the display to the engine's current internal port."
+          : "ZKas Wallet runs its wallet engine inside this app, and it isn't answering. Your funds are safe on-chain — this is a local problem, not a chain one."}
       </div>
       <p className="muted small">
         Retry first. If this began after choosing another node, switch the connection back to the public history node.
@@ -5310,7 +5320,7 @@ function DesktopEngineDown() {
   );
 }
 
-function Setup() {
+function Setup({ error: requestError }: { error?: string | null }) {
   const [base, setB] = useState(getBase());
   const [error, setError] = useState("");
 
@@ -5318,7 +5328,7 @@ function Setup() {
   // down" is both wrong and unactionable there — and the URL box is meaningless,
   // since the shell hands the UI its own loopback port and token.
   if (isDesktop()) {
-    return <DesktopEngineDown />;
+    return <DesktopEngineDown requestError={requestError} />;
   }
 
   return (

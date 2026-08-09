@@ -36,7 +36,12 @@ public class BackgroundSyncPlugin extends Plugin {
     public void configure(PluginCall call) {
         String base = call.getString("baseUrl", "").replaceAll("/+$", "");
         String token = call.getString("token", "");
-        prefs().edit().putString("baseUrl", base).putString("token", token).apply();
+        String bearer = call.getString("bearer", "").trim();
+        prefs().edit()
+            .putString("baseUrl", base)
+            .putString("token", token)
+            .putString("bearer", bearer)
+            .apply();
         call.resolve();
     }
 

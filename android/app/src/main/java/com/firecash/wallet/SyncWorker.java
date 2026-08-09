@@ -44,12 +44,14 @@ public class SyncWorker extends Worker {
         if (!p.getBoolean("enabled", false)) return Result.success();
         String base = p.getString("baseUrl", "");
         String token = p.getString("token", "");
+        String bearer = p.getString("bearer", "");
         if (base.isEmpty() || token.isEmpty()) return Result.success();
 
         JSONObject status;
         try {
             HttpURLConnection c = (HttpURLConnection) new URL(base + "/api/status").openConnection();
             c.setRequestProperty("X-Wallet-Token", token);
+            if (!bearer.isEmpty()) c.setRequestProperty("Authorization", "Bearer " + bearer);
             c.setConnectTimeout(10_000);
             c.setReadTimeout(10_000);
             int code = c.getResponseCode();

@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import { setNodeSource } from "./desktop";
+import { MANAGED_ZKAS_RPC } from "./ports";
 
 const CHOSEN_KEY = "node_choice_made";
 
@@ -68,7 +69,7 @@ export function FirstRunNode({ onDone }: { onDone: () => void }) {
           </span>
         </label>
         {mode === "custom" && (
-          <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="127.0.0.1:16810" />
+          <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder={MANAGED_ZKAS_RPC} />
         )}
 
         {mode === "remote" && (

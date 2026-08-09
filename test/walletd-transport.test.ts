@@ -8,7 +8,10 @@ afterEach(() => {
 
 describe("walletd transport policy", () => {
   it("defaults a bare browser endpoint to HTTPS", () => {
-    expect(normalizeDaemonInput("wallet.example.com")).toBe("https://wallet.example.com:8501");
+    // A public HTTPS reverse proxy normally listens on 443. Port 8501 is the
+    // plain backend and is filled automatically only by installed LAN clients.
+    expect(normalizeDaemonInput("wallet.example.com")).toBe("https://wallet.example.com");
+    expect(normalizeDaemonInput("wallet.example.com:9443")).toBe("https://wallet.example.com:9443");
     expect(walletdTransportError("http://wallet.example.com:8501")).toMatch(/web wallet.*HTTPS/i);
     expect(walletdTransportError("https://wallet.example.com:8501")).toBeNull();
   });

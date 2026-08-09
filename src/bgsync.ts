@@ -13,10 +13,10 @@
 // daemon it talks to is watch-only. The web bundle only configures and toggles.
 
 import { registerPlugin } from "@capacitor/core";
-import { getBase, getToken, isNative } from "./api";
+import { getBase, getToken, getWalletdBearer, isNative } from "./api";
 
 interface BackgroundSyncPlugin {
-  configure(opts: { baseUrl: string; token: string }): Promise<void>;
+  configure(opts: { baseUrl: string; token: string; bearer: string }): Promise<void>;
   enable(): Promise<void>;
   disable(): Promise<void>;
   isEnabled(): Promise<{ enabled: boolean }>;
@@ -42,7 +42,7 @@ export function bgSyncEnabled(): boolean {
 
 export async function bgSyncEnable(): Promise<void> {
   // Configure BEFORE enabling so the worker never wakes to stale credentials.
-  await Native.configure({ baseUrl: getBase(), token: getToken() });
+  await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer() });
   await Native.enable();
   localStorage.setItem(FLAG, "1");
 }
@@ -61,7 +61,7 @@ export async function bgSyncDisable(): Promise<void> {
 export async function bgSyncReconfigure(): Promise<void> {
   if (!bgSyncEnabled()) return;
   try {
-    await Native.configure({ baseUrl: getBase(), token: getToken() });
+    await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer() });
   } catch {
     /* best-effort — the next boot re-tries */
   }

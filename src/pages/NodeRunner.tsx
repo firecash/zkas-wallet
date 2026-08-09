@@ -10,6 +10,7 @@ import {
   type NodeStatus,
   type WalletdStatus,
 } from "../desktop-services";
+import { MANAGED_ZKAS_P2P_PORT, MANAGED_ZKAS_RPC, MANAGED_ZKAS_RPC_PORT } from "../ports";
 
 type NodePreset = "shielded" | "archival" | "mining";
 
@@ -103,15 +104,15 @@ function NodeStartDialog({
 
         <label className="check-row node-public-toggle">
           <input type="checkbox" checked={publicP2p} onChange={(event) => onPublicP2p(event.target.checked)} />
-          <span><strong>Accept inbound peers</strong><small>Optional. Other nodes can connect to this computer on TCP port 16811.</small></span>
+          <span><strong>Accept inbound peers</strong><small>Optional. Other nodes can connect to this computer on TCP port {MANAGED_ZKAS_P2P_PORT}.</small></span>
         </label>
 
         <div className={`node-network-note ${publicP2p ? "public" : "private"}`}>
           <strong>{publicP2p ? "Firewall setup" : "No firewall changes needed"}</strong>
           <span>{publicP2p
-            ? "Allow inbound TCP 16811 in the operating-system firewall. If this machine is behind a router, forward 16811 only if you want public inbound peers."
+            ? `Allow inbound TCP ${MANAGED_ZKAS_P2P_PORT} in the operating-system firewall. If this machine is behind a router, forward ${MANAGED_ZKAS_P2P_PORT} only if you want public inbound peers.`
             : "The node makes outbound peer connections and will sync normally. Its P2P listener stays on this device."}</span>
-          <small>Node RPC is private by default. Trusted-LAN access can be enabled in Host; never expose TCP 16810 to the internet.</small>
+          <small>Node RPC is private by default. Trusted-LAN access can be enabled in Host; never expose TCP {MANAGED_ZKAS_RPC_PORT} to the internet.</small>
         </div>
 
         {miningConflict && <div className="dialog-inline-error">This wallet currently uses the local node. Switch the wallet to its public service before running the history-free Mining mode.</div>}
@@ -279,7 +280,7 @@ export function NodeRunner() {
 
       <section className="control-card">
         <div className="card-title-row">
-          <div><span className="step-number">{installed ? "1" : "2"}</span><h2>Node</h2><p className="mono subtle">{node?.rpc_addr ?? "127.0.0.1:16810"}</p></div>
+          <div><span className="step-number">{installed ? "1" : "2"}</span><h2>Node</h2><p className="mono subtle">{node?.rpc_addr ?? MANAGED_ZKAS_RPC}</p></div>
           <span className={`status-dot ${node?.running ? "on" : ""}`} aria-label={node?.running ? "running" : "stopped"} />
         </div>
         <div className="metric-grid">
@@ -292,8 +293,8 @@ export function NodeRunner() {
         </div>
         <div className="node-runtime-summary">
           <span><small>Mode</small><strong>{presetLabel(config?.settings.node_preset)}</strong></span>
-          <span><small>Peer access</small><strong>{config?.settings.node_public_p2p ? "Public · TCP 16811" : "Outbound only"}</strong></span>
-          <span><small>RPC</small><strong>{config?.settings.node_lan_rpc ? "Trusted LAN · TCP 16810" : "Private · 127.0.0.1:16810"}</strong></span>
+          <span><small>Peer access</small><strong>{config?.settings.node_public_p2p ? `Public · TCP ${MANAGED_ZKAS_P2P_PORT}` : "Outbound only"}</strong></span>
+          <span><small>RPC</small><strong>{config?.settings.node_lan_rpc ? `Trusted LAN · TCP ${MANAGED_ZKAS_RPC_PORT}` : `Private · ${MANAGED_ZKAS_RPC}`}</strong></span>
         </div>
         {node?.error && node.running && <p className="inline-warning">The process is running but RPC is not ready yet: {node.error}</p>}
         {!node?.running && node?.last_exit && <p className="inline-warning">Last run: {node.last_exit}</p>}

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { desktopServices, type SelfHostStatus } from "../desktop-services";
 import { initDesktop, isDesktop, openPath } from "../desktop";
 import { setExplorerBase } from "../api/explorer";
+import { MANAGED_ZKAS_P2P_PORT, MANAGED_ZKAS_RPC_PORT, WALLET_SERVICE_PORT } from "../ports";
 
 export function SelfHost() {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ export function SelfHost() {
   const [error, setError] = useState("");
   const [accessEditing, setAccessEditing] = useState(false);
   const [walletAccess, setWalletAccess] = useState<"device" | "lan" | "wan">("device");
-  const [walletPort, setWalletPort] = useState(8501);
+  const [walletPort, setWalletPort] = useState(WALLET_SERVICE_PORT);
   const [publicUrl, setPublicUrl] = useState("");
   const [nodeLanRpc, setNodeLanRpc] = useState(false);
   const [nodePublicP2p, setNodePublicP2p] = useState(false);
@@ -186,7 +187,7 @@ export function SelfHost() {
                 <div className="node-runtime-summary">
                   <span><small>Wallet service</small><strong>{status.wallet_access === "device" ? "This device only" : status.wallet_access === "lan" ? "LAN · authenticated" : "Internet · HTTPS proxy"}</strong></span>
                   <span><small>Node RPC</small><strong>{status.node_lan_rpc ? "Trusted LAN" : "This device only"}</strong></span>
-                  <span><small>Node P2P</small><strong>{status.node_public_p2p ? "Public · TCP 16811" : "Outbound only"}</strong></span>
+                  <span><small>Node P2P</small><strong>{status.node_public_p2p ? `Public · TCP ${MANAGED_ZKAS_P2P_PORT}` : "Outbound only"}</strong></span>
                 </div>
                 {status.wallet_access_url && <div className="detail-row"><span className="k">Wallet URL</span><span className="v mono">{status.wallet_access_url}</span></div>}
                 {status.wallet_access !== "device" && (
@@ -213,8 +214,8 @@ export function SelfHost() {
                 {walletAccess === "wan" && <p className="inline-warning">Forward the public HTTPS URL through Caddy, nginx, Tailscale, or Tor to this computer. Do not expose the plain backend port directly to the internet.</p>}
 
                 <h3>Node access</h3>
-                <label className="check-row"><input type="checkbox" checked={nodeLanRpc} onChange={(event) => setNodeLanRpc(event.target.checked)} /><span><strong>Node RPC on trusted LAN</strong><small>Lets another wallet or miner use TCP 16810. No authentication—never forward it to the internet.</small></span></label>
-                <label className="check-row"><input type="checkbox" checked={nodePublicP2p} onChange={(event) => setNodePublicP2p(event.target.checked)} /><span><strong>Public P2P node</strong><small>Accept peers on TCP 16811. This does not expose wallet data or RPC.</small></span></label>
+                <label className="check-row"><input type="checkbox" checked={nodeLanRpc} onChange={(event) => setNodeLanRpc(event.target.checked)} /><span><strong>Node RPC on trusted LAN</strong><small>Lets another wallet or miner use TCP {MANAGED_ZKAS_RPC_PORT}. No authentication—never forward it to the internet.</small></span></label>
+                <label className="check-row"><input type="checkbox" checked={nodePublicP2p} onChange={(event) => setNodePublicP2p(event.target.checked)} /><span><strong>Public P2P node</strong><small>Accept peers on TCP {MANAGED_ZKAS_P2P_PORT}. This does not expose wallet data or RPC.</small></span></label>
                 {status.node_running && (nodeLanRpc !== status.node_lan_rpc || nodePublicP2p !== status.node_public_p2p) && <p className="inline-warning">Stop the managed node before applying changed node access. Wallet-service changes do not require stopping it.</p>}
                 <div className="control-actions">
                   <button className="btn ghost compact" disabled={busy === "access"} onClick={() => setAccessEditing(false)}>Cancel</button>

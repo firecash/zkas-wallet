@@ -9,6 +9,8 @@
 // zkas-walletd (e.g. http://127.0.0.1:8501) — then the seed never leaves your
 // machine.
 
+import { WALLET_SERVICE_PORT } from "./ports";
+
 function defaultBase(): string {
   // Native mobile (Capacitor) loads the bundle from the device, so there is no
   // same-origin server to proxy `/daemon` to — reach the hosted daemon directly.
@@ -51,7 +53,7 @@ export function setWalletdBearer(token: string) {
 }
 
 /** The default port a self-hosted `zkas-walletd` listens on. */
-export const DEFAULT_WALLETD_PORT = 8501;
+export const DEFAULT_WALLETD_PORT = WALLET_SERVICE_PORT;
 
 /** True for installed shells, where a user-selected HTTP walletd is not mixed
  * content from a remote web page and is useful for private LAN deployments. */
@@ -65,7 +67,7 @@ export function allowsInsecureWalletd(): boolean {
  * remember a scheme or `:8501`. Installed apps use HTTP for LAN nodes; the web
  * wallet uses HTTPS because an HTTPS page cannot safely load a cleartext daemon:
  *   native: 185.147.157.125     → http://185.147.157.125:8501
- *   web:    wallet.example.com  → https://wallet.example.com:8501
+ *   web:    wallet.example.com  → https://wallet.example.com (HTTPS/443 proxy)
  *   185.147.157.125:8501       → http://185.147.157.125:8501   (explicit port kept)
  *   mynode.example.com         → http://mynode.example.com:8501
  *   http(s)://…                → passed through (only trailing slash trimmed)
@@ -76,19 +78,20 @@ export function normalizeDaemonInput(raw: string): string {
   if (!s) return "";
   // Already a URL — respect the user's scheme/port exactly.
   if (/^https?:\/\//i.test(s)) return s;
+  const localApp = allowsInsecureWalletd();
   // Bare host or host:port. IPv6 must be bracketed in a URL. In particular,
   // `::1` is an ADDRESS, not the host `:` with port 1 — the old final-`:digits`
   // test produced the invalid URL `http://::1`. An explicit IPv6 port remains
   // unambiguous only in the normal `[2001:db8::1]:9000` form.
   if (s.startsWith("[")) {
     if (!/^\[[^\]]+\](?::\d+)?$/.test(s)) return "";
-    if (!/:\d+$/.test(s)) s = `${s}:${DEFAULT_WALLETD_PORT}`;
+    if (localApp && !/:\d+$/.test(s)) s = `${s}:${DEFAULT_WALLETD_PORT}`;
   } else if ((s.match(/:/g) || []).length > 1) {
-    s = `[${s}]:${DEFAULT_WALLETD_PORT}`;
-  } else if (!/:\d+$/.test(s)) {
+    s = `[${s}]${localApp ? `:${DEFAULT_WALLETD_PORT}` : ""}`;
+  } else if (localApp && !/:\d+$/.test(s)) {
     s = `${s}:${DEFAULT_WALLETD_PORT}`;
   }
-  return `${allowsInsecureWalletd() ? "http" : "https"}://${s}`;
+  return `${localApp ? "http" : "https"}://${s}`;
 }
 
 /** Explain a transport choice before fetch turns it into an opaque mixed-content
@@ -265,31 +268,60 @@ export interface PrepareResp {
 }
 
 async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 10_000): Promise<T> {
-  let res: Response;
+  let status: number;
+  let statusText = "";
+  let text: string;
   const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
   const bearer = getWalletdBearer();
   if (bearer) headers.Authorization = `Bearer ${bearer}`;
   if (body) headers["Content-Type"] = "application/json";
-  // Hard ceiling on every daemon call: `status` runs inside the 1-second poll, and
-  // one hung connection (mobile network, sleeping proxy) used to freeze the whole
-  // poll — balance, sync, and sends all stuck behind it. Slow calls (proving,
-  // cold wallet loads) pass a larger `timeoutMs`; chainTx has its own 4s bound.
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), timeoutMs);
-  try {
-    res = await fetch(getBase() + path, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      signal: ctl.signal,
-    });
-  } catch (e) {
-    if (ctl.signal.aborted) throw new Error("The wallet service is not responding (timed out).");
-    throw new Error("Cannot reach the wallet daemon. (" + (e as Error).message + ")");
-  } finally {
-    clearTimeout(timer);
+
+  // Desktop embeds walletd in the Rust process. Route its calls through Tauri
+  // instead of the WebView network stack: Host access can restart walletd on a
+  // different port and add a bearer gate, and Rust is the single authoritative
+  // owner of both values. This removes stale-port/CORS/auth races while keeping
+  // the exact same HTTP API boundary. Web/mobile still talk to walletd directly.
+  if ("__TAURI_INTERNALS__" in globalThis) {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const response = await invoke<{ status: number; body: string }>("wallet_api_request", {
+        method,
+        path,
+        body: body ?? null,
+        walletToken: getToken(),
+        timeoutMs,
+      });
+      status = response.status;
+      text = response.body;
+    } catch (e) {
+      const detail = typeof e === "string" ? e : (e as Error)?.message || String(e);
+      throw new Error("Cannot reach the embedded wallet engine. (" + detail + ")");
+    }
+  } else {
+    let res: Response;
+    // Hard ceiling on every daemon call: `status` runs inside the 1-second poll, and
+    // one hung connection (mobile network, sleeping proxy) used to freeze the whole
+    // poll — balance, sync, and sends all stuck behind it. Slow calls (proving,
+    // cold wallet loads) pass a larger `timeoutMs`; chainTx has its own 4s bound.
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), timeoutMs);
+    try {
+      res = await fetch(getBase() + path, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: ctl.signal,
+      });
+    } catch (e) {
+      if (ctl.signal.aborted) throw new Error("The wallet service is not responding (timed out).");
+      throw new Error("Cannot reach the wallet daemon. (" + (e as Error).message + ")");
+    } finally {
+      clearTimeout(timer);
+    }
+    status = res.status;
+    statusText = res.statusText;
+    text = await res.text();
   }
-  const text = await res.text();
   // A proxy error page (nginx 502, captive portal) is HTML, not JSON — parsing it
   // raw threw `SyntaxError: Unexpected token '<'` straight at the user. Report the
   // HTTP status instead; only parse when there is a body to parse.
@@ -298,10 +330,10 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
     try {
       data = JSON.parse(text);
     } catch {
-      throw new Error(`The wallet service returned an invalid response (${res.status}).`);
+      throw new Error(`The wallet service returned an invalid response (${status}).`);
     }
   }
-  if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : `${res.status} ${res.statusText}`);
+  if (status < 200 || status >= 300) throw new Error(typeof data.error === "string" ? data.error : `${status} ${statusText}`.trim());
   return data as T;
 }
 
