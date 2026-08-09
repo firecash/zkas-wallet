@@ -9,9 +9,8 @@ import {
   type DownloadProgress,
   type MiningStatus,
   type NodeStatus,
-  type ServiceLog,
 } from "../desktop-services";
-import { ServiceLogs } from "../components/ServiceLogs";
+import { ServiceLogsDialog } from "../components/ServiceLogsDialog";
 
 type Mode = "solo" | "dual";
 type NodeMode = "local" | "custom";
@@ -64,7 +63,6 @@ export function Mining() {
   const [showConnect, setShowConnect] = useState(false);
   const [showCpu, setShowCpu] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
-  const [logs, setLogs] = useState<ServiceLog[]>([]);
   const [cpuThreads, setCpuThreads] = useState(Math.max(1, Math.floor((navigator.hardwareConcurrency || 2) / 2)));
   const [copied, setCopied] = useState("");
   const refreshInFlight = useRef(false);
@@ -121,17 +119,11 @@ export function Mining() {
       const { listen } = await import("@tauri-apps/api/event");
       unlisten = [
         await listen<DownloadProgress>("download-progress", ({ payload }) => setProgress(payload)),
-        await listen<ServiceLog>("service-log", ({ payload }) => setLogs((old) => [...old.slice(-1_999), payload])),
         await listen("service-state", () => refreshLocal().catch(() => undefined)),
       ];
     })();
     return () => unlisten.forEach((fn) => fn());
   }, [desktop, refreshLocal]);
-
-  useEffect(() => {
-    if (!showLogs || !desktop) return;
-    desktopServices.logs(undefined, 1_500).then(setLogs).catch(() => undefined);
-  }, [desktop, showLogs]);
 
   const missing = useMemo(() => {
     if (!config) return [] as string[];
@@ -336,14 +328,14 @@ export function Mining() {
         {status?.zkas_rpc_error && <p className="inline-warning">ZKAS RPC: {status.zkas_rpc_error}</p>}
         {mode === "dual" && status?.kaspa_rpc_error && <p className="inline-warning">Kaspa RPC: {status.kaspa_rpc_error}</p>}
         {status?.bridge_error && <p className="inline-warning">Bridge stopped: {status.bridge_error}</p>}
-        <button className="text-button disclosure" onClick={() => setShowLogs((value) => !value)}>{showLogs ? "Hide diagnostics" : "Diagnostics"}</button>
-        {showLogs && <ServiceLogs logs={logs} onClear={() => setLogs([])} preferredService="stratum-bridge" />}
+        <button className="text-button disclosure" onClick={() => setShowLogs(true)}>View bridge logs</button>
       </section>
 
       {mode === "solo" && <section className="control-card compact-card cpu-card">
         <button className="text-button disclosure" onClick={() => setShowCpu((value) => !value)}>CPU test miner {status?.cpu_miner_running ? "· running" : ""}</button>
         {showCpu && <div className="advanced-row"><p>For setup testing only; ASICs are vastly faster.</p><label>Threads <input className="control-input" type="number" min={1} max={256} value={cpuThreads} onChange={(event) => setCpuThreads(Number(event.target.value))} /></label><button className="btn ghost compact" disabled={busy !== null || !config?.components.zkas_miner || !walletAddress || !!status?.cpu_miner_running} onClick={() => { setBusy("cpu"); desktopServices.startCpuMiner(cpuThreads, walletAddress).then(refreshLocal).catch((e) => setError(e.message)).finally(() => setBusy(null)); }}>Start</button><button className="btn ghost compact" disabled={!status?.cpu_miner_running} onClick={() => { setBusy("cpu"); desktopServices.stopCpuMiner().then(refreshLocal).finally(() => setBusy(null)); }}>Stop</button></div>}
       </section>}
+      <ServiceLogsDialog open={showLogs} onClose={() => setShowLogs(false)} service="stratum-bridge" title="Mining bridge logs" />
     </main>
   );
 }

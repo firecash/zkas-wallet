@@ -1,0 +1,104 @@
+# ZKas Wallet — Full Product Build
+
+Status: implemented and validated on 2026-08-08. This is the corrected version of the original eight-phase draft. Items that would fake chain data, weaken key custody, or execute an unsigned service were replaced with honest production boundaries.
+
+## Phase 1 — Application shell ✅
+
+- React router and compact navigation: Wallet, Node, Mine, Explore, Services, Pay, and desktop Host.
+- Shared `lib`, hooks, Zustand stores, i18n foundation, reusable control UI, error boundary, theme initialization and keyboard navigation (`Ctrl/Cmd+1…7`).
+- The mature wallet screen was not rewritten merely to satisfy a refactor checklist; its tested recovery, watch-only signing, history and sync behavior remain intact.
+
+## Phase 2 — Node runner ✅
+
+- Beginner presets for public, custom and managed local ZKas nodes.
+- Pinned SHA-256-verified downloads, atomic extraction, live gRPC status, bounded restart backoff and in-app logs.
+- RPC always stays on loopback. Public mode exposes P2P only.
+- Managed node data is never deleted by install, upgrade, stop or wallet backup.
+
+## Phase 3 — Mining ✅
+
+- Direct ZKAS Stratum, KAS+ZKAS merged mining, diagnostic CPU mining and local ASIC instructions.
+- Existing or managed Kaspa parent node; separate ZKas and Kaspa endpoints and payout addresses.
+- Real bridge metrics are shown. No invented profitability number or fake pool controls.
+
+## Phase 4 — In-app explorer ✅
+
+- Detail routes for blocks and transactions reached from the live BlockDAG lists, plus an address privacy explanation.
+- Live recent blocks, DAA, BPS, difficulty-derived work estimate, peers, shielded-pool totals, supply and halving data.
+- Exact `zkas-api` response contracts are used; desktop relays only an allow-listed set of public read-only paths.
+- Dashboard snapshot cache survives an API outage without presenting cached data as live.
+- Address balances/history are deliberately not shown: ZKas addresses and amounts are not public chain facts.
+
+## Phase 5 — Services ✅
+
+- Built-in Store / Use / Earn / Verify / Build directory with search and deep links into this app.
+- Mining pool choices include the ZKas pool, K1Pool, Rusty Kaspa Bridge, KekPool and CoreBlock.
+- The directory is bundled with the signed app instead of scraping changing website HTML at runtime.
+
+## Phase 6 — Self-host ✅ with release boundary
+
+- Desktop dashboard for wallet engine, node source, managed local explorer API, app data, wallet backups and process state.
+- The explorer binary is extracted from the same verified ZKas archive and runs loopback-only with a persistent local transaction index.
+- The payment gateway is linked as a source build. It is not downloaded or executed because no signed, hashed gateway release currently exists.
+- Automatic UPnP is intentionally excluded. The UI explains that only a TLS/Tor gateway should be published; walletd and node RPC must never be exposed.
+- Backups cover the irreplaceable wallet. Public chain/index data is regenerable and is not copied into giant “backup” archives.
+
+## Phase 7 — Advanced wallet ✅ with custody boundary
+
+- Payment-request QR with amount, memo, label and advisory expiry.
+- Full-screen POS mode detects the requested increase across confirmed and pending incoming value.
+- Private per-transaction labels are stored locally, searchable in History and exported in the accounting CSV.
+- Batch send and manual note consolidation use real walletd endpoints and real automatic/custom fee-floor semantics.
+- Hosted/device-signed wallets refuse batch/consolidation instead of uploading the seed. These controls require a deliberately self-hosted custodial walletd until split-signing endpoints exist for them.
+- No fake slow/standard/fast fee market: ZKas uses relay floors, and paying more does not create a priority lane.
+
+## Phase 8 — Platforms ✅
+
+### Desktop
+
+- System tray with Open and explicit “Quit and stop services.”
+- Closing with active node/mining/explorer processes keeps those children supervised but locks and stops the spending engine first.
+- Opt-in start-on-boot. An encrypted wallet still opens locked.
+- `Ctrl/Cmd+1…7` navigation shortcuts.
+
+### Android
+
+- Dynamic launcher shortcuts for Receive, Mining and Explorer.
+- `zkas:` / `firecash:` payment deep links open Send with requested amount and memo.
+- Android text-share target accepts payment URIs.
+- Opt-in WorkManager background sync and incoming-payment notifications.
+- Optional home widget shows only the last value already recorded by background sync and opens the wallet on tap; it never holds a key.
+
+### iOS / Web
+
+- iOS payment URL schemes use Capacitor’s application URL bridge.
+- PWA manifest includes shortcuts and a `web+zkas` protocol handler.
+- Service worker caches only the static app shell. Wallet, chain, explorer, pool and gateway calls are always network-only so stale balances/invoices are never replayed as truth.
+- The service worker is browser-only; Capacitor always loads the newly packaged frontend after an app update.
+- Safe-area spacing is owned once by CSS, touch inputs avoid iOS zoom, dynamic viewport units handle browser chrome, and narrow desktop windows keep a scrollable top bar instead of a crushed mobile bar.
+
+## Ports
+
+| Port | Purpose |
+|---|---|
+| 16810 | managed ZKas gRPC, loopback |
+| 16811 | managed ZKas P2P |
+| 16110 | managed Kaspa parent gRPC, loopback |
+| 16111 | managed Kaspa parent P2P |
+| 5555 | local ASIC Stratum |
+| 18114 | local bridge metrics/API |
+| 8500 | local explorer REST API |
+
+## Validation
+
+- `npm run build`: passed.
+- `npm test`: 74/74 tests passed across 12 files.
+- Native `cargo check`: run against the real sibling `zkas-rusty` workspace on VPS3.
+- Payment-link and private-label storage behavior have dedicated tests.
+- Capacitor Android/iOS sync: passed and preserved native deep links, shortcuts and widget resources. Android packaging still requires the release build host's JDK/SDK and signing key.
+
+## Remaining release operations
+
+- Build/sign installers and APK/IPA for each target platform.
+- Publish a pinned gateway binary before enabling one-click gateway installation.
+- Perform release-candidate ASIC and OS lifecycle smoke tests on real hardware.

@@ -1,0 +1,145 @@
+# ZKas Wallet — All-in-One Desktop Architecture
+
+Status: implemented and compile-checked on 2026-08-08. This document replaces the original AI draft. The old draft guessed nonexistent node flags and a nonexistent bridge library path; those assumptions are not part of this implementation.
+
+## Product
+
+One application with three simple destinations:
+
+1. **Wallet** — the existing private ZKAS wallet, unchanged at its core.
+2. **Node** — install, run, inspect and stop a local ZKas node.
+3. **Mine** — solo mine ZKAS, dual mine KAS + ZKAS, or monitor the public ZKAS pool.
+4. **Explore / Services / Pay / Host** — public chain inspection, ecosystem links, payment tools and safe local-service control.
+
+The beginner path requires no binary paths or command-line flags. Advanced users can still point the wallet at an existing ZKas node and dual mining at an existing Kaspa node.
+
+## User flows
+
+### First launch
+
+- Choose the recommended public ZKas node, or enter an existing node's `host:port`.
+- Create/import/unlock the wallet as before.
+- The choice is saved.
+- A local node can be installed later from **Node**; no file picker is shown during onboarding.
+
+### Run a ZKas node
+
+- Open **Node**.
+- Click **Install ZKAS node**. The app downloads a pinned release, verifies its SHA-256 digest, extracts only the expected executables and installs them atomically in app data.
+- Choose **Standard** (recommended pruning) or **Archive**.
+- Optionally accept public inbound P2P peers. RPC always stays on loopback.
+- Click **Start local node**. The app persists the choice, supervises the child process and reconnects the embedded wallet daemon to it. A selected managed node starts with the app; pressing Stop returns the wallet to the public node.
+- Live status comes from real gRPC calls: blocks, headers, DAA, peers, sync state, mempool, difficulty and chain-data size.
+
+### Solo mine ZKAS
+
+- Start a local ZKas node, or configure a reachable existing ZKas node.
+- Open **Mine → Solo ZKAS**.
+- Install the verified Stratum bridge if missing.
+- Confirm the shielded payout address and Stratum port; click start.
+- Point the ASIC at `stratum+tcp://<this-computer>:5555`, use the `zkas:` address as username and `x` as password.
+- Found ZKas blocks pay the miner address directly. There is no desktop pool account or pool fee.
+
+### Dual mine KAS + ZKAS
+
+- Open **Mine → KAS + ZKAS**.
+- Enter a `kaspa:` payout address.
+- Choose either a managed local Kaspa node or an existing Kaspa gRPC endpoint.
+- The bridge connects to ZKas at `16810` and the Kaspa parent at `16110`, then uses one ASIC workload for both networks.
+- KAS and ZKAS payouts remain separate and go to their respective addresses.
+
+## Architecture
+
+| Layer | Implementation | Trust/security boundary |
+|---|---|---|
+| UI | React routes `/`, `/node`, `/mine` | No shell command construction in JavaScript |
+| Wallet | Embedded `zkas-walletd` | Loopback-only, random port, per-install token; seed stays in local app data |
+| Control API | Typed Tauri commands in `src-tauri/src/lib.rs` | Validates modes, ports, RPC endpoints and payout-address prefixes |
+| Process manager | `src-tauri/src/services.rs` | Separate children for ZKas node, Kaspa node, bridge and test CPU miner |
+| Downloads | Pinned immutable release URLs + SHA-256 | Partial downloads are never run; exact ZIP entries only; atomic replacement |
+| Status | ZKas/Kaspa gRPC, walletd HTTP, bridge metrics HTTP | Read-only loopback queries with short timeouts |
+| Persistence | `settings.json` in app config | Saves node/mining configuration, never a wallet passphrase |
+
+Nodes and mining processes are intentionally not linked into the wallet process. A bridge or node crash cannot take the wallet UI or its unlocked key material down with it. The supervisor keeps only explicitly requested services alive and uses bounded exponential restart backoff. Stopping services sends an interrupt on Unix so RocksDB can flush, then uses a hard-kill fallback only after the grace period.
+
+## Verified port map
+
+| Port | Bind | Purpose |
+|---|---|---|
+| `16810` | `127.0.0.1` | Managed ZKas gRPC |
+| `16811` | loopback or `0.0.0.0` | ZKas P2P; controlled by “Accept inbound peers” |
+| `16110` | `127.0.0.1` | Managed Kaspa parent gRPC |
+| `16111` | loopback or `0.0.0.0` | Kaspa P2P; public only when enabled |
+| `5555` | `0.0.0.0` | Local ASIC Stratum (user configurable) |
+| `18080` | `127.0.0.1` | Bridge health endpoint |
+| `18114` | `127.0.0.1` | Bridge metrics/API |
+
+Important: release `kaspad` has no `--nolisten` flag. Private P2P mode therefore binds P2P to loopback; it does not disable outbound synchronization.
+
+## Real components
+
+- ZKas node and diagnostic CPU miner: `firecash/zkas-rusty`, pinned `zkas-v1.0.6`.
+- Merged-mining Stratum bridge: `firecash/solo-dual-mode`, pinned `v1.0.6`.
+- Kaspa parent node: `kaspanet/rusty-kaspa`, pinned `v2.0.1`.
+
+Linux x86-64 and Windows x86-64 have verified dual-mining bridge assets. The published macOS ZKas release includes a ZKAS-only bridge, so macOS can run the wallet/node/solo flow but dual mining is explicitly disabled until a verified merged-mining macOS artifact is published. The app does not silently label ZKAS-only work as dual mining.
+
+## Backend commands
+
+- `control_config`
+- `install_local_components`
+- `node_status`, `walletd_status`, `mining_status`
+- `start_node_preset`, `stop_node`, `set_node_options`
+- `start_solo_mining`, `start_dual_mining`, `stop_mining`
+- `start_cpu_miner`, `stop_cpu_miner`
+- `service_logs`
+
+All errors are returned to the page. Polling failures do not erase the last useful display, but user-triggered failures are never swallowed.
+
+## Safety rules
+
+- Node RPC is never exposed by the “public P2P” toggle.
+- The desktop webview has a restrictive CSP: bundled code plus WebAssembly, Tauri IPC and loopback walletd only; remote browser scripts/connections are blocked.
+- The Stratum fallback payout is the user's own validated shielded address, not a project wallet.
+- A custom endpoint is checked before replacing a working wallet connection.
+- A missing/broken managed node falls back to the public node at launch instead of leaving walletd pointed at dead RPC.
+- Direct mining refuses the hosted public ZKas RPC.
+- Local Stratum refuses privileged ports and ports already in use.
+- Mining consumers stop before their nodes.
+- Closing with no background service exits normally. With node/mining/explorer active, the app locks the spending engine and moves to the tray; explicit Quit stops every child. A supervisor never resurrects a user-stopped process.
+- Wallet files and node chain data are never deleted by install, start, stop or upgrade operations.
+- The test CPU miner is under an advanced disclosure and is described as diagnostic; it is not presented as competitive mining.
+- Direct mining is not auto-started by default. Starting ASIC-facing services remains an explicit action.
+
+## Deliberate corrections to the old draft
+
+- Removed fake `full`, `pruned` and `mining` node modes. The real release supports default pruning or `--archival`; mining needs no consensus preset.
+- Removed the nonexistent `--prune-depth` and `--nolisten` flags.
+- Did not add a dependency on `rusty-kaspa/bridge`; that directory is not the merged-mining product. The app runs the tested `solo-dual-mode` release out of process.
+- Separated ZKas `16810/16811` from Kaspa `16110/16111`; the old draft collided both nodes on one RPC port.
+- Replaced guessed Katpool/KAS/NACHO API types with the actual ZKAS pool `/api/stats` and `/api/miner` contracts.
+- Removed the fake USD profitability calculator. Without a trustworthy market-price and power model, it would show authoritative-looking nonsense.
+- Removed unsafe “download latest and execute” behavior. Every executable is version-pinned and digest-verified.
+
+## Files
+
+- `src/main.tsx` — all-in-one navigation and routes.
+- `src/pages/NodeRunner.tsx` — node installation/control/status/logs.
+- `src/pages/Mining.tsx` — solo and dual direct-mining workflows.
+- `src/desktop-services.ts` — typed frontend/native command boundary.
+- `src-tauri/src/lib.rs` — settings, validation, wallet integration and commands.
+- `src-tauri/src/services.rs` — process supervision, logs and verified installation.
+- `src/styles.css` — responsive desktop/mobile control UI.
+
+## Verification performed
+
+- Frontend production build: passed.
+- Frontend test suite: 74/74 passed across 12 files.
+- Native `cargo check` on VPS3 against the real sibling `rusty-kaspa`: passed.
+- ZKas release node started with the exact managed arguments, opened loopback RPC/P2P, connected to the live ZKas peer and shut down cleanly.
+- Released CPU miner CLI arguments verified against `--help`.
+- Released merged bridge parsed the generated YAML and attempted the correct ZKas RPC endpoint.
+
+## Release boundary
+
+The application implementation is complete. Shipping still requires the normal release operation: build/sign installers for each target OS, publish the matching artifacts, and perform a real ASIC end-to-end block submission on the release candidate. macOS dual mining additionally requires publishing and pinning a verified merged-mining bridge artifact.

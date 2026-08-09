@@ -61,6 +61,7 @@ import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReco
 import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
+import { desktopServices } from "./desktop-services";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, Server, Settings, ShieldAlert, Trash2, WalletCards } from "lucide-react";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -5220,17 +5221,22 @@ function NodeSourceSetting() {
   );
 }
 
-/// Desktop with a dead embedded engine. The most common cause in the field is a
-/// custom node address that nothing answers on: the engine waits for the node
-/// before it serves anything, so the app looks broken — and because the address
-/// is persisted, it stays broken across relaunches. People were reinstalling to
-/// escape. The way out must live HERE, on this screen, because the normal node
-/// settings only render when the engine is up: one button that switches back to
-/// the public node (a Tauri shell call — it works with the engine down) and
-/// restarts the engine in place.
+/// Desktop with a genuinely dead embedded engine. Node outages no longer reach
+/// this screen: walletd serves cached wallet state while it reconnects. Keep an
+/// escape hatch here for local bind/config/runtime failures, but never claim the
+/// public node is guaranteed to repair an unrelated engine problem.
 function DesktopEngineDown() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    desktopServices.walletdStatus()
+      .then((status) => {
+        if (alive && status.error) setErr(status.error);
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
   return (
     <div className="card setup">
       <h2>The wallet engine didn't start</h2>
@@ -5239,8 +5245,8 @@ function DesktopEngineDown() {
         this is a local problem, not a chain one.
       </div>
       <p className="muted small">
-        The usual cause is a custom node address that isn't reachable — the engine waits for its node before it can
-        serve the wallet. Switching back to the public node fixes that without touching your wallet:
+        Retry first. If this began after choosing another node, switch the connection back to the public history node.
+        Neither action changes your wallet files or seed.
       </p>
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <button
@@ -5258,7 +5264,7 @@ function DesktopEngineDown() {
             }
           }}
         >
-          {busy ? "Switching…" : "Use the public node"}
+          {busy ? "Switching…" : "Use public history node"}
         </button>
         {/* A plain retry first: the engine also fails for transient reasons, and
             the only remedy used to discard the user's custom-node config just to
@@ -5268,7 +5274,7 @@ function DesktopEngineDown() {
         </button>
       </div>
       {err && <div className="msg warn">{err}</div>}
-      <p className="muted small">If it still doesn't start after that, restart the app once more.</p>
+      <p className="muted small">If it still fails after retrying, restart the app once and keep the error shown above.</p>
     </div>
   );
 }

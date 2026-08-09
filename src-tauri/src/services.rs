@@ -8,6 +8,7 @@ use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::VecDeque;
+use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
@@ -332,32 +333,92 @@ impl ManagedProcess {
     }
 }
 
-/// Stop a node left behind by an earlier wallet process before starting a new
-/// supervised child. We match both the exact installed executable and the
-/// exact app-owned `--appdir`, so an unrelated user node is never touched.
-///
-/// This is recovery for force-quit, OS crash and updater cases where the child
-/// outlives the parent. Merely deleting RocksDB's LOCK file is unsafe while that
-/// child is alive and does not release the operating-system lock anyway.
-pub fn stop_orphaned_node_processes(binary: &Path, appdir: &Path) -> Result<Vec<u32>, String> {
+fn owned_process_matches(
+    binary: &Path,
+    process_exe: Option<&Path>,
+    command: &[OsString],
+    required_args: &[OsString],
+) -> bool {
+    let canonical_binary = std::fs::canonicalize(binary).unwrap_or_else(|_| binary.to_path_buf());
+    let same_path = |path: &Path| {
+        std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf()) == canonical_binary
+    };
+    let same_binary = process_exe.is_some_and(same_path)
+        || command
+            .first()
+            .map(PathBuf::from)
+            .is_some_and(|path| same_path(&path));
+    same_binary
+        && required_args
+            .iter()
+            .all(|required| command.iter().any(|actual| actual == required))
+}
+
+fn bridge_process_matches(
+    binary: &Path,
+    process_exe: Option<&Path>,
+    command: &[OsString],
+    config: &Path,
+) -> bool {
+    let required = [
+        OsString::from("--config"),
+        config.as_os_str().to_os_string(),
+    ];
+    if !required
+        .iter()
+        .all(|expected| command.iter().any(|actual| actual == expected))
+    {
+        return false;
+    }
+    if owned_process_matches(binary, process_exe, command, &required) {
+        return true;
+    }
+    // An app update may replace/rename the executable while the old child is
+    // still alive. The generated config path is unique to this wallet install;
+    // accept an older executable only when it is still recognisably the bridge
+    // and carries that exact app-owned config. Never match by port alone.
+    let expected_name = binary
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
+    let actual_name = process_exe
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str())
+        .map(str::to_owned)
+        .or_else(|| {
+            command.first().map(PathBuf::from).and_then(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .map(str::to_owned)
+            })
+        })
+        .unwrap_or_default();
+    let bridge_name = |name: &str| {
+        name == expected_name
+            || name == "stratum-bridge"
+            || name == "stratum-bridge.exe"
+            || name.starts_with("stratum-bridge.old")
+    };
+    bridge_name(&actual_name)
+}
+
+/// Stop an app-owned child left behind by a force-quit, crash, or updater.
+/// Matching requires both the exact installed executable and app-unique CLI
+/// arguments. A foreign bridge/node using the same network port is never killed.
+fn stop_orphaned_processes(
+    binary: &Path,
+    required_args: &[OsString],
+    label: &str,
+) -> Result<Vec<u32>, String> {
     use sysinfo::{ProcessesToUpdate, Signal, System};
 
-    let canonical_binary = std::fs::canonicalize(binary).unwrap_or_else(|_| binary.to_path_buf());
-    let appdir_argument = format!("--appdir={}", appdir.to_string_lossy());
     let mut system = System::new_all();
     let matches: Vec<_> = system
         .processes()
         .iter()
         .filter_map(|(pid, process)| {
-            let owns_appdir = process
-                .cmd()
-                .iter()
-                .any(|arg| arg.to_string_lossy() == appdir_argument);
-            let same_binary = process.exe().is_some_and(|path| {
-                std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
-                    == canonical_binary
-            });
-            (owns_appdir && same_binary).then_some(*pid)
+            owned_process_matches(binary, process.exe(), process.cmd(), required_args)
+                .then_some(*pid)
         })
         .collect();
     if matches.is_empty() {
@@ -371,7 +432,7 @@ pub fn stop_orphaned_node_processes(binary: &Path, appdir: &Path) -> Result<Vec<
             let graceful = process.kill_with(Signal::Interrupt).unwrap_or(false)
                 || process.kill_with(Signal::Term).unwrap_or(false);
             if !graceful && !process.kill() {
-                return Err(format!("could not stop orphaned node process {pid}"));
+                return Err(format!("could not stop orphaned {label} process {pid}"));
             }
         }
     }
@@ -407,7 +468,85 @@ pub fn stop_orphaned_node_processes(binary: &Path, appdir: &Path) -> Result<Vec<
                 .collect::<Vec<_>>()
                 .join(", ");
             return Err(format!(
-                "orphaned node process did not stop (PID {alive}); close it before starting the managed node"
+                "orphaned {label} process did not stop (PID {alive}); close it before starting it again"
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+}
+
+/// Nodes are owned by their exact binary plus their app-specific data folder.
+/// Merely deleting RocksDB's LOCK file is unsafe while the process is alive.
+pub fn stop_orphaned_node_processes(binary: &Path, appdir: &Path) -> Result<Vec<u32>, String> {
+    stop_orphaned_processes(
+        binary,
+        &[OsString::from(format!(
+            "--appdir={}",
+            appdir.to_string_lossy()
+        ))],
+        "node",
+    )
+}
+
+/// A wallet-managed bridge is uniquely identified by the installed executable
+/// and this wallet's generated config path. This reclaims Stratum 5555 and the
+/// loopback health/dashboard ports without touching a separately installed pool.
+pub fn stop_orphaned_bridge_processes(binary: &Path, config: &Path) -> Result<Vec<u32>, String> {
+    use sysinfo::{ProcessesToUpdate, Signal, System};
+
+    let mut system = System::new_all();
+    let matches: Vec<_> = system
+        .processes()
+        .iter()
+        .filter_map(|(pid, process)| {
+            bridge_process_matches(binary, process.exe(), process.cmd(), config).then_some(*pid)
+        })
+        .collect();
+    if matches.is_empty() {
+        return Ok(Vec::new());
+    }
+    for pid in &matches {
+        if let Some(process) = system.process(*pid) {
+            let graceful = process.kill_with(Signal::Interrupt).unwrap_or(false)
+                || process.kill_with(Signal::Term).unwrap_or(false);
+            if !graceful && !process.kill() {
+                return Err(format!(
+                    "could not stop orphaned Stratum bridge process {pid}"
+                ));
+            }
+        }
+    }
+    let graceful_deadline = Instant::now() + Duration::from_secs(12);
+    loop {
+        system.refresh_processes(ProcessesToUpdate::Some(&matches));
+        if matches.iter().all(|pid| system.process(*pid).is_none()) {
+            return Ok(matches.iter().map(|pid| pid.as_u32()).collect());
+        }
+        if Instant::now() >= graceful_deadline {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    for pid in &matches {
+        if let Some(process) = system.process(*pid) {
+            let _ = process.kill();
+        }
+    }
+    let kill_deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        system.refresh_processes(ProcessesToUpdate::Some(&matches));
+        if matches.iter().all(|pid| system.process(*pid).is_none()) {
+            return Ok(matches.iter().map(|pid| pid.as_u32()).collect());
+        }
+        if Instant::now() >= kill_deadline {
+            let alive = matches
+                .iter()
+                .filter(|pid| system.process(**pid).is_some())
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(format!(
+                "orphaned Stratum bridge did not stop (PID {alive}); close it before starting mining"
             ));
         }
         std::thread::sleep(Duration::from_millis(100));
@@ -494,9 +633,70 @@ impl ServiceManager {
         self.kaspa_node.start(app, Arc::clone(&self.logs), spec)
     }
 
-    pub fn start_bridge(&mut self, app: &AppHandle, spec: ProcessSpec) -> Result<u32, String> {
+    pub fn start_bridge(
+        &mut self,
+        app: &AppHandle,
+        spec: ProcessSpec,
+        stratum_port: u16,
+        timeout: Duration,
+    ) -> Result<u32, String> {
         self.bridge.restart_attempts = 0;
-        self.bridge.start(app, Arc::clone(&self.logs), spec)
+        let pid = self.bridge.start(app, Arc::clone(&self.logs), spec)?;
+        let deadline = Instant::now() + timeout;
+        let ready = |port| {
+            std::net::TcpStream::connect_timeout(
+                &std::net::SocketAddr::from(([127, 0, 0, 1], port)),
+                Duration::from_millis(150),
+            )
+            .is_ok()
+        };
+        loop {
+            if !self.bridge.running() {
+                let exit = self
+                    .bridge
+                    .last_exit()
+                    .unwrap_or_else(|| "exited before opening Stratum".into());
+                let detail = self
+                    .logs(Some("stratum-bridge"), 8)
+                    .into_iter()
+                    .map(|line| line.line)
+                    .collect::<Vec<_>>()
+                    .join(" | ");
+                self.bridge.stop(app, "stratum-bridge");
+                return Err(if detail.is_empty() {
+                    format!("Stratum bridge {exit}")
+                } else {
+                    format!("Stratum bridge {exit}: {detail}")
+                });
+            }
+            // The bridge is useful only when miners can reach Stratum AND its
+            // health/dashboard endpoints are live. Returning earlier made the UI
+            // say "Mining" while the child was still connecting or about to exit.
+            if ready(stratum_port) && ready(18080) && ready(18114) {
+                return Ok(pid);
+            }
+            if Instant::now() >= deadline {
+                let detail = self
+                    .logs(Some("stratum-bridge"), 8)
+                    .into_iter()
+                    .map(|line| line.line)
+                    .collect::<Vec<_>>()
+                    .join(" | ");
+                self.bridge.stop(app, "stratum-bridge");
+                return Err(if detail.is_empty() {
+                    format!(
+                        "Stratum bridge did not open port {stratum_port} and its dashboard within {} seconds",
+                        timeout.as_secs()
+                    )
+                } else {
+                    format!(
+                        "Stratum bridge was not ready within {} seconds: {detail}",
+                        timeout.as_secs()
+                    )
+                });
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
     }
 
     pub fn start_cpu_miner(&mut self, app: &AppHandle, spec: ProcessSpec) -> Result<u32, String> {
@@ -1045,6 +1245,49 @@ fn kaspa_archive() -> Result<ArchiveSpec, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn orphan_matching_never_claims_a_foreign_bridge() {
+        let current = Path::new("/app/bin/stratum-bridge");
+        let config = Path::new("/app/mining/bridge.yaml");
+        let owned = vec![
+            OsString::from("/app/bin/stratum-bridge.old"),
+            OsString::from("--node-mode"),
+            OsString::from("external"),
+            OsString::from("--config"),
+            config.as_os_str().to_os_string(),
+        ];
+        assert!(bridge_process_matches(
+            current,
+            Some(Path::new("/app/bin/stratum-bridge.old")),
+            &owned,
+            config,
+        ));
+
+        let foreign_config = vec![
+            OsString::from("/usr/bin/stratum-bridge"),
+            OsString::from("--config"),
+            OsString::from("/home/miner/bridge.yaml"),
+        ];
+        assert!(!bridge_process_matches(
+            current,
+            Some(Path::new("/usr/bin/stratum-bridge")),
+            &foreign_config,
+            config,
+        ));
+
+        let unrelated_binary = vec![
+            OsString::from("/tmp/not-a-bridge"),
+            OsString::from("--config"),
+            config.as_os_str().to_os_string(),
+        ];
+        assert!(!bridge_process_matches(
+            current,
+            Some(Path::new("/tmp/not-a-bridge")),
+            &unrelated_binary,
+            config,
+        ));
+    }
 
     fn assert_verified_release(spec: ArchiveSpec) {
         assert!(spec.url.starts_with("https://github.com/"));

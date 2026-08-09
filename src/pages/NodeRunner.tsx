@@ -243,6 +243,8 @@ export function NodeRunner() {
   const installed = !!config?.components.zkas_node;
   const updateAvailable = !!config?.components.zkas_node_update_available;
   const downloadPercent = progress?.total ? Math.round((progress.received / progress.total) * 100) : null;
+  const walletSource = walletd?.node_source === "local" ? "Local node" : walletd?.node_source === "custom" ? "My node" : "Public node";
+  const walletConnectionLabel = walletd?.node_connected === false ? `${walletSource} · reconnecting` : walletSource;
 
   return (
     <main className="control-page">
@@ -307,7 +309,7 @@ export function NodeRunner() {
       </section>
 
       <section className="control-card compact-card">
-        <div className="card-title-row"><div><h2>Wallet connection</h2><p>The wallet is separate from the node process above.</p></div><span className={`status-pill ${walletd?.running && walletd.node_connected ? "good" : "off"}`}>{walletd?.node_source === "local" ? "Local node" : walletd?.node_source === "custom" ? "My node" : "Public node"}</span></div>
+        <div className="card-title-row"><div><h2>Wallet connection</h2><p>The wallet is separate from the node process above.</p></div><span className={`status-pill ${walletd?.running && walletd.node_connected ? "good" : "off"}`}>{walletConnectionLabel}</span></div>
         <div className="metric-grid three">
           <Metric label="Wallet scan" value={walletd?.scanning_progress == null ? "—" : `${walletd.scanning_progress.toFixed(1)}%`} />
           <Metric label="Balance" value={walletd?.balance == null ? "—" : `${walletd.balance} ZKAS`} />
@@ -322,6 +324,8 @@ export function NodeRunner() {
           )}
         </div>
         {node?.running && node.is_synced !== true && <p className="inline-warning">Local node is syncing. Your wallet stays on {walletd?.node_source === "custom" ? "your existing node" : "the public node"} with its current balance until the local node is complete.</p>}
+        {walletd?.running && walletd.node_connected === false && <p className="inline-warning">The wallet is open, but its selected node is not answering yet. It retries automatically and keeps the last confirmed wallet state visible.</p>}
+        {walletd?.error && <p className="inline-warning">Wallet engine: {walletd.error}</p>}
         {config?.settings.node_preset === "mining" && <p className="inline-warning">Mining mode is never offered to the wallet because it does not retain complete historical notes.</p>}
       </section>
 

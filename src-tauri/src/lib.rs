@@ -229,6 +229,7 @@ struct Engine {
     /// scan loops and flushed checkpoints. Dropping only the shutdown sender
     /// allowed two daemons to write the same wallet files concurrently.
     walletd_task: Option<tokio::task::JoinHandle<()>>,
+    walletd_error: std::sync::Arc<std::sync::Mutex<Option<String>>>,
     services: ServiceManager,
     node_disk_bytes: u64,
     node_disk_checked: Option<std::time::Instant>,
@@ -321,6 +322,7 @@ impl Engine {
             data_dir,
             shutdown: None,
             walletd_task: None,
+            walletd_error: std::sync::Arc::new(std::sync::Mutex::new(None)),
             services: ServiceManager::default(),
             node_disk_bytes: 0,
             node_disk_checked: None,
@@ -380,6 +382,7 @@ impl Engine {
     /// Start (or restart) the embedded walletd against the current node source.
     fn start_walletd(&mut self) {
         self.stop_walletd();
+        *self.walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = None;
         // A fresh loopback port each (re)start avoids TIME_WAIT collisions.
         // A bind failure (firewall software gone wild, loopback misconfigured)
         // must not panic the app: leave port 0 — the UI shows "cannot reach the
@@ -388,17 +391,17 @@ impl Engine {
             Ok(l) => match l.local_addr() {
                 Ok(a) => a.port(),
                 Err(e) => {
-                    log_crash(&format!(
-                        "cannot read loopback address for wallet engine: {e}"
-                    ));
+                    let message = format!("cannot read loopback address for wallet engine: {e}");
+                    log_crash(&message);
+                    *self.walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message);
                     self.port = 0;
                     return;
                 }
             },
             Err(e) => {
-                log_crash(&format!(
-                    "cannot bind a loopback port for wallet engine: {e}"
-                ));
+                let message = format!("cannot bind a loopback port for wallet engine: {e}");
+                log_crash(&message);
+                *self.walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message);
                 self.port = 0;
                 return;
             }
@@ -437,10 +440,13 @@ impl Engine {
         };
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         self.shutdown = Some(tx);
+        let walletd_error = self.walletd_error.clone();
         self.walletd_task = Some(self.rt.spawn(async move {
             if let Err(e) = zkas_walletd::serve(cfg, rx).await {
                 // crash.log, not just stderr: the Windows build has no console.
-                log_crash(&format!("embedded walletd stopped: {e}"));
+                let message = format!("embedded walletd stopped: {e}");
+                log_crash(&message);
+                *walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message);
             }
         }));
         log_crash(&format!(
@@ -451,7 +457,12 @@ impl Engine {
 
     fn wait_walletd_ready(&self, timeout: std::time::Duration) -> Result<(), String> {
         if self.port == 0 {
-            return Err("wallet engine has no listening port".into());
+            return Err(self
+                .walletd_error
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .clone()
+                .unwrap_or_else(|| "wallet engine has no listening port".into()));
         }
         let deadline = std::time::Instant::now() + timeout;
         let address = std::net::SocketAddr::from(([127, 0, 0, 1], self.port));
@@ -461,7 +472,12 @@ impl Engine {
                 .as_ref()
                 .is_some_and(tokio::task::JoinHandle::is_finished)
             {
-                return Err("wallet engine stopped during startup".into());
+                return Err(self
+                    .walletd_error
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .clone()
+                    .unwrap_or_else(|| "wallet engine stopped during startup".into()));
             }
             if std::net::TcpStream::connect_timeout(&address, std::time::Duration::from_millis(250))
                 .is_ok()
@@ -1524,13 +1540,19 @@ struct WalletdStatus {
 
 #[tauri::command]
 async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<WalletdStatus, String> {
-    let (port, token, node_source, node_rpc) = {
+    let (port, token, node_source, node_rpc, engine_error) = {
         let e = engine(&state);
+        let engine_error = e
+            .walletd_error
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone();
         (
             e.port,
             e.token.clone(),
             e.settings.mode.clone(),
             e.settings.rpc_addr(),
+            engine_error,
         )
     };
     if port == 0 {
@@ -1545,7 +1567,7 @@ async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<Wallet
             note_count: None,
             anchor_daa: None,
             balance: None,
-            error: None,
+            error: engine_error,
         });
     }
     let result = reqwest::Client::new()
@@ -1637,11 +1659,16 @@ fn start_node_preset(
     // remote wallet connection remains usable if startup fails.
     std::thread::sleep(std::time::Duration::from_millis(300));
     if !e.services.zkas_node.running() {
-        return Err(e
+        let error = e
             .services
             .zkas_node
             .last_exit()
-            .unwrap_or_else(|| "ZKas node exited during startup".into()));
+            .unwrap_or_else(|| "ZKas node exited during startup".into());
+        // A failed first launch is not a transient runtime crash. Leaving the
+        // process marked desired made the supervisor retry a RocksDB LOCK or bad
+        // argument five times while the UI had already reported failure.
+        e.services.stop_zkas_node(&app);
+        return Err(error);
     }
     e.settings.node_auto_start = true;
     e.save_settings();
@@ -1741,9 +1768,28 @@ fn check_stratum_port(port: u16) -> Result<(), String> {
     if port < 1024 {
         return Err("choose a Stratum port from 1024 to 65535".into());
     }
-    std::net::TcpListener::bind(("0.0.0.0", port))
-        .map(|listener| drop(listener))
-        .map_err(|e| format!("Stratum port {port} is already in use: {e}"))
+    match std::net::TcpListener::bind(("0.0.0.0", port)) {
+        Ok(listener) => {
+            drop(listener);
+            Ok(())
+        }
+        Err(error) => {
+            let bridge_dashboard = std::net::TcpStream::connect_timeout(
+                &std::net::SocketAddr::from(([127, 0, 0, 1], 18114)),
+                std::time::Duration::from_millis(250),
+            )
+            .is_ok();
+            Err(if bridge_dashboard {
+                format!(
+                    "Stratum port {port} is already used by another bridge. Stop that bridge before starting mining here; the app will not kill a manually managed miner."
+                )
+            } else {
+                format!(
+                    "Stratum port {port} is already in use ({error}). Stop the program using it or choose another port."
+                )
+            })
+        }
+    }
 }
 
 fn check_bridge_control_ports() -> Result<(), String> {
@@ -1807,6 +1853,19 @@ fn start_bridge(
         .clone()
         .ok_or("Stratum bridge is not installed")?;
     if !e.services.bridge.running() {
+        let config = e.bridge_config_path();
+        let recovered =
+            services::stop_orphaned_bridge_processes(std::path::Path::new(&binary), &config)?;
+        if !recovered.is_empty() {
+            log_crash(&format!(
+                "recovered orphaned Stratum bridge process(es): {}",
+                recovered
+                    .iter()
+                    .map(u32::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
         check_stratum_port(e.settings.stratum_port)?;
         check_bridge_control_ports()?;
     }
@@ -1838,6 +1897,8 @@ fn start_bridge(
             env,
             cwd: config.parent().unwrap_or(&e.config_dir).to_path_buf(),
         },
+        e.settings.stratum_port,
+        std::time::Duration::from_secs(30),
     )
 }
 
@@ -1910,27 +1971,53 @@ fn start_dual_mining(
     } else {
         validate_endpoint(kaspa_node_addr.as_deref().unwrap_or(""), "Kaspa node RPC")?
     };
+    let mut kaspa_started_here = false;
     if kaspa_mode == "custom" {
         probe_node(&e.settings.kaspa_node_addr)?;
     } else {
+        let kaspa_was_running = e.services.kaspa_node.running();
         e.start_local_kaspa_node(&app)?;
+        kaspa_started_here = !kaspa_was_running;
         if !e.services.kaspa_node.running() {
-            return Err(e
+            let error = e
                 .services
                 .kaspa_node
                 .last_exit()
-                .unwrap_or_else(|| "Kaspa node exited during startup".into()));
+                .unwrap_or_else(|| "Kaspa node exited during startup".into());
+            e.services.stop_kaspa_node(&app);
+            return Err(error);
         }
         // The released dual bridge intentionally degrades to ZKAS-only when it
         // cannot connect to the Kaspa parent during construction; it does not
         // later promote that session. Never race it against a freshly spawned
         // Kaspa RPC or the UI would say dual while KAS work was silently absent.
-        wait_for_node_listener(LOCAL_KASPA_RPC, std::time::Duration::from_secs(20))?;
+        if let Err(error) =
+            wait_for_node_listener(LOCAL_KASPA_RPC, std::time::Duration::from_secs(20))
+        {
+            let detail = e.services.kaspa_node.last_exit();
+            if !kaspa_was_running {
+                // This command owns the new child. Do not leave a failed launch in
+                // the supervisor's restart loop after reporting an error to the user.
+                e.services.stop_kaspa_node(&app);
+            }
+            return Err(match detail {
+                Some(detail) => format!("{error}; Kaspa node {detail}"),
+                None => error,
+            });
+        }
     }
     e.settings.mining_mode = "dual".into();
     e.settings.mining_auto_start = false;
     e.services.stop_bridge(&app);
-    let pid = start_bridge(&mut e, &app, &zkas_payout, true)?;
+    let pid = match start_bridge(&mut e, &app, &zkas_payout, true) {
+        Ok(pid) => pid,
+        Err(error) => {
+            if kaspa_started_here {
+                e.services.stop_kaspa_node(&app);
+            }
+            return Err(error);
+        }
+    };
     e.save_settings();
     Ok(pid)
 }

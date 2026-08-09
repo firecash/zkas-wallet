@@ -39,7 +39,6 @@ const SERVICES: Service[] = [
   { name: "Mining pools", description: "Compare pools and mine ZKAS with kHeavyHash hardware.", categories: ["earn"], status: "Live", tags: ["ASIC", "Merged mining"], action: "Open mining", href: "/mine", internal: true, icon: Pickaxe, secondary: [
     { label: "ZKas Pool", href: "https://mining-pool.zkas.info" },
     { label: "K1Pool", href: "https://k1pool.com" },
-    { label: "Rusty Kaspa Bridge", href: "https://bridge.rustykaspa.org" },
     { label: "KekPool", href: "https://kekpool.com" },
     { label: "CoreBlock", href: "https://coreblock.cc" },
   ] },
