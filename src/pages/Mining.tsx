@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Copy, Cpu, Globe2, Network, Server, Square, Zap } from "lucide-react";
 import { api, loadStatusCache } from "../api";
-import { kaspaNodeProfiles, nodeProfiles } from "../connection-profiles";
+import { kaspaNodeProfiles, miningNodeProfiles } from "../connection-profiles";
 import { isDesktop } from "../desktop";
 import {
   desktopServices,
@@ -136,8 +136,12 @@ export function Mining() {
   const missing = useMemo(() => {
     if (!config) return [] as string[];
     const result: string[] = [];
-    if (zkasMode === "local" && !config.components.zkas_node) result.push("ZKAS node");
-    if (!config.components.bridge) result.push("mining bridge");
+    if (zkasMode === "local" && (!config.components.zkas_node || config.components.zkas_node_update_available)) {
+      result.push(config.components.zkas_node ? "ZKAS node update" : "ZKAS node");
+    }
+    if (!config.components.bridge || config.components.bridge_update_available) {
+      result.push(config.components.bridge ? "mining bridge update" : "mining bridge");
+    }
     if (mode === "dual" && kaspaMode === "local" && !config.components.kaspa_node) result.push("Kaspa node");
     return result;
   }, [config, kaspaMode, mode, zkasMode]);
@@ -157,8 +161,8 @@ export function Mining() {
     try {
       let current = config;
       const selection = {
-        zkas: zkasMode === "local" && !current.components.zkas_node,
-        bridge: !current.components.bridge,
+        zkas: zkasMode === "local" && (!current.components.zkas_node || current.components.zkas_node_update_available),
+        bridge: !current.components.bridge || current.components.bridge_update_available,
         kaspa: mode === "dual" && kaspaMode === "local" && !current.components.kaspa_node,
       };
       if (selection.zkas || selection.bridge || selection.kaspa) {
@@ -181,7 +185,7 @@ export function Mining() {
         }
         if (!ready) throw new Error("The ZKAS node started but its RPC is not ready yet. Keep it running and press Start mining again shortly.");
       } else {
-        if (!nodeProfiles.load().some((profile) => profile.address === zkasRpc.trim())) nodeProfiles.save("Mining node", zkasRpc.trim());
+        if (!miningNodeProfiles.load().some((profile) => profile.address === zkasRpc.trim())) miningNodeProfiles.save("Mining node", zkasRpc.trim());
       }
 
       setStage(mode === "dual" ? "Starting KAS + ZKAS mining" : "Starting ZKAS mining");
@@ -253,7 +257,7 @@ export function Mining() {
         <button className={mode === "solo" ? "active" : ""} onClick={() => setMode("solo")} disabled={live}>ZKAS</button>
         <button className={mode === "dual" ? "active" : ""} onClick={() => setMode("dual")} disabled={live || config?.dual_mining_supported === false}>KAS + ZKAS</button>
       </div>
-      {config?.dual_mining_supported === false && <p className="subtle mining-platform-note">Dual mining currently has verified bridge builds for Windows and Linux x64. ZKAS-only mining works here.</p>}
+      {config?.dual_mining_supported === false && <p className="subtle mining-platform-note">No verified merged-mining bridge is published for this device. ZKAS-only mining remains available.</p>}
       {error && <div className="control-error">{error}</div>}
 
       <section className="control-card mining-setup-card">
@@ -344,7 +348,7 @@ export function Mining() {
 }
 
 function EndpointField({ label, value, onChange, placeholder, disabled, kind }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; disabled: boolean; kind: "zkas" | "kaspa" }) {
-  const profiles = (kind === "zkas" ? nodeProfiles : kaspaNodeProfiles).load();
+  const profiles = (kind === "zkas" ? miningNodeProfiles : kaspaNodeProfiles).load();
   return <label className="field-label">{label}<div className="endpoint-input-row"><input className="control-input mono" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} disabled={disabled} />{profiles.length > 0 && <select aria-label={`Saved ${label}`} value="" disabled={disabled} onChange={(event) => event.target.value && onChange(event.target.value)}><option value="">Saved…</option>{profiles.map((profile) => <option value={profile.address} key={profile.id}>{profile.name}</option>)}</select>}</div></label>;
 }
 

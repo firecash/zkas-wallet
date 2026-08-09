@@ -296,8 +296,8 @@ export function NodeRunner() {
         {node?.error && node.running && <p className="inline-warning">The process is running but RPC is not ready yet: {node.error}</p>}
         {!node?.running && node?.last_exit && <p className="inline-warning">Last run: {node.last_exit}</p>}
         <div className="control-actions">
-          <button className="btn" disabled={!installed || busy !== null || !!node?.running} onClick={openStartDialog}>
-            Run node
+          <button className="btn" disabled={!installed || updateAvailable || busy !== null || !!node?.running} onClick={openStartDialog}>
+            {updateAvailable ? "Update before running" : "Run node"}
           </button>
           <button className="btn ghost" disabled={busy !== null || !node?.running || !node.managed} onClick={() => run("stop", async () => { await desktopServices.stopNode(); await initDesktop(); location.reload(); })}>
             {busy === "stop" ? "Stopping…" : "Stop"}

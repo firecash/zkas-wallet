@@ -2049,17 +2049,7 @@ select { appearance: none; cursor: pointer; }
 
 /* Payment tools ---------------------------------------------------------- */
 .tool-tabs { margin-bottom: 12px; }
-.payment-request-layout, .pos-panel { display: grid; grid-template-columns: minmax(230px, .7fr) minmax(0, 1fr); gap: 22px; align-items: center; margin-top: 12px; padding: 22px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
-.request-fields { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; }
-.request-qr { display: grid; min-height: 220px; place-items: center; }
-.request-qr img { display: block; width: min(100%, 280px); border-radius: 14px; }
-.request-summary { min-width: 0; }
-.request-summary > strong { display: block; margin: 8px 0; font-size: clamp(30px, 6vw, 52px); letter-spacing: -.05em; }
-.request-summary strong small { font-size: .35em; color: var(--muted); letter-spacing: 0; }
-.request-summary code, .service-runtime-card code { display: block; overflow-wrap: anywhere; padding: 10px; border-radius: 9px; background: var(--surface-2); color: var(--muted); font: 11px/1.5 var(--mono); }
-.payment-success { margin-top: 12px; color: var(--good); font-size: 28px; font-weight: 750; }
-.pos-overlay { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; overflow: auto; padding: calc(24px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left)); background: var(--bg); }
-.pos-panel { width: min(900px, 100%); margin: auto; }
+.service-runtime-card code { display: block; overflow-wrap: anywhere; padding: 10px; border-radius: 9px; background: var(--surface-2); color: var(--muted); font: 11px/1.5 var(--mono); }
 .batch-input { resize: vertical; line-height: 1.65; }
 .batch-summary { display: flex; justify-content: space-between; gap: 12px; margin: 10px 0; color: var(--muted); font-size: 13px; }
 .batch-summary strong { color: var(--ink); }
@@ -2146,12 +2136,10 @@ select { appearance: none; cursor: pointer; }
   .mining-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .explorer-page, .services-page { width: min(100% - 20px, 1080px); }
   .explorer-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .explorer-columns, .selfhost-grid, .payment-request-layout, .pos-panel { grid-template-columns: 1fr; }
+  .explorer-columns, .selfhost-grid { grid-template-columns: 1fr; }
   .services-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .services-grid { grid-template-columns: 1fr; }
   .service-card { min-height: 220px; }
-  .request-fields { grid-template-columns: 1fr; }
-  .request-qr img { width: min(78vw, 330px); }
   .wrap { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
   .control-page { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
   .detail-row { align-items: flex-start; }

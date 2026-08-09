@@ -20,10 +20,10 @@ describe("services directory", () => {
     expect(screen.queryByText("Use the network")).not.toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Filter services" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Use 4" })).toHaveClass("active");
-    expect(screen.getAllByRole("article")).toHaveLength(4);
-    await user.click(screen.getByRole("button", { name: "All 12" }));
-    expect(screen.getAllByRole("article")).toHaveLength(12);
+    expect(screen.getByRole("button", { name: "Use 3" })).toHaveClass("active");
+    expect(screen.getAllByRole("article")).toHaveLength(3);
+    await user.click(screen.getByRole("button", { name: "All 11" }));
+    expect(screen.getAllByRole("article")).toHaveLength(11);
   });
 
   it("filters in place and honours a linked category", async () => {

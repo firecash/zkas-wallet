@@ -60,7 +60,7 @@ import { disableLock, enableLock, forgetWalletLock, isLockEnabled, lockKind, sea
 import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReconfigure } from "./bgsync";
 import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
-import { nodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
+import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, Server, Settings, ShieldAlert, Trash2, WalletCards } from "lucide-react";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -175,6 +175,15 @@ function parseAmount(s: string): number {
 
 const EXPLORER = "https://explorer.zkas.info";
 type Tab = "receive" | "send" | "history" | "signatures" | "settings";
+
+function walletTabFromHash(): Tab | null {
+  if (typeof location === "undefined") return null;
+  const query = location.hash.split("?", 2)[1];
+  const requested = query ? new URLSearchParams(query).get("tab") : null;
+  return requested && ["receive", "send", "history", "signatures", "settings"].includes(requested)
+    ? requested as Tab
+    : null;
+}
 const TAB_LABEL: Record<Tab, string> = {
   receive: "Receive",
   send: "Send",
@@ -402,7 +411,20 @@ export default function App() {
   // Opens on History, not Receive. "Receive" is now a button, and landing inside it
   // meant every launch started with a QR code nobody asked for; what a person wants on
   // opening a wallet is to see that their money is there and what happened to it.
-  const [tab, setTab] = useState<Tab>("history");
+  const [tab, setTab] = useState<Tab>(() => walletTabFromHash() ?? "history");
+  useEffect(() => {
+    const applyWalletRoute = () => {
+      const routed = walletTabFromHash();
+      if (!routed) return;
+      setTab(routed);
+      // Consume the one-shot quick-action parameter. Normal tab changes remain
+      // local UI state and Back cannot unexpectedly reopen Receive later.
+      history.replaceState(null, "", `${location.pathname}${location.search}#/`);
+    };
+    applyWalletRoute();
+    window.addEventListener("hashchange", applyWalletRoute);
+    return () => window.removeEventListener("hashchange", applyWalletRoute);
+  }, []);
   // Switching tabs aligns the new pane under the tab bar so its form/content is
   // instantly usable — e.g. tapping Send lands you on the address field, not on
   // the balance hero with the form below the fold. Skipped on first render so
@@ -1171,7 +1193,7 @@ function ConnectionButton() {
 
   const refresh = useCallback(async () => {
     if (desktop) {
-      setProfiles(nodeProfiles.load());
+      setProfiles(walletNodeProfiles.load());
       setCfg(await initDesktop());
     } else {
       setProfiles(walletdProfiles.load());
@@ -1189,7 +1211,7 @@ function ConnectionButton() {
     return current?.replace(/\/$/, "").toLowerCase() === profile.address.replace(/\/$/, "").toLowerCase();
   });
   const label = desktop
-    ? cfg?.mode === "local" ? "Local node" : cfg?.mode === "custom" ? currentProfile?.name ?? "My node" : "Public node"
+    ? cfg?.mode === "local" ? "Local history" : cfg?.mode === "custom" ? currentProfile?.name ?? "My history node" : "Public history"
     : hosted ? "Hosted" : currentProfile?.name ?? "My walletd";
 
   const switchDesktop = async (mode: "remote" | "local" | "custom", profile?: EndpointProfile) => {
@@ -1241,7 +1263,7 @@ function ConnectionButton() {
       setError("");
       try {
         const next = await setNodeSource("custom", address);
-        nodeProfiles.save(name, next.node_addr);
+        walletNodeProfiles.save(name, next.node_addr);
         setCfg(next);
         setOpen(false);
         location.reload();
@@ -1260,25 +1282,25 @@ function ConnectionButton() {
     <>
       <button className="connection-button" onClick={() => { setOpen(true); void refresh(); }} aria-label={`Connection: ${label}`}>
         <Server aria-hidden="true" size={17} strokeWidth={2.2} />
-        <span><small>{desktop ? "Node" : "Wallet service"}</small><b>{label}</b></span>
+        <span><small>{desktop ? "Wallet source" : "Wallet service"}</small><b>{label}</b></span>
         <ChevronDown aria-hidden="true" size={15} />
       </button>
       {open && createPortal(
         <div className="modalwrap" onClick={() => !busy && setOpen(false)}>
           <div className="card modalcard connection-modal" onClick={(event) => event.stopPropagation()}>
             <div className="connection-modal-head">
-              <div><span className="eyebrow">Connection</span><h2>{desktop ? "Choose a ZKAS node" : "Choose a wallet service"}</h2></div>
+              <div><span className="eyebrow">Connection</span><h2>{desktop ? "Choose wallet data source" : "Choose a wallet service"}</h2></div>
               <span className="status-pill good">{label}</span>
             </div>
             <p className="muted small">
               {desktop
-                ? "The wallet engine and keys stay inside this app. This only changes where it reads the chain."
+                ? "Embedded walletd and your keys stay private inside this app. Choose the ZKAS node it reads for complete wallet history; a mining-only node is refused."
                 : `Hosted is easiest. A walletd you run yourself keeps your viewing key and wallet scan on your own machine. ${isNative() ? "This installed app accepts HTTPS or plain HTTP on your LAN." : "In a browser, your walletd must use HTTPS; install the app to use plain HTTP on a LAN."}`}
             </p>
 
             <div className="connection-list">
               <button className={`connection-option ${(desktop ? cfg?.mode === "remote" : hosted) ? "active" : ""}`} disabled={busy} onClick={() => desktop ? void switchDesktop("remote") : void switchWalletd("")}>
-                <span><b>{desktop ? "ZKAS public node" : "Hosted wallet service"}</b><small>Works immediately</small></span><span>{(desktop ? cfg?.mode === "remote" : hosted) ? "Connected" : "Use"}</span>
+                <span><b>{desktop ? "Public wallet-history node" : "Hosted wallet service"}</b><small>Works immediately</small></span><span>{(desktop ? cfg?.mode === "remote" : hosted) ? "Connected" : "Use"}</span>
               </button>
               {desktop && (
                 <button className={`connection-option ${cfg?.mode === "local" ? "active" : ""}`} disabled={busy} onClick={() => {
@@ -1289,7 +1311,7 @@ function ConnectionButton() {
                   }
                   void switchDesktop("local");
                 }}>
-                  <span><b>Managed local node</b><small>Runs and syncs on this computer</small></span><span>{cfg?.mode === "local" ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
+                  <span><b>Local wallet-history node</b><small>Managed here · gRPC 127.0.0.1:16810</small></span><span>{cfg?.mode === "local" ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
                 </button>
               )}
               {profiles.map((profile) => {
@@ -1299,15 +1321,15 @@ function ConnectionButton() {
                     <span><b>{profile.name}</b><small className="mono">{profile.address}</small></span><span>{active ? "Connected" : "Use"}</span>
                   </button>
                   <button className="connection-remove" aria-label={`Remove ${profile.name}`} disabled={busy || active} onClick={() => {
-                    (desktop ? nodeProfiles : walletdProfiles).remove(profile.id);
-                    setProfiles(desktop ? nodeProfiles.load() : walletdProfiles.load());
+                    (desktop ? walletNodeProfiles : walletdProfiles).remove(profile.id);
+                    setProfiles(desktop ? walletNodeProfiles.load() : walletdProfiles.load());
                   }}><Trash2 size={16} /></button>
                 </div>;
               })}
             </div>
 
             <div className="connection-add">
-              <h3>Add {desktop ? "node" : "walletd"}</h3>
+              <h3>Add {desktop ? "wallet-history node" : "walletd"}</h3>
               <div className="connection-add-grid">
                 <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name · Home node" />
                 <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={desktop ? "192.168.1.20:16110" : isNative() ? "192.168.1.20:8501" : "https://wallet.example.com"} />

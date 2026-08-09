@@ -21,6 +21,7 @@ const MAX_LOG_LINES: usize = 2_000;
 const HEALTHY_RUN: Duration = Duration::from_secs(60);
 const MAX_RESTART_DELAY: u64 = 30;
 pub const ZKAS_RELEASE: &str = "zkas-v1.0.6";
+pub const BRIDGE_RELEASE: &str = "v1.0.7";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ServiceLog {
@@ -569,63 +570,49 @@ pub async fn install_components(
     let exe = if cfg!(windows) { ".exe" } else { "" };
     let mut installed = InstalledComponents::default();
 
-    // The ZKas archive supplies both the node and the diagnostic CPU miner. On
-    // macOS it also supplies the only currently published bridge build.
-    if selection.zkas || (selection.bridge && cfg!(target_os = "macos")) {
+    // The ZKas archive supplies the node, diagnostic CPU miner and local
+    // explorer. The merged-mining bridge is always installed from its own
+    // independently verified release below.
+    if selection.zkas {
         let spec = zkas_archive()?;
         let archive = download_verified(app, &downloads, &spec).await?;
         let node_dest = bin_dir.join(format!("zkas-node{exe}"));
         let miner_dest = bin_dir.join(format!("zkas-miner{exe}"));
-        let bridge_dest = bin_dir.join(format!("stratum-bridge{exe}"));
         let explorer_dest = bin_dir.join(format!("zkas-api{exe}"));
         let mut targets = Vec::new();
-        if selection.zkas {
-            targets.push(ExtractTarget {
-                entries: if cfg!(windows) {
-                    &["bin/kaspad.exe", "kaspad.exe"]
-                } else {
-                    &["bin/kaspad", "kaspad"]
-                },
-                destination: node_dest.clone(),
-            });
-            targets.push(ExtractTarget {
-                entries: if cfg!(windows) {
-                    &["bin/zkas-miner.exe", "zkas-miner.exe"]
-                } else {
-                    &["bin/zkas-miner", "zkas-miner"]
-                },
-                destination: miner_dest.clone(),
-            });
-            targets.push(ExtractTarget {
-                entries: if cfg!(windows) {
-                    &["bin/zkas-api.exe", "zkas-api.exe"]
-                } else {
-                    &["bin/zkas-api", "zkas-api"]
-                },
-                destination: explorer_dest.clone(),
-            });
-        }
-        if selection.bridge && cfg!(target_os = "macos") {
-            targets.push(ExtractTarget {
-                entries: &["bin/stratum-bridge", "stratum-bridge"],
-                destination: bridge_dest.clone(),
-            });
-        }
+        targets.push(ExtractTarget {
+            entries: if cfg!(windows) {
+                &["bin/kaspad.exe", "kaspad.exe"]
+            } else {
+                &["bin/kaspad", "kaspad"]
+            },
+            destination: node_dest.clone(),
+        });
+        targets.push(ExtractTarget {
+            entries: if cfg!(windows) {
+                &["bin/zkas-miner.exe", "zkas-miner.exe"]
+            } else {
+                &["bin/zkas-miner", "zkas-miner"]
+            },
+            destination: miner_dest.clone(),
+        });
+        targets.push(ExtractTarget {
+            entries: if cfg!(windows) {
+                &["bin/zkas-api.exe", "zkas-api.exe"]
+            } else {
+                &["bin/zkas-api", "zkas-api"]
+            },
+            destination: explorer_dest.clone(),
+        });
         extract_exact(app, spec.component, archive, targets).await?;
-        if selection.zkas {
-            installed.zkas_node = Some(node_dest.to_string_lossy().into_owned());
-            installed.zkas_miner = Some(miner_dest.to_string_lossy().into_owned());
-            installed.explorer = Some(explorer_dest.to_string_lossy().into_owned());
-        }
-        if selection.bridge && cfg!(target_os = "macos") {
-            installed.bridge = Some(bridge_dest.to_string_lossy().into_owned());
-        }
+        installed.zkas_node = Some(node_dest.to_string_lossy().into_owned());
+        installed.zkas_miner = Some(miner_dest.to_string_lossy().into_owned());
+        installed.explorer = Some(explorer_dest.to_string_lossy().into_owned());
     }
 
-    // Linux and Windows use the release whose CI explicitly verifies the real
-    // KAS+ZKAS merged-mining markers. The similarly named bridge in zkas-rusty
-    // does not contain that implementation.
-    if selection.bridge && !cfg!(target_os = "macos") {
+    // Use only the solo-dual-mode release whose CI executes every native binary
+    // and verifies its KAS+ZKAS merged-mining and dashboard capability markers.
+    if selection.bridge {
         let spec = bridge_archive()?;
         let archive = download_verified(app, &downloads, &spec).await?;
         let dest = bin_dir.join(format!("stratum-bridge{exe}"));
@@ -889,30 +876,57 @@ fn zkas_archive() -> Result<ArchiveSpec, String> {
     Err("no verified ZKas release is published for this platform yet".into())
 }
 
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-fn bridge_archive() -> Result<ArchiveSpec, String> {
+fn bridge_archive_for(os: &str, arch: &str) -> Result<ArchiveSpec, String> {
+    let (component, url, sha256) = match (os, arch) {
+        ("linux", "x86_64") => (
+            "solo-dual-bridge-v1.0.7-linux-x64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.7/solo-dual-mode-linux-x64.zip",
+            "271c32854c9865e616f41bbb113732d04c52ccf9e9d099e44d7803b77becede9",
+        ),
+        ("linux", "aarch64") => (
+            "solo-dual-bridge-v1.0.7-linux-arm64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.7/solo-dual-mode-linux-arm64.zip",
+            "1357e85722398e8dd102a5a96e410efa7291a1b6e3117f5bfa7dfa76b5902020",
+        ),
+        ("macos", "x86_64") => (
+            "solo-dual-bridge-v1.0.7-macos-x64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.7/solo-dual-mode-macos-x64.zip",
+            "9563e0dcbf1b4aea3318d05262560309b0d4112230aa1566fd3acfa640dfffd7",
+        ),
+        ("macos", "aarch64") => (
+            "solo-dual-bridge-v1.0.7-macos-arm64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.7/solo-dual-mode-macos-arm64.zip",
+            "518dfced1f3ad0c3945dcc17ecdaaea9dbbdbdc35eeb39d3789de09d24fab989",
+        ),
+        ("windows", "x86_64") => (
+            "solo-dual-bridge-v1.0.7-windows-x64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.7/solo-dual-mode-windows-x64.zip",
+            "d77432113eb479c481d5698aff9b1a78a83f982b3ee675eb84f4c266dd67febc",
+        ),
+        ("windows", "aarch64") => (
+            "solo-dual-bridge-v1.0.7-windows-arm64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.7/solo-dual-mode-windows-arm64.zip",
+            "4247a4cd23cbe8fbbc0f94bb3958550d855af4449e2a798a00fd0e2f47d66099",
+        ),
+        _ => {
+            return Err(format!(
+                "a verified merged-mining bridge is not published for {os}/{arch}"
+            ))
+        }
+    };
     Ok(ArchiveSpec {
-        component: "solo-dual-bridge-v1.0.6-linux-x64",
-        url: "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.6/solo-dual-mode-linux-x64.zip",
-        sha256: "5b84bb5ae5e7b60f42476dee219802402cddf0cd602db4994c29746185eccbb1",
+        component,
+        url,
+        sha256,
     })
 }
 
-#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
 fn bridge_archive() -> Result<ArchiveSpec, String> {
-    Ok(ArchiveSpec {
-        component: "solo-dual-bridge-v1.0.6-windows-x64",
-        url: "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.6/solo-dual-mode-windows-x64.zip",
-        sha256: "2c6790814fc0eb2278378968fa67c6934335ff4d6575b5304c1dba5f7f36ed40",
-    })
+    bridge_archive_for(std::env::consts::OS, std::env::consts::ARCH)
 }
 
-#[cfg(not(any(
-    all(target_os = "linux", target_arch = "x86_64"),
-    all(target_os = "windows", target_arch = "x86_64")
-)))]
-fn bridge_archive() -> Result<ArchiveSpec, String> {
-    Err("a verified merged-mining bridge is not published for this platform yet".into())
+pub fn bridge_supported() -> bool {
+    bridge_archive().is_ok()
 }
 
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
@@ -941,11 +955,27 @@ mod tests {
         assert!(zkas.url.contains(ZKAS_RELEASE));
         assert_verified_release(zkas);
         assert_verified_release(kaspa_archive().unwrap());
-        #[cfg(any(
-            all(target_os = "linux", target_arch = "x86_64"),
-            all(target_os = "windows", target_arch = "x86_64")
-        ))]
         assert_verified_release(bridge_archive().unwrap());
+    }
+
+    #[test]
+    fn merged_mining_release_covers_all_desktop_platforms() {
+        let targets = [
+            ("linux", "x86_64", "linux-x64"),
+            ("linux", "aarch64", "linux-arm64"),
+            ("macos", "x86_64", "macos-x64"),
+            ("macos", "aarch64", "macos-arm64"),
+            ("windows", "x86_64", "windows-x64"),
+            ("windows", "aarch64", "windows-arm64"),
+        ];
+        for (os, arch, asset) in targets {
+            let spec = bridge_archive_for(os, arch).unwrap();
+            assert!(spec.component.contains(BRIDGE_RELEASE));
+            assert!(spec.url.contains(BRIDGE_RELEASE));
+            assert!(spec.url.ends_with(&format!("solo-dual-mode-{asset}.zip")));
+            assert_verified_release(spec);
+        }
+        assert!(bridge_archive_for("android", "aarch64").is_err());
     }
 }
 

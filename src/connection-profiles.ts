@@ -5,6 +5,7 @@ export interface EndpointProfile {
 }
 
 const NODE_PROFILES_KEY = "zkas_node_profiles_v1";
+const MINING_NODE_PROFILES_KEY = "zkas_mining_node_profiles_v1";
 const KASPA_NODE_PROFILES_KEY = "kaspa_node_profiles_v1";
 const WALLETD_PROFILES_KEY = "zkas_walletd_profiles_v1";
 
@@ -46,10 +47,36 @@ function upsert(key: string, name: string, address: string): EndpointProfile {
   return next.find((profile) => profile.address === cleanAddress)!;
 }
 
-export const nodeProfiles = {
+export const walletNodeProfiles = {
   load: () => read(NODE_PROFILES_KEY),
   save: (name: string, address: string) => upsert(NODE_PROFILES_KEY, name, address),
   remove: (id: string) => write(NODE_PROFILES_KEY, read(NODE_PROFILES_KEY).filter((profile) => profile.id !== id)),
+};
+
+function migrateMiningProfiles(): EndpointProfile[] {
+  const mining = read(MINING_NODE_PROFILES_KEY);
+  const wallet = read(NODE_PROFILES_KEY);
+  // Older builds wrote the mining screen's endpoint into the wallet-history
+  // chooser under this exact generated name. Move only those known entries;
+  // never guess based on an address or move a user-named wallet source.
+  const misplaced = wallet.filter((profile) => profile.name === "Mining node");
+  if (!misplaced.length) return mining;
+  let next = mining;
+  for (const profile of misplaced) {
+    if (!next.some((item) => item.address.toLowerCase() === profile.address.toLowerCase())) next = [...next, profile];
+  }
+  write(MINING_NODE_PROFILES_KEY, next);
+  write(NODE_PROFILES_KEY, wallet.filter((profile) => profile.name !== "Mining node"));
+  return next;
+}
+
+export const miningNodeProfiles = {
+  load: migrateMiningProfiles,
+  save: (name: string, address: string) => {
+    migrateMiningProfiles();
+    return upsert(MINING_NODE_PROFILES_KEY, name, address);
+  },
+  remove: (id: string) => write(MINING_NODE_PROFILES_KEY, read(MINING_NODE_PROFILES_KEY).filter((profile) => profile.id !== id)),
 };
 
 export const kaspaNodeProfiles = {

@@ -30,7 +30,7 @@ describe("payment links", () => {
   });
 
   it("maps only the app's explicit quick-action routes", () => {
-    expect(internalRouteFromLink("zkas-wallet://receive")).toBe("/tools?tab=request");
+    expect(internalRouteFromLink("zkas-wallet://receive")).toBe("/?tab=receive");
     expect(internalRouteFromLink("zkas-wallet://mine")).toBe("/mine");
     expect(internalRouteFromLink("zkas-wallet://unknown")).toBeNull();
   });

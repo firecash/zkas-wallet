@@ -27,7 +27,7 @@ export function internalRouteFromLink(raw: string): string | null {
   try {
     const url = new URL(raw);
     if (url.protocol !== "zkas-wallet:") return null;
-    if (url.hostname === "receive") return "/tools?tab=request";
+    if (url.hostname === "receive") return "/?tab=receive";
     if (url.hostname === "mine") return "/mine";
     if (url.hostname === "explore") return "/explore";
   } catch {

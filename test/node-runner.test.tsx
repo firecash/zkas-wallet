@@ -98,6 +98,7 @@ describe("managed node", () => {
     render(<NodeRunner />);
 
     expect(await screen.findByText("Node update available")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Update before running" })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Update to zkas-v1.0.6" }));
     await waitFor(() => expect(install).toHaveBeenCalledWith({ zkas: true, bridge: false, kaspa: false }));
   });

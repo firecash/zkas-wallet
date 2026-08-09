@@ -111,6 +111,9 @@ pub struct Settings {
     pub node_auto_start: bool,
     /// Installed direct-payout bridge and optional diagnostic CPU miner.
     pub bridge_binary: Option<String>,
+    /// Verified solo-dual-mode release installed by this app. Missing markers
+    /// are treated as legacy installs and upgraded before mining starts.
+    pub bridge_release: Option<String>,
     pub miner_binary: Option<String>,
     /// Explorer REST backend shipped in the same verified ZKas release archive.
     pub explorer_binary: Option<String>,
@@ -141,6 +144,7 @@ impl Default for Settings {
             node_public_p2p: false,
             node_auto_start: false,
             bridge_binary: None,
+            bridge_release: None,
             miner_binary: None,
             explorer_binary: None,
             kaspa_mode: "disabled".into(),
@@ -1119,6 +1123,7 @@ struct ComponentStatus {
     zkas_node: bool,
     zkas_node_update_available: bool,
     bridge: bool,
+    bridge_update_available: bool,
     zkas_miner: bool,
     kaspa_node: bool,
     explorer: bool,
@@ -1129,15 +1134,21 @@ struct ControlConfig {
     settings: Settings,
     components: ComponentStatus,
     zkas_release: &'static str,
-    /// A verified merged-mining bridge release currently exists for Linux and
-    /// Windows. macOS can run the wallet, node and ZKAS-only bridge, but the UI
-    /// must never pretend that its fallback bridge submits Kaspa parents.
+    bridge_release: &'static str,
+    /// True only when this OS/CPU pair has a pinned, verified merged-mining
+    /// bridge release. Unsupported targets must not offer a fake fallback.
     dual_mining_supported: bool,
     data_dir: String,
 }
 
 fn zkas_node_update_available(settings: &Settings, node_exists: bool) -> bool {
     node_exists && settings.node_release.as_deref() != Some(services::ZKAS_RELEASE)
+}
+
+fn bridge_update_available(settings: &Settings, bridge_exists: bool) -> bool {
+    bridge_exists
+        && services::bridge_supported()
+        && settings.bridge_release.as_deref() != Some(services::BRIDGE_RELEASE)
 }
 
 #[tauri::command]
@@ -1148,18 +1159,21 @@ fn control_config(state: tauri::State<'_, Mutex<Engine>>) -> ControlConfig {
             .is_some_and(|v| std::path::Path::new(v).is_file())
     };
     let zkas_node = exists(&e.settings.node_binary);
+    let bridge = exists(&e.settings.bridge_binary);
     ControlConfig {
         settings: e.settings.clone(),
         components: ComponentStatus {
             zkas_node,
             zkas_node_update_available: zkas_node_update_available(&e.settings, zkas_node),
-            bridge: exists(&e.settings.bridge_binary),
+            bridge,
+            bridge_update_available: bridge_update_available(&e.settings, bridge),
             zkas_miner: exists(&e.settings.miner_binary),
             kaspa_node: exists(&e.settings.kaspa_node_binary),
             explorer: exists(&e.settings.explorer_binary),
         },
         zkas_release: services::ZKAS_RELEASE,
-        dual_mining_supported: !cfg!(target_os = "macos"),
+        bridge_release: services::BRIDGE_RELEASE,
+        dual_mining_supported: services::bridge_supported(),
         data_dir: e.data_dir.to_string_lossy().into_owned(),
     }
 }
@@ -1182,6 +1196,9 @@ async fn install_local_components(
                     .into(),
             );
         }
+        if selection.bridge && e.services.bridge.running() {
+            return Err("stop mining before updating the Stratum bridge".into());
+        }
         e.data_dir.clone()
     };
     let installed = services::install_components(&app, &data_dir, selection).await?;
@@ -1198,6 +1215,7 @@ async fn install_local_components(
     }
     if installed.bridge.is_some() {
         e.settings.bridge_binary = installed.bridge.clone();
+        e.settings.bridge_release = Some(services::BRIDGE_RELEASE.into());
     }
     if installed.kaspa_node.is_some() {
         e.settings.kaspa_node_binary = installed.kaspa_node.clone();
@@ -1813,11 +1831,12 @@ fn start_dual_mining(
     zkas_mode: String,
     zkas_node_addr: Option<String>,
 ) -> Result<u32, String> {
-    if cfg!(target_os = "macos") {
-        return Err(
-            "dual mining is not available on macOS until a verified merged-mining bridge is published"
-                .into(),
-        );
+    if !services::bridge_supported() {
+        return Err(format!(
+            "dual mining is not available on {}/{} because no verified bridge is published",
+            std::env::consts::OS,
+            std::env::consts::ARCH
+        ));
     }
     let zkas_payout = validate_payout_address(&zkas_payout, "zkas")?;
     let kaspa_payout = validate_payout_address(&kaspa_payout, "kaspa")?;
@@ -2518,6 +2537,18 @@ mod control_tests {
         settings.node_release = Some(services::ZKAS_RELEASE.into());
         assert!(!zkas_node_update_available(&settings, true));
         assert!(!zkas_node_update_available(&settings, false));
+    }
+
+    #[test]
+    fn legacy_bridge_install_is_offered_the_pinned_release() {
+        let mut settings = Settings {
+            bridge_binary: Some("/existing/stratum-bridge".into()),
+            ..Settings::default()
+        };
+        assert!(bridge_update_available(&settings, true));
+        settings.bridge_release = Some(services::BRIDGE_RELEASE.into());
+        assert!(!bridge_update_available(&settings, true));
+        assert!(!bridge_update_available(&settings, false));
     }
 
     #[test]

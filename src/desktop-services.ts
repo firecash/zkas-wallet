@@ -9,6 +9,7 @@ export interface ControlSettings {
   node_public_p2p: boolean;
   node_auto_start: boolean;
   bridge_binary: string | null;
+  bridge_release: string | null;
   miner_binary: string | null;
   explorer_binary: string | null;
   kaspa_mode: "disabled" | "local" | "custom";
@@ -30,11 +31,13 @@ export interface ControlConfig {
     zkas_node: boolean;
     zkas_node_update_available: boolean;
     bridge: boolean;
+    bridge_update_available: boolean;
     zkas_miner: boolean;
     kaspa_node: boolean;
     explorer: boolean;
   };
   zkas_release: string;
+  bridge_release: string;
   dual_mining_supported: boolean;
   data_dir: string;
 }
