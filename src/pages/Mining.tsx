@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Copy, Cpu, Globe2, Network, Server, Square, Zap } from "lucide-react";
+import { Check, ChevronDown, Copy, Cpu, ExternalLink, Globe2, Network, Server, Square, Zap } from "lucide-react";
 import { api, loadStatusCache } from "../api";
 import { kaspaNodeProfiles, miningNodeProfiles } from "../connection-profiles";
 import { isDesktop } from "../desktop";
@@ -322,13 +322,14 @@ export function Mining() {
       </section>}
 
       <section className="control-card mining-live-card">
-        <div className="card-title-row"><div><h2>Live status</h2><p>{live ? "Updates every two seconds." : "Start mining to receive ASIC work."}</p></div><span className={`status-dot ${live ? "on" : ""}`} /></div>
+        <div className="card-title-row"><div><h2>Live status</h2><p>{live ? "Updates every two seconds." : "Start mining to receive ASIC work."}</p></div><div className="mining-live-actions">{live && <a className="btn ghost compact" href="http://127.0.0.1:18114/" target="_blank" rel="noreferrer"><ExternalLink size={14} />Full dashboard</a>}<span className={`status-dot ${live ? "on" : ""}`} /></div></div>
         <div className="metric-grid mining-metrics">
           <Metric label="Bridge" value={live ? "Running" : "Stopped"} />
           <Metric label="ZKAS node" value={nodeLabel} />
           <Metric label="ASICs" value={String(status?.active_workers ?? 0)} />
           <Metric label="Accepted shares" value={(status?.shares_accepted ?? 0).toLocaleString()} />
           <Metric label="ZKAS blocks" value={(status?.blocks_found ?? 0).toLocaleString()} />
+          {mode === "dual" && <Metric label="KAS blocks" value={(status?.kas_blocks_found ?? 0).toLocaleString()} />}
           <Metric label="Kaspa parent" value={mode === "solo" ? "Off" : status?.kaspa_rpc_connected ? status.kaspa_synced ? "Synced" : "Syncing" : status?.kaspa_node_running ? "Starting" : "Stopped"} />
         </div>
         {node?.running && node.is_synced === false && <p className="inline-warning">The ZKAS node is syncing. Keep the app running; the bridge is supervised and mining becomes ready when the node catches up.</p>}

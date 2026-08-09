@@ -3074,7 +3074,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.57.0",
+ "windows-core 0.61.2",
 ]
 
 [[package]]
@@ -3837,6 +3837,7 @@ name = "kaspa-shielded-core"
 version = "2.0.1"
 dependencies = [
  "blake2b_simd",
+ "chacha20 0.9.1",
  "group",
  "incrementalmerkletree",
  "kaspa-addresses",
@@ -3846,6 +3847,7 @@ dependencies = [
  "orchard",
  "pasta_curves",
  "rand 0.8.7",
+ "rayon",
  "serde",
  "sha2",
  "zcash_note_encryption",
@@ -4028,7 +4030,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e9ec52138abedcc58dc17a7c6c0c00a2bdb4f3427c7f63fa97fd0d859155caf"
 dependencies = [
  "gtk-sys",
- "libloading",
+ "libloading 0.7.4",
  "once_cell",
 ]
 
@@ -4055,6 +4057,16 @@ checksum = "b67380fd3b2fbe7527a606e18729d21c6f3951633d0500574c4dc22d2d638b9f"
 dependencies = [
  "cfg-if",
  "winapi",
+]
+
+[[package]]
+name = "libloading"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55"
+dependencies = [
+ "cfg-if",
+ "windows-link 0.2.1",
 ]
 
 [[package]]
@@ -6918,7 +6930,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
@@ -9041,6 +9053,7 @@ dependencies = [
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "serde_yaml",
  "sha2",
  "sysinfo",
  "tauri",
@@ -9051,6 +9064,16 @@ dependencies = [
  "tokio",
  "zip",
  "zkas-walletd",
+]
+
+[[package]]
+name = "zkas-gpu"
+version = "0.1.0"
+dependencies = [
+ "group",
+ "libloading 0.8.9",
+ "log",
+ "pasta_curves",
 ]
 
 [[package]]
@@ -9114,6 +9137,7 @@ dependencies = [
  "sha2",
  "tokio",
  "tower-http 0.5.2",
+ "zkas-gpu",
  "zkas-sdk",
  "zkas-wallet-engine",
 ]

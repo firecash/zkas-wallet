@@ -39,6 +39,9 @@ libc = "0.2"
 [features]
 custom-protocol = ["tauri/custom-protocol"]
 
+[dev-dependencies]
+serde_yaml = "0.9"
+
 # Mirrors the rusty-kaspa workspace release profile EXACTLY. Not cosmetic: the
 # workspace enables overflow-checks in release but opts the constant-time crypto
 # crates out (they rely on wrapping ops — with checks on, proving panics), and a

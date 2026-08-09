@@ -1941,7 +1941,9 @@ select { appearance: none; cursor: pointer; }
 .asic-credentials span { min-width: 0; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); color: var(--muted); font-size: 10px; }
 .asic-credentials span:first-child { flex: 1; }
 .asic-credentials code { display: block; overflow: hidden; margin-top: 3px; color: var(--ink); font: 10px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
-.mining-metrics { grid-template-columns: repeat(6, minmax(0, 1fr)); margin-bottom: 12px; }
+.mining-metrics { grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); margin-bottom: 12px; }
+.mining-live-actions { display: flex; flex: none; align-items: center; gap: 8px; }
+.mining-live-actions .btn { display: inline-flex; align-items: center; gap: 6px; margin: 0; text-decoration: none; }
 .mining-live-card .disclosure { margin-top: 7px; }
 .mining-logs { margin-top: 12px; }
 .cpu-card .disclosure { width: 100%; text-align: left; }

@@ -259,6 +259,45 @@ fn dirs_documents() -> Option<PathBuf> {
     }
 }
 
+/// Render the bridge configuration without Rust's `\` line-continuation
+/// whitespace stripping. The indentation below is part of the YAML schema:
+/// every mining parameter after `- stratum_port` belongs to that instance.
+fn bridge_config_yaml(
+    zkas_rpc: &str,
+    kaspa_rpc: &str,
+    kaspa_pay: &str,
+    stratum_port: u16,
+    min_share_diff: f64,
+) -> String {
+    // All interpolated values are validated address/host:port/port values by
+    // the command boundary, so none can inject another YAML key.
+    format!(
+        r#"kaspad_address: "{zkas_rpc}"
+block_wait_time: 1000
+print_stats: false
+log_to_file: false
+health_check_port: "127.0.0.1:18080"
+web_dashboard_port: ""
+var_diff: true
+shares_per_min: 20
+var_diff_stats: false
+pow2_clamp: true
+extranonce_size: 2
+coinbase_tag_suffix: "zkas-desktop"
+merged_kaspa_address: "{kaspa_rpc}"
+merged_kaspa_pay_address: "{kaspa_pay}"
+instances:
+  - stratum_port: "0.0.0.0:{stratum_port}"
+    min_share_diff: {min_share_diff}
+    prom_port: "127.0.0.1:18114"
+    var_diff: true
+    shares_per_min: 20
+    pow2_clamp: true
+    log_to_file: false
+"#,
+    )
+}
+
 impl Engine {
     fn new(config_dir: PathBuf, data_dir: PathBuf) -> Self {
         let mut settings: Settings = std::fs::read(config_dir.join("settings.json"))
@@ -617,31 +656,7 @@ impl Engine {
         } else {
             ""
         };
-        // All interpolated values are validated address/host:port/port values by
-        // the command boundary, so none can inject another YAML key.
-        let yaml = format!(
-            "kaspad_address: \"{}\"\n\
-             block_wait_time: 1000\n\
-             print_stats: false\n\
-             log_to_file: false\n\
-             health_check_port: \"127.0.0.1:18080\"\n\
-             web_dashboard_port: \"\"\n\
-             var_diff: true\n\
-             shares_per_min: 20\n\
-             var_diff_stats: false\n\
-             pow2_clamp: true\n\
-             extranonce_size: 2\n\
-             coinbase_tag_suffix: \"zkas-desktop\"\n\
-             merged_kaspa_address: \"{}\"\n\
-             merged_kaspa_pay_address: \"{}\"\n\
-             instances:\n\
-               - stratum_port: \"0.0.0.0:{}\"\n\
-                 min_share_diff: {}\n\
-                 prom_port: \"127.0.0.1:18114\"\n\
-                 var_diff: true\n\
-                 shares_per_min: 20\n\
-                 pow2_clamp: true\n\
-                 log_to_file: false\n",
+        let yaml = bridge_config_yaml(
             zkas_rpc,
             kaspa_rpc,
             kaspa_pay,
@@ -1985,6 +2000,8 @@ struct BridgeApiStats {
     active_workers: u64,
     #[serde(rename = "totalBlocks")]
     total_blocks: u64,
+    #[serde(rename = "totalKasBlocks")]
+    total_kas_blocks: u64,
     #[serde(rename = "totalShares")]
     total_shares: u64,
 }
@@ -2010,6 +2027,7 @@ struct MiningStatus {
     active_workers: u64,
     shares_accepted: u64,
     blocks_found: u64,
+    kas_blocks_found: u64,
     network_hashrate: f64,
     bridge_error: Option<String>,
 }
@@ -2125,6 +2143,7 @@ async fn mining_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<MiningS
         active_workers: stats.active_workers,
         shares_accepted: stats.total_shares,
         blocks_found: stats.total_blocks,
+        kas_blocks_found: stats.total_kas_blocks,
         network_hashrate: stats.network_hashrate,
         bridge_error: (!bridge_running).then_some(last_exit).flatten(),
     })
@@ -2544,6 +2563,46 @@ mod control_tests {
     }
 
     #[test]
+    fn generated_bridge_yaml_keeps_instance_fields_nested() {
+        let yaml = bridge_config_yaml(
+            "127.0.0.1:16810",
+            "127.0.0.1:16110",
+            KASPA_ADDRESS,
+            5555,
+            8192.0,
+        );
+        let parsed: serde_yaml::Value = serde_yaml::from_str(&yaml).unwrap();
+        let root = parsed.as_mapping().unwrap();
+        let instances = root
+            .get(serde_yaml::Value::String("instances".into()))
+            .and_then(serde_yaml::Value::as_sequence)
+            .unwrap();
+        let instance = instances
+            .first()
+            .and_then(serde_yaml::Value::as_mapping)
+            .unwrap();
+        assert_eq!(
+            instance
+                .get(serde_yaml::Value::String("stratum_port".into()))
+                .and_then(serde_yaml::Value::as_str),
+            Some("0.0.0.0:5555")
+        );
+        assert_eq!(
+            instance
+                .get(serde_yaml::Value::String("min_share_diff".into()))
+                .and_then(serde_yaml::Value::as_f64),
+            Some(8192.0)
+        );
+        assert_eq!(
+            instance
+                .get(serde_yaml::Value::String("prom_port".into()))
+                .and_then(serde_yaml::Value::as_str),
+            Some("127.0.0.1:18114")
+        );
+        assert!(!root.contains_key(serde_yaml::Value::String("min_share_diff".into())));
+    }
+
+    #[test]
     fn corrupted_persisted_controls_fall_back_to_safe_defaults() {
         let mut settings = Settings {
             mode: "broken".into(),
@@ -2600,7 +2659,10 @@ mod control_tests {
         let folder = std::env::temp_dir().join(format!(
             "zkas-desktop-backup-test-{}-{}",
             std::process::id(),
-            now_ms()
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         std::fs::create_dir_all(&folder).unwrap();
         let document = r#"{"magic":"zkas-wallet-backup","version":2}"#;

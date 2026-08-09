@@ -94,6 +94,7 @@ export interface MiningStatus {
   active_workers: number;
   shares_accepted: number;
   blocks_found: number;
+  kas_blocks_found: number;
   network_hashrate: number;
   bridge_error: string | null;
 }
