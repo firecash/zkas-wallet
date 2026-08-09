@@ -20,6 +20,7 @@ use tokio::io::AsyncWriteExt;
 const MAX_LOG_LINES: usize = 2_000;
 const HEALTHY_RUN: Duration = Duration::from_secs(60);
 const MAX_RESTART_DELAY: u64 = 30;
+const MAX_RESTART_ATTEMPTS: u32 = 5;
 pub const ZKAS_RELEASE: &str = "zkas-v1.0.6";
 pub const BRIDGE_RELEASE: &str = "v1.0.7";
 
@@ -118,8 +119,16 @@ impl ManagedProcess {
                         self.restart_attempts = 0;
                     }
                     self.restart_attempts = self.restart_attempts.saturating_add(1);
-                    let delay = (1u64 << self.restart_attempts.min(5)).min(MAX_RESTART_DELAY);
-                    self.restart_after = Some(Instant::now() + Duration::from_secs(delay));
+                    if self.restart_attempts >= MAX_RESTART_ATTEMPTS {
+                        self.desired = false;
+                        self.restart_after = None;
+                        self.last_exit = Some(format!(
+                            "{status}; automatic restart stopped after {MAX_RESTART_ATTEMPTS} failed starts"
+                        ));
+                    } else {
+                        let delay = (1u64 << self.restart_attempts.min(5)).min(MAX_RESTART_DELAY);
+                        self.restart_after = Some(Instant::now() + Duration::from_secs(delay));
+                    }
                 }
                 true
             }
@@ -300,18 +309,108 @@ impl ManagedProcess {
         if let Err(e) = self.start(app, logs, spec.clone()) {
             self.last_exit = Some(e.clone());
             self.restart_attempts = self.restart_attempts.saturating_add(1);
-            let delay = (1u64 << self.restart_attempts.min(5)).min(MAX_RESTART_DELAY);
-            self.restart_after = Some(Instant::now() + Duration::from_secs(delay));
+            if self.restart_attempts >= MAX_RESTART_ATTEMPTS {
+                self.desired = false;
+                self.restart_after = None;
+                self.last_exit = Some(format!(
+                    "{e}; automatic restart stopped after {MAX_RESTART_ATTEMPTS} failed starts"
+                ));
+            } else {
+                let delay = (1u64 << self.restart_attempts.min(5)).min(MAX_RESTART_DELAY);
+                self.restart_after = Some(Instant::now() + Duration::from_secs(delay));
+            }
             let _ = app.emit(
                 "service-state",
                 ServiceStateEvent {
                     service: spec.service.into(),
                     running: false,
                     pid: None,
-                    detail: e,
+                    detail: self.last_exit.clone().unwrap_or(e),
                 },
             );
         }
+    }
+}
+
+/// Stop a node left behind by an earlier wallet process before starting a new
+/// supervised child. We match both the exact installed executable and the
+/// exact app-owned `--appdir`, so an unrelated user node is never touched.
+///
+/// This is recovery for force-quit, OS crash and updater cases where the child
+/// outlives the parent. Merely deleting RocksDB's LOCK file is unsafe while that
+/// child is alive and does not release the operating-system lock anyway.
+pub fn stop_orphaned_node_processes(binary: &Path, appdir: &Path) -> Result<Vec<u32>, String> {
+    use sysinfo::{ProcessesToUpdate, Signal, System};
+
+    let canonical_binary = std::fs::canonicalize(binary).unwrap_or_else(|_| binary.to_path_buf());
+    let appdir_argument = format!("--appdir={}", appdir.to_string_lossy());
+    let mut system = System::new_all();
+    let matches: Vec<_> = system
+        .processes()
+        .iter()
+        .filter_map(|(pid, process)| {
+            let owns_appdir = process
+                .cmd()
+                .iter()
+                .any(|arg| arg.to_string_lossy() == appdir_argument);
+            let same_binary = process.exe().is_some_and(|path| {
+                std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+                    == canonical_binary
+            });
+            (owns_appdir && same_binary).then_some(*pid)
+        })
+        .collect();
+    if matches.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    for pid in &matches {
+        if let Some(process) = system.process(*pid) {
+            // Nodes flush RocksDB on SIGINT. Windows does not support this
+            // signal through sysinfo, so it falls through to the forced stop.
+            let graceful = process.kill_with(Signal::Interrupt).unwrap_or(false)
+                || process.kill_with(Signal::Term).unwrap_or(false);
+            if !graceful && !process.kill() {
+                return Err(format!("could not stop orphaned node process {pid}"));
+            }
+        }
+    }
+
+    let graceful_deadline = Instant::now() + Duration::from_secs(12);
+    loop {
+        system.refresh_processes(ProcessesToUpdate::Some(&matches));
+        if matches.iter().all(|pid| system.process(*pid).is_none()) {
+            return Ok(matches.iter().map(|pid| pid.as_u32()).collect());
+        }
+        if Instant::now() >= graceful_deadline {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+
+    for pid in &matches {
+        if let Some(process) = system.process(*pid) {
+            let _ = process.kill();
+        }
+    }
+    let kill_deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        system.refresh_processes(ProcessesToUpdate::Some(&matches));
+        if matches.iter().all(|pid| system.process(*pid).is_none()) {
+            return Ok(matches.iter().map(|pid| pid.as_u32()).collect());
+        }
+        if Instant::now() >= kill_deadline {
+            let alive = matches
+                .iter()
+                .filter(|pid| system.process(**pid).is_some())
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(format!(
+                "orphaned node process did not stop (PID {alive}); close it before starting the managed node"
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(100));
     }
 }
 
@@ -386,22 +485,27 @@ impl ServiceManager {
     }
 
     pub fn start_zkas_node(&mut self, app: &AppHandle, spec: ProcessSpec) -> Result<u32, String> {
+        self.zkas_node.restart_attempts = 0;
         self.zkas_node.start(app, Arc::clone(&self.logs), spec)
     }
 
     pub fn start_kaspa_node(&mut self, app: &AppHandle, spec: ProcessSpec) -> Result<u32, String> {
+        self.kaspa_node.restart_attempts = 0;
         self.kaspa_node.start(app, Arc::clone(&self.logs), spec)
     }
 
     pub fn start_bridge(&mut self, app: &AppHandle, spec: ProcessSpec) -> Result<u32, String> {
+        self.bridge.restart_attempts = 0;
         self.bridge.start(app, Arc::clone(&self.logs), spec)
     }
 
     pub fn start_cpu_miner(&mut self, app: &AppHandle, spec: ProcessSpec) -> Result<u32, String> {
+        self.cpu_miner.restart_attempts = 0;
         self.cpu_miner.start(app, Arc::clone(&self.logs), spec)
     }
 
     pub fn start_explorer(&mut self, app: &AppHandle, spec: ProcessSpec) -> Result<u32, String> {
+        self.explorer.restart_attempts = 0;
         self.explorer.start(app, Arc::clone(&self.logs), spec)
     }
 

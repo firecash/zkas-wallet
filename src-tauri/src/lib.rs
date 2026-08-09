@@ -449,6 +449,24 @@ impl Engine {
             return Err(format!("node binary not found at {bin}"));
         }
         let appdir = self.data_dir.join("node");
+        if !self.services.zkas_node.running() {
+            let recovered =
+                services::stop_orphaned_node_processes(std::path::Path::new(&bin), &appdir)?;
+            if !recovered.is_empty() {
+                log_crash(&format!(
+                    "recovered orphaned ZKas node process(es): {}",
+                    recovered
+                        .iter()
+                        .map(u32::to_string)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+            } else if probe_node(LOCAL_ZKAS_RPC).is_ok() {
+                return Err(format!(
+                    "another node is already using {LOCAL_ZKAS_RPC}; stop it or choose Existing node"
+                ));
+            }
+        }
         let mut args = vec![
             format!("--appdir={}", appdir.to_string_lossy()),
             format!("--rpclisten={LOCAL_ZKAS_RPC}"),
@@ -505,6 +523,24 @@ impl Engine {
             .clone()
             .ok_or("Kaspa node is not installed")?;
         let appdir = self.data_dir.join("kaspa-node");
+        if !self.services.kaspa_node.running() {
+            let recovered =
+                services::stop_orphaned_node_processes(std::path::Path::new(&bin), &appdir)?;
+            if !recovered.is_empty() {
+                log_crash(&format!(
+                    "recovered orphaned Kaspa node process(es): {}",
+                    recovered
+                        .iter()
+                        .map(u32::to_string)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+            } else if probe_node(LOCAL_KASPA_RPC).is_ok() {
+                return Err(format!(
+                    "another node is already using {LOCAL_KASPA_RPC}; stop it or choose Existing node"
+                ));
+            }
+        }
         let mut args = vec![
             format!("--appdir={}", appdir.to_string_lossy()),
             format!("--rpclisten={LOCAL_KASPA_RPC}"),

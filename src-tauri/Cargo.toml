@@ -22,6 +22,7 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "str
 futures-util = "0.3"
 sha2 = "0.10"
 hex = "0.4"
+sysinfo = { version = "0.31.2", default-features = false, features = ["system"] }
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
 # The wallet daemon as a library: REST API + sync loops + Orchard engine.
 # Path dep: rusty-kaspa checked out as a sibling of this repo.
