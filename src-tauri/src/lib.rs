@@ -516,7 +516,6 @@ impl Engine {
             "app",
             format!("starting wallet engine on {bind_host}:{port}; node {node_rpc}"),
         );
-        let diagnostic_logger = logger.clone();
         let cfg = zkas_walletd::Config {
             rpc_server: node_rpc.clone(),
             listen: format!("{bind_host}:{port}").parse().unwrap(),
@@ -549,9 +548,6 @@ impl Engine {
             // consolidates them. `None` would disable that silently.
             auto_consolidate: Some(zkas_walletd::AUTO_CONSOLIDATE_DEFAULT),
             resources: zkas_walletd::ResourceLimits::default(),
-            diagnostic_sink: Some(std::sync::Arc::new(move |line| {
-                diagnostic_logger.record("walletd", line);
-            })),
         };
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         self.shutdown = Some(tx);
