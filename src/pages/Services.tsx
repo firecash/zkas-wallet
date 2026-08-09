@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   BookOpen,
@@ -66,7 +66,12 @@ export function Services() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const initial = params.get("filter");
-  const [category, setCategoryState] = useState<"all" | Category>(CATEGORIES.some((item) => item.id === initial) ? (initial as "all" | Category) : "all");
+  // This is the wallet's action directory, so lead with things a holder can
+  // actually use. Explicit deep links such as ?filter=store still win.
+  const [category, setCategoryState] = useState<"all" | Category>(CATEGORIES.some((item) => item.id === initial) ? (initial as "all" | Category) : "use");
+  useEffect(() => {
+    setCategoryState(CATEGORIES.some((item) => item.id === initial) ? (initial as "all" | Category) : "use");
+  }, [initial]);
   const shown = useMemo(
     () => SERVICES.filter((service) => category === "all" || service.categories.includes(category)),
     [category],

@@ -5171,7 +5171,7 @@ function NodeSourceSetting() {
     initDesktop().then(setCfg).catch((e) => setErr(String(e)));
   }, []);
   if (!cfg) return null;
-  const usePublic = async () => {
+  const switchToPublic = async () => {
     setBusy(true);
     setErr("");
     try {
@@ -5191,7 +5191,7 @@ function NodeSourceSetting() {
       <p className="muted small">The embedded wallet engine keeps your keys on this computer. Node changes are checked before the wallet switches.</p>
       <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
         <button className="btn small" onClick={() => { location.hash = "#/node"; }}>Manage local node</button>
-        {cfg.mode !== "remote" && <button className="btn small ghost" disabled={busy} onClick={() => void usePublic()}>{busy ? "Checking…" : "Use public node"}</button>}
+        {cfg.mode !== "remote" && <button className="btn small ghost" disabled={busy} onClick={() => void switchToPublic()}>{busy ? "Checking…" : "Use public node"}</button>}
       </div>
       {err && <div className="msg warn">{err}</div>}
     </div>

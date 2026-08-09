@@ -14,11 +14,15 @@ function mount(path = "/services") {
 }
 
 describe("services directory", () => {
-  it("opens directly on categories and cards without an intro or search bar", () => {
+  it("opens on wallet-use services without an intro or search bar", async () => {
+    const user = userEvent.setup();
     mount();
     expect(screen.queryByText("Use the network")).not.toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Filter services" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Use 4" })).toHaveClass("active");
+    expect(screen.getAllByRole("article")).toHaveLength(4);
+    await user.click(screen.getByRole("button", { name: "All 12" }));
     expect(screen.getAllByRole("article")).toHaveLength(12);
   });
 
