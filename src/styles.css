@@ -669,6 +669,8 @@ select { appearance: none; cursor: pointer; }
 .connection-add { margin: 15px 0; padding-top: 15px; border-top: 1px solid var(--border); }
 .connection-add h3 { margin: 0 0 9px; font-size: 13px; }
 .connection-add-grid { display: grid; grid-template-columns: minmax(120px, .7fr) minmax(210px, 1.3fr) auto; gap: 7px; }
+.connection-add-grid.walletd { grid-template-columns: minmax(120px, .7fr) minmax(210px, 1.3fr); }
+.connection-add-grid.walletd .btn { justify-self: start; }
 .connection-add-grid input { min-width: 0; margin: 0; }
 .connection-add-grid .btn { min-width: 0; white-space: nowrap; }
 
@@ -2069,11 +2071,16 @@ select { appearance: none; cursor: pointer; }
 .service-runtime-card code { margin: 15px 0 8px; }
 .service-runtime-card .control-actions, .service-runtime-card > .btn { margin-top: auto; }
 .safety-card { border-color: color-mix(in srgb, #e5ae38 40%, var(--border)); }
+.host-access-card h3 { margin: 18px 0 8px; font-size: 13px; }
+.host-access-card .node-runtime-summary { margin-top: 14px; }
+.host-field { display: block; max-width: 520px; margin-top: 12px; color: var(--muted); font-size: 12px; font-weight: 650; }
+.host-mode-list .choice-button { min-height: 92px; }
 
 @media (max-width: 620px) {
   .wallet-topline { flex-direction: column; gap: 8px; }
   .walletbar, .connection-button { width: 100%; }
   .connection-add-grid { grid-template-columns: 1fr; }
+  .host-mode-list.choice-row.three { grid-template-columns: 1fr; }
   .history-heading { align-items: stretch; flex-direction: column; gap: 9px; }
   .history-heading .btn { width: 100%; }
   .filterbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }

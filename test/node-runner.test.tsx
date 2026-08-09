@@ -41,7 +41,7 @@ vi.mock("../src/desktop-services", () => ({
       node_connected: true, synced: true, scanning_progress: 100, note_count: 1,
       anchor_daa: 10, balance: "1", error: null,
     })),
-    logs: vi.fn(async () => serviceState.logs),
+    logs: vi.fn(async (service?: string) => serviceState.logs.filter((entry) => !service || entry.service === service)),
     install,
     startNode,
     stopNode: vi.fn(async () => undefined),
@@ -80,7 +80,7 @@ describe("managed node", () => {
     const user = userEvent.setup();
     const view = render(<NodeRunner />);
 
-    await user.click(await screen.findByRole("button", { name: "View logs" }));
+    await user.click(await screen.findByRole("button", { name: "View node logs" }));
     expect(await screen.findByRole("dialog", { name: "ZKAS node logs diagnostics" })).toBeInTheDocument();
     expect(await screen.findByText("node ready")).toBeInTheDocument();
     expect(view.container.querySelector(".service-console")).toBeNull();
@@ -90,6 +90,18 @@ describe("managed node", () => {
       { at_unix_ms: 2, service: "zkas-node", stream: "stdout", line: "new block received" },
     ];
     await waitFor(() => expect(screen.getByText("new block received")).toBeInTheDocument(), { timeout: 2_500 });
+  });
+
+  it("opens wallet-engine diagnostics separately from node logs", async () => {
+    serviceState.logs = [
+      { at_unix_ms: 3, service: "wallet-engine", stream: "walletd", line: "connected to node" },
+    ];
+    const user = userEvent.setup();
+    render(<NodeRunner />);
+
+    await user.click(await screen.findByRole("button", { name: "View wallet logs" }));
+    expect(await screen.findByRole("dialog", { name: "Wallet engine logs diagnostics" })).toBeInTheDocument();
+    expect(await screen.findByText("connected to node")).toBeInTheDocument();
   });
 
   it("offers the pinned release to an existing older installation", async () => {

@@ -310,7 +310,7 @@ export function Mining() {
           </div>
         </div>
         <div className="asic-credentials"><span>Username <code>{walletAddress || "zkas:your-address"}</code></span><span>Password <code>x</code></span></div>
-        <p className="subtle">LAN is ready automatically. For an internet ASIC, forward TCP {stratumPort} to this computer or use a VPN, and restrict the firewall to your miner’s IP. Never expose node RPC.</p>
+        <p className="subtle">LAN is ready automatically. For an internet ASIC, forward TCP {stratumPort} to this computer or use a VPN, and restrict the firewall to your miner’s IP. Never forward node RPC to the internet.</p>
       </section>}
 
       <section className="control-card mining-live-card">

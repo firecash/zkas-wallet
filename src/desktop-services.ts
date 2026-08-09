@@ -7,6 +7,7 @@ export interface ControlSettings {
   node_release: string | null;
   node_preset: "shielded" | "archival" | "mining";
   node_public_p2p: boolean;
+  node_lan_rpc: boolean;
   node_auto_start: boolean;
   bridge_binary: string | null;
   bridge_release: string | null;
@@ -131,6 +132,15 @@ export interface SelfHostStatus {
   data_dir: string;
   backup_dir: string;
   autostart_enabled: boolean;
+  wallet_access: "device" | "lan" | "wan";
+  wallet_access_port: number;
+  wallet_public_url: string;
+  wallet_access_url: string | null;
+  wallet_access_token: string | null;
+  lan_ip: string | null;
+  node_running: boolean;
+  node_public_p2p: boolean;
+  node_lan_rpc: boolean;
 }
 
 async function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -174,6 +184,13 @@ export const desktopServices = {
     invoke<number>("start_cpu_miner", { threads, miningAddress }),
   stopCpuMiner: () => invoke<void>("stop_cpu_miner"),
   selfHostStatus: () => invoke<SelfHostStatus>("self_host_status"),
+  setHostAccess: (options: {
+    walletAccess: "device" | "lan" | "wan";
+    walletAccessPort: number;
+    walletPublicUrl: string;
+    nodeLanRpc: boolean;
+    nodePublicP2p: boolean;
+  }) => invoke<void>("set_host_access", options),
   startExplorer: () => invoke<number>("start_explorer_backend"),
   stopExplorer: () => invoke<void>("stop_explorer_backend"),
   setAutostart: (enabled: boolean) => invoke<void>("set_desktop_autostart", { enabled }),

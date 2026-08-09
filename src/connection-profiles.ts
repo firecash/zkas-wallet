@@ -2,6 +2,8 @@ export interface EndpointProfile {
   id: string;
   name: string;
   address: string;
+  /** Optional wallet-service bearer. Never used for node RPC profiles. */
+  bearer?: string;
 }
 
 const NODE_PROFILES_KEY = "zkas_node_profiles_v1";
@@ -16,7 +18,10 @@ function read(key: string): EndpointProfile[] {
     return value.filter((item): item is EndpointProfile => {
       if (!item || typeof item !== "object") return false;
       const profile = item as Partial<EndpointProfile>;
-      return typeof profile.id === "string" && typeof profile.name === "string" && typeof profile.address === "string";
+      return typeof profile.id === "string"
+        && typeof profile.name === "string"
+        && typeof profile.address === "string"
+        && (profile.bearer === undefined || typeof profile.bearer === "string");
     });
   } catch {
     return [];
@@ -35,20 +40,27 @@ function idFor(address: string): string {
   return `endpoint-${(hash >>> 0).toString(16)}`;
 }
 
-function upsert(key: string, name: string, address: string): EndpointProfile {
+function upsert(key: string, name: string, address: string, bearer?: string): EndpointProfile {
   const cleanName = name.trim().slice(0, 32) || "My node";
   const cleanAddress = address.trim();
   const profiles = read(key);
   const existing = profiles.find((profile) => profile.address.toLowerCase() === cleanAddress.toLowerCase());
+  const cleanBearer = bearer?.trim() || undefined;
   const next = existing
-    ? profiles.map((profile) => profile.id === existing.id ? { ...profile, name: cleanName, address: cleanAddress } : profile)
-    : [...profiles, { id: idFor(cleanAddress), name: cleanName, address: cleanAddress }];
+    ? profiles.map((profile) => profile.id === existing.id ? { ...profile, name: cleanName, address: cleanAddress, bearer: cleanBearer } : profile)
+    : [...profiles, { id: idFor(cleanAddress), name: cleanName, address: cleanAddress, bearer: cleanBearer }];
   write(key, next);
   return next.find((profile) => profile.address === cleanAddress)!;
 }
 
 export const walletNodeProfiles = {
-  load: () => read(NODE_PROFILES_KEY),
+  load: () => {
+    // Old desktop builds accidentally stored the mining endpoint in the wallet
+    // history chooser. Migrate it before rendering this list, not only when the
+    // user later visits Mining; otherwise the same managed RPC appears twice.
+    migrateMiningProfiles();
+    return read(NODE_PROFILES_KEY);
+  },
   save: (name: string, address: string) => upsert(NODE_PROFILES_KEY, name, address),
   remove: (id: string) => write(NODE_PROFILES_KEY, read(NODE_PROFILES_KEY).filter((profile) => profile.id !== id)),
 };
@@ -87,6 +99,6 @@ export const kaspaNodeProfiles = {
 
 export const walletdProfiles = {
   load: () => read(WALLETD_PROFILES_KEY),
-  save: (name: string, address: string) => upsert(WALLETD_PROFILES_KEY, name, address),
+  save: (name: string, address: string, bearer?: string) => upsert(WALLETD_PROFILES_KEY, name, address, bearer),
   remove: (id: string) => write(WALLETD_PROFILES_KEY, read(WALLETD_PROFILES_KEY).filter((profile) => profile.id !== id)),
 };

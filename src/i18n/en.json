@@ -149,7 +149,7 @@
     "full": "Full",
     "pruned": "Pruned",
     "mining": "Mining",
-    "publicMode": "Public mode (expose P2P + RPC)",
+    "publicMode": "Accept inbound P2P peers",
     "autoStart": "Auto-start on boot",
     "logs": "Logs",
     "walletd": "Wallet Daemon",

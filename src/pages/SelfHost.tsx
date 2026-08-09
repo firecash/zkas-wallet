@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { desktopServices, type SelfHostStatus } from "../desktop-services";
-import { isDesktop, openPath } from "../desktop";
+import { initDesktop, isDesktop, openPath } from "../desktop";
 import { setExplorerBase } from "../api/explorer";
 
 export function SelfHost() {
@@ -9,6 +9,14 @@ export function SelfHost() {
   const [status, setStatus] = useState<SelfHostStatus | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [accessEditing, setAccessEditing] = useState(false);
+  const [walletAccess, setWalletAccess] = useState<"device" | "lan" | "wan">("device");
+  const [walletPort, setWalletPort] = useState(8501);
+  const [publicUrl, setPublicUrl] = useState("");
+  const [nodeLanRpc, setNodeLanRpc] = useState(false);
+  const [nodePublicP2p, setNodePublicP2p] = useState(false);
+  const [tokenVisible, setTokenVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
   const refresh = useCallback(async () => {
     if (!isDesktop()) return;
     try {
@@ -67,6 +75,55 @@ export function SelfHost() {
       setBusy("");
     }
   };
+  const editAccess = () => {
+    if (!status) return;
+    setWalletAccess(status.wallet_access);
+    setWalletPort(status.wallet_access_port);
+    setPublicUrl(status.wallet_public_url);
+    setNodeLanRpc(status.node_lan_rpc);
+    setNodePublicP2p(status.node_public_p2p);
+    setError("");
+    setAccessEditing(true);
+  };
+  const saveAccess = async () => {
+    setBusy("access");
+    setError("");
+    try {
+      await desktopServices.setHostAccess({
+        walletAccess,
+        walletAccessPort: walletPort,
+        walletPublicUrl: publicUrl,
+        nodeLanRpc,
+        nodePublicP2p,
+      });
+      // The engine may have moved from a random loopback port to the stable
+      // shared port. Refresh the SPA's base URL + bearer immediately.
+      await initDesktop();
+      setAccessEditing(false);
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  };
+  const copyToken = async () => {
+    if (!status?.wallet_access_token) return;
+    try {
+      await navigator.clipboard.writeText(status.wallet_access_token);
+    } catch {
+      const input = document.createElement("textarea");
+      input.value = status.wallet_access_token;
+      input.style.position = "fixed";
+      input.style.opacity = "0";
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1_500);
+  };
 
   if (!isDesktop()) {
     return (
@@ -79,7 +136,7 @@ export function SelfHost() {
 
   return (
     <main className="control-page selfhost-page">
-      <div className="control-heading"><div><span className="eyebrow">Self-host</span><h1>Local services</h1><p>Private, supervised services on this computer.</p></div><span className="status-pill good">Loopback only</span></div>
+      <div className="control-heading"><div><span className="eyebrow">Self-host</span><h1>Local services</h1><p>Private, supervised services on this computer.</p></div><span className={`status-pill ${status?.wallet_access === "device" ? "good" : "warm"}`}>{status?.wallet_access === "wan" ? "Internet access" : status?.wallet_access === "lan" ? "LAN access" : "Device only"}</span></div>
       {error && <div className="control-error">{error}</div>}
       {!status ? <div className="control-card empty-state"><span className="spin" /> Reading service state…</div> : (
         <>
@@ -118,9 +175,53 @@ export function SelfHost() {
             <div className="control-actions"><button className="btn ghost compact" onClick={() => void openPath(status.data_dir)}>Open app data</button><button className="btn ghost compact" onClick={() => void openPath(status.backup_dir)}>Open backups</button><button className="btn compact" onClick={() => navigate("/")}>Back up wallet</button></div>
           </section>
 
-          <section className="control-card safety-card">
-            <h2>Public access</h2>
-            <p>RPC, walletd, and the local explorer stay on <code>127.0.0.1</code>. Automatic UPnP is disabled. If you publish a merchant checkout, place only the gateway behind authenticated TLS or Tor—never expose node RPC or walletd.</p>
+          <section className="control-card safety-card host-access-card">
+            <div className="card-title-row">
+              <div><h2>Network access</h2><p>Use the wallet service from another device and choose how the node participates.</p></div>
+              {!accessEditing && <button className="btn compact" onClick={editAccess}>Configure</button>}
+            </div>
+
+            {!accessEditing ? (
+              <>
+                <div className="node-runtime-summary">
+                  <span><small>Wallet service</small><strong>{status.wallet_access === "device" ? "This device only" : status.wallet_access === "lan" ? "LAN · authenticated" : "Internet · HTTPS proxy"}</strong></span>
+                  <span><small>Node RPC</small><strong>{status.node_lan_rpc ? "Trusted LAN" : "This device only"}</strong></span>
+                  <span><small>Node P2P</small><strong>{status.node_public_p2p ? "Public · TCP 16811" : "Outbound only"}</strong></span>
+                </div>
+                {status.wallet_access_url && <div className="detail-row"><span className="k">Wallet URL</span><span className="v mono">{status.wallet_access_url}</span></div>}
+                {status.wallet_access !== "device" && (
+                  <>
+                    <div className="detail-row"><span className="k">Access token</span><span className="v mono">{tokenVisible ? status.wallet_access_token ?? "Unavailable" : "••••••••••••••••••••••••"}</span></div>
+                    <div className="control-actions">
+                      <button className="btn ghost compact" onClick={() => setTokenVisible((value) => !value)}>{tokenVisible ? "Hide token" : "Show token"}</button>
+                      <button className="btn ghost compact" onClick={() => void copyToken()}>{copied ? "Copied" : "Copy token"}</button>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <h3>Wallet service</h3>
+                <div className="choice-row three host-mode-list" role="radiogroup" aria-label="Wallet service access">
+                  <button className={`choice-button ${walletAccess === "device" ? "selected" : ""}`} role="radio" aria-checked={walletAccess === "device"} onClick={() => setWalletAccess("device")}><strong>Device only</strong><span>Random loopback port. Nothing else can connect.</span></button>
+                  <button className={`choice-button ${walletAccess === "lan" ? "selected" : ""}`} role="radio" aria-checked={walletAccess === "lan"} onClick={() => setWalletAccess("lan")}><strong>Local network</strong><span>Authenticated service for desktop and mobile apps on a trusted LAN.</span></button>
+                  <button className={`choice-button ${walletAccess === "wan" ? "selected" : ""}`} role="radio" aria-checked={walletAccess === "wan"} onClick={() => setWalletAccess("wan")}><strong>Internet</strong><span>Authenticated backend for a trusted HTTPS reverse proxy or VPN.</span></button>
+                </div>
+                {walletAccess !== "device" && <label className="host-field">Wallet port<input className="control-input" type="number" min={1024} max={65535} value={walletPort} onChange={(event) => setWalletPort(Number(event.target.value))} /></label>}
+                {walletAccess === "wan" && <label className="host-field">Public HTTPS URL<input className="control-input mono" type="url" value={publicUrl} onChange={(event) => setPublicUrl(event.target.value)} placeholder="https://wallet.example.com" /></label>}
+                {walletAccess === "lan" && <p className="inline-warning">Allow inbound TCP {walletPort} in the firewall for Private/Home networks only. The app does not change firewall rules or enable UPnP.</p>}
+                {walletAccess === "wan" && <p className="inline-warning">Forward the public HTTPS URL through Caddy, nginx, Tailscale, or Tor to this computer. Do not expose the plain backend port directly to the internet.</p>}
+
+                <h3>Node access</h3>
+                <label className="check-row"><input type="checkbox" checked={nodeLanRpc} onChange={(event) => setNodeLanRpc(event.target.checked)} /><span><strong>Node RPC on trusted LAN</strong><small>Lets another wallet or miner use TCP 16810. No authentication—never forward it to the internet.</small></span></label>
+                <label className="check-row"><input type="checkbox" checked={nodePublicP2p} onChange={(event) => setNodePublicP2p(event.target.checked)} /><span><strong>Public P2P node</strong><small>Accept peers on TCP 16811. This does not expose wallet data or RPC.</small></span></label>
+                {status.node_running && (nodeLanRpc !== status.node_lan_rpc || nodePublicP2p !== status.node_public_p2p) && <p className="inline-warning">Stop the managed node before applying changed node access. Wallet-service changes do not require stopping it.</p>}
+                <div className="control-actions">
+                  <button className="btn ghost compact" disabled={busy === "access"} onClick={() => setAccessEditing(false)}>Cancel</button>
+                  <button className="btn compact" disabled={busy === "access" || (status.node_running && (nodeLanRpc !== status.node_lan_rpc || nodePublicP2p !== status.node_public_p2p))} onClick={() => void saveAccess()}>{busy === "access" ? "Applying…" : "Apply"}</button>
+                </div>
+              </>
+            )}
           </section>
 
           <section className="control-card safety-card">

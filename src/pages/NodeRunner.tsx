@@ -111,7 +111,7 @@ function NodeStartDialog({
           <span>{publicP2p
             ? "Allow inbound TCP 16811 in the operating-system firewall. If this machine is behind a router, forward 16811 only if you want public inbound peers."
             : "The node makes outbound peer connections and will sync normally. Its P2P listener stays on this device."}</span>
-          <small>RPC always stays private at 127.0.0.1:16810. Never expose that port to the internet.</small>
+          <small>Node RPC is private by default. Trusted-LAN access can be enabled in Host; never expose TCP 16810 to the internet.</small>
         </div>
 
         {miningConflict && <div className="dialog-inline-error">This wallet currently uses the local node. Switch the wallet to its public service before running the history-free Mining mode.</div>}
@@ -133,7 +133,7 @@ export function NodeRunner() {
   const [config, setConfig] = useState<ControlConfig | null>(null);
   const [node, setNode] = useState<NodeStatus | null>(null);
   const [walletd, setWalletd] = useState<WalletdStatus | null>(null);
-  const [showLogs, setShowLogs] = useState(false);
+  const [logService, setLogService] = useState<"zkas-node" | "wallet-engine" | null>(null);
   const [showStart, setShowStart] = useState(false);
   const [busy, setBusy] = useState<"install" | "start" | "stop" | "attach" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -142,7 +142,7 @@ export function NodeRunner() {
   const [publicP2p, setPublicP2p] = useState(false);
   const refreshInFlight = useRef(false);
   const closeStartDialog = useCallback(() => setShowStart(false), []);
-  const closeLogsDialog = useCallback(() => setShowLogs(false), []);
+  const closeLogsDialog = useCallback(() => setLogService(null), []);
 
   const refresh = useCallback(async () => {
     if (!desktop || refreshInFlight.current) return;
@@ -293,7 +293,7 @@ export function NodeRunner() {
         <div className="node-runtime-summary">
           <span><small>Mode</small><strong>{presetLabel(config?.settings.node_preset)}</strong></span>
           <span><small>Peer access</small><strong>{config?.settings.node_public_p2p ? "Public · TCP 16811" : "Outbound only"}</strong></span>
-          <span><small>RPC</small><strong>Private · 127.0.0.1:16810</strong></span>
+          <span><small>RPC</small><strong>{config?.settings.node_lan_rpc ? "Trusted LAN · TCP 16810" : "Private · 127.0.0.1:16810"}</strong></span>
         </div>
         {node?.error && node.running && <p className="inline-warning">The process is running but RPC is not ready yet: {node.error}</p>}
         {!node?.running && node?.last_exit && <p className="inline-warning">Last run: {node.last_exit}</p>}
@@ -304,7 +304,7 @@ export function NodeRunner() {
           <button className="btn ghost" disabled={busy !== null || !node?.running || !node.managed} onClick={() => run("stop", async () => { await desktopServices.stopNode(); await initDesktop(); location.reload(); })}>
             {busy === "stop" ? "Stopping…" : "Stop"}
           </button>
-          <button className="btn ghost" onClick={() => setShowLogs(true)}>View logs</button>
+          <button className="btn ghost" onClick={() => setLogService("zkas-node")}>View node logs</button>
         </div>
       </section>
 
@@ -322,6 +322,7 @@ export function NodeRunner() {
           {walletd?.node_source === "local" && (
             <button className="btn ghost" disabled={busy !== null} onClick={() => run("attach", async () => { await setNodeSource("remote"); location.reload(); })}>Use public node</button>
           )}
+          <button className="btn ghost" onClick={() => setLogService("wallet-engine")}>View wallet logs</button>
         </div>
         {node?.running && node.is_synced !== true && <p className="inline-warning">Local node is syncing. Your wallet stays on {walletd?.node_source === "custom" ? "your existing node" : "the public node"} with its current balance until the local node is complete.</p>}
         {walletd?.running && walletd.node_connected === false && <p className="inline-warning">The wallet is open, but its selected node is not answering yet. It retries automatically and keeps the last confirmed wallet state visible.</p>}
@@ -342,7 +343,12 @@ export function NodeRunner() {
         onClose={closeStartDialog}
         onRun={() => void startNode()}
       />
-      <ServiceLogsDialog open={showLogs} onClose={closeLogsDialog} service="zkas-node" title="ZKAS node logs" />
+      <ServiceLogsDialog
+        open={logService !== null}
+        onClose={closeLogsDialog}
+        service={logService ?? "wallet-engine"}
+        title={logService === "zkas-node" ? "ZKAS node logs" : "Wallet engine logs"}
+      />
     </main>
   );
 }

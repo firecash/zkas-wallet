@@ -12,6 +12,7 @@
 //! - `local`: a node binary this app spawns and supervises (`node_binary`).
 
 use serde::{Deserialize, Serialize};
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
 use tauri::Manager;
@@ -104,8 +105,11 @@ pub struct Settings {
     /// `shielded` (pruned bodies + complete wallet history), `archival` (all
     /// bodies + complete history), or `mining` (pruned, no historical notes).
     pub node_preset: String,
-    /// Accept inbound ZKas P2P connections. RPC always remains loopback-only.
+    /// Accept inbound ZKas P2P connections.
     pub node_public_p2p: bool,
+    /// Allow trusted LAN devices to use the managed node's unauthenticated gRPC.
+    /// Internet RPC is never offered; public node access uses P2P instead.
+    pub node_lan_rpc: bool,
     /// The managed process is independent of the wallet's selected RPC. This
     /// lets a node sync/mine while the wallet safely keeps using a public node.
     pub node_auto_start: bool,
@@ -131,6 +135,12 @@ pub struct Settings {
     pub mining_auto_start: bool,
     /// Last direct-mining mode, used only when mining_auto_start is enabled.
     pub mining_mode: String,
+    /// "device" | "lan" | "wan". LAN/WAN bind the authenticated wallet API
+    /// to all interfaces; WAN additionally requires an operator-supplied HTTPS
+    /// URL because raw wallet traffic must never cross the internet.
+    pub wallet_access: String,
+    pub wallet_access_port: u16,
+    pub wallet_public_url: String,
 }
 
 impl Default for Settings {
@@ -142,6 +152,7 @@ impl Default for Settings {
             node_release: None,
             node_preset: "shielded".into(),
             node_public_p2p: false,
+            node_lan_rpc: false,
             node_auto_start: false,
             bridge_binary: None,
             bridge_release: None,
@@ -158,6 +169,9 @@ impl Default for Settings {
             min_share_diff: 8192.0,
             mining_auto_start: false,
             mining_mode: "solo".into(),
+            wallet_access: "device".into(),
+            wallet_access_port: 8501,
+            wallet_public_url: String::new(),
         }
     }
 }
@@ -203,6 +217,17 @@ impl Settings {
         if !self.min_share_diff.is_finite() || self.min_share_diff <= 0.0 {
             self.min_share_diff = 8192.0;
         }
+        if !matches!(self.wallet_access.as_str(), "device" | "lan" | "wan") {
+            self.wallet_access = "device".into();
+        }
+        if self.wallet_access_port < 1024 {
+            self.wallet_access_port = 8501;
+        }
+        self.wallet_public_url = self
+            .wallet_public_url
+            .trim()
+            .trim_end_matches('/')
+            .to_string();
     }
 
     fn rpc_addr(&self) -> String {
@@ -221,6 +246,7 @@ struct Engine {
     rt: tokio::runtime::Runtime,
     port: u16,
     token: String,
+    wallet_access_token: String,
     settings: Settings,
     config_dir: PathBuf,
     data_dir: PathBuf,
@@ -299,7 +325,42 @@ instances:
     )
 }
 
+/// A listening socket is not proof that walletd started: another process may
+/// own the port, or walletd may accept TCP and fail before routing requests.
+/// Require its public health endpoint to return HTTP 200 before a node switch
+/// is committed or the UI is pointed at the new engine.
+fn walletd_health_ready(address: std::net::SocketAddr) -> bool {
+    let timeout = std::time::Duration::from_millis(500);
+    let Ok(mut stream) = std::net::TcpStream::connect_timeout(&address, timeout) else {
+        return false;
+    };
+    let _ = stream.set_read_timeout(Some(timeout));
+    let _ = stream.set_write_timeout(Some(timeout));
+    if stream
+        .write_all(b"GET /health HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+        .is_err()
+    {
+        return false;
+    }
+    let mut response = [0u8; 256];
+    let Ok(read) = stream.read(&mut response) else {
+        return false;
+    };
+    let status = String::from_utf8_lossy(&response[..read]);
+    status.starts_with("HTTP/1.1 200 ") || status.starts_with("HTTP/1.0 200 ")
+}
+
 impl Engine {
+    fn write_private(path: &std::path::Path, contents: &[u8]) {
+        if std::fs::write(path, contents).is_ok() {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
+            }
+        }
+    }
+
     fn new(config_dir: PathBuf, data_dir: PathBuf) -> Self {
         let mut settings: Settings = std::fs::read(config_dir.join("settings.json"))
             .ok()
@@ -307,6 +368,7 @@ impl Engine {
             .unwrap_or_default();
         settings.normalize();
         let token = Self::load_or_create_token(&config_dir);
+        let wallet_access_token = Self::load_or_create_access_token(&config_dir);
         let rt = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(8) // see zkas-walletd: oversubscribed so HTTP never starves behind scans
             .enable_all()
@@ -317,6 +379,7 @@ impl Engine {
             rt,
             port: 0,
             token,
+            wallet_access_token,
             settings,
             config_dir,
             data_dir,
@@ -348,7 +411,26 @@ impl Engine {
             .map(char::from)
             .collect();
         let _ = std::fs::create_dir_all(config_dir);
-        let _ = std::fs::write(&path, &token);
+        Self::write_private(&path, token.as_bytes());
+        token
+    }
+
+    /// Authentication for LAN/WAN wallet-service clients. It is deliberately
+    /// distinct from the X-Wallet-Token that identifies the desktop wallet.
+    fn load_or_create_access_token(config_dir: &PathBuf) -> String {
+        let path = config_dir.join("wallet-access-token");
+        if let Ok(value) = std::fs::read_to_string(&path) {
+            let value = value.trim().to_string();
+            if value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                return value;
+            }
+        }
+        use rand::RngCore;
+        let mut bytes = [0u8; 32];
+        rand::thread_rng().fill_bytes(&mut bytes);
+        let token = hex::encode(bytes);
+        let _ = std::fs::create_dir_all(config_dir);
+        Self::write_private(&path, format!("{token}\n").as_bytes());
         token
     }
 
@@ -363,6 +445,11 @@ impl Engine {
     /// Stop walletd and WAIT for its scan loops to stop and checkpoints to
     /// flush. A node switch is not complete until this returns.
     fn stop_walletd(&mut self) {
+        let logger = self.services.logger("wallet-engine");
+        let was_running = self.shutdown.is_some() || self.walletd_task.is_some();
+        if was_running {
+            logger.record("app", "stopping wallet engine");
+        }
         if let Some(tx) = self.shutdown.take() {
             let _ = tx.send(());
         }
@@ -372,27 +459,42 @@ impl Engine {
             });
             if stopped.is_err() {
                 log_crash("embedded walletd did not stop within 30s; aborting its task");
+                logger.record(
+                    "stderr",
+                    "shutdown exceeded 30 seconds; aborting wallet engine task",
+                );
                 task.abort();
                 let _ = self.rt.block_on(task);
             }
         }
         self.port = 0;
+        if was_running {
+            logger.record("app", "wallet engine stopped");
+        }
     }
 
     /// Start (or restart) the embedded walletd against the current node source.
     fn start_walletd(&mut self) {
         self.stop_walletd();
+        let logger = self.services.logger("wallet-engine");
         *self.walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = None;
-        // A fresh loopback port each (re)start avoids TIME_WAIT collisions.
-        // A bind failure (firewall software gone wild, loopback misconfigured)
-        // must not panic the app: leave port 0 — the UI shows "cannot reach the
-        // wallet daemon" and crash.log says why.
-        let port = match std::net::TcpListener::bind("127.0.0.1:0") {
+        // Device-only uses a fresh loopback port. LAN/WAN uses the stable,
+        // user-selected port and a separate bearer gate; the desktop webview
+        // still connects through 127.0.0.1, never through its external address.
+        let exposed = self.settings.wallet_access != "device";
+        let requested_port = if exposed {
+            self.settings.wallet_access_port
+        } else {
+            0
+        };
+        let bind_host = if exposed { "0.0.0.0" } else { "127.0.0.1" };
+        let port = match std::net::TcpListener::bind((bind_host, requested_port)) {
             Ok(l) => match l.local_addr() {
                 Ok(a) => a.port(),
                 Err(e) => {
                     let message = format!("cannot read loopback address for wallet engine: {e}");
                     log_crash(&message);
+                    logger.record("stderr", message.clone());
                     *self.walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message);
                     self.port = 0;
                     return;
@@ -401,6 +503,7 @@ impl Engine {
             Err(e) => {
                 let message = format!("cannot bind a loopback port for wallet engine: {e}");
                 log_crash(&message);
+                logger.record("stderr", message.clone());
                 *self.walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message);
                 self.port = 0;
                 return;
@@ -408,9 +511,15 @@ impl Engine {
         };
         self.port = port;
 
+        let node_rpc = self.settings.rpc_addr();
+        logger.record(
+            "app",
+            format!("starting wallet engine on {bind_host}:{port}; node {node_rpc}"),
+        );
+        let diagnostic_logger = logger.clone();
         let cfg = zkas_walletd::Config {
-            rpc_server: self.settings.rpc_addr(),
-            listen: format!("127.0.0.1:{port}").parse().unwrap(),
+            rpc_server: node_rpc.clone(),
+            listen: format!("{bind_host}:{port}").parse().unwrap(),
             wallet_dir: self.data_dir.join("wallets").to_string_lossy().into_owned(),
             network: "mainnet".into(),
             // The webview's origin is not 127.0.0.1, so CORS must admit it.
@@ -418,6 +527,9 @@ impl Engine {
                 "tauri://localhost".into(),
                 "http://tauri.localhost".into(),
                 "https://tauri.localhost".into(),
+                "capacitor://localhost".into(),
+                "http://localhost".into(),
+                "https://wallet.zkas.info".into(),
             ],
             allow_default_token: false,
             // The passphrase the user unlocked with. `None` only in the
@@ -425,7 +537,7 @@ impl Engine {
             wallet_secret: self.secret.clone(),
             // Embedded daemon is loopback-only: no HTTPS, no bearer gate.
             tls: None,
-            require_bearer: None,
+            require_bearer: exposed.then(|| self.wallet_access_token.clone()),
             // This is a single-user loopback daemon. The desktop shell keeps the
             // encrypted seed locally and is explicitly allowed to spend it.
             allow_custodial: true,
@@ -437,21 +549,29 @@ impl Engine {
             // consolidates them. `None` would disable that silently.
             auto_consolidate: Some(zkas_walletd::AUTO_CONSOLIDATE_DEFAULT),
             resources: zkas_walletd::ResourceLimits::default(),
+            diagnostic_sink: Some(std::sync::Arc::new(move |line| {
+                diagnostic_logger.record("walletd", line);
+            })),
         };
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         self.shutdown = Some(tx);
         let walletd_error = self.walletd_error.clone();
+        let task_logger = logger.clone();
         self.walletd_task = Some(self.rt.spawn(async move {
-            if let Err(e) = zkas_walletd::serve(cfg, rx).await {
-                // crash.log, not just stderr: the Windows build has no console.
-                let message = format!("embedded walletd stopped: {e}");
-                log_crash(&message);
-                *walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message);
+            match zkas_walletd::serve(cfg, rx).await {
+                Err(e) => {
+                    // crash.log, not just stderr: the Windows build has no console.
+                    let message = format!("embedded walletd stopped: {e}");
+                    log_crash(&message);
+                    task_logger.record("stderr", message.clone());
+                    *walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message);
+                }
+                Ok(()) => task_logger.record("app", "wallet engine exited cleanly"),
             }
         }));
         log_crash(&format!(
             "embedded walletd on 127.0.0.1:{port} -> node {}",
-            self.settings.rpc_addr()
+            node_rpc
         ));
     }
 
@@ -479,17 +599,22 @@ impl Engine {
                     .clone()
                     .unwrap_or_else(|| "wallet engine stopped during startup".into()));
             }
-            if std::net::TcpStream::connect_timeout(&address, std::time::Duration::from_millis(250))
-                .is_ok()
-            {
+            if walletd_health_ready(address) {
                 return Ok(());
             }
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
-        Err(format!(
-            "wallet engine did not become ready within {} seconds",
-            timeout.as_secs()
-        ))
+        Err(self
+            .walletd_error
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone()
+            .unwrap_or_else(|| {
+                format!(
+                    "wallet engine did not answer /health within {} seconds",
+                    timeout.as_secs()
+                )
+            }))
     }
 
     /// Spawn the user-provided node binary (`local` mode) and supervise it for
@@ -524,7 +649,14 @@ impl Engine {
         }
         let mut args = vec![
             format!("--appdir={}", appdir.to_string_lossy()),
-            format!("--rpclisten={LOCAL_ZKAS_RPC}"),
+            format!(
+                "--rpclisten={}",
+                if self.settings.node_lan_rpc {
+                    "0.0.0.0:16810"
+                } else {
+                    LOCAL_ZKAS_RPC
+                }
+            ),
             "--utxoindex".into(),
             "--disable-upnp".into(),
             "--yes".into(),
@@ -731,6 +863,8 @@ struct WalletConfig {
     base: String,
     /// The per-install wallet token (X-Wallet-Token header).
     token: String,
+    /// Present only when the engine is intentionally shared beyond loopback.
+    wallet_bearer: Option<String>,
     network: String,
     mode: String,
     node_addr: String,
@@ -742,6 +876,8 @@ fn config_of(e: &mut Engine) -> WalletConfig {
     WalletConfig {
         base: format!("http://127.0.0.1:{}", e.port),
         token: e.token.clone(),
+        wallet_bearer: (e.settings.wallet_access != "device")
+            .then(|| e.wallet_access_token.clone()),
         network: "mainnet".into(),
         mode: e.settings.mode.clone(),
         node_addr: e.settings.node_addr.clone(),
@@ -1540,7 +1676,7 @@ struct WalletdStatus {
 
 #[tauri::command]
 async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<WalletdStatus, String> {
-    let (port, token, node_source, node_rpc, engine_error) = {
+    let (port, token, bearer, node_source, node_rpc, engine_error) = {
         let e = engine(&state);
         let engine_error = e
             .walletd_error
@@ -1550,6 +1686,7 @@ async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<Wallet
         (
             e.port,
             e.token.clone(),
+            (e.settings.wallet_access != "device").then(|| e.wallet_access_token.clone()),
             e.settings.mode.clone(),
             e.settings.rpc_addr(),
             engine_error,
@@ -1570,12 +1707,16 @@ async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<Wallet
             error: engine_error,
         });
     }
-    let result = reqwest::Client::new()
+    let request = reqwest::Client::new()
         .get(format!("http://127.0.0.1:{port}/api/status"))
         .header("X-Wallet-Token", token)
-        .timeout(std::time::Duration::from_secs(3))
-        .send()
-        .await;
+        .timeout(std::time::Duration::from_secs(3));
+    let result = match bearer {
+        Some(token) => request.bearer_auth(token),
+        None => request,
+    }
+    .send()
+    .await;
     let status = match result {
         Ok(response) if response.status().is_success() => {
             let value = response
@@ -1619,7 +1760,9 @@ async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<Wallet
             note_count: None,
             anchor_daa: None,
             balance: None,
-            error: Some(format!("wallet daemon returned {}", response.status())),
+            error: engine_error
+                .clone()
+                .or_else(|| Some(format!("wallet daemon returned {}", response.status()))),
         },
         Err(error) => WalletdStatus {
             running: false,
@@ -1632,7 +1775,7 @@ async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<Wallet
             note_count: None,
             anchor_daa: None,
             balance: None,
-            error: Some(error.to_string()),
+            error: engine_error.or_else(|| Some(error.to_string())),
         },
     };
     Ok(status)
@@ -1810,15 +1953,20 @@ struct LocalNetworkInfo {
 
 #[tauri::command]
 fn local_network_info() -> LocalNetworkInfo {
-    let lan_ip = std::net::UdpSocket::bind(("0.0.0.0", 0))
+    LocalNetworkInfo {
+        lan_ip: primary_lan_ip(),
+    }
+}
+
+fn primary_lan_ip() -> Option<String> {
+    std::net::UdpSocket::bind(("0.0.0.0", 0))
         .and_then(|socket| {
             socket.connect(("1.1.1.1", 80))?;
             socket.local_addr()
         })
         .ok()
         .map(|address| address.ip().to_string())
-        .filter(|address| address != "127.0.0.1" && address != "0.0.0.0");
-    LocalNetworkInfo { lan_ip }
+        .filter(|address| address != "127.0.0.1" && address != "0.0.0.0")
 }
 
 fn configure_mining_zkas_source(
@@ -2313,6 +2461,15 @@ struct SelfHostStatus {
     data_dir: String,
     backup_dir: String,
     autostart_enabled: bool,
+    wallet_access: String,
+    wallet_access_port: u16,
+    wallet_public_url: String,
+    wallet_access_url: Option<String>,
+    wallet_access_token: Option<String>,
+    lan_ip: Option<String>,
+    node_running: bool,
+    node_public_p2p: bool,
+    node_lan_rpc: bool,
 }
 
 #[tauri::command]
@@ -2326,9 +2483,25 @@ fn self_host_status(
         .explorer_binary
         .as_ref()
         .is_some_and(|p| std::path::Path::new(p).is_file());
+    let lan_ip = primary_lan_ip();
+    let wallet_access_url = match e.settings.wallet_access.as_str() {
+        "lan" => lan_ip
+            .as_ref()
+            .map(|ip| format!("http://{ip}:{}", e.settings.wallet_access_port)),
+        "wan" => {
+            (!e.settings.wallet_public_url.is_empty()).then(|| e.settings.wallet_public_url.clone())
+        }
+        _ => None,
+    };
+    let node_running = e.services.zkas_node.running();
+    let wallet_engine_running = e.port != 0
+        && !e
+            .walletd_task
+            .as_ref()
+            .is_some_and(tokio::task::JoinHandle::is_finished);
     SelfHostStatus {
-        wallet_engine_running: e.port != 0,
-        wallet_engine_url: (e.port != 0).then(|| format!("http://127.0.0.1:{}", e.port)),
+        wallet_engine_running,
+        wallet_engine_url: wallet_engine_running.then(|| format!("http://127.0.0.1:{}", e.port)),
         node_mode: e.settings.mode.clone(),
         node_rpc: e.settings.rpc_addr(),
         explorer_installed: installed,
@@ -2340,7 +2513,70 @@ fn self_host_status(
         data_dir: e.data_dir.to_string_lossy().into_owned(),
         backup_dir: e.backup_dir().to_string_lossy().into_owned(),
         autostart_enabled: app.autolaunch().is_enabled().unwrap_or(false),
+        wallet_access: e.settings.wallet_access.clone(),
+        wallet_access_port: e.settings.wallet_access_port,
+        wallet_public_url: e.settings.wallet_public_url.clone(),
+        wallet_access_url,
+        wallet_access_token: (e.settings.wallet_access != "device")
+            .then(|| e.wallet_access_token.clone()),
+        lan_ip,
+        node_running,
+        node_public_p2p: e.settings.node_public_p2p,
+        node_lan_rpc: e.settings.node_lan_rpc,
     }
+}
+
+#[tauri::command]
+fn set_host_access(
+    state: tauri::State<'_, Mutex<Engine>>,
+    wallet_access: String,
+    wallet_access_port: u16,
+    wallet_public_url: String,
+    node_lan_rpc: bool,
+    node_public_p2p: bool,
+) -> Result<(), String> {
+    if !matches!(wallet_access.as_str(), "device" | "lan" | "wan") {
+        return Err("wallet access must be device, lan, or wan".into());
+    }
+    if wallet_access_port < 1024 {
+        return Err("wallet service port must be from 1024 to 65535".into());
+    }
+    let public_url = wallet_public_url.trim().trim_end_matches('/').to_string();
+    if wallet_access == "wan" {
+        let parsed = reqwest::Url::parse(&public_url).map_err(|_| {
+            "enter the public HTTPS wallet URL, for example https://wallet.example.com"
+        })?;
+        if parsed.scheme() != "https" || parsed.host_str().is_none() {
+            return Err("internet wallet access requires an HTTPS URL".into());
+        }
+    }
+
+    let mut e = engine(&state);
+    let node_changed =
+        e.settings.node_lan_rpc != node_lan_rpc || e.settings.node_public_p2p != node_public_p2p;
+    if node_changed && e.services.zkas_node.running() {
+        return Err("stop the managed node before changing its network access".into());
+    }
+    let previous = e.settings.clone();
+    e.settings.wallet_access = wallet_access;
+    e.settings.wallet_access_port = wallet_access_port;
+    e.settings.wallet_public_url = public_url;
+    e.settings.node_lan_rpc = node_lan_rpc;
+    e.settings.node_public_p2p = node_public_p2p;
+
+    // A locked wallet has no engine to restart; the new policy applies on its
+    // next unlock. An active engine is switched transactionally.
+    if e.port != 0 {
+        e.start_walletd();
+        if let Err(error) = e.wait_walletd_ready(std::time::Duration::from_secs(15)) {
+            e.settings = previous;
+            e.start_walletd();
+            let _ = e.wait_walletd_ready(std::time::Duration::from_secs(15));
+            return Err(format!("{error}; restored the previous Host settings"));
+        }
+    }
+    e.save_settings();
+    Ok(())
 }
 
 #[tauri::command]
@@ -2588,6 +2824,7 @@ pub fn run() {
             mining_status,
             public_explorer_get,
             self_host_status,
+            set_host_access,
             start_explorer_backend,
             stop_explorer_backend,
             set_desktop_autostart,
@@ -2649,6 +2886,95 @@ mod control_tests {
         assert!(LOCAL_KASPA_RPC.starts_with("127.0.0.1:"));
     }
 
+    fn one_shot_http(status: &str) -> (std::net::SocketAddr, std::thread::JoinHandle<()>) {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let response =
+            format!("HTTP/1.1 {status}\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok");
+        let task = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0u8; 256];
+            let _ = stream.read(&mut request);
+            stream.write_all(response.as_bytes()).unwrap();
+        });
+        (address, task)
+    }
+
+    #[test]
+    fn wallet_engine_readiness_requires_http_200() {
+        let (healthy, healthy_task) = one_shot_http("200 OK");
+        assert!(walletd_health_ready(healthy));
+        healthy_task.join().unwrap();
+
+        let (unhealthy, unhealthy_task) = one_shot_http("503 Service Unavailable");
+        assert!(!walletd_health_ready(unhealthy));
+        unhealthy_task.join().unwrap();
+    }
+
+    fn http_status(address: std::net::SocketAddr, path: &str, headers: &[(&str, &str)]) -> u16 {
+        let mut stream =
+            std::net::TcpStream::connect_timeout(&address, std::time::Duration::from_secs(2))
+                .unwrap();
+        let mut request = format!("GET {path} HTTP/1.1\r\nHost: 127.0.0.1\r\n");
+        for (name, value) in headers {
+            request.push_str(&format!("{name}: {value}\r\n"));
+        }
+        request.push_str("Connection: close\r\n\r\n");
+        stream.write_all(request.as_bytes()).unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        response
+            .split_whitespace()
+            .nth(1)
+            .and_then(|value| value.parse().ok())
+            .unwrap()
+    }
+
+    #[test]
+    fn lan_wallet_engine_is_live_and_bearer_gated() {
+        let root = std::env::temp_dir().join(format!(
+            "zkas-desktop-lan-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let config = root.join("config");
+        let data = root.join("data");
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        drop(listener);
+
+        let mut engine = Engine::new(config, data);
+        engine.settings.wallet_access = "lan".into();
+        engine.settings.wallet_access_port = port;
+        engine.start_walletd();
+        engine
+            .wait_walletd_ready(std::time::Duration::from_secs(5))
+            .unwrap();
+
+        let address = std::net::SocketAddr::from(([127, 0, 0, 1], port));
+        assert_eq!(http_status(address, "/health", &[]), 200);
+        assert_eq!(http_status(address, "/api/status", &[]), 401);
+        assert_eq!(
+            http_status(
+                address,
+                "/api/status",
+                &[
+                    (
+                        "Authorization",
+                        &format!("Bearer {}", engine.wallet_access_token)
+                    ),
+                    ("X-Wallet-Token", &engine.token),
+                ],
+            ),
+            200
+        );
+        engine.stop_walletd();
+        let _ = std::fs::remove_dir_all(root);
+    }
+
     #[test]
     fn generated_bridge_yaml_keeps_instance_fields_nested() {
         let yaml = bridge_config_yaml(
@@ -2698,6 +3024,8 @@ mod control_tests {
             mining_mode: "pool".into(),
             stratum_port: 80,
             min_share_diff: -1.0,
+            wallet_access: "public-everything".into(),
+            wallet_access_port: 80,
             ..Settings::default()
         };
         settings.normalize();
@@ -2707,6 +3035,8 @@ mod control_tests {
         assert_eq!(settings.mining_mode, "solo");
         assert_eq!(settings.stratum_port, 5555);
         assert_eq!(settings.min_share_diff, 8192.0);
+        assert_eq!(settings.wallet_access, "device");
+        assert_eq!(settings.wallet_access_port, 8501);
     }
 
     #[test]

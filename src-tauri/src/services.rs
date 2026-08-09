@@ -585,6 +585,26 @@ pub struct ServiceManager {
     logs: Arc<Mutex<VecDeque<ServiceLog>>>,
 }
 
+#[derive(Clone)]
+pub struct ServiceLogger {
+    service: &'static str,
+    logs: Arc<Mutex<VecDeque<ServiceLog>>>,
+}
+
+impl ServiceLogger {
+    pub fn record(&self, stream: &'static str, line: impl Into<String>) {
+        push_log(
+            &self.logs,
+            ServiceLog {
+                at_unix_ms: now_ms(),
+                service: self.service.into(),
+                stream: stream.into(),
+                line: line.into(),
+            },
+        );
+    }
+}
+
 impl Default for ServiceManager {
     fn default() -> Self {
         let mut existing = VecDeque::with_capacity(MAX_LOG_LINES);
@@ -612,6 +632,13 @@ impl Default for ServiceManager {
 }
 
 impl ServiceManager {
+    pub fn logger(&self, service: &'static str) -> ServiceLogger {
+        ServiceLogger {
+            service,
+            logs: Arc::clone(&self.logs),
+        }
+    }
+
     /// True only for child services that are useful with the window hidden.
     /// The embedded wallet engine is deliberately excluded: hiding the window
     /// locks it so no spending secret remains live in the tray.

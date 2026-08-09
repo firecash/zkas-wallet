@@ -8,6 +8,7 @@
 export interface DesktopConfig {
   base: string;
   token: string;
+  wallet_bearer: string | null;
   network: string;
   mode: string; // "remote" | "custom" | "local"
   node_addr: string;
@@ -30,6 +31,8 @@ export async function initDesktop(): Promise<DesktopConfig | null> {
   if (!isDesktop()) return null;
   const cfg = await invoke<DesktopConfig>("wallet_config");
   localStorage.setItem("walletd_base", cfg.base);
+  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
+  else localStorage.removeItem("walletd_bearer");
   // The shell's token is the FIRST wallet, not the only one. Writing it on every
   // boot clobbered whichever wallet the user had switched to — the embedded
   // daemon serves any token, so the app's choice is the one that counts.
@@ -49,6 +52,8 @@ export async function setNodeSource(
     nodeBinary: nodeBinary ?? null,
   });
   localStorage.setItem("walletd_base", cfg.base);
+  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
+  else localStorage.removeItem("walletd_bearer");
   return cfg;
 }
 
@@ -74,6 +79,8 @@ export function vaultStatus(): Promise<VaultStatus> {
 export async function unlockVault(passphrase: string): Promise<DesktopConfig> {
   const cfg = await invoke<DesktopConfig>("unlock", { passphrase });
   localStorage.setItem("walletd_base", cfg.base);
+  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
+  else localStorage.removeItem("walletd_bearer");
   // Same rule as initDesktop: the shell token is the FIRST wallet, not the only
   // one. Unlocking restarted the daemon but changed nothing about which wallet
   // the user had selected — writing it here switched them back to wallet #1 on
@@ -86,6 +93,8 @@ export async function unlockVault(passphrase: string): Promise<DesktopConfig> {
 export async function setPassphrase(passphrase: string): Promise<DesktopConfig> {
   const cfg = await invoke<DesktopConfig>("set_passphrase", { passphrase });
   localStorage.setItem("walletd_base", cfg.base);
+  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
+  else localStorage.removeItem("walletd_bearer");
   // Preserve the active wallet, exactly like unlockVault — encrypting at rest is
   // not a wallet switch.
   if (!localStorage.getItem("wallet_token")) localStorage.setItem("wallet_token", cfg.token);
@@ -118,6 +127,8 @@ export async function restoreBackup(
 ): Promise<DesktopConfig> {
   const cfg = await invoke<DesktopConfig>("restore_backup", { path, backupPassphrase, passphrase });
   localStorage.setItem("walletd_base", cfg.base);
+  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
+  else localStorage.removeItem("walletd_bearer");
   localStorage.setItem("wallet_token", cfg.token);
   return cfg;
 }

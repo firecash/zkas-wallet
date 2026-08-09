@@ -40,6 +40,16 @@ export function setBase(url: string) {
   else localStorage.setItem("walletd_base", url.replace(/\/$/, ""));
 }
 
+export function getWalletdBearer(): string {
+  return localStorage.getItem("walletd_bearer") ?? "";
+}
+
+export function setWalletdBearer(token: string) {
+  const clean = token.trim();
+  if (clean) localStorage.setItem("walletd_bearer", clean);
+  else localStorage.removeItem("walletd_bearer");
+}
+
 /** The default port a self-hosted `zkas-walletd` listens on. */
 export const DEFAULT_WALLETD_PORT = 8501;
 
@@ -257,6 +267,8 @@ export interface PrepareResp {
 async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 10_000): Promise<T> {
   let res: Response;
   const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
+  const bearer = getWalletdBearer();
+  if (bearer) headers.Authorization = `Bearer ${bearer}`;
   if (body) headers["Content-Type"] = "application/json";
   // Hard ceiling on every daemon call: `status` runs inside the 1-second poll, and
   // one hung connection (mobile network, sleeping proxy) used to freeze the whole

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, chainTx, getBase, setBase, normalizeDaemonInput, walletdTransportError, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
+import { api, chainTx, getBase, setBase, getToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
 import {
@@ -62,6 +62,7 @@ import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { desktopServices } from "./desktop-services";
+import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, Server, Settings, ShieldAlert, Trash2, WalletCards } from "lucide-react";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -1189,7 +1190,8 @@ function ConnectionButton() {
   const [profiles, setProfiles] = useState<EndpointProfile[]>([]);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [bearer, setBearer] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const refresh = useCallback(async () => {
@@ -1216,7 +1218,7 @@ function ConnectionButton() {
     : hosted ? "Hosted" : currentProfile?.name ?? "My walletd";
 
   const switchDesktop = async (mode: "remote" | "local" | "custom", profile?: EndpointProfile) => {
-    setBusy(true);
+    setBusy(profile?.id ?? mode);
     setError("");
     try {
       const next = await setNodeSource(mode, profile?.address);
@@ -1226,12 +1228,12 @@ function ConnectionButton() {
     } catch (e) {
       setError((e as Error).message || String(e));
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
-  const switchWalletd = async (raw: string) => {
-    setBusy(true);
+  const switchWalletd = async (raw: string, busyKey = "walletd", accessToken = "") => {
+    setBusy(busyKey);
     setError("");
     try {
       const url = normalizeDaemonInput(raw);
@@ -1241,26 +1243,29 @@ function ConnectionButton() {
         const ctl = new AbortController();
         const timer = window.setTimeout(() => ctl.abort(), 5_000);
         try {
-          const response = await fetch(`${url}/health`, { signal: ctl.signal });
+          const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
+          if (accessToken.trim()) headers.Authorization = `Bearer ${accessToken.trim()}`;
+          const response = await fetch(`${url}/api/status`, { signal: ctl.signal, headers });
           if (!response.ok) throw new Error(`walletd answered ${response.status}`);
         } finally {
           clearTimeout(timer);
         }
       }
       setBase(url);
+      setWalletdBearer(url ? accessToken : "");
       setOpen(false);
       location.reload();
     } catch (e) {
       setError((e as Error).name === "AbortError" ? "Connection timed out after 5 seconds." : (e as Error).message);
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
   const add = async () => {
     if (!address.trim()) return;
     if (desktop) {
-      setBusy(true);
+      setBusy("add");
       setError("");
       try {
         const next = await setNodeSource("custom", address);
@@ -1270,13 +1275,13 @@ function ConnectionButton() {
         location.reload();
       } catch (e) {
         setError((e as Error).message || String(e));
-        setBusy(false);
+        setBusy(null);
       }
       return;
     }
     const normalized = normalizeDaemonInput(address);
-    await switchWalletd(normalized);
-    walletdProfiles.save(name, normalized);
+    await switchWalletd(normalized, "add", bearer);
+    walletdProfiles.save(name, normalized, bearer);
   };
 
   return (
@@ -1287,7 +1292,7 @@ function ConnectionButton() {
         <ChevronDown aria-hidden="true" size={15} />
       </button>
       {open && createPortal(
-        <div className="modalwrap" onClick={() => !busy && setOpen(false)}>
+        <div className="modalwrap" onClick={() => setOpen(false)}>
           <div className="card modalcard connection-modal" onClick={(event) => event.stopPropagation()}>
             <div className="connection-modal-head">
               <div><span className="eyebrow">Connection</span><h2>{desktop ? "Choose wallet data source" : "Choose a wallet service"}</h2></div>
@@ -1300,11 +1305,11 @@ function ConnectionButton() {
             </p>
 
             <div className="connection-list">
-              <button className={`connection-option ${(desktop ? cfg?.mode === "remote" : hosted) ? "active" : ""}`} disabled={busy} onClick={() => desktop ? void switchDesktop("remote") : void switchWalletd("")}>
-                <span><b>{desktop ? "Public wallet-history node" : "Hosted wallet service"}</b><small>Works immediately</small></span><span>{(desktop ? cfg?.mode === "remote" : hosted) ? "Connected" : "Use"}</span>
+              <button className={`connection-option ${(desktop ? cfg?.mode === "remote" : hosted) ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void switchDesktop("remote") : void switchWalletd("", "hosted", "")}>
+                <span><b>{desktop ? "Public wallet-history node" : "Hosted wallet service"}</b><small>Works immediately</small></span><span>{busy === (desktop ? "remote" : "hosted") ? "Checking…" : (desktop ? cfg?.mode === "remote" : hosted) ? "Connected" : "Use"}</span>
               </button>
               {desktop && (
-                <button className={`connection-option ${cfg?.mode === "local" ? "active" : ""}`} disabled={busy} onClick={() => {
+                <button className={`connection-option ${cfg?.mode === "local" ? "active" : ""}`} disabled={busy !== null} onClick={() => {
                   if (!cfg?.node_running) {
                     setOpen(false);
                     location.hash = "#/node";
@@ -1312,16 +1317,16 @@ function ConnectionButton() {
                   }
                   void switchDesktop("local");
                 }}>
-                  <span><b>Local wallet-history node</b><small>Managed here · gRPC 127.0.0.1:16810</small></span><span>{cfg?.mode === "local" ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
+                  <span><b>Local wallet-history node</b><small>Managed here · gRPC 127.0.0.1:16810</small></span><span>{busy === "local" ? "Checking…" : cfg?.mode === "local" ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
                 </button>
               )}
               {profiles.map((profile) => {
                 const active = desktop ? cfg?.mode === "custom" && currentProfile?.id === profile.id : currentProfile?.id === profile.id;
                 return <div className={`connection-option saved ${active ? "active" : ""}`} key={profile.id}>
-                  <button disabled={busy} onClick={() => desktop ? void switchDesktop("custom", profile) : void switchWalletd(profile.address)}>
-                    <span><b>{profile.name}</b><small className="mono">{profile.address}</small></span><span>{active ? "Connected" : "Use"}</span>
+                  <button disabled={busy !== null} onClick={() => desktop ? void switchDesktop("custom", profile) : void switchWalletd(profile.address, profile.id, profile.bearer ?? "")}>
+                    <span><b>{profile.name}</b><small className="mono">{profile.address}</small></span><span>{busy === profile.id ? "Checking…" : active ? "Connected" : "Use"}</span>
                   </button>
-                  <button className="connection-remove" aria-label={`Remove ${profile.name}`} disabled={busy || active} onClick={() => {
+                  <button className="connection-remove" aria-label={`Remove ${profile.name}`} disabled={busy !== null || active} onClick={() => {
                     (desktop ? walletNodeProfiles : walletdProfiles).remove(profile.id);
                     setProfiles(desktop ? walletNodeProfiles.load() : walletdProfiles.load());
                   }}><Trash2 size={16} /></button>
@@ -1331,15 +1336,16 @@ function ConnectionButton() {
 
             <div className="connection-add">
               <h3>Add {desktop ? "wallet-history node" : "walletd"}</h3>
-              <div className="connection-add-grid">
+              <div className={`connection-add-grid ${desktop ? "" : "walletd"}`}>
                 <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name · Home node" />
                 <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={desktop ? "192.168.1.20:16110" : isNative() ? "192.168.1.20:8501" : "https://wallet.example.com"} />
-                <button className="btn small" disabled={busy || !address.trim()} onClick={() => void add()}>{busy ? "Checking…" : "Save & connect"}</button>
+                {!desktop && <input type="password" className="mono" value={bearer} onChange={(event) => setBearer(event.target.value)} placeholder="Access token · if required" autoCapitalize="none" autoCorrect="off" spellCheck={false} />}
+                <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? "Checking…" : "Save & connect"}</button>
               </div>
             </div>
             {desktop && !cfg?.node_binary && <p className="muted small">Managed local node is not installed yet. The Mine and Node screens can install the verified release automatically.</p>}
             {error && <div className="msg err">{error}</div>}
-            <button className="btn ghost small" disabled={busy} onClick={() => setOpen(false)}>Close</button>
+            <button className="btn ghost small" onClick={() => setOpen(false)}>Close</button>
           </div>
         </div>,
         document.body,
@@ -4349,12 +4355,13 @@ function DaemonSetting() {
   const [base, setB] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [bearer, setBearer] = useState("");
   const current = getBase();
   const own = current.includes("127.0.0.1") || current.includes("localhost") || !current.includes("wallet.zkas.info");
 
   // Accept a bare IP/host and fill in its platform-safe scheme plus :8501, so
   // "just paste your node's address" works. Empty resets to hosted default.
-  const save = async (raw: string) => {
+  const save = async (raw: string, accessToken = bearer) => {
     setBusy(true);
     setError("");
     const url = normalizeDaemonInput(raw);
@@ -4366,13 +4373,16 @@ function DaemonSetting() {
         const ctl = new AbortController();
         const timer = setTimeout(() => ctl.abort(), 5000);
         try {
-          const r = await fetch(`${url}/health`, { signal: ctl.signal });
+          const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
+          if (accessToken.trim()) headers.Authorization = `Bearer ${accessToken.trim()}`;
+          const r = await fetch(`${url}/api/status`, { signal: ctl.signal, headers });
           if (!r.ok) throw new Error(`answered ${r.status}`);
         } finally {
           clearTimeout(timer);
         }
       }
       setBase(url);
+      setWalletdBearer(url ? accessToken : "");
       location.reload();
     } catch (e) {
       const detail = (e as Error).name === "AbortError" ? "timed out after 5s" : (e as Error).message;
@@ -4424,11 +4434,22 @@ function DaemonSetting() {
               {busy ? <span className="spin" /> : "Connect"}
             </button>
           </div>
+          <label style={{ marginTop: 10 }}>Access token <span className="muted">(if the host requires one)</span></label>
+          <input
+            type="password"
+            value={bearer}
+            onChange={(e) => setBearer(e.target.value)}
+            className="mono"
+            placeholder="64-character host access token"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+          />
           <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
             Uses port {DEFAULT_WALLETD_PORT} by default — add <span className="mono">:port</span> only if you changed it.
           </p>
           {!own && (
-            <button className="btn ghost small" style={{ marginTop: 12 }} disabled={busy} onClick={() => save("")}>
+            <button className="btn ghost small" style={{ marginTop: 12 }} disabled={busy} onClick={() => save("", "")}>
               Reset to hosted default
             </button>
           )}
@@ -5228,6 +5249,7 @@ function NodeSourceSetting() {
 function DesktopEngineDown() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [showLogs, setShowLogs] = useState(false);
   useEffect(() => {
     let alive = true;
     desktopServices.walletdStatus()
@@ -5272,9 +5294,18 @@ function DesktopEngineDown() {
         <button className="btn ghost" disabled={busy} onClick={() => location.reload()}>
           Retry
         </button>
+        <button className="btn ghost" onClick={() => setShowLogs(true)}>
+          View wallet logs
+        </button>
       </div>
       {err && <div className="msg warn">{err}</div>}
       <p className="muted small">If it still fails after retrying, restart the app once and keep the error shown above.</p>
+      <ServiceLogsDialog
+        open={showLogs}
+        onClose={() => setShowLogs(false)}
+        service="wallet-engine"
+        title="Wallet engine logs"
+      />
     </div>
   );
 }
