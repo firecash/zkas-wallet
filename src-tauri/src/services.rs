@@ -20,6 +20,7 @@ use tokio::io::AsyncWriteExt;
 const MAX_LOG_LINES: usize = 2_000;
 const HEALTHY_RUN: Duration = Duration::from_secs(60);
 const MAX_RESTART_DELAY: u64 = 30;
+pub const ZKAS_RELEASE: &str = "zkas-v1.0.6";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ServiceLog {
@@ -845,36 +846,36 @@ fn file_sha256(path: &Path) -> Result<String, String> {
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
     Ok(ArchiveSpec {
-        component: "zkas-v1.0.5-linux-x64",
-        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.5/zkas-zkas-v1.0.5-linux-amd64.zip",
-        sha256: "a509b9eda3fad395faca4c3bac79bbdd3fabd38de6e538684fae98d2b9d93265",
+        component: "zkas-v1.0.6-linux-x64",
+        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.6/zkas-zkas-v1.0.6-linux-amd64.zip",
+        sha256: "1709b7a01b5b88bf06b91a01a8df104cf831a09805e44d21f41d8e9767ce3ce8",
     })
 }
 
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
     Ok(ArchiveSpec {
-        component: "zkas-v1.0.5-windows-x64",
-        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.5/zkas-zkas-v1.0.5-win64.zip",
-        sha256: "9f6857f23dbd6e0a22e2f3531e95ae52c165f7dd12d864cba14138fa25d83bbd",
+        component: "zkas-v1.0.6-windows-x64",
+        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.6/zkas-zkas-v1.0.6-win64.zip",
+        sha256: "8b63c491096f12fd70d57a079d062934fd6ccc326e1c75e2f001aa9305b2d830",
     })
 }
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
     Ok(ArchiveSpec {
-        component: "zkas-v1.0.5-macos-arm64",
-        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.5/zkas-zkas-v1.0.5-osx-arm64.zip",
-        sha256: "8cfdc8dc1e03b6c0d03a8cb58e6d524273d8f3cce1857eddf809d9a5c5eae7ba",
+        component: "zkas-v1.0.6-macos-arm64",
+        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.6/zkas-zkas-v1.0.6-osx-arm64.zip",
+        sha256: "22cd34540bf678b602a01438ae67bd16741d7c155fac8c622884cd9493d0429c",
     })
 }
 
 #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
     Ok(ArchiveSpec {
-        component: "zkas-v1.0.5-macos-x64",
-        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.5/zkas-zkas-v1.0.5-osx-x86_64.zip",
-        sha256: "718c1832280411039c2faa96df1ec2c4b890fa16322d00bebd72482d300a0e2b",
+        component: "zkas-v1.0.6-macos-x64",
+        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.6/zkas-zkas-v1.0.6-osx-x86_64.zip",
+        sha256: "24b6d5f9d1ab31266d5bc0fca9a5021e7b4aa8e28ae4d71a06f75f15305b06f5",
     })
 }
 
@@ -935,7 +936,10 @@ mod tests {
 
     #[test]
     fn platform_release_metadata_is_complete() {
-        assert_verified_release(zkas_archive().unwrap());
+        let zkas = zkas_archive().unwrap();
+        assert!(zkas.component.contains(ZKAS_RELEASE));
+        assert!(zkas.url.contains(ZKAS_RELEASE));
+        assert_verified_release(zkas);
         assert_verified_release(kaspa_archive().unwrap());
         #[cfg(any(
             all(target_os = "linux", target_arch = "x86_64"),

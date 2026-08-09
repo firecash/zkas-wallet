@@ -2,10 +2,12 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { serviceState, startNode, stopListeners } = vi.hoisted(() => ({
+const { serviceState, install, startNode, stopListeners } = vi.hoisted(() => ({
   serviceState: {
     logs: [{ at_unix_ms: 1, service: "zkas-node", stream: "app", line: "node ready" }],
+    updateAvailable: false,
   },
+  install: vi.fn(async () => undefined),
   startNode: vi.fn(async () => 1234),
   stopListeners: vi.fn(),
 }));
@@ -23,8 +25,9 @@ vi.mock("@tauri-apps/api/event", () => ({
 vi.mock("../src/desktop-services", () => ({
   desktopServices: {
     config: vi.fn(async () => ({
-      settings: { node_preset: "shielded", node_public_p2p: false },
-      components: { zkas_node: true, bridge: false, zkas_miner: true, kaspa_node: false, explorer: true },
+      settings: { node_preset: "shielded", node_public_p2p: false, node_release: serviceState.updateAvailable ? "zkas-v1.0.5" : "zkas-v1.0.6" },
+      components: { zkas_node: true, zkas_node_update_available: serviceState.updateAvailable, bridge: false, zkas_miner: true, kaspa_node: false, explorer: true },
+      zkas_release: "zkas-v1.0.6",
       data_dir: "/tmp/zkas-wallet",
     })),
     nodeStatus: vi.fn(async () => ({
@@ -39,7 +42,7 @@ vi.mock("../src/desktop-services", () => ({
       anchor_daa: 10, balance: "1", error: null,
     })),
     logs: vi.fn(async () => serviceState.logs),
-    install: vi.fn(async () => undefined),
+    install,
     startNode,
     stopNode: vi.fn(async () => undefined),
   },
@@ -50,6 +53,7 @@ import { NodeRunner } from "../src/pages/NodeRunner";
 afterEach(() => {
   vi.clearAllMocks();
   serviceState.logs = [{ at_unix_ms: 1, service: "zkas-node", stream: "app", line: "node ready" }];
+  serviceState.updateAvailable = false;
   document.body.style.overflow = "";
 });
 
@@ -86,5 +90,15 @@ describe("managed node", () => {
       { at_unix_ms: 2, service: "zkas-node", stream: "stdout", line: "new block received" },
     ];
     await waitFor(() => expect(screen.getByText("new block received")).toBeInTheDocument(), { timeout: 2_500 });
+  });
+
+  it("offers the pinned release to an existing older installation", async () => {
+    serviceState.updateAvailable = true;
+    const user = userEvent.setup();
+    render(<NodeRunner />);
+
+    expect(await screen.findByText("Node update available")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Update to zkas-v1.0.6" }));
+    await waitFor(() => expect(install).toHaveBeenCalledWith({ zkas: true, bridge: false, kaspa: false }));
   });
 });

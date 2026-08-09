@@ -241,6 +241,7 @@ export function NodeRunner() {
   }
 
   const installed = !!config?.components.zkas_node;
+  const updateAvailable = !!config?.components.zkas_node_update_available;
   const downloadPercent = progress?.total ? Math.round((progress.received / progress.total) * 100) : null;
 
   return (
@@ -257,6 +258,19 @@ export function NodeRunner() {
           <div><span className="step-number">1</span><h2>Install node software</h2><p>The verified ZKAS release is downloaded into the app's private data folder.</p></div>
           <button className="btn" disabled={busy !== null} onClick={() => run("install", () => desktopServices.install({ zkas: true, bridge: false, kaspa: false }))}>
             {busy === "install" ? progress ? `${progress.phase}${downloadPercent != null ? ` · ${downloadPercent}%` : ""}` : "Preparing…" : "Install ZKAS node"}
+          </button>
+        </section>
+      )}
+
+      {installed && updateAvailable && (
+        <section className="control-card install-card node-update-card">
+          <div><h2>Node update available</h2><p>{config?.zkas_release} fixes fresh-node synchronization and shielded-history transfer.</p></div>
+          <button className="btn" disabled={busy !== null || !!node?.running} onClick={() => run("install", () => desktopServices.install({ zkas: true, bridge: false, kaspa: false }))}>
+            {node?.running
+              ? "Stop node to update"
+              : busy === "install"
+                ? progress ? `${progress.phase}${downloadPercent != null ? ` · ${downloadPercent}%` : ""}` : "Preparing…"
+                : `Update to ${config?.zkas_release ?? "latest"}`}
           </button>
         </section>
       )}

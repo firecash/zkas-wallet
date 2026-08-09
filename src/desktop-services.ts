@@ -4,6 +4,7 @@ export interface ControlSettings {
   mode: "remote" | "custom" | "local";
   node_addr: string;
   node_binary: string | null;
+  node_release: string | null;
   node_preset: "shielded" | "archival" | "mining";
   node_public_p2p: boolean;
   node_auto_start: boolean;
@@ -27,11 +28,13 @@ export interface ControlConfig {
   settings: ControlSettings;
   components: {
     zkas_node: boolean;
+    zkas_node_update_available: boolean;
     bridge: boolean;
     zkas_miner: boolean;
     kaspa_node: boolean;
     explorer: boolean;
   };
+  zkas_release: string;
   dual_mining_supported: boolean;
   data_dir: string;
 }

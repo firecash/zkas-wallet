@@ -98,6 +98,9 @@ pub struct Settings {
     pub node_addr: String,
     /// Path to a `zkas-node` binary used in `local` mode.
     pub node_binary: Option<String>,
+    /// Verified release installed by this app. Older settings have no marker,
+    /// which intentionally makes the next desktop build offer an upgrade.
+    pub node_release: Option<String>,
     /// `shielded` (pruned bodies + complete wallet history), `archival` (all
     /// bodies + complete history), or `mining` (pruned, no historical notes).
     pub node_preset: String,
@@ -133,6 +136,7 @@ impl Default for Settings {
             mode: "remote".into(),
             node_addr: DEFAULT_REMOTE_NODE.into(),
             node_binary: None,
+            node_release: None,
             node_preset: "shielded".into(),
             node_public_p2p: false,
             node_auto_start: false,
@@ -1113,6 +1117,7 @@ async fn set_node_source(
 #[derive(Clone, Serialize)]
 struct ComponentStatus {
     zkas_node: bool,
+    zkas_node_update_available: bool,
     bridge: bool,
     zkas_miner: bool,
     kaspa_node: bool,
@@ -1123,11 +1128,16 @@ struct ComponentStatus {
 struct ControlConfig {
     settings: Settings,
     components: ComponentStatus,
+    zkas_release: &'static str,
     /// A verified merged-mining bridge release currently exists for Linux and
     /// Windows. macOS can run the wallet, node and ZKAS-only bridge, but the UI
     /// must never pretend that its fallback bridge submits Kaspa parents.
     dual_mining_supported: bool,
     data_dir: String,
+}
+
+fn zkas_node_update_available(settings: &Settings, node_exists: bool) -> bool {
+    node_exists && settings.node_release.as_deref() != Some(services::ZKAS_RELEASE)
 }
 
 #[tauri::command]
@@ -1137,15 +1147,18 @@ fn control_config(state: tauri::State<'_, Mutex<Engine>>) -> ControlConfig {
         p.as_ref()
             .is_some_and(|v| std::path::Path::new(v).is_file())
     };
+    let zkas_node = exists(&e.settings.node_binary);
     ControlConfig {
         settings: e.settings.clone(),
         components: ComponentStatus {
-            zkas_node: exists(&e.settings.node_binary),
+            zkas_node,
+            zkas_node_update_available: zkas_node_update_available(&e.settings, zkas_node),
             bridge: exists(&e.settings.bridge_binary),
             zkas_miner: exists(&e.settings.miner_binary),
             kaspa_node: exists(&e.settings.kaspa_node_binary),
             explorer: exists(&e.settings.explorer_binary),
         },
+        zkas_release: services::ZKAS_RELEASE,
         dual_mining_supported: !cfg!(target_os = "macos"),
         data_dir: e.data_dir.to_string_lossy().into_owned(),
     }
@@ -1157,11 +1170,25 @@ async fn install_local_components(
     state: tauri::State<'_, Mutex<Engine>>,
     selection: InstallSelection,
 ) -> Result<InstalledComponents, String> {
-    let data_dir = engine(&state).data_dir.clone();
+    let data_dir = {
+        let mut e = engine(&state);
+        if selection.zkas
+            && (e.services.zkas_node.running()
+                || e.services.cpu_miner.running()
+                || e.services.explorer.running())
+        {
+            return Err(
+                "stop the local node, CPU miner, and local explorer before updating ZKAS software"
+                    .into(),
+            );
+        }
+        e.data_dir.clone()
+    };
     let installed = services::install_components(&app, &data_dir, selection).await?;
     let mut e = engine(&state);
     if installed.zkas_node.is_some() {
         e.settings.node_binary = installed.zkas_node.clone();
+        e.settings.node_release = Some(services::ZKAS_RELEASE.into());
     }
     if installed.zkas_miner.is_some() {
         e.settings.miner_binary = installed.zkas_miner.clone();
@@ -2479,6 +2506,18 @@ mod control_tests {
         assert_eq!(settings.mining_mode, "solo");
         assert_eq!(settings.stratum_port, 5555);
         assert_eq!(settings.min_share_diff, 8192.0);
+    }
+
+    #[test]
+    fn legacy_node_install_is_offered_the_pinned_release() {
+        let mut settings = Settings {
+            node_binary: Some("/existing/zkas-node".into()),
+            ..Settings::default()
+        };
+        assert!(zkas_node_update_available(&settings, true));
+        settings.node_release = Some(services::ZKAS_RELEASE.into());
+        assert!(!zkas_node_update_available(&settings, true));
+        assert!(!zkas_node_update_available(&settings, false));
     }
 
     #[test]
