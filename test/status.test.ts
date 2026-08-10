@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { walletStatus, formatDuration, arrivalAmount, type StatusInput } from "../src/status";
+import { walletStatus, walletCanSpend, formatDuration, arrivalAmount, type StatusInput } from "../src/status";
 
 const base: StatusInput = {
   online: true,
@@ -148,5 +148,45 @@ describe("announcing money that arrives", () => {
 
   it("ignores sub-sompi float noise", () => {
     expect(arrivalAmount(10, 10 + 1e-12, true)).toBeNull();
+  });
+});
+
+// The live contradiction: the balance card said "1.27 ZKAS ready to spend" while Send
+// refused with "still catching up", in the same wallet. Two meanings of "ready" read
+// from two separate places. One predicate is what stops it recurring.
+describe("one spend predicate", () => {
+  it("never lets a state claim it can spend while it is still catching up", () => {
+    const catching = walletStatus({
+      online: true, synced: false, scannedBlocks: 900, chainLen: 1000,
+      warming: false, haveConfirmedBalance: true, etaSeconds: null,
+    });
+    expect(catching.phase).toBe("catching-up");
+    expect(catching.canSpend).toBe(false);
+    expect(walletCanSpend({ online: true, synced: false })).toBe(false);
+  });
+
+  it("agrees with the status model in every phase", () => {
+    for (const synced of [true, false]) {
+      for (const scannedBlocks of [0, 900]) {
+        for (const haveConfirmedBalance of [true, false]) {
+          for (const warming of [true, false]) {
+            const view = walletStatus({
+              online: true, synced, scannedBlocks, chainLen: 1000,
+              warming, haveConfirmedBalance, etaSeconds: null,
+            });
+            expect(view.canSpend).toBe(walletCanSpend({ online: true, synced }));
+          }
+        }
+      }
+    }
+  });
+
+  it("a warming wallet may still pay — slowly, but it knows all its coins", () => {
+    const warm = walletStatus({
+      online: true, synced: true, scannedBlocks: 1000, chainLen: 1000,
+      warming: true, haveConfirmedBalance: true, etaSeconds: null,
+    });
+    expect(warm.phase).toBe("almost-ready");
+    expect(warm.canSpend).toBe(true);
   });
 });

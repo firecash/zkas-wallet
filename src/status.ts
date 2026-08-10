@@ -39,6 +39,23 @@ export interface StatusInput {
 
 export type WalletPhase = "offline" | "opening" | "setting-up" | "catching-up" | "almost-ready" | "ready";
 
+/**
+ * The ONE rule for whether a wallet may start a payment. Every spend control must ask
+ * this — not `status.synced` directly.
+ *
+ * The balance card called it "1.27 ZKAS ready to spend" (a statement about note
+ * MATURITY) while Send refused with "still catching up" (a statement about SYNC), in
+ * the same wallet, seconds apart. Both were individually true and together they read
+ * as the app contradicting itself. Two meanings of "ready" and two separate reads of
+ * the daemon's flags is how that happens; one predicate is how it stops.
+ *
+ * A wallet that has not finished scanning does not yet know about all of its own
+ * coins, so it must not spend — a partial view can pick an already-spent note.
+ */
+export function walletCanSpend(s: { online: boolean; synced: boolean }): boolean {
+  return s.online && s.synced;
+}
+
 export interface WalletStatusView {
   phase: WalletPhase;
   /// Two or three words. The state, as a person would name it.
@@ -112,7 +129,7 @@ export function walletStatus(s: StatusInput): WalletStatusView {
       eta: null,
       tone: "busy",
       balanceIsFinal: false,
-      canSpend: false,
+      canSpend: walletCanSpend(s),
     };
   }
 
@@ -129,7 +146,7 @@ export function walletStatus(s: StatusInput): WalletStatusView {
       eta: null,
       tone: "busy",
       balanceIsFinal: false,
-      canSpend: false,
+      canSpend: walletCanSpend(s),
     };
   }
 
@@ -147,7 +164,7 @@ export function walletStatus(s: StatusInput): WalletStatusView {
         eta,
         tone: "busy",
         balanceIsFinal: false,
-        canSpend: false,
+        canSpend: walletCanSpend(s),
       };
     }
     // Has a confirmed figure from before, and is checking the chain since then.
@@ -161,7 +178,7 @@ export function walletStatus(s: StatusInput): WalletStatusView {
       eta,
       tone: "busy",
       balanceIsFinal: false,
-      canSpend: false,
+      canSpend: walletCanSpend(s),
     };
   }
 
@@ -181,7 +198,7 @@ export function walletStatus(s: StatusInput): WalletStatusView {
       eta: null,
       tone: "busy",
       balanceIsFinal: true,
-      canSpend: true,
+      canSpend: walletCanSpend(s),
     };
   }
 
@@ -195,7 +212,7 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     eta: null,
     tone: "ok",
     balanceIsFinal: true,
-    canSpend: true,
+    canSpend: walletCanSpend(s),
   };
 }
 

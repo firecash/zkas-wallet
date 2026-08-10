@@ -18,7 +18,7 @@ import {
 } from "./localtx";
 import { ensureSigner, fvkHex, generateWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
-import { walletStatus, arrivalAmount } from "./status";
+import { walletStatus, walletCanSpend, arrivalAmount } from "./status";
 import { exportFile, exportMessage } from "./exportfile";
 import {
   backupWallet,
@@ -898,10 +898,10 @@ export default function App() {
               <button
                 className="qa qa-send"
                 onClick={() => setTab("send")}
-                // Same condition as `canSpend` in the status model: a synced wallet may
-                // spend, including while it is still warming up. An unsynced one may not,
-                // because it does not yet know about all of its own notes.
-                disabled={!status.synced}
+                // The single spend predicate — see `walletCanSpend`. A synced wallet
+                // may spend, including while it is still warming up. An unsynced one
+                // may not: it does not yet know about all of its own notes.
+                disabled={!walletCanSpend({ online: true, synced: status.synced })}
                 aria-label="Send ZKAS"
               >
                 <ArrowUpRight className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
@@ -910,7 +910,7 @@ export default function App() {
               <button
                 className="qa qa-consolidate"
                 onClick={() => setShowConsolidate(true)}
-                disabled={!status.synced || (status.note_count ?? 0) < 3}
+                disabled={!walletCanSpend({ online: true, synced: status.synced }) || (status.note_count ?? 0) < 3}
                 aria-label="Consolidate wallet notes"
               >
                 <span className="qa-label">Consolidate</span>
@@ -2000,11 +2000,22 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
       </div>
       <div className="sub notice-slot">
         {maturing > 0.00000001 ? (
-          <span>
-            {trimFc(Math.max(0, spendable).toFixed(8))} ready to spend ·{" "}
-            <span style={{ color: "var(--ember)" }}>{trimFc(maturing.toFixed(8))} arriving</span> — coins become
-            spendable about 10 minutes after they land.
-          </span>
+          view.canSpend ? (
+            <span>
+              {trimFc(Math.max(0, spendable).toFixed(8))} ready to spend ·{" "}
+              <span style={{ color: "var(--ember)" }}>{trimFc(maturing.toFixed(8))} arriving</span> — coins become
+              spendable about 10 minutes after they land.
+            </span>
+          ) : (
+            // "Ready to spend" here means a note has MATURED. It is not a claim that
+            // the wallet can pay — while it is still scanning it cannot, and saying
+            // both at once is what made the app look like it was contradicting
+            // itself: this line offered a figure, and Send then refused it.
+            <span>
+              <span style={{ color: "var(--ember)" }}>{trimFc(maturing.toFixed(8))} arriving</span> — you can pay once
+              the wallet finishes checking the chain.
+            </span>
+          )
         ) : (
           ""
         )}
@@ -4015,7 +4026,7 @@ function Send({
         </div>
       )}
 
-      {!status?.synced && (
+      {!walletCanSpend({ online: !!status, synced: !!status?.synced }) && (
         <div className="msg warn small">
           Still catching up with the chain — you can pay once it finishes, so the wallet knows about all your coins.
         </div>
