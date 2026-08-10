@@ -2212,3 +2212,21 @@ select { appearance: none; cursor: pointer; }
   width: 220px; height: 220px; align-self: center;
   border-radius: 10px; background: #fff; padding: 8px;
 }
+
+/* Pairing is the intended way to connect to another machine's wallet service, so it
+   leads the Add form rather than hiding under the manual fields. */
+.connection-pair { display: grid; gap: 6px; margin-bottom: 12px; }
+.connection-pair .btn { justify-self: start; }
+
+/* A long secret (64 hex chars) needs the full card width and a left edge to read
+   against — right-aligning it inside a flex row overflowed on narrow windows. */
+.detail-row.stacked { flex-direction: column; align-items: stretch; gap: 5px; }
+.detail-row.stacked .v { text-align: left; }
+.host-token {
+  word-break: break-all;
+  line-height: 1.5;
+  font-size: 13px;
+  background: var(--panel, rgba(127, 127, 127, 0.08));
+  border-radius: 8px;
+  padding: 7px 9px;
+}

@@ -183,7 +183,20 @@ export function SelfHost() {
             <section className="control-card service-runtime-card">
               <div className="card-title-row"><div><h2>Explorer API</h2><p>Local chain REST API and transaction index.</p></div><span className={`status-pill ${status.explorer_running ? "good" : status.explorer_installed ? "" : "warm"}`}>{status.explorer_running ? "Running" : status.explorer_installed ? "Stopped" : "Not installed"}</span></div>
               <code>{status.explorer_url}</code>
-              {status.explorer_last_exit && <div className="inline-warning">Last exit: {status.explorer_last_exit}</div>}
+              {/* Opening this in a browser returns 404, because the service answers
+                  /info/… and /blocks/… and has no page at the root. Saying so here is
+                  the difference between "healthy" and "apparently broken". */}
+              <p className="subtle">Data API, not a web page — the address itself returns 404. Try <code>{status.explorer_url}/info/blockdag</code>.</p>
+              {status.explorer_last_exit && (
+                <div className="inline-warning">
+                  Last exit: {status.explorer_last_exit}
+                  {/* An exit code alone sent people hunting. The overwhelmingly common
+                      cause is that the port was already taken by a copy still running,
+                      which ALSO answers the wallet — so the service looks broken and
+                      working at once. */}
+                  {" — if the wallet's Explore tab still works, another copy is already serving this port. Use View logs for the exact reason."}
+                </div>
+              )}
               <div className="control-actions">
                 {!status.explorer_installed ? <button className="btn compact" disabled={!!busy} onClick={() => void installExplorer()}>{busy === "install" ? "Downloading & verifying…" : "Install verified backend"}</button> : <button className="btn compact" disabled={!!busy} onClick={() => void toggleExplorer()}>{busy === "explorer" ? "Working…" : status.explorer_running ? "Stop" : "Start"}</button>}
                 {status.explorer_running && <button className="btn ghost compact" onClick={() => navigate("/explore")}>Open explorer</button>}
@@ -245,7 +258,14 @@ export function SelfHost() {
                         </p>
                       </div>
                     )}
-                    <div className="detail-row"><span className="k">Access token</span><span className="v mono">{tokenVisible ? status.wallet_access_token ?? "Unavailable" : "••••••••••••••••••••••••"}</span></div>
+                    {/* A 64-character hex string cannot share a line with its label: as a
+                        right-aligned flex cell it either overflowed the card or wrapped
+                        into a ragged column. It gets its own full-width block, which is
+                        also the only shape you can reliably select and copy by hand. */}
+                    <div className="detail-row stacked">
+                      <span className="k">Access token</span>
+                      <span className="v mono host-token">{tokenVisible ? status.wallet_access_token ?? "Unavailable" : "•".repeat(32)}</span>
+                    </div>
                     <div className="control-actions">
                       <button className="btn ghost compact" onClick={() => setTokenVisible((value) => !value)}>{tokenVisible ? "Hide token" : "Show token"}</button>
                       <button className="btn ghost compact" onClick={() => void copyToken()}>{copied ? "Copied" : "Copy token"}</button>

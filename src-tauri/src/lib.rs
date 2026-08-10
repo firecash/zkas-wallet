@@ -77,6 +77,11 @@ fn engine(m: &Mutex<Engine>) -> MutexGuard<'_, Engine> {
 
 /// ZKas's public node gRPC (VPS1, exposed via socat). The default for the
 /// lightweight install: no local chain, wallet scans through this node.
+/// The managed explorer API's fixed loopback port. It serves `/info/...`, `/blocks/...`
+/// and so on — there is deliberately no page at the root, so a browser pointed at `/`
+/// gets a 404 from a perfectly healthy service.
+const EXPLORER_API_PORT: u16 = 8500;
+
 const DEFAULT_REMOTE_NODE: &str = "185.147.157.125:16110";
 /// Our public P2P entry — handed to a spawned local node so it can join the
 /// network (release binaries ship with no DNS seeders).
@@ -836,6 +841,18 @@ impl Engine {
         let state_dir = self.data_dir.join("explorer");
         std::fs::create_dir_all(&state_dir)
             .map_err(|e| format!("cannot create explorer data directory: {e}"))?;
+        // The explorer's port is fixed, so a leftover copy — one this app started before
+        // and did not reap, or a separately-run zkas-api — silently owns it. Spawning
+        // anyway produced a process that died instantly and a card reading only
+        // "exited with exit status: 1", while the browser still got an answer on 8500
+        // from the copy that was already there. That combination is unreadable: it looks
+        // like the service is both broken and working. Name the conflict instead.
+        if let Err(e) = std::net::TcpListener::bind(("127.0.0.1", EXPLORER_API_PORT)) {
+            return Err(format!(
+                "port {EXPLORER_API_PORT} is already in use ({e}). Something is already serving the chain API there \
+                 — most likely a copy of the explorer that is still running. Stop it, or restart the app, and try again."
+            ));
+        }
         self.services.start_explorer(
             app,
             ProcessSpec {
@@ -843,7 +860,7 @@ impl Engine {
                 binary: PathBuf::from(binary),
                 args: vec![
                     format!("--rpc-server={}", self.settings.rpc_addr()),
-                    "--listen=127.0.0.1:8500".into(),
+                    format!("--listen=127.0.0.1:{EXPLORER_API_PORT}"),
                     format!(
                         "--tx-index={}",
                         state_dir.join("txindex.tsv").to_string_lossy()
@@ -2749,7 +2766,7 @@ fn self_host_status(
         explorer_installed: installed,
         explorer_running: e.services.explorer.running(),
         explorer_pid: e.services.explorer.pid(),
-        explorer_url: "http://127.0.0.1:8500".into(),
+        explorer_url: format!("http://127.0.0.1:{EXPLORER_API_PORT}"),
         explorer_last_exit: e.services.explorer.last_exit(),
         gateway_release_available: false,
         data_dir: e.data_dir.to_string_lossy().into_owned(),

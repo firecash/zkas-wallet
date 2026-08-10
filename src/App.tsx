@@ -1217,6 +1217,7 @@ function ConnectionButton() {
   const [bearer, setBearer] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [scanning, setScanning] = useState(false);
 
   const refresh = useCallback(async () => {
     if (desktop) {
@@ -1363,6 +1364,20 @@ function ConnectionButton() {
 
             <div className="connection-add">
               <h3>Add {desktop ? "wallet-history node" : "walletd"}</h3>
+              {/* The pairing path, first and by itself. Scanning fills in the address and
+                  BOTH secrets at once; typing them means transcribing two long hex strings,
+                  and getting the wallet one wrong opens a different, empty wallet rather
+                  than failing. The manual fields stay below for anyone who needs them. */}
+              {!desktop && (
+                <div className="connection-pair">
+                  <button className="btn small" disabled={busy !== null} onClick={() => setScanning(true)}>
+                    Scan pairing code
+                  </button>
+                  <span className="muted small">
+                    From the computer running the wallet service: <b>Host → Network access → Pair a phone</b>.
+                  </span>
+                </div>
+              )}
               <div className={`connection-add-grid ${desktop ? "" : "walletd"}`}>
                 <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name · Home node" />
                 <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={desktop ? STANDALONE_ZKAS_RPC_EXAMPLE : isNative() ? `192.168.1.20:${DEFAULT_WALLETD_PORT}` : "https://wallet.example.com"} />
@@ -1370,6 +1385,27 @@ function ConnectionButton() {
                 <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? "Checking…" : "Save & connect"}</button>
               </div>
             </div>
+            {scanning && (
+              <QrScanner
+                onClose={() => setScanning(false)}
+                onResult={(text) => {
+                  setScanning(false);
+                  const paired = parsePairingUri(text);
+                  if (!paired) {
+                    // A QR that is not a pairing code is far more likely to be a wallet
+                    // address than a wallet service, so say what was scanned instead of
+                    // dropping it into the address box and failing to connect to it.
+                    setError("That code is not a wallet-service pairing code. On the computer serving the wallet, open Host → Network access → Pair a phone.");
+                    return;
+                  }
+                  setAddress(paired.url);
+                  setBearer(paired.accessToken);
+                  void switchWalletd(text, "add", paired.accessToken, (connected) =>
+                    walletdProfiles.save(name.trim() || "Paired wallet", connected, paired.accessToken),
+                  );
+                }}
+              />
+            )}
             {desktop && !cfg?.node_binary && <p className="muted small">Managed local node is not installed yet. The Mine and Node screens can install the verified release automatically.</p>}
             {error && <div className="msg err">{error}</div>}
             <button className="btn ghost small" onClick={() => setOpen(false)}>Close</button>
