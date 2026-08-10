@@ -565,6 +565,10 @@ impl Engine {
                 "https://tauri.localhost".into(),
                 "capacitor://localhost".into(),
                 "http://localhost".into(),
+                // Capacitor's Android WebView uses this origin with
+                // androidScheme=https. Without it /health still opens as a page,
+                // but the authenticated API preflight fails as "Failed to fetch".
+                "https://localhost".into(),
                 "https://wallet.zkas.info".into(),
             ],
             allow_default_token: false,
@@ -2088,27 +2092,54 @@ fn check_bridge_control_ports() -> Result<(), String> {
 
 #[derive(Clone, Serialize)]
 struct LocalNetworkInfo {
-    /// Primary LAN address chosen by the OS routing table. No packet is sent;
-    /// connecting a UDP socket only asks the kernel which interface it would use.
+    /// Preferred human LAN address. `lan_ips` contains every usable interface;
+    /// this compatibility field favors ordinary Wi-Fi/Ethernet over VPN ranges.
     lan_ip: Option<String>,
+    lan_ips: Vec<String>,
 }
 
 #[tauri::command]
 fn local_network_info() -> LocalNetworkInfo {
+    let lan_ips = lan_ipv4s();
     LocalNetworkInfo {
-        lan_ip: primary_lan_ip(),
+        lan_ip: lan_ips.first().cloned(),
+        lan_ips,
     }
 }
 
-fn primary_lan_ip() -> Option<String> {
-    std::net::UdpSocket::bind(("0.0.0.0", 0))
-        .and_then(|socket| {
-            socket.connect(("1.1.1.1", 80))?;
-            socket.local_addr()
+fn lan_ipv4_rank(ip: &std::net::Ipv4Addr) -> u8 {
+    let octets = ip.octets();
+    // Home routers overwhelmingly use 192.168/16. Prefer it over 10/8, which is
+    // also the most common VPN/tunnel range; still return every address below.
+    if octets[0] == 192 && octets[1] == 168 {
+        0
+    } else if octets[0] == 172 && (16..=31).contains(&octets[1]) {
+        1
+    } else if octets[0] == 10 {
+        2
+    } else if octets[0] == 169 && octets[1] == 254 {
+        4
+    } else {
+        3
+    }
+}
+
+fn lan_ipv4s() -> Vec<String> {
+    let mut ips: Vec<std::net::Ipv4Addr> = local_ip_address::list_afinet_netifas()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|(_, ip)| match ip {
+            std::net::IpAddr::V4(ip)
+                if !ip.is_loopback()
+                    && !ip.is_unspecified()
+                    && !ip.is_multicast()
+                    && !ip.is_broadcast() => Some(ip),
+            _ => None,
         })
-        .ok()
-        .map(|address| address.ip().to_string())
-        .filter(|address| address != "127.0.0.1" && address != "0.0.0.0")
+        .collect();
+    ips.sort_by_key(|ip| (lan_ipv4_rank(ip), ip.octets()));
+    ips.dedup();
+    ips.into_iter().map(|ip| ip.to_string()).collect()
 }
 
 fn configure_mining_zkas_source(
@@ -2609,6 +2640,8 @@ struct SelfHostStatus {
     wallet_access_url: Option<String>,
     wallet_access_token: Option<String>,
     lan_ip: Option<String>,
+    lan_ips: Vec<String>,
+    wallet_access_urls: Vec<String>,
     node_running: bool,
     node_public_p2p: bool,
     node_lan_rpc: bool,
@@ -2625,11 +2658,20 @@ fn self_host_status(
         .explorer_binary
         .as_ref()
         .is_some_and(|p| std::path::Path::new(p).is_file());
-    let lan_ip = primary_lan_ip();
+    let lan_ips = lan_ipv4s();
+    let lan_ip = lan_ips.first().cloned();
+    let wallet_access_urls: Vec<String> = match e.settings.wallet_access.as_str() {
+        "lan" => lan_ips
+            .iter()
+            .map(|ip| format!("http://{ip}:{}", e.settings.wallet_access_port))
+            .collect(),
+        "wan" if !e.settings.wallet_public_url.is_empty() => {
+            vec![e.settings.wallet_public_url.clone()]
+        }
+        _ => vec![],
+    };
     let wallet_access_url = match e.settings.wallet_access.as_str() {
-        "lan" => lan_ip
-            .as_ref()
-            .map(|ip| format!("http://{ip}:{}", e.settings.wallet_access_port)),
+        "lan" => wallet_access_urls.first().cloned(),
         "wan" => {
             (!e.settings.wallet_public_url.is_empty()).then(|| e.settings.wallet_public_url.clone())
         }
@@ -2662,6 +2704,8 @@ fn self_host_status(
         wallet_access_token: (e.settings.wallet_access != "device")
             .then(|| e.wallet_access_token.clone()),
         lan_ip,
+        lan_ips,
+        wallet_access_urls,
         node_running,
         node_public_p2p: e.settings.node_public_p2p,
         node_lan_rpc: e.settings.node_lan_rpc,
@@ -2997,6 +3041,15 @@ mod control_tests {
         "kaspa:qrap6w97jjpwrp59yj8fd3tfkz9jkxjd2spsjn4yxfpw60zzpdzsxnddcggqe";
 
     #[test]
+    fn home_lan_address_ranks_before_vpn_address() {
+        use std::net::Ipv4Addr;
+        assert!(
+            lan_ipv4_rank(&Ipv4Addr::new(192, 168, 15, 227))
+                < lan_ipv4_rank(&Ipv4Addr::new(10, 10, 0, 4))
+        );
+    }
+
+    #[test]
     fn endpoint_input_is_normalized_and_injection_is_rejected() {
         assert_eq!(
             validate_endpoint(" grpc://127.0.0.1:16110/ ", "RPC").unwrap(),
@@ -3074,7 +3127,11 @@ mod control_tests {
         unhealthy_task.join().unwrap();
     }
 
-    fn http_status(address: std::net::SocketAddr, path: &str, headers: &[(&str, &str)]) -> u16 {
+    fn http_response(
+        address: std::net::SocketAddr,
+        path: &str,
+        headers: &[(&str, &str)],
+    ) -> String {
         let mut stream =
             std::net::TcpStream::connect_timeout(&address, std::time::Duration::from_secs(2))
                 .unwrap();
@@ -3087,6 +3144,10 @@ mod control_tests {
         let mut response = String::new();
         stream.read_to_string(&mut response).unwrap();
         response
+    }
+
+    fn http_status(address: std::net::SocketAddr, path: &str, headers: &[(&str, &str)]) -> u16 {
+        http_response(address, path, headers)
             .split_whitespace()
             .nth(1)
             .and_then(|value| value.parse().ok())
@@ -3094,12 +3155,24 @@ mod control_tests {
     }
 
     fn cors_preflight(address: std::net::SocketAddr, origin: &str) -> String {
+        cors_preflight_with(address, origin, &[])
+    }
+
+    fn cors_preflight_with(
+        address: std::net::SocketAddr,
+        origin: &str,
+        extra: &[(&str, &str)],
+    ) -> String {
         let mut stream =
             std::net::TcpStream::connect_timeout(&address, std::time::Duration::from_secs(2))
                 .unwrap();
-        let request = format!(
-            "OPTIONS /api/status HTTP/1.1\r\nHost: 127.0.0.1\r\nOrigin: {origin}\r\nAccess-Control-Request-Method: GET\r\nAccess-Control-Request-Headers: authorization,x-wallet-token\r\nConnection: close\r\n\r\n"
+        let mut request = format!(
+            "OPTIONS /api/status HTTP/1.1\r\nHost: 127.0.0.1\r\nOrigin: {origin}\r\nAccess-Control-Request-Method: GET\r\nAccess-Control-Request-Headers: authorization,x-wallet-token\r\n"
         );
+        for (name, value) in extra {
+            request.push_str(&format!("{name}: {value}\r\n"));
+        }
+        request.push_str("Connection: close\r\n\r\n");
         stream.write_all(request.as_bytes()).unwrap();
         let mut response = String::new();
         stream.read_to_string(&mut response).unwrap();
@@ -3155,6 +3228,41 @@ mod control_tests {
             );
             assert!(response.contains("authorization"), "{response}");
             assert!(response.contains("x-wallet-token"), "{response}");
+
+            // Chromium cannot resolve a synthetic app origin to an IP address
+            // space, so it treats one as public and preflights Private Network
+            // Access before touching a LAN address. An unanswered PNA preflight
+            // fails the request with no status for the page to report.
+            let private_network = cors_preflight_with(
+                address,
+                origin,
+                &[("Access-Control-Request-Private-Network", "true")],
+            )
+            .to_ascii_lowercase();
+            assert!(
+                private_network.contains("access-control-allow-private-network: true"),
+                "{private_network}"
+            );
+
+            // A rejected bearer must still be a READABLE rejection. Without CORS
+            // headers on the 401 the browser withholds the response entirely and
+            // the app can only report an opaque transport failure — indisting-
+            // uishable from a wrong address, a closed port or a firewall.
+            let unauthorized = http_response(
+                address,
+                "/api/status",
+                &[
+                    ("Origin", origin),
+                    ("Authorization", "Bearer not-the-right-token"),
+                    ("X-Wallet-Token", &engine.token),
+                ],
+            )
+            .to_ascii_lowercase();
+            assert!(unauthorized.starts_with("http/1.1 401 "), "{unauthorized}");
+            assert!(
+                unauthorized.contains(&format!("access-control-allow-origin: {origin}")),
+                "{unauthorized}"
+            );
         }
         assert_eq!(
             http_status(

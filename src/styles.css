@@ -1552,6 +1552,16 @@ select { appearance: none; cursor: pointer; }
   border-color: var(--border);
 }
 .qa-send:hover:not(:disabled) { background: var(--ember-soft); border-color: var(--ember); }
+.qa-consolidate {
+  grid-column: 1 / -1;
+  min-height: 44px;
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border);
+  font-size: 14px;
+}
+.qa-consolidate:hover:not(:disabled) { background: var(--ember-soft); border-color: var(--ember); }
+.qa-detail { color: var(--muted); font-size: 12px; font-weight: 550; }
 .qa:active:not(:disabled) { transform: scale(0.975); }
 /* Disabled Send is a STATE, not a dead button: it stays legible so the status line
    above it ("Setting up your wallet…") reads as the explanation. A greyed-out
@@ -1564,6 +1574,11 @@ select { appearance: none; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .qa:active:not(:disabled) { transform: none; }
 }
+
+.consolidate-dialog { max-width: 520px; }
+.host-url-list { display: grid; gap: 5px; overflow-wrap: anywhere; }
+.send-confirm-actions { align-items: stretch; }
+.send-confirm-actions > .btn { flex: 1 1 auto; }
 
 /* A way out of Receive/Send, which no tab lights up any more. Quiet by design — it is
    an escape hatch, not a call to action, and it must not compete with the primary

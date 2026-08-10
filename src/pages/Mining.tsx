@@ -60,7 +60,7 @@ export function Mining() {
   const [kaspaRpc, setKaspaRpc] = useState(DEFAULT_KASPA_RPC);
   const [stratumPort, setStratumPort] = useState(STRATUM_PORT);
   const [shareDifficulty, setShareDifficulty] = useState(8192);
-  const [lanIp, setLanIp] = useState<string | null>(null);
+  const [lanIps, setLanIps] = useState<string[]>([]);
   const [externalHost, setExternalHost] = useState(() => localStorage.getItem("mining_external_host") ?? "");
   const [busy, setBusy] = useState<Busy>(null);
   const [stage, setStage] = useState("");
@@ -98,7 +98,9 @@ export function Mining() {
   useEffect(() => {
     if (!desktop) return;
     refreshLocal().catch((e) => setError(e.message));
-    desktopServices.localNetworkInfo().then((info) => setLanIp(info.lan_ip)).catch(() => undefined);
+    desktopServices.localNetworkInfo()
+      .then((info) => setLanIps(info.lan_ips?.length ? info.lan_ips : info.lan_ip ? [info.lan_ip] : []))
+      .catch(() => undefined);
     const timer = window.setInterval(() => refreshLocal().catch(() => undefined), 2_000);
     return () => clearInterval(timer);
   }, [desktop, refreshLocal]);
@@ -309,7 +311,20 @@ export function Mining() {
         <div className="card-title-row"><div><h2>Connect your ASIC</h2><p>Use the address that reaches this computer.</p></div><span className={`status-pill ${live ? "good" : ""}`}>{live ? `Port ${stratumPort} open` : "Start first"}</span></div>
         <div className="endpoint-grid">
           <EndpointCard icon={<Cpu size={18} />} title="This computer" note="Miner software running here" value={endpoint("127.0.0.1")} id="local" copied={copied} onCopy={copyEndpoint} />
-          <EndpointCard icon={<Network size={18} />} title="Local network" note={lanIp ? "ASIC on the same router" : "LAN address not detected"} value={lanIp ? endpoint(lanIp) : ""} id="lan" copied={copied} onCopy={copyEndpoint} />
+          {lanIps.length ? lanIps.map((ip, index) => (
+            <EndpointCard
+              key={ip}
+              icon={<Network size={18} />}
+              title={index === 0 ? "Local network" : `Local network ${index + 1}`}
+              note={index === 0 && lanIps.length > 1 ? "Preferred · try another if your ASIC uses it" : "ASIC on the same router or VPN"}
+              value={endpoint(ip)}
+              id={`lan-${index}`}
+              copied={copied}
+              onCopy={copyEndpoint}
+            />
+          )) : (
+            <EndpointCard icon={<Network size={18} />} title="Local network" note="LAN address not detected" value="" id="lan" copied={copied} onCopy={copyEndpoint} />
+          )}
           <div className="endpoint-card external-endpoint">
             <div className="endpoint-title"><Globe2 size={18} /><span><b>Remote ASIC</b><small>Public IP, DNS, or VPN hostname</small></span></div>
             <input value={externalHost} onChange={(event) => { setExternalHost(event.target.value); localStorage.setItem("mining_external_host", event.target.value); }} placeholder="mine.example.com" />

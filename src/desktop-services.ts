@@ -102,6 +102,7 @@ export interface MiningStatus {
 
 export interface LocalNetworkInfo {
   lan_ip: string | null;
+  lan_ips: string[];
 }
 
 export interface ServiceLog {
@@ -138,6 +139,8 @@ export interface SelfHostStatus {
   wallet_access_url: string | null;
   wallet_access_token: string | null;
   lan_ip: string | null;
+  lan_ips: string[];
+  wallet_access_urls: string[];
   node_running: boolean;
   node_public_p2p: boolean;
   node_lan_rpc: boolean;

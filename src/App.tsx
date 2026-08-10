@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, chainTx, getBase, setBase, getToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
+import { api, chainTx, findReachableDaemon, getBase, getWalletdBearer, setBase, setWalletdBearer, normalizeDaemonInput, walletdTransportError, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
 import {
@@ -17,7 +17,7 @@ import {
   type LocalTx,
 } from "./localtx";
 import { ensureSigner, fvkHex, generateWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
-import { sendNonCustodial, PartialSendError, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
+import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, arrivalAmount } from "./status";
 import { exportFile, exportMessage } from "./exportfile";
 import {
@@ -410,6 +410,7 @@ export default function App() {
   // renders in the first frame instead of trickling in as network calls land —
   // the 1s poll then corrects anything stale within a second.
   const [status, setStatus] = useState<Status | null>(() => loadStatusCache());
+  const [showConsolidate, setShowConsolidate] = useState(false);
   const [reachable, setReachable] = useState<boolean | null>(() => (loadStatusCache() ? true : null));
   const [reachError, setReachError] = useState<string | null>(null);
   // Opens on History, not Receive. "Receive" is now a button, and landing inside it
@@ -906,7 +907,26 @@ export default function App() {
                 <ArrowUpRight className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
                 <span className="qa-label">Send</span>
               </button>
+              <button
+                className="qa qa-consolidate"
+                onClick={() => setShowConsolidate(true)}
+                disabled={!status.synced || (status.note_count ?? 0) < 3}
+                aria-label="Consolidate wallet notes"
+              >
+                <span className="qa-label">Consolidate</span>
+                <span className="qa-detail">{status.note_count ?? 0} notes</span>
+              </button>
             </div>
+            {showConsolidate && (
+              <ConsolidateDialog
+                status={status}
+                onClose={() => setShowConsolidate(false)}
+                onDone={() => {
+                  setShowConsolidate(false);
+                  void refresh();
+                }}
+              />
+            )}
           </section>
           <section className="wallet-workspace" aria-label="Wallet activity">
             <div className="tabs" role="tablist" aria-label="Wallet sections">
@@ -1163,16 +1183,13 @@ function WalletBar() {
 
   const active = activeToken();
   const wallets = listWallets();
-  // A single wallet needs no switcher — showing one would be chrome for its own
-  // sake. It appears the moment a second wallet exists.
-  if (wallets.length < 2) return null;
   const current = wallets.find((w) => w.token === active);
 
   return (
     <>
       <button className="walletbar" onClick={() => setOpen(true)} aria-label="Switch wallet">
         <WalletCards aria-hidden="true" size={18} strokeWidth={2.2} />
-        <span className="walletbar-name">{current?.label ?? "Wallet"}</span>
+        <span className="walletbar-name">{current?.label ?? "Wallet 1"}</span>
         <span className="walletbar-chev" aria-hidden="true">
           <ChevronDown size={16} strokeWidth={2.2} />
         </span>
@@ -1238,27 +1255,19 @@ function ConnectionButton() {
     }
   };
 
-  const switchWalletd = async (raw: string, busyKey = "walletd", accessToken = "") => {
+  const switchWalletd = async (
+    raw: string,
+    busyKey = "walletd",
+    accessToken = "",
+    onConnected?: (url: string) => void,
+  ) => {
     setBusy(busyKey);
     setError("");
     try {
-      const url = normalizeDaemonInput(raw);
-      const transportError = walletdTransportError(url);
-      if (transportError) throw new Error(transportError);
-      if (url) {
-        const ctl = new AbortController();
-        const timer = window.setTimeout(() => ctl.abort(), 5_000);
-        try {
-          const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
-          if (accessToken.trim()) headers.Authorization = `Bearer ${accessToken.trim()}`;
-          const response = await fetch(`${url}/api/status`, { signal: ctl.signal, headers });
-          if (!response.ok) throw new Error(`walletd answered ${response.status}`);
-        } finally {
-          clearTimeout(timer);
-        }
-      }
+      const url = raw.trim() ? await findReachableDaemon(raw, accessToken) : "";
       setBase(url);
       setWalletdBearer(url ? accessToken : "");
+      onConnected?.(url);
       setOpen(false);
       location.reload();
     } catch (e) {
@@ -1285,9 +1294,7 @@ function ConnectionButton() {
       }
       return;
     }
-    const normalized = normalizeDaemonInput(address);
-    await switchWalletd(normalized, "add", bearer);
-    walletdProfiles.save(name, normalized, bearer);
+    await switchWalletd(address, "add", bearer, (connected) => walletdProfiles.save(name, connected, bearer));
   };
 
   return (
@@ -1362,7 +1369,10 @@ function ConnectionButton() {
 
 function WalletSwitcher({ onClose }: { onClose: () => void }) {
   const active = activeToken();
-  const wallets = listWallets();
+  const registered = listWallets();
+  // The first status poll registers legacy wallets. If the switcher is opened
+  // before that sub-second repair completes, still show the active wallet.
+  const wallets = registered.length || !active ? registered : [{ token: active, label: "Wallet 1" }];
   return createPortal(
     <div className="modalwrap" onClick={onClose}>
       <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
@@ -1510,6 +1520,146 @@ function ConfirmDialog({
             Cancel
           </button>
         </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/** Device-signed one-pass note consolidation. It uses the same noncustodial
+ * prepare/verify/submit path as Send; the seed never goes to walletd. */
+function ConsolidateDialog({
+  status,
+  onClose,
+  onDone,
+}: {
+  status: Status;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState<SendStage | null>(null);
+  const [error, setError] = useState("");
+  const [needSeed, setNeedSeed] = useState(false);
+  const [seedInput, setSeedInput] = useState("");
+  const [result, setResult] = useState<{ inputs: number; txid: string; fee: number; rounds: number; more: boolean } | null>(null);
+  // Live count of merged notes. A fragmented wallet needs several transactions,
+  // which takes minutes — without this the dialog looks hung.
+  const [merged, setMerged] = useState<{ round: number; notes: number } | null>(null);
+
+  const run = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      let seed: string;
+      try {
+        seed = await resolveDeviceSeed(status.address ?? undefined);
+      } catch (cause) {
+        if ((cause as Error).message !== SEED_REQUIRED) throw cause;
+        if (!/^[0-9a-fA-F]{64}$/.test(seedInput.trim())) {
+          setNeedSeed(true);
+          throw new Error("Enter this wallet's 64-character recovery seed to sign on this device.");
+        }
+        seed = seedInput.trim();
+        if (status.address && await addressFromSeed(seed, networkOf(status)) !== status.address) {
+          throw new Error("That seed belongs to a different wallet.");
+        }
+        setDeviceSeed(seed);
+        setNeedSeed(false);
+        setSeedInput("");
+      }
+      if (!status.address) throw new Error("This wallet has no address yet.");
+      const spendable = BigInt(
+        status.spendable_sompi ?? Math.max(0, Math.round(spendableFc(status) * 100_000_000)).toString(),
+      );
+      const consolidated = await consolidateNonCustodial(
+        seed,
+        networkOf(status),
+        status.address,
+        spendable,
+        setStage,
+        undefined,
+        (round, notes) => setMerged({ round, notes }),
+      );
+      setResult({
+        inputs: consolidated.inputs,
+        txid: consolidated.txid,
+        fee: consolidated.fee_sompi / 100_000_000,
+        rounds: consolidated.rounds,
+        more: consolidated.more,
+      });
+      successFeedback();
+    } catch (cause) {
+      setError((cause as Error).message || String(cause));
+    } finally {
+      setBusy(false);
+      setStage(null);
+      setMerged(null);
+    }
+  };
+
+  return createPortal(
+    <div className="modalwrap" onClick={() => !busy && onClose()}>
+      <div className="card modalcard consolidate-dialog" onClick={(event) => event.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>{result ? "Notes consolidated" : "Consolidate notes"}</h2>
+        {result ? (
+          <>
+            <div className="msg ok">
+              Combined {result.inputs} spendable notes in {result.rounds === 1 ? "one device-signed transaction" : `${result.rounds} device-signed transactions`}.
+            </div>
+            <p className="muted small">
+              The merged value becomes spendable after normal maturity (about 10 minutes). Total fee:{" "}
+              {trimFc(result.fee.toFixed(8))} ZKAS.
+            </p>
+            {/* Saying "done" while the wallet is still too fragmented to pay is how
+                a user ends up repeating this by hand and never being told why. */}
+            {result.more && (
+              <div className="msg warn small">
+                This wallet held more small notes than one pass can merge. Run Consolidate again once the merged note
+                matures to reduce it further.
+              </div>
+            )}
+            <div className="addr">{result.txid}</div>
+            <button className="btn" onClick={onDone}>Done</button>
+          </>
+        ) : (
+          <>
+            <p className="muted small">
+              Merge your small notes back into your own wallet, so a payment can reach your whole balance in one
+              transaction. Each pass costs one network fee and briefly makes the merged value unavailable while it
+              matures. Nothing leaves your wallet.
+            </p>
+            <div className="confirm-row"><span className="muted">Current notes</span><b>{status.note_count}</b></div>
+            {typeof status.note_count === "number" && status.note_count > MAX_NOTES_PER_TX && (
+              <div className="confirm-row">
+                <span className="muted">Passes needed</span>
+                <b>about {Math.min(MAX_CONSOLIDATION_ROUNDS, Math.ceil(status.note_count / MAX_NOTES_PER_TX))}</b>
+              </div>
+            )}
+            {needSeed && (
+              <>
+                <label>Recovery seed · stays on this device</label>
+                <textarea value={seedInput} onChange={(event) => setSeedInput(event.target.value)} placeholder="64 hex characters" />
+              </>
+            )}
+            {busy && <SendScene stage={stage ?? undefined} />}
+            {/* Each pass is its own proof, so this runs for minutes on a very
+                fragmented wallet. Report the work already banked — those
+                transactions are broadcast and survive closing this dialog. */}
+            {busy && merged && (
+              <p className="muted small" style={{ marginTop: 8 }}>
+                Merged {merged.notes} notes in {merged.round} {merged.round === 1 ? "transaction" : "transactions"} so far…
+              </p>
+            )}
+            {error && <div className="msg err">{error}</div>}
+            <div className="row">
+              <button className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
+              <button className="btn" disabled={busy} onClick={() => void run()}>
+                {busy ? stage === "signing" ? "Signing…" : stage === "broadcasting" ? "Broadcasting…" : "Building proof…" : "Consolidate"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>,
     document.body,
@@ -3368,6 +3518,8 @@ function Send({
   const [unlock, setUnlock] = useState("");
   const [needSeed, setNeedSeed] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [fragmented, setFragmented] = useState(false);
+  const [showConsolidate, setShowConsolidate] = useState(false);
   const [scanning, setScanning] = useState(false);
   // Advanced: a manual fee (ZKAS). Empty = automatic. The daemon treats it as a
   // floor and still raises anything below the network's byte-proportional
@@ -3437,7 +3589,7 @@ function Send({
     setAmount(max > 0 ? String(Number(max.toFixed(8))) : "0");
   };
 
-  const doSend = async () => {
+  const doSend = async (allowMultipleTransactions = false) => {
     // Rows for one payment: ONE ROW PER TRANSACTION (see the recording comment
     // below), all stamped with the payment's shared preFc and a payId, so
     // `reconcile` releases their subtractions CUMULATIVELY — the first chunk's
@@ -3503,12 +3655,22 @@ function Send({
         }
       }
       const feeSompi = feeCustomSet ? Math.round(feeCustom * 1e8) : undefined;
-      const r = await sendNonCustodial(seed.trim(), networkOf(status), to.trim(), amt, feeSompi, onStage, memo);
+      const r = await sendNonCustodial(
+        seed.trim(),
+        networkOf(status),
+        to.trim(),
+        amt,
+        feeSompi,
+        onStage,
+        memo,
+        allowMultipleTransactions,
+      );
       const toAddr = to.trim();
       setTo("");
       setAmount("");
       setMemo("");
       setConfirming(false);
+      setFragmented(false);
       // Record on-device so the balance drops to a 0-conf figure immediately;
       // onSent switches straight to History where the confirmations tick in live.
       // The daemon reports the fee it actually charged (byte-proportional) —
@@ -3534,13 +3696,21 @@ function Send({
       // the error, or the balance keeps displaying funds that already left and
       // invites a double-send. `stay` keeps this screen mounted so the error —
       // and how much actually went — stays visible.
-      if (e instanceof PartialSendError && e.parts.length > 0) {
+      if (e instanceof FragmentedWalletError) {
+        // Atomic default: prepare refused before a signature or broadcast. Keep
+        // the confirmation visible and let the user choose consolidation or an
+        // explicitly non-atomic multi-transaction payment.
+        setFragmented(true);
+        setError(`${e.message} Nothing was signed or sent.`);
+        setConfirming(true);
+      } else if (e instanceof PartialSendError && e.parts.length > 0) {
         onSent(buildRows(e.parts, to.trim()), { stay: true });
         setError(`${(e as Error).message} The part already broadcast is recorded in History.`);
+        setConfirming(false);
       } else {
         setError((e as Error).message);
+        setConfirming(false);
       }
-      setConfirming(false);
     } finally {
       setBusy(false);
       setStage(null);
@@ -3571,13 +3741,12 @@ function Send({
             {feeCustomSet ? Number((amt + feeCustom).toFixed(8)) : `≤ ${Number((amt + FEE_MAX_FC).toFixed(8))}`} ZKAS
           </span>
         </div>
-        {/* A fragmented wallet pays in several transactions and the fee range
-            above is PER transaction — say so before the user approves one fee
-            and gets debited several. */}
-        {(status?.note_count ?? 0) > 38 && !feeCustomSet && (
+        {/* Normal payments are atomic at the transaction boundary. If this many
+            notes cannot fit, prepare stops before signing and offers a choice. */}
+        {(status?.note_count ?? 0) > MAX_NOTES_PER_TX && !feeCustomSet && (
           <div className="muted small" style={{ marginTop: 2 }}>
-            Your balance sits in {status!.note_count} notes. A large payment is sent as several transactions when it
-            doesn't fit in one — each carries its own network fee.
+            Your balance sits in {status!.note_count} notes. If this amount cannot fit in one transaction, nothing is
+            sent and the wallet will offer consolidation or an explicit split payment.
           </div>
         )}
         <label>To</label>
@@ -3617,11 +3786,22 @@ function Send({
           </div>
         )}
         {error && <div className="msg err">{error}</div>}
-        <div className="row">
+        {fragmented && (
+          <div className="msg warn small">
+            <b>Choose safely:</b> consolidation is recommended. “Send in parts” broadcasts independent transactions;
+            accepted parts cannot be automatically reversed if a later part fails.
+          </div>
+        )}
+        <div className="row send-confirm-actions">
           <button className="btn ghost" disabled={busy} onClick={() => { setConfirming(false); setError(""); }}>
             Back
           </button>
-          <button className="btn" disabled={busy} onClick={doSend}>
+          {fragmented && (
+            <button className="btn" disabled={busy} onClick={() => setShowConsolidate(true)}>
+              Consolidate first
+            </button>
+          )}
+          <button className={fragmented ? "btn ghost" : "btn"} disabled={busy} onClick={() => void doSend(fragmented)}>
             {busy ? (
               <>
                 <span className="spin" />{" "}
@@ -3635,10 +3815,23 @@ function Send({
                 {sendProgress && sendProgress.parts > 1 && ` (${sendProgress.part} of ${sendProgress.parts})`}
               </>
             ) : (
-              "Confirm & send"
+              fragmented ? "Send in parts anyway" : "Confirm & send"
             )}
           </button>
         </div>
+        {showConsolidate && status && (
+          <ConsolidateDialog
+            status={status}
+            onClose={() => setShowConsolidate(false)}
+            onDone={() => {
+              setShowConsolidate(false);
+              setFragmented(false);
+              setConfirming(false);
+              setError("");
+              toast.show("good", "Consolidation sent", "Wait for the new note to mature, then retry the full payment.");
+            }}
+          />
+        )}
         {busy && sendProgress && sendProgress.parts > 1 && (
           <p className="muted small" style={{ marginTop: 8 }}>
             Your balance is spread across many small notes, so this payment is being sent as{" "}
@@ -4370,22 +4563,12 @@ function DaemonSetting() {
   const save = async (raw: string, accessToken = bearer) => {
     setBusy(true);
     setError("");
-    const url = normalizeDaemonInput(raw);
+    let url = normalizeDaemonInput(raw);
     try {
-      const transportError = walletdTransportError(url);
-      if (transportError) throw new Error(transportError);
       if (url) {
-        // Prove a wallet service actually answers there before committing to it.
-        const ctl = new AbortController();
-        const timer = setTimeout(() => ctl.abort(), 5000);
-        try {
-          const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
-          if (accessToken.trim()) headers.Authorization = `Bearer ${accessToken.trim()}`;
-          const r = await fetch(`${url}/api/status`, { signal: ctl.signal, headers });
-          if (!r.ok) throw new Error(`answered ${r.status}`);
-        } finally {
-          clearTimeout(timer);
-        }
+        // A bare LAN address is tested over both HTTP and HTTPS. Save only the
+        // transport whose authenticated status endpoint really answered.
+        url = await findReachableDaemon(raw, accessToken);
       }
       setBase(url);
       setWalletdBearer(url ? accessToken : "");
@@ -5323,6 +5506,7 @@ function DesktopEngineDown({ requestError }: { requestError?: string | null }) {
 function Setup({ error: requestError }: { error?: string | null }) {
   const [base, setB] = useState(getBase());
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   // Desktop runs the wallet engine INSIDE the app, so "the hosted service is
   // down" is both wrong and unactionable there — and the URL box is meaningless,
@@ -5352,18 +5536,21 @@ function Setup({ error: requestError }: { error?: string | null }) {
         <button
           className="btn small"
           style={{ flex: "0 0 auto" }}
-          onClick={() => {
-            const url = normalizeDaemonInput(base);
-            const transportError = walletdTransportError(url);
-            if (transportError) {
-              setError(transportError);
-              return;
+          disabled={busy || !base.trim()}
+          onClick={() => void (async () => {
+            setBusy(true);
+            setError("");
+            try {
+              const url = await findReachableDaemon(base, getWalletdBearer());
+              setBase(url);
+              location.reload();
+            } catch (cause) {
+              setError((cause as Error).message || String(cause));
+              setBusy(false);
             }
-            setBase(url);
-            location.reload();
-          }}
+          })()}
         >
-          Save
+          {busy ? "Checking…" : "Save"}
         </button>
       </div>
     </div>

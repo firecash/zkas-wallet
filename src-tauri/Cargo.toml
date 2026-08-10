@@ -1,6 +1,6 @@
 [package]
 name = "zkas-desktop"
-version = "1.0.1"
+version = "1.0.3"
 description = "ZKas desktop wallet — the shielded wallet engine embedded in a native shell"
 edition = "2021"
 license = "ISC"
@@ -23,6 +23,7 @@ futures-util = "0.3"
 sha2 = "0.10"
 hex = "0.4"
 sysinfo = { version = "0.31.2", default-features = false, features = ["system"] }
+local-ip-address = "0.6.13"
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
 # The wallet daemon as a library: REST API + sync loops + Orchard engine.
 # Path dep: rusty-kaspa checked out as a sibling of this repo.

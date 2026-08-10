@@ -14,41 +14,42 @@ import {
   WalletCards,
   type LucideIcon,
 } from "lucide-react";
+import {
+  BUNDLED_SERVICES,
+  readCachedServices,
+  refreshServicesDirectory,
+  type DirectoryService,
+  type ServiceCategory,
+  type ServiceIcon,
+} from "../services-directory";
 
-type Category = "store" | "use" | "earn" | "verify" | "build";
-type Status = "Live" | "Testing" | "Developer preview";
+type Category = ServiceCategory;
 
-type Service = {
-  name: string;
-  description: string;
-  categories: Category[];
-  status: Status;
-  tags: string[];
-  action: string;
-  href: string;
-  internal?: boolean;
-  secondary?: { label: string; href: string }[];
-  icon: LucideIcon;
+const ICONS: Record<ServiceIcon, LucideIcon> = {
+  book: BookOpen,
+  code: Code2,
+  "credit-card": CreditCard,
+  "file-key": FileKey,
+  git: GitFork,
+  pickaxe: Pickaxe,
+  search: ScanSearch,
+  server: Server,
+  terminal: SquareTerminal,
+  users: Users,
+  wallet: WalletCards,
 };
 
-const SERVICES: Service[] = [
-  { name: "Wallet", description: "Send, receive, back up, and manage ZKAS.", categories: ["store", "use"], status: "Live", tags: ["Local key", "Private payments"], action: "Open wallet", href: "/", internal: true, icon: WalletCards },
-  { name: "CLI & self-hosted wallet", description: "Run walletd or shielded-pay on your own machine.", categories: ["store", "build"], status: "Live", tags: ["Self-hosted", "CLI + API"], action: "Wallet tools", href: "https://github.com/firecash/zkas-rusty#wallet", icon: SquareTerminal },
-  { name: "Paper wallet", description: "Create a recovery key offline for cold storage.", categories: ["store"], status: "Live", tags: ["Offline", "Cold storage"], action: "Create paper wallet", href: "https://zkas.info/paper-wallet.html", icon: FileKey },
-  { name: "BlockDAG explorer", description: "Inspect public blocks and shielded transactions.", categories: ["verify"], status: "Live", tags: ["Live chain", "No public balances"], action: "Open explorer", href: "/explore", internal: true, icon: ScanSearch },
-  { name: "Mining pools", description: "Compare pools and mine ZKAS with kHeavyHash hardware.", categories: ["earn"], status: "Live", tags: ["ASIC", "Merged mining"], action: "Open mining", href: "/mine", internal: true, icon: Pickaxe, secondary: [
-    { label: "ZKas Pool", href: "https://mining-pool.zkas.info" },
-    { label: "K1Pool", href: "https://k1pool.com" },
-    { label: "KekPool", href: "https://kekpool.com" },
-    { label: "CoreBlock", href: "https://coreblock.cc" },
-  ] },
-  { name: "Node & solo mining", description: "Verify the chain and mine directly to your address.", categories: ["earn", "verify"], status: "Live", tags: ["Self-verified", "Direct payout"], action: "Run a node", href: "/node", internal: true, icon: Server },
-  { name: "Payment gateway", description: "Merchant invoices, checkout pages, and webhooks.", categories: ["use", "build"], status: "Testing", tags: ["Self-hosted", "WooCommerce"], action: "Gateway project", href: "https://github.com/firecash/zkas-payment-gateway", icon: CreditCard },
-  { name: "ZKAS SDK", description: "TypeScript and Rust libraries for wallet integrations.", categories: ["build"], status: "Developer preview", tags: ["TypeScript", "Rust"], action: "Open SDK", href: "https://github.com/firecash/zkas-rusty/tree/main/sdk", icon: Code2 },
-  { name: "Core source", description: "Node, consensus, wallet, and mining source code.", categories: ["build", "verify"], status: "Live", tags: ["Open source", "Rust"], action: "View source", href: "https://github.com/firecash/zkas-rusty", icon: GitFork },
-  { name: "Whitepaper", description: "Protocol, privacy, consensus, and economics.", categories: ["build", "verify"], status: "Live", tags: ["Protocol", "Documentation"], action: "Read whitepaper", href: "https://zkas.info/whitepaper.html", icon: BookOpen },
-  { name: "Community", description: "Support, network updates, and discussion.", categories: ["use", "build"], status: "Live", tags: ["Discord", "X"], action: "Open Discord", href: "https://discord.gg/jysMS4XNFT", icon: Users, secondary: [{ label: "X", href: "https://x.com/ZKas_X" }] },
-];
+// Known ZKAS tools open inside the app. This mapping is bundled rather than
+// accepted from the remote directory, so remote data cannot invent app routes.
+const INTERNAL_ROUTES: Record<string, string> = {
+  "web-wallet": "/",
+  explorer: "/explore",
+  "mining-pools": "/mine",
+  "node-solo-mining": "/node",
+};
+
+/// Where the directory opens when the user has not asked for anything specific.
+const DEFAULT_CATEGORY: "all" | Category = "use";
 
 const CATEGORIES: { id: "all" | Category; label: string }[] = [
   { id: "all", label: "All" },
@@ -62,23 +63,45 @@ const CATEGORIES: { id: "all" | Category; label: string }[] = [
 export function Services() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const [services, setServices] = useState<DirectoryService[]>(() => readCachedServices() ?? BUNDLED_SERVICES);
   const initial = params.get("filter");
+  const linked = CATEGORIES.some((item) => item.id === initial) ? (initial as "all" | Category) : null;
   // This is the wallet's action directory, so lead with things a holder can
   // actually use. Explicit deep links such as ?filter=store still win.
-  const [category, setCategoryState] = useState<"all" | Category>(CATEGORIES.some((item) => item.id === initial) ? (initial as "all" | Category) : "use");
+  const [category, setCategoryState] = useState<"all" | Category>(linked ?? DEFAULT_CATEGORY);
+  // Only a landing category chosen for the user is corrected; a category the user
+  // clicked, or asked for by link, keeps its honest empty state.
+  const [chosen, setChosen] = useState(linked !== null);
   useEffect(() => {
-    setCategoryState(CATEGORIES.some((item) => item.id === initial) ? (initial as "all" | Category) : "use");
-  }, [initial]);
+    setCategoryState(linked ?? DEFAULT_CATEGORY);
+    setChosen(linked !== null);
+  }, [linked]);
+  useEffect(() => {
+    let active = true;
+    refreshServicesDirectory()
+      .then((updated) => { if (active) setServices(updated); })
+      .catch(() => { /* keep the last validated or bundled directory */ });
+    return () => { active = false; };
+  }, []);
+  // The directory is remotely updatable, so the landing category can legitimately
+  // hold nothing — and an empty page is indistinguishable from a broken one. Fall
+  // back to the whole directory rather than opening on "No matching services."
+  const effective = useMemo(() => {
+    if (chosen || category === "all") return category;
+    return services.some((service) => service.categories.includes(category)) ? category : "all";
+  }, [category, chosen, services]);
   const shown = useMemo(
-    () => SERVICES.filter((service) => category === "all" || service.categories.includes(category)),
-    [category],
+    () => services.filter((service) => effective === "all" || service.categories.includes(effective)),
+    [effective, services],
   );
   const choose = (next: "all" | Category) => {
     setCategoryState(next);
+    setChosen(true);
     setParams(next === "all" ? {} : { filter: next }, { replace: true });
   };
-  const open = (service: Service) => {
-    if (service.internal) navigate(service.href);
+  const open = (service: DirectoryService) => {
+    const internalRoute = INTERNAL_ROUTES[service.id];
+    if (internalRoute) navigate(internalRoute);
     else window.open(service.href, "_blank", "noopener,noreferrer");
   };
   return (
@@ -86,19 +109,19 @@ export function Services() {
       <div className="services-controls">
         <div className="services-filters" role="group" aria-label="Filter services">
           {CATEGORIES.map((item) => {
-            const count = item.id === "all" ? SERVICES.length : SERVICES.filter((service) => service.categories.includes(item.id as Category)).length;
-            return <button key={item.id} className={category === item.id ? "active" : ""} onClick={() => choose(item.id)}>{item.label} <span>{count}</span></button>;
+            const count = item.id === "all" ? services.length : services.filter((service) => service.categories.includes(item.id as Category)).length;
+            return <button key={item.id} className={effective === item.id ? "active" : ""} onClick={() => choose(item.id)}>{item.label} <span>{count}</span></button>;
           })}
         </div>
       </div>
       <div className="services-grid">
         {shown.map((service) => {
-          const Icon = service.icon;
+          const Icon = ICONS[service.icon];
           return (
-            <article className="service-card" key={service.name}>
+            <article className="service-card" key={service.id}>
               <div className="card-title-row">
                 <span className="service-icon" aria-hidden="true"><Icon size={21} strokeWidth={1.8} /></span>
-                <span className="service-meta"><span className={`service-status ${service.status === "Live" ? "live" : "testing"}`}>{service.status}</span><span className="service-category">{service.categories.join(" · ")}</span></span>
+                <span className="service-meta"><span className={`service-status ${["Live", "Available", "Published", "Open"].includes(service.status) ? "live" : "testing"}`}>{service.status}</span><span className="service-category">{service.categories.join(" · ")}</span></span>
               </div>
               <h2>{service.name}</h2>
               <p>{service.description}</p>

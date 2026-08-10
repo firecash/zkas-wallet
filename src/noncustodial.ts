@@ -20,10 +20,9 @@
 import { api } from "./api";
 import { fvkHex, verifyAndSignPayment, type Network } from "./signer";
 
-/// One transaction of a payment. A payment spread over many small notes needs
-/// several, and each carries only its own share of the total — so the wallet must
-/// record them individually rather than filing the whole amount under the first
-/// txid, which would claim a transaction paid far more than it did.
+/// One transaction of a payment. Normal payments are exactly one transaction;
+/// this list has several entries only after the user explicitly accepts split
+/// delivery for a fragmented wallet.
 export interface SendPart {
   txid: string;
   amount_sompi: number;
@@ -45,6 +44,15 @@ export class PartialSendError extends Error {
   }
 }
 
+/** A normal payment did not fit in one consensus-standard transaction. No
+ * transaction has been signed or broadcast when this is raised. */
+export class FragmentedWalletError extends Error {
+  constructor(message = "This payment needs more notes than one transaction can spend.") {
+    super(message);
+    this.name = "FragmentedWalletError";
+  }
+}
+
 export interface SendResult {
   txid: string;
   amount_sompi: number;
@@ -58,7 +66,7 @@ export interface SendResult {
 
 /// Sompi per ZKAS, for converting a remaining balance back to the FC-denominated
 /// amount `/prepare` takes.
-const SOMPI_PER_ZKAS = 100_000_000;
+export const SOMPI_PER_ZKAS = 100_000_000;
 
 /// Largest per-transaction fee the device will EVER authorize, in sompi (0.1 ZKAS).
 /// The daemon prices fees by transaction bytes; even the largest standard
@@ -68,7 +76,13 @@ const SOMPI_PER_ZKAS = 100_000_000;
 /// Before this ceiling existed the device signed whatever fee the daemon reported,
 /// which let a lying daemon spend the wallet's entire change as "fee" (collectable
 /// by a miner — plausibly the daemon operator's own pool).
-const MAX_FEE_SOMPI = 10_000_000;
+export const MAX_FEE_SOMPI = 10_000_000;
+
+/// Notes one standard transaction can spend, mirroring the node's 500,000 block-mass
+/// cap. The wallet only ever uses this to *explain* and to estimate — walletd decides
+/// what actually fits — but if the node's mass limit changes, this is the figure that
+/// must change with it (see WALLET-STACK "constants that must stay in sync").
+export const MAX_NOTES_PER_TX = 38;
 
 /// Hard stop on the chunk loop. One transaction spends at most ~38 notes (the
 /// 500,000-mass standard cap), so 24 chunks can still move a wallet fragmented
@@ -81,10 +95,8 @@ const MAX_CHUNKS = 24;
 /// Halo 2 proof); signing is on-device and quick; broadcast is near-instant.
 export type SendStage = "proving" | "signing" | "broadcasting";
 
-/// Progress of a payment that spans several transactions. A wallet holding many
-/// small notes pays a large amount in chunks of at most ~38 notes each, which can
-/// take minutes — without this the UI sits on "Building private proof…" the whole
-/// time and an entirely healthy send is indistinguishable from a hung one.
+/// Progress of an explicitly approved split payment. A wallet holding many small
+/// notes can pay in chunks of at most ~38 notes each, which can take minutes.
 export interface SendProgress {
   /// 1-based index of the transaction being built.
   part: number;
@@ -111,6 +123,7 @@ export async function sendNonCustodial(
   fee?: number,
   onStage?: (stage: SendStage, progress?: SendProgress) => void,
   memo?: string,
+  allowMultipleTransactions = false,
 ): Promise<SendResult> {
   const fvk = await fvkHex(seedHex);
   const sentParts: SendPart[] = [];
@@ -136,7 +149,8 @@ export async function sendNonCustodial(
   // reports what one transaction can carry.
   let parts = 1;
   try {
-    for (let chunk = 0; chunk < MAX_CHUNKS; chunk++) {
+    const chunkLimit = allowMultipleTransactions ? MAX_CHUNKS : 1;
+    for (let chunk = 0; chunk < chunkLimit; chunk++) {
       const progress = (): SendProgress => ({
         part: chunk + 1,
         parts: Math.max(parts, chunk + 1),
@@ -147,7 +161,10 @@ export async function sendNonCustodial(
       // The memo is sealed into the recipient's encrypted note by the prover; the
       // on-device verification below still checks recipient and amounts, which are
       // what a malicious prover could actually steal with.
-      const prep = await api.prepare(fvk, to, owed, fee, memo, true);
+      // A normal transfer is all-or-nothing: without partial mode walletd
+      // rejects an over-fragmented payment before it builds, signs or broadcasts
+      // anything. Multi-transaction delivery is an explicit user choice.
+      const prep = await api.prepare(fvk, to, owed, fee, memo, allowMultipleTransactions);
       // Exact integer figures; the plain-number fields are the fallback for a
       // daemon that predates the *_exact decimal strings.
       const chunkAmount = BigInt(prep.amount_sompi_exact ?? Math.round(prep.amount_sompi));
@@ -157,6 +174,11 @@ export async function sendNonCustodial(
       // in `remaining` — anything else is it silently rewriting the payment.
       if (chunkAmount + remaining !== owed) {
         throw new Error("The daemon changed the requested amount. Refusing to sign.");
+      }
+      if (!allowMultipleTransactions && (remaining !== 0n || chunkAmount !== owed)) {
+        throw new FragmentedWalletError(
+          "The wallet service could not prepare the complete amount in one transaction.",
+        );
       }
       // Now that one chunk's capacity is known, estimate how many the payment needs.
       if (chunk === 0 && chunkAmount > 0n && remaining > 0n) {
@@ -214,8 +236,146 @@ export async function sendNonCustodial(
     // optimistic balance) before showing the error — otherwise the balance keeps
     // showing funds that already left, inviting a double-send.
     if (sentParts.length > 0) throw new PartialSendError((e as Error).message, [...sentParts]);
+    if (!allowMultipleTransactions && /needs more than .*input notes|send in smaller chunks/i.test((e as Error).message)) {
+      throw new FragmentedWalletError(
+        "Nothing was sent. This wallet has too many small notes for that amount to fit in one transaction.",
+      );
+    }
     throw e;
   }
 
   return { txid: txids[0], amount_sompi: Number(sent), fee_sompi: Number(fees), txids, parts: sentParts };
+}
+
+export interface ConsolidationResult {
+  txid: string;
+  /// Total notes merged across every round.
+  inputs: number;
+  amount_sompi: number;
+  fee_sompi: number;
+  /// One entry per broadcast consolidation transaction, oldest first.
+  txids: string[];
+  /// How many rounds ran. More than one means the wallet was too fragmented for
+  /// a single transaction to reach.
+  rounds: number;
+  /// True when the loop stopped at `maxRounds` with merging still possible, so
+  /// the caller can say the wallet is better but not finished.
+  more: boolean;
+  /// Why the loop stopped early, when it stopped on a failure rather than on
+  /// having nothing left to merge. Present only alongside completed rounds:
+  /// those transactions are broadcast and must be reported, not discarded with
+  /// the error that ended the run.
+  stoppedBecause?: string;
+}
+
+/// Rounds one call will run back to back. A round merges at most one standard
+/// transaction's worth of notes (~38 at the 500,000-mass cap), so a wallet with
+/// hundreds of small notes needs many. The cap keeps a single tap from spending
+/// an unbounded number of fees.
+export const MAX_CONSOLIDATION_ROUNDS = 12;
+
+/// Below this a round cannot reduce the note count: merging two notes into one
+/// change note plus a fee is not progress.
+const MIN_NOTES_PER_ROUND = 3;
+
+/** Merge matured notes back into this wallet without handing the seed to walletd.
+ * Uses the same prepare/verify/sign/submit protocol as a payment, so it works
+ * against both hosted and self-run wallet services.
+ *
+ * Rounds run **back to back with no wait between them**. A submitted note leaves
+ * the spendable set the moment it is broadcast (walletd parks it in its pending
+ * spends), so the next round selects a completely different set of notes and
+ * cannot double-spend the last one. Waiting for maturity between rounds — the
+ * obvious-looking alternative — would make a 400-note wallet take hours, which
+ * is the whole reason consolidation was not solving anybody's problem. Only the
+ * final merged note has to mature before it can be spent.
+ */
+export async function consolidateNonCustodial(
+  seedHex: string,
+  network: Network,
+  ownAddress: string,
+  spendableSompi: bigint,
+  onStage?: (stage: SendStage) => void,
+  maxRounds = MAX_CONSOLIDATION_ROUNDS,
+  onRound?: (round: number, mergedNotes: number) => void,
+): Promise<ConsolidationResult> {
+  if (spendableSompi <= BigInt(MAX_FEE_SOMPI)) throw new Error("There is not enough spendable balance to consolidate safely.");
+  const fvk = await fvkHex(seedHex);
+  const txids: string[] = [];
+  let inputs = 0;
+  let amount = 0n;
+  let fees = 0n;
+  let more = false;
+  let stoppedBecause: string | undefined;
+  // Reserving the hard fee ceiling prevents an insufficient-funds error. A
+  // heavily fragmented wallet takes the partial-capacity path, which produces
+  // one self-note and zero change; smaller wallets may produce one small change
+  // note, but this action is offered only when the note count exceeds the
+  // standard transaction input cap.
+  let available = spendableSompi;
+
+  for (let round = 0; round < Math.max(1, maxRounds); round++) {
+    const requested = available - BigInt(MAX_FEE_SOMPI);
+    if (requested <= 0n) break;
+    try {
+    onStage?.("proving");
+    const prep = await api.prepare(fvk, ownAddress, requested, undefined, undefined, true);
+    const roundAmount = BigInt(prep.amount_sompi_exact ?? Math.round(prep.amount_sompi));
+    const roundFee = BigInt(prep.fee_sompi_exact ?? Math.round(prep.fee_sompi));
+    const remaining = BigInt(prep.remaining_sompi_exact ?? Math.round(prep.remaining_sompi ?? 0));
+    if (roundAmount <= 0n || roundFee > BigInt(MAX_FEE_SOMPI)) {
+      if (txids.length) break;
+      throw new Error("The wallet service returned an unsafe consolidation.");
+    }
+    if (prep.spend_auth.length < MIN_NOTES_PER_ROUND) {
+      // Not a failure once work is already done — it is the natural end of the
+      // loop, and reporting it as an error would hide rounds that succeeded.
+      if (txids.length) break;
+      throw new Error("Fewer than three notes are spendable right now, so consolidating would not reduce the wallet's note count.");
+    }
+    onStage?.("signing");
+    const signatures = await verifyAndSignPayment(
+      seedHex,
+      network,
+      ownAddress,
+      roundAmount,
+      BigInt(MAX_FEE_SOMPI),
+      prep.bundle_hex,
+      JSON.stringify(prep.disclosure),
+      JSON.stringify(prep.spend_auth),
+    );
+    onStage?.("broadcasting");
+    const submitted = await api.submit(prep.session, signatures);
+    txids.push(submitted.txid);
+    inputs += prep.spend_auth.length;
+    amount += BigInt(Math.round(submitted.amount_sompi));
+    fees += BigInt(Math.round(submitted.fee_sompi));
+    onRound?.(txids.length, inputs);
+
+    // Everything the wallet could offer went into this round.
+    if (remaining <= BigInt(MAX_FEE_SOMPI)) break;
+    available = remaining;
+    if (round === Math.max(1, maxRounds) - 1) more = true;
+    } catch (cause) {
+      // Rounds already broadcast are real transactions. Throwing here would
+      // erase them from the user's view while their fees were already spent and
+      // their notes already moved — the same class of mistake as reporting a
+      // partially delivered payment as a clean failure.
+      if (!txids.length) throw cause;
+      stoppedBecause = (cause as Error).message || String(cause);
+      more = true;
+      break;
+    }
+  }
+
+  return {
+    txid: txids[0],
+    inputs,
+    amount_sompi: Number(amount),
+    fee_sompi: Number(fees),
+    txids,
+    rounds: txids.length,
+    more,
+    ...(stoppedBecause ? { stoppedBecause } : {}),
+  };
 }

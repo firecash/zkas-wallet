@@ -94,6 +94,103 @@ export function normalizeDaemonInput(raw: string): string {
   return `${localApp ? "http" : "https"}://${s}`;
 }
 
+/** Candidate URLs for a user-entered wallet-service address. Installed apps
+ * try both transports for a bare private/LAN host. Public hosts do not silently
+ * downgrade from HTTPS; an explicit scheme stays authoritative. */
+export function daemonEndpointCandidates(raw: string): string[] {
+  const entered = raw.trim().replace(/\/+$/, "");
+  if (!entered) return [];
+  if (/^https?:\/\//i.test(entered)) return [normalizeDaemonInput(entered)].filter(Boolean);
+
+  const primary = normalizeDaemonInput(entered);
+  if (!primary || !allowsInsecureWalletd()) return primary ? [primary] : [];
+
+  let host = "";
+  try {
+    host = new URL(primary).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  } catch {
+    return [];
+  }
+  const privateLan =
+    host === "localhost" ||
+    host === "::1" ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    (() => {
+      const match = host.match(/^172\.(\d+)\./);
+      return !!match && Number(match[1]) >= 16 && Number(match[1]) <= 31;
+    })();
+  const http = primary.replace(/^https:/i, "http:");
+  const https = primary.replace(/^http:/i, "https:");
+  return privateLan ? [http, https] : [https];
+}
+
+/** A wallet service that answered, but refused this caller's credentials. Kept
+ * distinct from every other failure because the remedy is completely different:
+ * the address, port and network are all correct and only the access token is
+ * wrong — advice about firewalls and IP addresses would send the user hunting
+ * for a problem that does not exist. */
+export class WalletdUnauthorizedError extends Error {
+  constructor(public url: string) {
+    super("That wallet service is reachable, but it rejected the access token. Copy the token from the Host screen of the computer running it.");
+    this.name = "WalletdUnauthorizedError";
+  }
+}
+
+async function probe(url: string, path: string, headers: Record<string, string>, timeoutMs: number): Promise<Response> {
+  const ctl = new AbortController();
+  const timer = globalThis.setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    return await fetch(`${url}${path}`, { signal: ctl.signal, headers });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Probe every sensible transport and return the URL whose authenticated status
+ * endpoint actually answers. Callers persist only this successful URL.
+ *
+ * `/health` is probed first because it is the one endpoint no bearer gate covers.
+ * Reaching it proves the address, port, network route and CORS configuration are
+ * all sound, which narrows a subsequent 401 to exactly one cause — the token —
+ * instead of leaving the user with a bare "failed to fetch" that is equally
+ * consistent with a typo, a firewall, a sleeping machine and a wrong port. */
+export async function findReachableDaemon(raw: string, accessToken = "", timeoutMs = 5_000): Promise<string> {
+  const candidates = daemonEndpointCandidates(raw);
+  if (!candidates.length) throw new Error("Enter a valid wallet-service address.");
+  const failures: string[] = [];
+  const describe = (error: unknown) =>
+    (error as Error).name === "AbortError" ? `timed out after ${Math.round(timeoutMs / 1000)}s` : (error as Error).message;
+
+  for (const url of candidates) {
+    const transportError = walletdTransportError(url);
+    if (transportError) {
+      failures.push(`${url}: ${transportError}`);
+      continue;
+    }
+    try {
+      const health = await probe(url, "/health", {}, timeoutMs);
+      if (!health.ok) throw new Error(`answered ${health.status} on /health`);
+    } catch (error) {
+      failures.push(`${url}: ${describe(error)}`);
+      continue;
+    }
+    // The service is definitely there. From here a failure is about THIS caller,
+    // so report it rather than silently trying the next transport and blaming the
+    // last one's error message.
+    const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
+    if (accessToken.trim()) headers.Authorization = `Bearer ${accessToken.trim()}`;
+    const response = await probe(url, "/api/status", headers, timeoutMs).catch((error: unknown) => {
+      throw new Error(`${url} is reachable but refused the wallet API request (${describe(error)}).`);
+    });
+    if (response.status === 401 || response.status === 403) throw new WalletdUnauthorizedError(url);
+    if (!response.ok) throw new Error(`The wallet service at ${url} answered ${response.status}.`);
+    return url;
+  }
+  throw new Error(`Could not reach a wallet service. Tried ${failures.join("; ")}`);
+}
+
 /** Explain a transport choice before fetch turns it into an opaque mixed-content
  * failure. Native shells permit HTTP; a browser connection must use HTTPS. */
 export function walletdTransportError(url: string): string | null {
@@ -405,8 +502,9 @@ export const api = {
   // ~38 notes (the node's 500,000-mass standard cap), so a wallet holding many small
   // notes cannot always pay a large amount at once. With it the
   // daemon pays what one transaction carries and reports `remaining_sompi`; the caller
-  // repeats until 0 (see sendNonCustodial). Without it the daemon errors instead — so a
-  // caller that does not loop can never mistake a partial payment for a complete one.
+  // repeats until 0 only after the user explicitly accepts split delivery. Normal
+  // Send leaves it false, so the daemon rejects before signing/broadcasting and a
+  // bill can never be silently paid only in part.
   // `amountSompi` is an exact integer (bigint), sent as a decimal string so no
   // floating-point coin amount ever crosses the wire. The one float→integer
   // conversion happens where the user's decimal input is parsed, not here.

@@ -218,18 +218,18 @@ describe("the wallet a user actually touches", () => {
     expect((to as HTMLInputElement).value).toContain(OTHER);
   });
 
-  it("does not offer a wallet switcher until a second wallet exists", async () => {
+  it("always identifies the active wallet and offers the switcher", async () => {
     await mountApp();
     await waitFor(() => expect(screen.getByRole("button", { name: "Receive ZKAS" })).toBeInTheDocument());
-    expect(screen.queryByLabelText("Switch wallet")).toBeNull();
+    expect(screen.getByLabelText("Switch wallet")).toHaveTextContent("Wallet 1");
+  });
 
-    const { addWallet } = await import("../src/wallets");
-    act(() => {
-      addWallet();
-    });
-    // Two wallets registered (the active one is registered by the status poll).
-    const { listWallets } = await import("../src/wallets");
-    expect(listWallets().length).toBeGreaterThanOrEqual(1);
+  it("keeps consolidation on the main wallet screen", async () => {
+    statusOverride = { note_count: 120, spendable_sompi: "500000000" };
+    await mountApp();
+    const action = await screen.findByRole("button", { name: "Consolidate wallet notes" });
+    expect(action).toBeEnabled();
+    expect(action).toHaveTextContent("120 notes");
   });
 });
 

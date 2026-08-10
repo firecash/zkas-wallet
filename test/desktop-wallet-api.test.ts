@@ -42,4 +42,16 @@ describe("desktop embedded wallet transport", () => {
     invoke.mockResolvedValue({ status: 401, body: JSON.stringify({ error: "missing or invalid bearer token" }) });
     await expect(api.status()).rejects.toThrow("missing or invalid bearer token");
   });
+
+  it("imports through Rust instead of WebView CORS", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ address: "zkas:test" }) });
+    await expect(api.watch("00".repeat(96), 123)).resolves.toEqual({ address: "zkas:test" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledWith("wallet_api_request", expect.objectContaining({
+      method: "POST",
+      path: "/api/wallet/watch",
+    }));
+    fetchMock.mockRestore();
+  });
 });

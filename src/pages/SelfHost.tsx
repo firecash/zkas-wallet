@@ -189,7 +189,14 @@ export function SelfHost() {
                   <span><small>Node RPC</small><strong>{status.node_lan_rpc ? "Trusted LAN" : "This device only"}</strong></span>
                   <span><small>Node P2P</small><strong>{status.node_public_p2p ? `Public · TCP ${MANAGED_ZKAS_P2P_PORT}` : "Outbound only"}</strong></span>
                 </div>
-                {status.wallet_access_url && <div className="detail-row"><span className="k">Wallet URL</span><span className="v mono">{status.wallet_access_url}</span></div>}
+                {!!status.wallet_access_urls?.length && (
+                  <div className="detail-row">
+                    <span className="k">Wallet URL{status.wallet_access_urls.length > 1 ? "s" : ""}</span>
+                    <span className="v mono host-url-list">
+                      {status.wallet_access_urls.map((url, index) => <span key={url}>{url}{index === 0 && status.wallet_access_urls.length > 1 ? " · preferred" : ""}</span>)}
+                    </span>
+                  </div>
+                )}
                 {status.wallet_access !== "device" && (
                   <>
                     <div className="detail-row"><span className="k">Access token</span><span className="v mono">{tokenVisible ? status.wallet_access_token ?? "Unavailable" : "••••••••••••••••••••••••"}</span></div>
