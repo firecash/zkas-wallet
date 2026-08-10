@@ -22,6 +22,32 @@ const TEAL = "#17d6be";
 const BRIGHT = "#7ef7e4";
 /** Minimum vertical distance between two overlapping country labels, in px. */
 const LABEL_GAP = 17;
+/** How far the declutter pass may push a label from its country before the label
+ * is dropped instead. Past this it is no longer pointing at anything. */
+const MAX_LABEL_SHIFT = 46;
+/** Below this VIEWPORT width a country label is a flag and a count, with no name.
+ * Deliberately the viewport and not the canvas: the globe sits in a panel that is
+ * comfortably under 640px even on a large desktop, so measuring the canvas hid the
+ * country names on exactly the screens with room for them. What matters is whether
+ * this is a phone. */
+const COMPACT_LABEL_WIDTH = 640;
+const isCompactViewport = () =>
+  typeof window !== "undefined" && window.matchMedia(`(max-width: ${COMPACT_LABEL_WIDTH - 1}px)`).matches;
+/** Radians of spin for a drag across the FULL canvas width/height. Expressed as a
+ * fraction of the canvas rather than per-pixel so a maximised window and a small
+ * one feel identical — per-pixel sensitivity made the globe feel sluggish on a
+ * large display and twitchy on a small one. */
+const DRAG_SPAN_X = 5.0;
+const DRAG_SPAN_Y = 3.0;
+/** Fraction of the spin velocity surviving one second of coasting. */
+const SPIN_DAMPING = 0.025;
+/** Ceiling on flick speed, rad/s — a violent drag should not turn into a blur. */
+const MAX_SPIN = 9;
+/** Below this spin rate (rad/s) the globe is treated as stopped. */
+const SPIN_EPSILON = 0.01;
+/** A drag that has been still for longer than this releases with NO momentum:
+ * lining up a country and letting go must not fling the globe away. */
+const STALE_FLICK_MS = 90;
 
 /** One node as the globe needs it. */
 export interface GlobeNode {
@@ -419,18 +445,31 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
     // inside the render loop forced a synchronous layout on every frame for
     // every label — by far the most expensive thing this component did.
     let labelEls: { el: HTMLDivElement; dir: THREE.Vector3; anchor: THREE.Vector3; half: number }[] = [];
+    // Country NAMES do not fit a phone. "United States 12" is ~130px against a
+    // ~360px viewport, so a handful of them span the whole globe, the declutter
+    // pass shoves them into a vertical stack far from the countries they name,
+    // and the result reads as a broken overlay rather than a map. A flag is the
+    // same identifier in ~20px and needs no translation, so small screens get
+    // flag + count and the name moves to the tap/hover detail.
+    let labelsCompact = isCompactViewport();
 
     const buildLabels = () => {
       for (const l of labelEls) l.el.remove();
       labelEls = labelsRef.current.map((c) => {
         const el = document.createElement("div");
         el.style.cssText =
-          "position:absolute;left:0;top:0;white-space:nowrap;font-size:12px;line-height:1.1;" +
+          "position:absolute;left:0;top:0;white-space:nowrap;line-height:1.1;" +
+          // Slightly larger when compact: it is the only identifier left, and a
+          // flag glyph at 12px is unreadable on a dense phone screen.
+          (labelsCompact ? "font-size:15px;" : "font-size:12px;") +
           "color:#f6f6f8;text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 10px rgba(0,0,0,.7);will-change:transform,opacity";
-        el.innerHTML =
-          `<span style="opacity:.95">${flagOf(c.code)}</span> ` +
-          `<span>${c.name}</span>` +
-          `<span style="color:#17d6be;margin-left:6px">${c.count}</span>`;
+        el.innerHTML = labelsCompact
+          ? `<span>${flagOf(c.code)}</span>` +
+            `<span style="color:#17d6be;margin-left:4px;font-size:12px;font-weight:600">${c.count}</span>`
+          : `<span style="opacity:.95">${flagOf(c.code)}</span> ` +
+            `<span>${c.name}</span>` +
+            `<span style="color:#17d6be;margin-left:6px">${c.count}</span>`;
+        el.title = `${c.name} · ${c.count}`;
         labelLayer.appendChild(el);
         // Anchor a little above the surface so the text clears its markers.
         const anchor = latLonToVec3(c.lat, c.lon, 1.02);
@@ -767,8 +806,12 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
     let moved = false;
     let lastX = 0;
     let lastY = 0;
+    // Spin velocity in radians per SECOND, so coasting is identical whether the
+    // loop is running at 60 or 30 fps. The previous per-frame figure decayed at
+    // whatever rate the loop happened to be ticking at.
     let velX = 0;
     let velY = 0;
+    let lastMoveAt = 0;
     let hovering = false;
     const pointer = new THREE.Vector2();
     const raycaster = new THREE.Raycaster();
@@ -779,7 +822,9 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
       moved = false;
       lastX = e.clientX;
       lastY = e.clientY;
+      lastMoveAt = e.timeStamp;
       velX = velY = 0;
+      canvas.style.cursor = "grabbing";
       canvas.setPointerCapture(e.pointerId);
     };
     const onMove = (e: PointerEvent) => {
@@ -792,14 +837,32 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
       if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
       lastX = e.clientX;
       lastY = e.clientY;
-      velX = dx * 0.005;
-      velY = dy * 0.003;
-      group.rotation.y += velX;
-      group.rotation.x = THREE.MathUtils.clamp(group.rotation.x + velY, -1.1, 1.1);
+
+      // The globe tracks the pointer EXACTLY, unsmoothed: a drag is direct
+      // manipulation and any easing here reads as lag.
+      const turnX = (dx / Math.max(1, rect.width)) * DRAG_SPAN_X;
+      const turnY = (dy / Math.max(1, rect.height)) * DRAG_SPAN_Y;
+      group.rotation.y += turnX;
+      group.rotation.x = THREE.MathUtils.clamp(group.rotation.x + turnY, -1.1, 1.1);
+
+      // Release momentum is a SMOOTHED velocity, which the old code got wrong: it
+      // kept the last single frame's delta, so a flick whose final pointer event
+      // happened to be short — extremely common, since a hand decelerates before
+      // letting go — released with almost no momentum and the globe stopped dead.
+      // Averaging the recent motion makes a flick behave like a flick every time.
+      const dtMs = Math.max(1, e.timeStamp - lastMoveAt);
+      lastMoveAt = e.timeStamp;
+      const instX = (turnX / dtMs) * 1000;
+      const instY = (turnY / dtMs) * 1000;
+      velX = THREE.MathUtils.clamp(velX * 0.55 + instX * 0.45, -MAX_SPIN, MAX_SPIN);
+      velY = THREE.MathUtils.clamp(velY * 0.55 + instY * 0.45, -MAX_SPIN, MAX_SPIN);
     };
     const onUp = (e: PointerEvent) => {
       // A tap that never moved is a selection, not a spin.
       if (!moved && hoveredId) selectCb.current?.(hoveredId);
+      // Held still before releasing: the user was aiming, not throwing.
+      if (e.timeStamp - lastMoveAt > STALE_FLICK_MS) velX = velY = 0;
+      canvas.style.cursor = "grab";
       dragging = false;
       try {
         canvas.releasePointerCapture(e.pointerId);
@@ -842,6 +905,16 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
       // Keep air around the planet: the atmosphere shell reaches r=1.16 and the
       // country labels sit outside that again, so a tight framing clips them.
       camera.position.z = w < 640 ? 4.0 : w / h > 1.9 ? 3.75 : 3.5;
+      // Labels bake their content and measured width at build time, so crossing
+      // the breakpoint — a phone rotating, a desktop window dragged narrow —
+      // has to rebuild them or the old shape keeps its stale half-width and the
+      // declutter maths goes wrong. The panel can resize without the viewport
+      // crossing the breakpoint, hence the explicit media query.
+      const compact = isCompactViewport();
+      if (compact !== labelsCompact) {
+        labelsCompact = compact;
+        buildLabels();
+      }
     };
     resize();
     const ro = new ResizeObserver(resize);
@@ -858,7 +931,7 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
     const worldDir = new THREE.Vector3();
     const projected = new THREE.Vector3();
     // Reused each frame so decluttering allocates nothing.
-    const placedLabels: { l: (typeof labelEls)[number]; vis: number; x: number; y: number; half: number }[] = [];
+    const placedLabels: { l: (typeof labelEls)[number]; vis: number; x: number; y: number; y0: number; half: number }[] = [];
 
     // Frame governor. A globe drifting at 0.06 rad/s does not need 60 fps — it
     // needs to be smooth *while you are pushing it around*. So: full rate under
@@ -873,7 +946,7 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
       if (!visible || document.hidden) return;
-      const interacting = dragging || hovering || Math.abs(velX) > 0.0001 || Math.abs(velY) > 0.0001;
+      const interacting = dragging || hovering || Math.abs(velX) > SPIN_EPSILON || Math.abs(velY) > SPIN_EPSILON;
       if (!interacting && now - lastFrame < IDLE_MS) return;
       lastFrame = now;
       const dt = Math.min(clock.getDelta(), 0.05);
@@ -881,11 +954,12 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
 
       // Idle spin, suspended while the pointer is on the globe so labels can be read.
       if (!dragging) {
-        if (Math.abs(velX) > 0.0001 || Math.abs(velY) > 0.0001) {
-          group.rotation.y += velX;
-          group.rotation.x = THREE.MathUtils.clamp(group.rotation.x + velY, -1.1, 1.1);
-          velX *= 0.94;
-          velY *= 0.94;
+        if (Math.abs(velX) > SPIN_EPSILON || Math.abs(velY) > SPIN_EPSILON) {
+          group.rotation.y += velX * dt;
+          group.rotation.x = THREE.MathUtils.clamp(group.rotation.x + velY * dt, -1.1, 1.1);
+          const decay = Math.pow(SPIN_DAMPING, dt);
+          velX *= decay;
+          velY *= decay;
         } else if (!hovering && !calm) {
           group.rotation.y += dt * 0.06;
         }
@@ -983,18 +1057,25 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
         for (const l of labelEls) {
           worldDir.copy(l.dir).applyQuaternion(group.quaternion);
           const facing = -worldDir.dot(camDir);
-          const vis = THREE.MathUtils.smoothstep(facing, 0.08, 0.42);
+          // Fade out well BEFORE the limb. Near the rim the projection compresses
+          // hard, so a few degrees of spin slide a label a long way across the
+          // screen — which is what made them look like they jump to random places.
+          const vis = THREE.MathUtils.smoothstep(facing, 0.22, 0.5);
           if (vis <= 0.01) {
             l.el.style.opacity = "0";
             continue;
           }
           const p = projected.copy(l.anchor).applyMatrix4(group.matrixWorld).project(camera);
+          const py = ((-p.y + 1) / 2) * h - 20;
           placedLabels.push({
             l,
             vis,
             x: ((p.x + 1) / 2) * w,
             // Sit the label just above its country's markers.
-            y: ((-p.y + 1) / 2) * h - 20,
+            y: py,
+            // Where it BELONGS, so the declutter pass below can tell how far it
+            // has been pushed and give up rather than lie about a location.
+            y0: py,
             half: l.half,
           });
         }
@@ -1013,12 +1094,24 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
           }
         }
 
-        for (const { l, x, y, half, vis } of placedLabels) {
-          // Keep every label fully inside the canvas — the layer clips, and a
-          // half-cut country name looks broken.
-          const cx = THREE.MathUtils.clamp(x, half + 4, Math.max(half + 4, w - half - 4));
-          const cy = THREE.MathUtils.clamp(y, 10, Math.max(10, h - 10));
-          l.el.style.transform = `translate(-50%,-50%) translate(${cx.toFixed(1)}px, ${cy.toFixed(1)}px)`;
+        for (const { l, x, y, y0, half, vis } of placedLabels) {
+          // A label is only worth drawing where its country actually is. Two ways
+          // it stops being that, and the old code did the wrong thing for both:
+          //
+          //  * it did not FIT, so it was clamped to the canvas edge — pinning it
+          //    to the rim, far from its marker, sliding along the edge as the
+          //    globe turned;
+          //  * the declutter pass shoved it arbitrarily far to escape a pile-up.
+          //
+          // Both produce a flag sitting somewhere it does not belong, which reads
+          // as the labels jumping around at random. Hide it instead: fewer labels
+          // that are all truthful beats more labels that are not.
+          const fits = x - half >= 2 && x + half <= w - 2 && y >= 8 && y <= h - 8;
+          if (!fits || Math.abs(y - y0) > MAX_LABEL_SHIFT) {
+            l.el.style.opacity = "0";
+            continue;
+          }
+          l.el.style.transform = `translate(-50%,-50%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
           l.el.style.opacity = (vis * 0.92).toFixed(3);
         }
       }

@@ -202,11 +202,13 @@ export function SelfHost() {
                 {status.explorer_running && <button className="btn ghost compact" onClick={() => navigate("/explore")}>Open explorer</button>}
               </div>
             </section>
-            <section className="control-card service-runtime-card">
-              <div className="card-title-row"><div><h2>Payment gateway</h2><p>Invoices, unique addresses, and webhooks.</p></div><span className="status-pill warm">Source build</span></div>
-              <p className="subtle">No signed gateway binary release exists yet, so the app will not download or execute an unverified build. The current source is ready for operators, but not honest one-click installation.</p>
-              <a className="btn ghost compact" href="https://github.com/firecash/zkas-payment-gateway" target="_blank" rel="noreferrer">Build instructions ↗</a>
-            </section>
+            {/* The payment gateway card lived here to explain why the app would not
+                one-click install it: there is no signed, hashed gateway release to
+                verify. That is a true statement and a useless one on a screen for
+                controlling services that ARE running — a permanently inert card whose
+                only action was a link to build instructions. It belongs in the Services
+                directory with the rest of the ecosystem, not in local service control.
+                Put it back here when a pinned, digest-verified binary exists. */}
           </div>
 
           <section className="control-card">

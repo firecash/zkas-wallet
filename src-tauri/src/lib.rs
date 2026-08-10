@@ -630,6 +630,12 @@ impl Engine {
             // consolidates them. `None` would disable that silently.
             auto_consolidate: Some(zkas_walletd::AUTO_CONSOLIDATE_DEFAULT),
             resources: zkas_walletd::ResourceLimits::default(),
+            // The wallet UI IS this daemon's client, and it is the process hosting it.
+            // An idle bound belongs to a daemon somebody exposed and walked away from,
+            // not to one whose window is open in front of them — here it would stop
+            // the engine under the app while the user was still looking at it. The
+            // shell already stops the engine when it locks or quits.
+            idle_timeout: None,
         };
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         self.shutdown = Some(tx);
@@ -1807,10 +1813,21 @@ async fn node_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<NodeStatu
                 peer_count: Some(peers),
                 is_synced: Some(synced),
                 mempool_size: Some(mempool),
+                // `blocks / headers` is NOT sync progress and must not be shown as one
+                // once it is near the top. Headers are fetched ahead of bodies, so the
+                // ratio dips whenever the node pulls a batch of headers — it was seen
+                // going 99.4% -> 97.3% across a restart — and a pruned node drops
+                // bodies it no longer needs, so the ratio has no reason to ever reach
+                // 100. Presented as a percentage it parks a few points short forever
+                // and reads as a node stuck at 97%.
+                //
+                // It IS a fair signal during real initial sync, when bodies are far
+                // behind. Past that, report no number rather than a false one: the UI
+                // says "Catching up" and shows the counters, which do move.
                 sync_progress: if synced {
                     Some(100.0)
-                } else if headers > 0 {
-                    Some((blocks as f64 / headers as f64 * 100.0).clamp(0.0, 99.9))
+                } else if headers > 0 && (blocks as f64) < headers as f64 * 0.98 {
+                    Some((blocks as f64 / headers as f64 * 100.0).clamp(0.0, 97.9))
                 } else {
                     None
                 },

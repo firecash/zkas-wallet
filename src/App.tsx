@@ -1576,6 +1576,18 @@ function ConfirmDialog({
   );
 }
 
+/// Compact clock for an operation measured in seconds to minutes: "48s", "3m 20s".
+/// Deliberately not `formatDuration`, whose coarse "about 3 minutes" is right for an
+/// estimate but wrong for a running timer — a timer that does not visibly move is the
+/// thing that makes people think a slow operation has hung.
+function formatElapsed(secs: number): string {
+  if (!Number.isFinite(secs) || secs < 0) return "0s";
+  if (secs < 60) return `${secs}s`;
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return s ? `${m}m ${s}s` : `${m}m`;
+}
+
 /** Device-signed one-pass note consolidation. It uses the same noncustodial
  * prepare/verify/submit path as Send; the seed never goes to walletd. */
 function ConsolidateDialog({
@@ -1596,10 +1608,36 @@ function ConsolidateDialog({
   // Live count of merged notes. A fragmented wallet needs several transactions,
   // which takes minutes — without this the dialog looks hung.
   const [merged, setMerged] = useState<{ round: number; notes: number } | null>(null);
+  // Consolidation runs one Halo 2 proof per pass and a fragmented wallet needs many,
+  // so this legitimately runs for minutes. A spinner alone is indistinguishable from a
+  // hang. Time is MEASURED here, never guessed: elapsed always, and a remaining figure
+  // only once a completed pass has given us a real per-pass rate.
+  const [startedAt, setStartedAt] = useState(0);
+  const [tick, setTick] = useState(0);
+  const [passEndedAt, setPassEndedAt] = useState<number[]>([]);
+  useEffect(() => {
+    if (!busy) return;
+    const timer = window.setInterval(() => setTick(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [busy]);
+
+  const expectedPasses = Math.min(
+    MAX_CONSOLIDATION_ROUNDS,
+    Math.max(1, Math.ceil((status.note_count ?? 0) / MAX_NOTES_PER_TX)),
+  );
+  const elapsed = busy && startedAt ? Math.max(0, Math.round((Math.max(tick, Date.now()) - startedAt) / 1000)) : 0;
+  // Average a COMPLETED pass, so the estimate is this machine's real proving rate on
+  // this wallet rather than a constant that would be wrong on half the hardware.
+  const remainingSecs =
+    passEndedAt.length > 0 && passEndedAt.length < expectedPasses
+      ? Math.round(((passEndedAt[passEndedAt.length - 1] - startedAt) / passEndedAt.length / 1000) * (expectedPasses - passEndedAt.length))
+      : null;
 
   const run = async () => {
     setBusy(true);
     setError("");
+    setStartedAt(Date.now());
+    setPassEndedAt([]);
     try {
       let seed: string;
       try {
@@ -1629,7 +1667,10 @@ function ConsolidateDialog({
         spendable,
         setStage,
         undefined,
-        (round, notes) => setMerged({ round, notes }),
+        (round, notes) => {
+          setMerged({ round, notes });
+          setPassEndedAt((done) => [...done, Date.now()]);
+        },
       );
       setResult({
         inputs: consolidated.inputs,
@@ -1696,9 +1737,17 @@ function ConsolidateDialog({
             {/* Each pass is its own proof, so this runs for minutes on a very
                 fragmented wallet. Report the work already banked — those
                 transactions are broadcast and survive closing this dialog. */}
-            {busy && merged && (
+            {busy && (
               <p className="muted small" style={{ marginTop: 8 }}>
-                Merged {merged.notes} notes in {merged.round} {merged.round === 1 ? "transaction" : "transactions"} so far…
+                {merged
+                  ? `Merged ${merged.notes} notes in ${merged.round} of about ${expectedPasses} ${expectedPasses === 1 ? "pass" : "passes"}`
+                  : `Pass 1 of about ${expectedPasses}`}
+                {" · "}
+                {formatElapsed(elapsed)} elapsed
+                {/* No estimate until a pass has finished: a number invented before we
+                    have measured anything is exactly the kind of promise that makes a
+                    slow operation feel broken when it overruns. */}
+                {remainingSecs != null && ` · about ${formatElapsed(remainingSecs)} left`}
               </p>
             )}
             {error && <div className="msg err">{error}</div>}
