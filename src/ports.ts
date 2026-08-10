@@ -14,6 +14,17 @@ export const MANAGED_ZKAS_P2P_PORT = 16811;
 export const MANAGED_KASPA_RPC_PORT = 16110;
 export const MANAGED_KASPA_P2P_PORT = 16111;
 
+/// The RPC port a ZKAS node uses when the operator runs it themselves rather than
+/// letting this app manage it: the upstream Kaspa-derived default, which the managed
+/// node deliberately moves off so a Kaspa parent can keep it during merged mining.
+///
+/// Its own constant on purpose. It happens to equal `MANAGED_KASPA_RPC_PORT`, and the
+/// example below used to be built from that — which read as "a standalone ZKAS node
+/// listens on the managed Kaspa port". That is a coincidence of numbers, not a fact
+/// about ZKAS, and it meant retuning the Kaspa parent's port would silently rewrite
+/// the address we suggest for a ZKAS node.
+export const STANDALONE_ZKAS_RPC_PORT = 16110;
+
 export const MANAGED_ZKAS_RPC = `127.0.0.1:${MANAGED_ZKAS_RPC_PORT}`;
 export const MANAGED_KASPA_RPC = `127.0.0.1:${MANAGED_KASPA_RPC_PORT}`;
-export const STANDALONE_ZKAS_RPC_EXAMPLE = `192.168.1.20:${MANAGED_KASPA_RPC_PORT}`;
+export const STANDALONE_ZKAS_RPC_EXAMPLE = `192.168.1.20:${STANDALONE_ZKAS_RPC_PORT}`;
