@@ -2230,3 +2230,15 @@ select { appearance: none; cursor: pointer; }
   border-radius: 8px;
   padding: 7px 9px;
 }
+
+/* The mining bridge's own dashboard, shown inside the app rather than thrown out
+   to a browser tab — on desktop `target="_blank"` opens nothing at all. */
+.dashboard-modal { max-width: min(1100px, 94vw); width: 100%; }
+.dashboard-frame {
+  width: 100%;
+  height: min(70vh, 720px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.asic-credentials .btn.compact { margin-left: auto; }

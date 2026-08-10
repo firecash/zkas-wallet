@@ -47,6 +47,10 @@ async function copy(value: string) {
 
 export function Mining() {
   const desktop = isDesktop();
+  // The bridge serves its own dashboard on loopback. Opening it in a new tab drops
+  // the user out of the app (and on desktop `target="_blank"` may open nothing at
+  // all), so it is shown inside a panel here instead.
+  const [dashboardOpen, setDashboardOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("solo");
   const [config, setConfig] = useState<ControlConfig | null>(null);
   const [configHydrated, setConfigHydrated] = useState(false);
@@ -331,12 +335,20 @@ export function Mining() {
             {external && <button onClick={() => void copyEndpoint("external", endpoint(external))}><code>{endpoint(external)}</code>{copied === "external" ? <Check size={15} /> : <Copy size={15} />}</button>}
           </div>
         </div>
-        <div className="asic-credentials"><span>Username <code>{walletAddress || "zkas:your-address"}</code></span><span>Password <code>x</code></span></div>
+        <div className="asic-credentials">
+          <span>Username <code>{walletAddress || "zkas:your-address"}</code></span>
+          <span>Password <code>x</code></span>
+          {live && (
+            <button className="btn ghost compact" onClick={() => setDashboardOpen(true)}>
+              <ExternalLink size={14} />Miner dashboard
+            </button>
+          )}
+        </div>
         <p className="subtle">LAN is ready automatically. For an internet ASIC, forward TCP {stratumPort} to this computer or use a VPN, and restrict the firewall to your miner’s IP. Never forward node RPC to the internet.</p>
       </section>}
 
       <section className="control-card mining-live-card">
-        <div className="card-title-row"><div><h2>Live status</h2><p>{live ? "Updates every two seconds." : "Start mining to receive ASIC work."}</p></div><div className="mining-live-actions">{live && <a className="btn ghost compact" href={`http://127.0.0.1:${BRIDGE_DASHBOARD_PORT}/`} target="_blank" rel="noreferrer"><ExternalLink size={14} />Full dashboard</a>}<span className={`status-dot ${live ? "on" : ""}`} /></div></div>
+        <div className="card-title-row"><div><h2>Live status</h2><p>{live ? "Updates every two seconds." : "Start mining to receive ASIC work."}</p></div><div className="mining-live-actions">{live && <button className="btn ghost compact" onClick={() => setDashboardOpen(true)}><ExternalLink size={14} />Full dashboard</button>}<span className={`status-dot ${live ? "on" : ""}`} /></div></div>
         <div className="metric-grid mining-metrics">
           <Metric label="Bridge" value={live ? "Running" : "Stopped"} />
           <Metric label="ZKAS node" value={nodeLabel} />
@@ -358,6 +370,31 @@ export function Mining() {
         {showCpu && <div className="advanced-row"><p>For setup testing only; ASICs are vastly faster.</p><label>Threads <input className="control-input" type="number" min={1} max={256} value={cpuThreads} onChange={(event) => setCpuThreads(Number(event.target.value))} /></label><button className="btn ghost compact" disabled={busy !== null || !config?.components.zkas_miner || !walletAddress || !!status?.cpu_miner_running} onClick={() => { setBusy("cpu"); desktopServices.startCpuMiner(cpuThreads, walletAddress).then(refreshLocal).catch((e) => setError(e.message)).finally(() => setBusy(null)); }}>Start</button><button className="btn ghost compact" disabled={!status?.cpu_miner_running} onClick={() => { setBusy("cpu"); desktopServices.stopCpuMiner().then(refreshLocal).finally(() => setBusy(null)); }}>Stop</button></div>}
       </section>}
       <ServiceLogsDialog open={showLogs} onClose={() => setShowLogs(false)} service="stratum-bridge" title="Mining bridge logs" />
+      {dashboardOpen && (
+        <div className="modalwrap" onClick={() => setDashboardOpen(false)}>
+          <div className="card modalcard dashboard-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="card-title-row">
+              <div>
+                <h2>Miner dashboard</h2>
+                <p className="mono">http://127.0.0.1:{BRIDGE_DASHBOARD_PORT}/</p>
+              </div>
+              <button className="btn ghost compact" onClick={() => setDashboardOpen(false)}>Close</button>
+            </div>
+            {/* Served by the bridge on loopback. Sandboxed: it is a local service the
+                app supervises, not app code, and it has no business reaching this
+                page's storage or scripts. */}
+            <iframe
+              className="dashboard-frame"
+              title="Mining bridge dashboard"
+              src={`http://127.0.0.1:${BRIDGE_DASHBOARD_PORT}/`}
+              sandbox="allow-scripts allow-same-origin"
+            />
+            <p className="subtle">
+              Served by the mining bridge on this computer. It appears once mining is running.
+            </p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
