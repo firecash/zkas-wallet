@@ -33,8 +33,15 @@ export interface Pairing {
   network: string;
 }
 
-/// A wallet token is a 16-byte hex string, the same shape the app mints locally.
-const TOKEN_RE = /^[0-9a-f]{16,128}$/i;
+/// Tokens are opaque ASCII-alphanumeric secrets, and the two ends mint them
+/// DIFFERENTLY: the browser makes a 32-character hex wallet token, while the desktop
+/// shell makes a 32-character *alphanumeric* one (`valid_wallet_token`, and its access
+/// token is 64 hex). A hex-only rule therefore rejected essentially every real desktop
+/// pairing code — 32 random alphanumerics are hex only by astronomical accident — so
+/// scanning a valid QR reported "not a pairing code" and the user was sent back to
+/// typing two long secrets by hand, which is the exact task this exists to remove.
+/// Keep this in step with `valid_wallet_token` in the desktop shell.
+const TOKEN_RE = /^[0-9a-z]{16,128}$/i;
 
 export function isPairingUri(raw: string): boolean {
   return /^zkas\+https?:\/\//i.test(raw.trim());

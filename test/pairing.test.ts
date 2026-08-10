@@ -40,6 +40,17 @@ describe("pairing a device with a wallet service", () => {
     expect(parsePairingUri("https://wallet.zkas.info")).toBeNull();
   });
 
+  // The shape the desktop shell ACTUALLY mints: `valid_wallet_token` is 32 ASCII
+  // alphanumerics, not hex. The fixtures above ("a"*64, "b"*32) are hex by accident,
+  // so a hex-only rule passed every test here and rejected every real QR — scanning a
+  // valid code said "not a pairing code" and sent the user back to typing secrets.
+  it("accepts the alphanumeric token the desktop actually mints", () => {
+    const walletToken = "aZ3kP9qW2mN7bV4xC8dF1gH5jK6lT0yR"; // 32 alphanumerics, not hex
+    const p = parsePairingUri(`zkas+http://192.168.15.227:8501#token=${ACCESS}&wallet=${walletToken}&net=mainnet`);
+    expect(p?.walletToken).toBe(walletToken);
+    expect(p?.url).toBe("http://192.168.15.227:8501");
+  });
+
   // A service with no gate is legitimate (loopback), and a pairing string for it
   // should still carry the wallet selector.
   it("accepts a pairing string with no access token", () => {
