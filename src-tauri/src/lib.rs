@@ -524,28 +524,64 @@ impl Engine {
         } else {
             0
         };
-        let bind_host = if exposed { "0.0.0.0" } else { "127.0.0.1" };
-        let port = match std::net::TcpListener::bind((bind_host, requested_port)) {
-            Ok(l) => match l.local_addr() {
-                Ok(a) => a.port(),
-                Err(e) => {
-                    let message = format!("cannot read loopback address for wallet engine: {e}");
-                    log_crash(&message);
-                    logger.record("stderr", message.clone());
-                    *self.walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message);
-                    self.port = 0;
-                    return;
-                }
-            },
-            Err(e) => {
-                let message = format!("cannot bind a loopback port for wallet engine: {e}");
-                log_crash(&message);
-                logger.record("stderr", message.clone());
-                *self.walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message);
-                self.port = 0;
-                return;
+        let mut bind_host = if exposed { "0.0.0.0" } else { "127.0.0.1" };
+        // A fixed port is not always free the instant we want it. Restarting the engine
+        // — switching nodes, toggling LAN access, relaunching the app over a previous
+        // instance still draining — leaves 8501 held for a moment by the socket that is
+        // going away. A single attempt turned that ordinary timing into "THE WALLET
+        // ENGINE DIDN'T START", with the app then failing every call to
+        // http://127.0.0.1:8501 because `self.port` had already been set to a port
+        // nothing was listening on. Retry briefly, then degrade to a working wallet.
+        let mut port = 0u16;
+        let mut last_err = String::new();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        loop {
+            match std::net::TcpListener::bind((bind_host, requested_port)) {
+                Ok(l) => match l.local_addr() {
+                    Ok(a) => {
+                        port = a.port();
+                        break;
+                    }
+                    Err(e) => last_err = format!("cannot read the wallet engine's address: {e}"),
+                },
+                Err(e) => last_err = format!("cannot bind {bind_host}:{requested_port}: {e}"),
             }
-        };
+            if requested_port == 0 || std::time::Instant::now() >= deadline {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(250));
+        }
+
+        // Still taken after the grace period: something else owns that port. Falling back
+        // to a private loopback port keeps the WALLET working — the user's own funds and
+        // UI are not hostage to a port conflict — and only LAN/WAN sharing is lost, which
+        // is what the message says. Reporting "didn't start" here was doubly wrong: the
+        // engine could have started, and the advice it offered (switch node source) had
+        // nothing to do with the actual cause.
+        if port == 0 && requested_port != 0 {
+            match std::net::TcpListener::bind(("127.0.0.1", 0)).and_then(|l| l.local_addr()) {
+                Ok(a) => {
+                    port = a.port();
+                    bind_host = "127.0.0.1";
+                    let message = format!(
+                        "port {requested_port} is in use ({last_err}), so wallet sharing over the network is off; \
+                         the wallet is running privately on this device. Pick a different port in Host to share it."
+                    );
+                    log_crash(&message);
+                    logger.record("stderr", message);
+                }
+                Err(e) => last_err = format!("{last_err}; loopback fallback also failed: {e}"),
+            }
+        }
+
+        if port == 0 {
+            let message = format!("cannot start the wallet engine: {last_err}");
+            log_crash(&message);
+            logger.record("stderr", message.clone());
+            *self.walletd_error.lock().unwrap_or_else(|p| p.into_inner()) = Some(message);
+            self.port = 0;
+            return;
+        }
         self.port = port;
 
         let node_rpc = self.settings.rpc_addr();
@@ -2642,6 +2678,8 @@ struct SelfHostStatus {
     lan_ip: Option<String>,
     lan_ips: Vec<String>,
     wallet_access_urls: Vec<String>,
+    /// One pairing string per reachable address: address + API token + wallet selector.
+    wallet_pairing_uris: Vec<String>,
     node_running: bool,
     node_public_p2p: bool,
     node_lan_rpc: bool,
@@ -2669,6 +2707,26 @@ fn self_host_status(
             vec![e.settings.wallet_public_url.clone()]
         }
         _ => vec![],
+    };
+    // One string that carries everything a phone needs: address, the API's bearer token,
+    // and the WALLET token that selects this computer's wallet. Without the third, a
+    // paired device connects successfully and opens an empty wallet, which is
+    // indistinguishable from losing your coins. Secrets live in the fragment so they
+    // never reach a request line or an access log.
+    let wallet_pairing_uris: Vec<String> = if e.settings.wallet_access == "device" {
+        Vec::new()
+    } else {
+        wallet_access_urls
+            .iter()
+            .map(|url| {
+                let scheme = if url.starts_with("https://") { "zkas+https" } else { "zkas+http" };
+                let host_port = url.trim_start_matches("https://").trim_start_matches("http://").trim_end_matches('/');
+                format!(
+                    "{scheme}://{host_port}#token={}&wallet={}&net=mainnet",
+                    e.wallet_access_token, e.token
+                )
+            })
+            .collect()
     };
     let wallet_access_url = match e.settings.wallet_access.as_str() {
         "lan" => wallet_access_urls.first().cloned(),
@@ -2706,6 +2764,7 @@ fn self_host_status(
         lan_ip,
         lan_ips,
         wallet_access_urls,
+        wallet_pairing_uris,
         node_running,
         node_public_p2p: e.settings.node_public_p2p,
         node_lan_rpc: e.settings.node_lan_rpc,

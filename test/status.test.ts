@@ -190,3 +190,38 @@ describe("one spend predicate", () => {
     expect(warm.canSpend).toBe(true);
   });
 });
+
+// The exact contradiction users reported: a card reading "Ready · 1.27 ZKAS" while
+// tapping Send or Consolidate answered "wallet is still catching up". Both statements
+// came from the daemon, but from DIFFERENT conditions — `/api/status.synced` (the scan
+// reached the tip) versus what `/prepare` enforces (the mirror tree is also valid). The
+// daemon now publishes the second one, and every spend control reads that.
+describe("readiness is the daemon's answer, not our inference", () => {
+  it("does not claim Ready when the daemon would refuse the spend", () => {
+    const finishing = walletStatus({ ...base, spendReady: false });
+    expect(finishing.canSpend).toBe(false);
+    expect(finishing.phase).not.toBe("ready");
+    expect(finishing.label).toBe("Finishing up");
+    // The balance itself is complete — only spending is blocked. Hiding the figure
+    // here would be the opposite mistake.
+    expect(finishing.balanceIsFinal).toBe(true);
+  });
+
+  it("is Ready when the daemon says a spend would be accepted", () => {
+    const ready = walletStatus({ ...base, spendReady: true });
+    expect(ready.phase).toBe("ready");
+    expect(ready.canSpend).toBe(true);
+  });
+
+  // Daemons predating the field must keep working exactly as before, or upgrading the
+  // app would strand every wallet pointed at an older wallet service.
+  it("falls back to synced against a daemon that does not publish it", () => {
+    expect(walletCanSpend({ online: true, synced: true })).toBe(true);
+    expect(walletCanSpend({ online: true, synced: false })).toBe(false);
+    expect(walletStatus(base).phase).toBe("ready");
+  });
+
+  it("is never spendable while offline, whatever the daemon last said", () => {
+    expect(walletCanSpend({ online: false, synced: true, spendReady: true })).toBe(false);
+  });
+});

@@ -2204,3 +2204,11 @@ select { appearance: none; cursor: pointer; }
     forced-color-adjust: none;
   }
 }
+
+/* Pairing a phone with this computer's wallet service. The QR is the primary path —
+   the alternative is transcribing two long hex secrets on a phone keyboard. */
+.pairing-block { display: grid; gap: 10px; padding: 12px 0; }
+.pairing-qr {
+  width: 220px; height: 220px; align-self: center;
+  border-radius: 10px; background: #fff; padding: 8px;
+}

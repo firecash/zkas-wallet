@@ -141,6 +141,8 @@ export interface SelfHostStatus {
   lan_ip: string | null;
   lan_ips: string[];
   wallet_access_urls: string[];
+  /// One scannable pairing string per address: URL + access token + wallet selector.
+  wallet_pairing_uris: string[];
   node_running: boolean;
   node_public_p2p: boolean;
   node_lan_rpc: boolean;

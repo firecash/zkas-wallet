@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { useNavigate } from "react-router-dom";
 import { desktopServices, type SelfHostStatus } from "../desktop-services";
 import { initDesktop, isDesktop, openPath } from "../desktop";
@@ -18,6 +19,33 @@ export function SelfHost() {
   const [nodePublicP2p, setNodePublicP2p] = useState(false);
   const [tokenVisible, setTokenVisible] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pairingCopied, setPairingCopied] = useState(false);
+  const [pairingQr, setPairingQr] = useState("");
+  // The first reachable address is the one the QR encodes: it is ranked to prefer an
+  // ordinary home network over a VPN interface, which is the address a phone on the
+  // same Wi-Fi can actually reach.
+  const pairing = status?.wallet_pairing_uris?.[0] ?? "";
+  useEffect(() => {
+    if (!pairing) {
+      setPairingQr("");
+      return;
+    }
+    let live = true;
+    QRCode.toDataURL(pairing, { margin: 1, width: 440 })
+      .then((url) => { if (live) setPairingQr(url); })
+      .catch(() => { if (live) setPairingQr(""); });
+    return () => { live = false; };
+  }, [pairing]);
+  const copyPairing = useCallback(async () => {
+    if (!pairing) return;
+    try {
+      await navigator.clipboard.writeText(pairing);
+      setPairingCopied(true);
+      setTimeout(() => setPairingCopied(false), 1500);
+    } catch {
+      // Clipboard access can be refused; the QR is still on screen.
+    }
+  }, [pairing]);
   const refresh = useCallback(async () => {
     if (!isDesktop()) return;
     try {
@@ -199,6 +227,24 @@ export function SelfHost() {
                 )}
                 {status.wallet_access !== "device" && (
                   <>
+                    {/* Pairing first, because it is the way this is meant to be done.
+                        Connecting needs the address, the access token AND the wallet
+                        token — and typing the last one wrong does not fail loudly, it
+                        opens a different, empty wallet on this machine. One scan
+                        carries all three. The raw values stay below for anyone
+                        configuring a client by hand. */}
+                    {!!pairing && (
+                      <div className="pairing-block">
+                        <div className="detail-row"><span className="k">Pair a phone</span><span className="v">Scan this in the ZKas wallet app — no tokens to type.</span></div>
+                        {pairingQr && <img className="pairing-qr" src={pairingQr} alt="Pairing code for the ZKas wallet app" width={220} height={220} />}
+                        <div className="control-actions">
+                          <button className="btn ghost compact" onClick={() => void copyPairing()}>{pairingCopied ? "Copied" : "Copy pairing link"}</button>
+                        </div>
+                        <p className="muted small">
+                          Anyone who scans this gets full access to this wallet. Treat it like the recovery seed.
+                        </p>
+                      </div>
+                    )}
                     <div className="detail-row"><span className="k">Access token</span><span className="v mono">{tokenVisible ? status.wallet_access_token ?? "Unavailable" : "••••••••••••••••••••••••"}</span></div>
                     <div className="control-actions">
                       <button className="btn ghost compact" onClick={() => setTokenVisible((value) => !value)}>{tokenVisible ? "Hide token" : "Show token"}</button>

@@ -205,6 +205,18 @@ export function walletdTransportError(url: string): string | null {
   return null;
 }
 
+/** Point this device at a specific wallet on the daemon.
+ *
+ * Only pairing uses this. The wallet token SELECTS a wallet — the daemon keeps one
+ * wallet file per token — so a device connecting to someone else's wallet service
+ * with its own token reaches a real, authenticated, empty wallet. Adopting the
+ * paired token is what makes the phone show the SAME wallet as the computer serving
+ * it, rather than a blank one that reads as lost funds. */
+export function setToken(token: string) {
+  const clean = token.trim().toLowerCase();
+  if (/^[0-9a-f]{16,128}$/.test(clean)) localStorage.setItem("wallet_token", clean);
+}
+
 // A random per-browser wallet token. On the hosted daemon this selects THIS
 // browser's wallet; losing it (clearing storage) means restoring from seed.
 export function getToken(): string {
@@ -228,6 +240,14 @@ export interface Status {
   // Synced, but still doing the one-time witness warm-up that makes sends fast.
   // Sends work during this (just slower). Older daemons omit it.
   warming?: boolean;
+  // Whether the daemon would ACCEPT a spend right now — the same condition `/prepare`
+  // enforces, which `synced` alone does not capture: a wallet borrowing the shared
+  // chain tree is scanned up to the tip yet still has no valid mirror tree, and
+  // `/prepare` answers "wallet is still catching up with the shared chain state".
+  // Reading `synced` for this is what let the balance card say "Ready · 1.27 ZKAS"
+  // while Send refused seconds later. Older daemons omit it; absent means "trust
+  // `synced`", which is the old behaviour and no worse than it was.
+  spend_ready?: boolean;
   // The wallet's view was rebuilt through a node that has PRUNED part of its
   // history: notes older than the node's pruning point exist on-chain but cannot
   // be seen here, so the balance is a lower bound. The UI must say so — silence

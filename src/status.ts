@@ -29,6 +29,9 @@ export interface StatusInput {
   chainLen: number;
   /// Daemon is still making this wallet fast to spend from (cold witnesses).
   warming: boolean;
+  /// The daemon's own answer to "would a spend be accepted right now". Absent on
+  /// daemons that predate the field, in which case `synced` is used.
+  spendReady?: boolean;
   /// A confirmed balance from a previous completed sync, if we have ever had one.
   haveConfirmedBalance: boolean;
   /// Seconds remaining from a measured scan rate, or null if not yet known.
@@ -52,8 +55,13 @@ export type WalletPhase = "offline" | "opening" | "setting-up" | "catching-up" |
  * A wallet that has not finished scanning does not yet know about all of its own
  * coins, so it must not spend — a partial view can pick an already-spent note.
  */
-export function walletCanSpend(s: { online: boolean; synced: boolean }): boolean {
-  return s.online && s.synced;
+export function walletCanSpend(s: { online: boolean; synced: boolean; spendReady?: boolean }): boolean {
+  if (!s.online) return false;
+  // The daemon is the authority on whether it would accept a spend. `synced` only says
+  // the scan reached the tip; `/prepare` additionally requires a valid mirror tree, and
+  // a wallet can satisfy the first and not the second. Prefer the daemon's own answer
+  // and fall back to `synced` for daemons that predate it.
+  return s.spendReady ?? s.synced;
 }
 
 export interface WalletStatusView {
@@ -179,6 +187,27 @@ export function walletStatus(s: StatusInput): WalletStatusView {
       tone: "busy",
       balanceIsFinal: false,
       canSpend: walletCanSpend(s),
+    };
+  }
+
+  // Scanned to the tip, but the daemon still would not accept a spend. This is the
+  // state that produced the contradiction in the header comment: the scan is done, so
+  // every progress signal says finished, and the card said "Ready" — then Send refused.
+  // It is a real state with a real cause (the wallet's mirror of the chain tree is not
+  // valid yet), it resolves on its own in seconds, and the only honest thing to do is
+  // name it instead of claiming readiness the daemon will not honour.
+  if (!walletCanSpend(s)) {
+    return {
+      phase: "almost-ready",
+      label: "Finishing up",
+      detail: "Your balance is up to date. The wallet is doing the last of its bookkeeping before it can pay — a few seconds.",
+      pct: null,
+      pctFine: null,
+      progress: null,
+      eta: null,
+      tone: "busy",
+      balanceIsFinal: true,
+      canSpend: false,
     };
   }
 

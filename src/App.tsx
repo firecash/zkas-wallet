@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, chainTx, findReachableDaemon, getBase, getWalletdBearer, setBase, setWalletdBearer, normalizeDaemonInput, walletdTransportError, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
+import { api, chainTx, findReachableDaemon, getBase, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
+import { parsePairingUri } from "./pairing";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
 import {
@@ -901,7 +902,7 @@ export default function App() {
                 // The single spend predicate — see `walletCanSpend`. A synced wallet
                 // may spend, including while it is still warming up. An unsynced one
                 // may not: it does not yet know about all of its own notes.
-                disabled={!walletCanSpend({ online: true, synced: status.synced })}
+                disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready })}
                 aria-label="Send ZKAS"
               >
                 <ArrowUpRight className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
@@ -910,7 +911,7 @@ export default function App() {
               <button
                 className="qa qa-consolidate"
                 onClick={() => setShowConsolidate(true)}
-                disabled={!walletCanSpend({ online: true, synced: status.synced }) || (status.note_count ?? 0) < 3}
+                disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready }) || (status.note_count ?? 0) < 3}
                 aria-label="Consolidate wallet notes"
               >
                 <span className="qa-label">Consolidate</span>
@@ -1264,9 +1265,22 @@ function ConnectionButton() {
     setBusy(busyKey);
     setError("");
     try {
-      const url = raw.trim() ? await findReachableDaemon(raw, accessToken) : "";
+      // A pairing string carries the address AND both secrets, so scanning or pasting
+      // one connects to the right wallet with nothing typed. Typing them by hand means
+      // transcribing two long hex strings on a phone; getting the second one wrong does
+      // not fail loudly, it opens a different, empty wallet.
+      const paired = parsePairingUri(raw);
+      const target = paired ? paired.url : raw;
+      const secret = paired ? paired.accessToken : accessToken;
+      const url = target.trim() ? await findReachableDaemon(target, secret) : "";
+      // Adopt the paired wallet BEFORE the reload, or the next poll asks for this
+      // device's own wallet on the far end and finds nothing.
+      if (url && paired?.walletToken) {
+        setToken(paired.walletToken);
+        ensureRegistered(paired.walletToken);
+      }
       setBase(url);
-      setWalletdBearer(url ? accessToken : "");
+      setWalletdBearer(url ? secret : "");
       onConnected?.(url);
       setOpen(false);
       location.reload();
@@ -1864,6 +1878,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   const view = walletStatus({
     online: true, // this card only renders once a poll has produced a status
     synced: status.synced,
+    spendReady: status.spend_ready,
     scannedBlocks: status.scanned_blocks,
     chainLen: status.chain_len,
     warming: !!status.warming,
@@ -3593,7 +3608,10 @@ function Send({
   // The maturing balance would cover it — the shortfall is just not-yet-matured funds.
   const blockedByMaturing = overspend && amtValid && amt + feeReserve <= spendable + maturing + 1e-9;
   // The send is possible only once the wallet is synced (spends need a matured anchor).
-  const canProceed = addrOk && amtValid && !overspend && !!status?.synced;
+  // The same predicate every other spend control uses. Reading `synced` here let the
+  // button stay enabled in the one state where the daemon refuses the payment.
+  const canProceed =
+    addrOk && amtValid && !overspend && walletCanSpend({ online: !!status, synced: !!status?.synced, spendReady: status?.spend_ready });
 
   const setMax = () => {
     const max = Math.max(0, spendable - feeReserve);
@@ -4026,7 +4044,7 @@ function Send({
         </div>
       )}
 
-      {!walletCanSpend({ online: !!status, synced: !!status?.synced }) && (
+      {!walletCanSpend({ online: !!status, synced: !!status?.synced, spendReady: status?.spend_ready }) && (
         <div className="msg warn small">
           Still catching up with the chain — you can pay once it finishes, so the wallet knows about all your coins.
         </div>
