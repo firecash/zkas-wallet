@@ -1,7 +1,7 @@
 import { Component, lazy, StrictMode, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Blocks, HardDrive, LayoutGrid, Pickaxe, QrCode, Server, WalletCards } from "lucide-react";
+import { Blocks, HardDrive, LayoutGrid, Pickaxe, Server, WalletCards } from "lucide-react";
 import { LockScreen } from "./LockScreen";
 import { AppLockScreen } from "./AppLockScreen";
 import { installAutoLock, isLockEnabled, isUnlocked } from "./applock";
@@ -22,7 +22,6 @@ const NodeRunner = lazy(() => import("./pages/NodeRunner").then((module) => ({ d
 const Mining = lazy(() => import("./pages/Mining").then((module) => ({ default: module.Mining })));
 const Explorer = lazy(() => import("./pages/Explorer").then((module) => ({ default: module.Explorer })));
 const Services = lazy(() => import("./pages/Services").then((module) => ({ default: module.Services })));
-const WalletTools = lazy(() => import("./pages/WalletTools").then((module) => ({ default: module.WalletTools })));
 const SelfHost = lazy(() => import("./pages/SelfHost").then((module) => ({ default: module.SelfHost })));
 
 // On desktop the wallet is gated behind a passphrase: the embedded daemon does
@@ -57,7 +56,10 @@ function Root({ locked, askNode }: { locked: boolean; askNode: boolean }) {
             <Route path="/explore" element={<Explorer />} />
             <Route path="/explore/:kind/:id" element={<Explorer />} />
             <Route path="/services" element={<Services />} />
-            <Route path="/tools" element={<WalletTools />} />
+            {/* Pay moved into the wallet's own sections. The route stays so
+                existing links, shortcuts and bookmarks land on it rather than
+                nowhere. */}
+            <Route path="/tools" element={<Navigate to="/?tab=tools" replace />} />
             <Route path="/self-host" element={<SelfHost />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -79,7 +81,6 @@ function AppShell() {
     { path: "/mine", label: "Mine", icon: Pickaxe },
     { path: "/explore", label: "Explore", icon: Blocks },
     { path: "/services", label: "Services", icon: LayoutGrid },
-    ...(!android ? [{ path: "/tools", label: "Pay", icon: QrCode }] : []),
     ...(desktop ? [{ path: "/self-host", label: "Host", icon: HardDrive }] : []),
   ], [android, desktop]);
   useEffect(() => {

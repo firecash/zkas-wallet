@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, lazy, Suspense} from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
@@ -21,6 +21,8 @@ import { ensureSigner, fvkHex, generateWallet, signLocal, verifyLocal, addressFr
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, walletCanSpend, arrivalAmount } from "./status";
 import { useMaintenance } from "./useMaintenance";
+
+const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
 import {
   backupWallet,
@@ -179,13 +181,13 @@ function parseAmount(s: string): number {
 }
 
 const EXPLORER = "https://explorer.zkas.info";
-type Tab = "receive" | "send" | "history" | "signatures" | "settings";
+type Tab = "receive" | "send" | "history" | "signatures" | "tools" | "settings";
 
 function walletTabFromHash(): Tab | null {
   if (typeof location === "undefined") return null;
   const query = location.hash.split("?", 2)[1];
   const requested = query ? new URLSearchParams(query).get("tab") : null;
-  return requested && ["receive", "send", "history", "signatures", "settings"].includes(requested)
+  return requested && ["receive", "send", "history", "signatures", "tools", "settings"].includes(requested)
     ? requested as Tab
     : null;
 }
@@ -197,6 +199,10 @@ const TAB_LABEL: Record<Tab, string> = {
   // address — and split across two tabs they each looked like a whole feature
   // while together they crowded out the three that matter.
   signatures: "Signatures",
+  // Batch payouts and manual note merging. It used to be a top-level destination
+  // beside Wallet, Node and Mine, which put occasional self-hosted tooling on the
+  // same footing as the whole wallet; it belongs among the wallet's own sections.
+  tools: "Pay",
   settings: "Settings",
 };
 
@@ -219,7 +225,9 @@ const ROOMY = () => isDesktop() || (typeof window !== "undefined" && window.inne
 /// two styles apart, which reads as two different features rather than one. The tab row
 /// is now what it should always have been — where you go to LOOK at things — and the
 /// buttons are what you press to DO things.
-const TABS: Tab[] = ROOMY() ? ["history", "signatures", "settings"] : ["history", "settings"];
+// "Pay" only where there is room for it: it is a desktop-sized tool (multi-line
+// batch entry) and was never offered on Android.
+const TABS: Tab[] = ROOMY() ? ["history", "signatures", "tools", "settings"] : ["history", "settings"];
 
 /// Do two status snapshots differ in anything the UI renders?
 ///
@@ -1003,6 +1011,11 @@ export default function App() {
               />
             )}
             {tab === "signatures" && <Signatures status={status} />}
+            {tab === "tools" && (
+              <Suspense fallback={<div className="card"><div className="muted small">Loading…</div></div>}>
+                <WalletTools />
+              </Suspense>
+            )}
             {tab === "settings" && <SettingsPane status={status} />}
             </div>
           </section>

@@ -30,6 +30,12 @@ type Dashboard = {
 
 const CACHE_KEY = "zkas_explorer_dashboard_v2";
 
+/// Resolve to the value, or to null if the call failed. Lets one endpoint fail
+/// without taking the rest of the dashboard with it.
+function settled<T>(p: Promise<T>): Promise<T | null> {
+  return p.then((v) => v).catch(() => null);
+}
+
 function cachedDashboard(): Dashboard | null {
   try {
     const value = JSON.parse(localStorage.getItem(CACHE_KEY) || "null") as Dashboard | null;
@@ -114,25 +120,38 @@ function DashboardView() {
     fullRefreshInFlight.current = true;
     setRefreshing(true);
     try {
+      // Settled, not all-or-nothing. With `Promise.all` a single endpoint hiccuping
+      // threw away the other seven and left the ENTIRE dashboard on its last saved
+      // snapshot — reported live, hours old. Each panel now keeps its own last good
+      // value, so one sulking endpoint costs one panel instead of the screen.
       const [dag, network, shielded, halving, supply, pulse, blocks, nodes] = await Promise.all([
-        explorerApi.blockdag(),
-        explorerApi.network(),
-        explorerApi.shieldedPool(),
-        explorerApi.halving(),
-        explorerApi.coinSupply(),
-        explorerApi.pulse("1h"),
-        explorerApi.recentBlocks(),
-        explorerApi.nodes().catch(() => null),
+        settled(explorerApi.blockdag()),
+        settled(explorerApi.network()),
+        settled(explorerApi.shieldedPool()),
+        settled(explorerApi.halving()),
+        settled(explorerApi.coinSupply()),
+        settled(explorerApi.pulse("1h")),
+        settled(explorerApi.recentBlocks()),
+        settled(explorerApi.nodes()),
       ]);
+      const previous = dataRef.current;
+      // Something has to have arrived, or there is no snapshot to speak of.
+      const anyFresh = [dag, network, shielded, halving, supply, pulse, blocks].some((r) => r !== null);
+      if (!anyFresh) {
+        setError(previous ? "Live data is temporarily unavailable. Showing the last saved snapshot." : "The explorer API is not responding.");
+        return;
+      }
       const next: Dashboard = {
-        dag,
-        network,
-        shielded,
-        halving,
-        supply,
-        pulse,
-        blocks,
-        nodes,
+        dag: dag ?? previous!.dag,
+        network: network ?? previous!.network,
+        shielded: shielded ?? previous!.shielded,
+        halving: halving ?? previous!.halving,
+        supply: supply ?? previous!.supply,
+        pulse: pulse ?? previous!.pulse,
+        blocks: blocks ?? previous!.blocks,
+        nodes: nodes ?? previous?.nodes ?? null,
+        // Stamped only from data that actually arrived, so `savedAt` means "this is
+        // how fresh the screen is" and the age shown to the user cannot flatter it.
         savedAt: Date.now(),
       };
       dataRef.current = next;
@@ -146,6 +165,18 @@ function DashboardView() {
       setRefreshing(false);
     }
   }, []);
+
+  // A snapshot older than a couple of poll intervals is not a live feed, and the
+  // chrome around it must say so. Re-rendered by the poll, so it ages visibly
+  // instead of freezing at whatever it said when the tab was opened.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowTick(Date.now()), 5_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const snapshotAgeMs = data ? Math.max(0, nowTick - data.savedAt) : 0;
+  const stale = !!data && snapshotAgeMs > 30_000;
+  const ageLabel = ago(Math.floor(data ? data.savedAt / 1000 : 0));
 
   const globeNodes = useMemo(() => data?.nodes?.nodes.map((node) => ({ id: node.id, lat: node.lat, lon: node.lon, self: node.self, country: node.country })) ?? [], [data?.nodes]);
   const globeLabels = useMemo(() => data?.nodes?.countries.map((country) => ({ code: country.code, name: country.name, count: country.count, lat: country.lat, lon: country.lon })) ?? [], [data?.nodes]);
@@ -222,7 +253,15 @@ function DashboardView() {
 
           <div className="explorer-columns">
             <section className="control-card">
-              <div className="card-title-row"><div><h2>Latest blocks</h2><p>Updates every two seconds.</p></div><span className="live-dot">live</span></div>
+              {/* The badge reports what is on screen, not what the page intends. It
+                  said "live" unconditionally, so a snapshot that had not refreshed in
+                  hours — every block stamped "17h ago" — still presented itself as a
+                  live feed. A stale screen is recoverable; a stale screen insisting it
+                  is current is not, because nobody thinks to reload it. */}
+              <div className="card-title-row">
+                <div><h2>Latest blocks</h2><p>{stale ? `Last updated ${ageLabel}.` : "Updates every two seconds."}</p></div>
+                <span className={stale ? "status-pill" : "live-dot"}>{stale ? ageLabel : "live"}</span>
+              </div>
               <div className="explorer-list">
                 {data.blocks.slice(0, 12).map((block) => (
                   <button key={block.block_hash} onClick={() => navigate(`/explore/block/${block.block_hash}`)}>
