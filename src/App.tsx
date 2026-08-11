@@ -1621,6 +1621,84 @@ function formatElapsed(secs: number): string {
   return s ? `${m}m ${s}s` : `${m}m`;
 }
 
+/// Asks WHEN this wallet started before replaying the chain for it.
+///
+/// Recovery used to be a yes/no confirmation that always rescanned from genesis —
+/// millions of leaves, minutes of work, most of it over blocks the wallet did not
+/// exist for. Nobody knows their block height, but everybody knows roughly when
+/// they made the wallet, and this chain runs at one block per second, so a calendar
+/// date converts straight into one. Same question the importer asks, same
+/// conversion, and the same two days of margin: scanning a little too far back
+/// costs seconds, starting too late costs notes.
+function RecoverHistoryDialog({
+  daaScore,
+  onConfirm,
+  onCancel,
+}: {
+  daaScore: number;
+  onConfirm: (birthday?: number) => void;
+  onCancel: () => void;
+}) {
+  const [when, setWhen] = useState<"unknown" | "date">("unknown");
+  const [createdDate, setCreatedDate] = useState("");
+  const [height, setHeight] = useState("");
+
+  const birthday = (): number | undefined => {
+    if (height.trim()) return Math.max(0, Math.floor(Number(height.trim()))) || undefined;
+    if (when === "date" && createdDate && daaScore) {
+      const ageSec = Math.floor((Date.now() - new Date(createdDate + "T00:00:00").getTime()) / 1000);
+      if (ageSec > 0) return Math.max(0, Math.floor(daaScore - ageSec - 2 * 86400));
+    }
+    return undefined;
+  };
+  const from = birthday();
+  const days = from && daaScore > from ? Math.round((daaScore - from) / 86400) : null;
+
+  return createPortal(
+    <div className="modalwrap" onClick={onCancel}>
+      <div className="card modalcard" onClick={(event) => event.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>Recover full history</h2>
+        <p className="muted small">
+          Payment details are rebuilt from the chain and saved with this wallet, so anyone with access to
+          its wallet data can read them. Payments stay private on-chain either way.
+        </p>
+        <div className="choice-grid">
+          <button className={`choice-button ${when === "date" ? "selected" : ""}`} onClick={() => setWhen("date")}>
+            <strong>I know roughly when</strong>
+            <span>Scan from that date. Much faster.</span>
+          </button>
+          <button className={`choice-button ${when === "unknown" ? "selected" : ""}`} onClick={() => setWhen("unknown")}>
+            <strong>Not sure</strong>
+            <span>Scan everything from the beginning.</span>
+          </button>
+        </div>
+        {when === "date" && (
+          <>
+            <label>Wallet created around</label>
+            <input type="date" className="control-input" value={createdDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setCreatedDate(event.target.value)} />
+            <details style={{ marginTop: 8 }}>
+              <summary className="muted small">Know the exact block height?</summary>
+              <input className="control-input mono" value={height} onChange={(event) => setHeight(event.target.value.replace(/[^0-9]/g, ""))} placeholder="DAA height" inputMode="numeric" />
+            </details>
+          </>
+        )}
+        <p className="subtle">
+          {from
+            ? `Scanning from DAA ${from.toLocaleString()}${days ? ` — about ${days} day${days === 1 ? "" : "s"} of chain.` : "."}`
+            : "Scanning the whole chain. This finds everything, and takes the longest."}
+        </p>
+        <div className="row">
+          <button className="btn ghost" onClick={onCancel}>Cancel</button>
+          <button className="btn" disabled={when === "date" && !from} onClick={() => onConfirm(from)}>
+            Agree &amp; recover
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 /** Device-signed one-pass note consolidation. It uses the same noncustodial
  * prepare/verify/submit path as Send; the seed never goes to walletd. */
 function ConsolidateDialog({
@@ -4416,14 +4494,17 @@ function History({
   // scanned, so without it "Enable history" leaves the tab empty until the next
   // payment arrives — the flag looks broken. The rescan re-reads the chain from
   // the wallet's birthday and recovers everything the keys can still derive.
-  const setHistory = async (on: boolean) => {
+  const setHistory = async (on: boolean, birthday?: number) => {
     setAskDisable(false);
     setErr("");
     setBusy(true);
     try {
       await api.setHistoryEnabled(on);
       if (on) {
-        await api.rescan();
+        // Genesis unless the user told us when this wallet started. A full replay is
+        // millions of leaves; starting at a remembered date skips the years the
+        // wallet did not exist for.
+        await api.rescan(birthday);
         // Mark recovery BEFORE the fetch below. The rescan is asynchronous on the
         // daemon, so that fetch returns the pre-rescan (empty) history — which is
         // correct to display, but only if the tab knows more is coming. The 2s poll
@@ -4703,15 +4784,13 @@ function History({
       )}
       {err && <div className="msg err">{err}</div>}
       {askRecover && (
-        <ConfirmDialog
-          title="Recover full history?"
-          body="Full recovery saves readable payment details with this wallet. Anyone with access to its wallet data can read them. Payments remain private on-chain. Recovery may take a few minutes."
-          confirmLabel="Agree & recover"
-          onConfirm={() => {
-            setAskRecover(false);
-            void setHistory(true);
-          }}
+        <RecoverHistoryDialog
+          daaScore={loadStatusCache()?.daa_score ?? 0}
           onCancel={() => setAskRecover(false)}
+          onConfirm={(birthday) => {
+            setAskRecover(false);
+            void setHistory(true, birthday);
+          }}
         />
       )}
       {askDisable && (

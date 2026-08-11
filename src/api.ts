@@ -557,7 +557,11 @@ export const api = {
     req<{ recoverableHistory: boolean }>("POST", "/api/wallet/settings", { recoverable_history: on }, 15_000),
   // Re-derive the wallet from the chain itself (from its birthday): backfills
   // history rows and recovers anything the incremental view lost.
-  rescan: () => req<{ rescanning: boolean }>("POST", "/api/wallet/rescan", {}, 30_000),
+  // `birthday` is a DAA height to scan from. Omitted means genesis, which finds
+  // everything and replays the whole chain to do it. A caller that knows roughly
+  // when the wallet was made can skip the years before that.
+  rescan: (birthday?: number) =>
+    req<{ rescanning: boolean }>("POST", "/api/wallet/rescan", birthday ? { birthday } : {}, 30_000),
   verify: (address: string, message: string, signature: string) =>
     req<{ valid: boolean; reason: string | null }>("POST", "/api/verify", { address, message, signature }, 15_000),
 };

@@ -116,13 +116,17 @@ describe("history", () => {
     expect(screen.getByText(/− 1.25 ZKAS/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Recover full history" }));
-    expect(await screen.findByRole("heading", { name: "Recover full history?" })).toBeInTheDocument();
-    expect(screen.getByText(/Anyone with access to its wallet data can read them/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Recover full history" })).toBeInTheDocument();
+    expect(screen.getByText(/anyone with access to its wallet data can read them/i)).toBeInTheDocument();
 
+    // Recovery replays the chain, so it asks WHEN the wallet started rather than
+    // always starting at genesis. "Not sure" is the safe default and still scans
+    // everything — the fast path is offered, never assumed.
     const { api } = await import("../src/api");
     expect(api.rescan).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Agree & recover" }));
     await waitFor(() => expect(api.rescan).toHaveBeenCalled());
+    expect(api.rescan).toHaveBeenCalledWith(undefined);
   });
 });
 

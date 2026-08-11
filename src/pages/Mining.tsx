@@ -72,6 +72,13 @@ export function Mining() {
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
+  // Mining asks one question — which chains — and answers the rest itself. The
+  // choice lives in a step you reach by pressing Start, not in a tab strip you must
+  // understand before you can do anything.
+  const [chooser, setChooser] = useState(false);
+  // Everything the app can decide for you stays folded away. It is still all here
+  // for the people who need a custom node or a different Stratum port.
+  const [advanced, setAdvanced] = useState(false);
   const [showCpu, setShowCpu] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [cpuThreads, setCpuThreads] = useState(Math.max(1, Math.floor((navigator.hardwareConcurrency || 2) / 2)));
@@ -258,14 +265,42 @@ export function Mining() {
         <span className={`status-pill ${live ? "good" : ""}`}>{live ? "Listening" : "Stopped"}</span>
       </header>
 
-      <div className="mode-tabs two" role="tablist">
-        <button className={mode === "solo" ? "active" : ""} onClick={() => setMode("solo")} disabled={live}>ZKAS</button>
-        <button className={mode === "dual" ? "active" : ""} onClick={() => setMode("dual")} disabled={live || config?.dual_mining_supported === false}>KAS + ZKAS</button>
-      </div>
+      {!live && (
+        <section className="control-card mining-hero">
+          <div>
+            <h2>Start mining</h2>
+            <p>
+              Rewards go straight to this wallet — there is no pool account and no fee. The app installs
+              what is missing, starts the node, and keeps it running.
+            </p>
+          </div>
+          <div className="mining-hero-action">
+            <button className="btn mining-start" disabled={busy !== null || !config} onClick={() => setChooser(true)}>
+              <Zap size={17} />
+              {busy === "start" ? stage || "Starting…" : "Start mining"}
+            </button>
+            <button className="btn ghost compact" onClick={() => setAdvanced((on) => !on)}>
+              {advanced ? "Hide setup" : "Change setup"}
+            </button>
+          </div>
+          {busy === "start" && progress && (
+            <div className="download-line">
+              <span>{progress.component} · {progress.phase}</span>
+              {downloadPercent != null && <><b>{downloadPercent}%</b><i><span style={{ width: `${downloadPercent}%` }} /></i></>}
+            </div>
+          )}
+        </section>
+      )}
+      {live && (
+        <div className="mode-tabs two" role="tablist">
+          <button className={mode === "solo" ? "active" : ""} disabled>ZKAS</button>
+          <button className={mode === "dual" ? "active" : ""} disabled>KAS + ZKAS</button>
+        </div>
+      )}
       {config?.dual_mining_supported === false && <p className="subtle mining-platform-note">No verified merged-mining bridge is published for this device. ZKAS-only mining remains available.</p>}
       {error && <div className="control-error">{error}</div>}
 
-      <section className="control-card mining-setup-card">
+      {(advanced || live) && <section className="control-card mining-setup-card">
         <div className="card-title-row">
           <div><h2>{live ? "Mining service" : "Setup"}</h2><p>{live ? "Your ASIC can connect now." : "Recommended choices are ready. Change only what you need."}</p></div>
           {missing.length > 0 && !live && <span className="status-pill">Installs {missing.length}</span>}
@@ -304,12 +339,16 @@ export function Mining() {
           <p>Vardiff adjusts after the ASIC connects. This starting value changes share reporting, not block probability or rewards.</p>
         </div>}
 
-        <div className="mining-primary-action">
-          {!live ? <button className="btn mining-start" disabled={busy !== null || !config || !valid} onClick={() => void start()}><Zap size={17} />{busy === "start" ? stage || "Starting…" : missing.length > 0 ? "Install & start" : "Start mining"}</button>
-            : <button className="btn ghost mining-start" disabled={busy !== null} onClick={() => void stop()}><Square size={15} />{busy === "stop" ? "Stopping…" : "Stop mining"}</button>}
-          {busy === "start" && progress && <div className="download-line"><span>{progress.component} · {progress.phase}</span>{downloadPercent != null && <><b>{downloadPercent}%</b><i><span style={{ width: `${downloadPercent}%` }} /></i></>}</div>}
-        </div>
-      </section>
+        {/* Starting lives on the card above; this one only ever stops. Two Start
+            buttons on one screen is two answers to the same question. */}
+        {live && (
+          <div className="mining-primary-action">
+            <button className="btn ghost mining-start" disabled={busy !== null} onClick={() => void stop()}>
+              <Square size={15} />{busy === "stop" ? "Stopping…" : "Stop mining"}
+            </button>
+          </div>
+        )}
+      </section>}
 
       {(live || showConnect) && <section className="control-card connect-miner-card">
         <div className="card-title-row"><div><h2>Connect your ASIC</h2><p>Use the address that reaches this computer.</p></div><span className={`status-pill ${live ? "good" : ""}`}>{live ? `Port ${stratumPort} open` : "Start first"}</span></div>
@@ -369,6 +408,78 @@ export function Mining() {
         <button className="text-button disclosure" onClick={() => setShowCpu((value) => !value)}>CPU test miner {status?.cpu_miner_running ? "· running" : ""}</button>
         {showCpu && <div className="advanced-row"><p>For setup testing only; ASICs are vastly faster.</p><label>Threads <input className="control-input" type="number" min={1} max={256} value={cpuThreads} onChange={(event) => setCpuThreads(Number(event.target.value))} /></label><button className="btn ghost compact" disabled={busy !== null || !config?.components.zkas_miner || !walletAddress || !!status?.cpu_miner_running} onClick={() => { setBusy("cpu"); desktopServices.startCpuMiner(cpuThreads, walletAddress).then(refreshLocal).catch((e) => setError(e.message)).finally(() => setBusy(null)); }}>Start</button><button className="btn ghost compact" disabled={!status?.cpu_miner_running} onClick={() => { setBusy("cpu"); desktopServices.stopCpuMiner().then(refreshLocal).finally(() => setBusy(null)); }}>Stop</button></div>}
       </section>}
+      {chooser && (
+        <div className="modalwrap" onClick={() => busy === null && setChooser(false)}>
+          <div className="card modalcard" onClick={(event) => event.stopPropagation()}>
+            <h2 style={{ marginTop: 0 }}>Which chains?</h2>
+            <p className="muted small">
+              The same ASIC work can be paid on one chain or two. Everything else — installing, the node,
+              the Stratum port — is handled for you.
+            </p>
+            <div className="choice-grid">
+              <button
+                className={`choice-button ${mode === "solo" ? "selected" : ""}`}
+                onClick={() => setMode("solo")}
+                disabled={busy !== null}
+              >
+                <strong>ZKAS</strong>
+                <span>Paid to this wallet. Nothing else to enter.</span>
+              </button>
+              <button
+                className={`choice-button ${mode === "dual" ? "selected" : ""}`}
+                onClick={() => setMode("dual")}
+                disabled={busy !== null || config?.dual_mining_supported === false}
+              >
+                <strong>KAS + ZKAS</strong>
+                <span>One ASIC, both chains, paid separately.</span>
+              </button>
+            </div>
+            {config?.dual_mining_supported === false && (
+              <p className="subtle">No verified merged-mining build is published for this device, so ZKAS-only is available here.</p>
+            )}
+            {/* The one thing the app cannot know. Asked only when it is actually
+                needed, and at the moment it becomes relevant — not on a setup form
+                somebody has to read through first. */}
+            {mode === "dual" && (
+              <>
+                <label className="field-label">
+                  Kaspa payout address
+                  <input
+                    className="control-input mono"
+                    value={kaspaAddress}
+                    onChange={(event) => setKaspaAddress(event.target.value.trim())}
+                    placeholder="kaspa:…"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    disabled={busy !== null}
+                  />
+                </label>
+                <p className="subtle">KAS is paid here; ZKAS still goes to this wallet.</p>
+              </>
+            )}
+            <div className="detail-row">
+              <span className="k">Rewards</span>
+              <span className="v mono">{walletAddress ? `${walletAddress.slice(0, 22)}…` : "this wallet"}</span>
+            </div>
+            {missing.length > 0 && (
+              <p className="subtle">First run installs: {missing.join(", ")}. Verified downloads, then it starts.</p>
+            )}
+            {error && <div className="msg err">{error}</div>}
+            <div className="row">
+              <button className="btn ghost" disabled={busy !== null} onClick={() => setChooser(false)}>Cancel</button>
+              <button
+                className="btn"
+                disabled={busy !== null || !config || !valid}
+                onClick={() => void (async () => { await start(); setChooser(false); })()}
+              >
+                <Zap size={16} />
+                {busy === "start" ? stage || "Starting…" : missing.length > 0 ? "Install & start" : "Start mining"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <ServiceLogsDialog open={showLogs} onClose={() => setShowLogs(false)} service="stratum-bridge" title="Mining bridge logs" />
       {dashboardOpen && (
         <div className="modalwrap" onClick={() => setDashboardOpen(false)}>
