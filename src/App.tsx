@@ -22,6 +22,7 @@ import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, Parti
 import { walletStatus, walletCanSpend, arrivalAmount } from "./status";
 import { useMaintenance } from "./useMaintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
+import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline, type Receipt } from "./receipts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -466,6 +467,7 @@ export default function App() {
   const recoveryNeeded = useRef(false);
   // On-device send history; drives the optimistic (0-conf) balance and History tab.
   const [txs, setTxs] = useState<LocalTx[]>(() => loadTxs());
+  const [receipts, setReceipts] = useState<Receipt[]>(() => loadReceipts());
   // Consecutive polls answering "no wallet"; see the guard in `refresh`.
   const missingPolls = useRef(0);
   // Auto-repair state: when the daemon has genuinely forgotten this token's
@@ -490,7 +492,13 @@ export default function App() {
   const notifAsked = useRef(false);
   /// Last balance seen while the wallet was FULLY synced, so an arrival is a real
   /// arrival and not the scan still finding notes. null until the first final reading.
-  const lastFinalBalance = useRef<number | null>(null);
+  // Seeded from storage, NOT null. A baseline that resets on every launch cannot
+  // notice anything that happened between launches — which is precisely when the
+  // Android worker is doing its job and notifying about incoming payments.
+  const lastFinalBalance = useRef<number | null>(loadBaseline());
+  /// True until the first final reading of this session, so an arrival found by
+  /// comparing against the STORED baseline can be told apart from one watched live.
+  const firstFinalRead = useRef(true);
   const toast = useToast();
   const refreshInFlight = useRef(false);
   const confirmationNextAt = useRef(new Map<string, number>());
@@ -686,13 +694,24 @@ export default function App() {
       if (s.synced && !s.warming && s.has_wallet) {
         const now = parseFloat(s.balance_fc || "0");
         const gained = arrivalAmount(lastFinalBalance.current, now, true);
+        const whileAway = firstFinalRead.current;
+        firstFinalRead.current = false;
         if (gained !== null) {
           const amount = trimFc(gained.toFixed(8));
-          notifyOs("ZKAS received", `+${amount} ZKAS arrived in your wallet.`);
+          // Write it down before announcing it. With chain history off, History holds
+          // only sends from this device, so a receive had nowhere to live at all —
+          // the phone said "+11 ZKAS arrived" and the app, opened seconds later,
+          // showed nothing. A notification you cannot corroborate is worse than none.
+          setReceipts(recordArrival(gained, whileAway));
+          // An arrival found on opening was almost certainly already announced by the
+          // background worker that woke for it. Saying it twice is noise; the record
+          // above is the part that was missing.
+          if (!whileAway) notifyOs("ZKAS received", `+${amount} ZKAS arrived in your wallet.`);
           toast.show("good", `Received ${amount} ZKAS`);
           successFeedback();
         }
         lastFinalBalance.current = now;
+        saveBaseline(now);
       }
       let list = reconcile(parseFloat(s.balance_fc || "0"), !!s.synced);
       // Ask the chain about every send that has no confirmation count yet — NOT
@@ -1002,6 +1021,7 @@ export default function App() {
             {tab === "history" && (
               <History
                 txs={txs}
+                receipts={receipts}
                 justSent={justSent}
                 synced={!!status?.synced}
                 onSendAnother={(prefill) => {
@@ -4428,11 +4448,15 @@ function fmtTime(ms: number): string {
 // success banner and a highlighted row whose confirmation count ticks up live.
 function History({
   txs,
+  receipts,
   justSent,
   onSendAnother,
   synced,
 }: {
   txs: LocalTx[];
+  /// Arrivals this device noticed, shown only in the on-device scope: with full
+  /// recovery on, the chain itself reports receives and these would double up.
+  receipts?: Receipt[];
   justSent?: string | null;
   onSendAnother?: (prefillAddress?: string) => void;
   synced?: boolean;
@@ -4552,6 +4576,17 @@ function History({
     return who.includes(needle) || getTxLabel(t.txid).toLowerCase().includes(needle) || t.amountFc.toFixed(8).includes(needle) || t.txid.toLowerCase().includes(needle);
   });
   const historyOff = chain !== null && !chain.recoverableHistory;
+  // Arrivals belong to the on-device scope only. With full recovery on, the chain
+  // reports receives itself and these would list the same payment twice.
+  const shownReceipts = useMemo(() => {
+    if (!historyOff) return [];
+    const rows = receipts ?? [];
+    if (kindFilter !== "all" && kindFilter !== "received") return [];
+    if (!q.trim()) return rows;
+    const needle = q.trim().toLowerCase();
+    return rows.filter((r) => r.amountFc.toFixed(8).includes(needle) || "received".includes(needle));
+  }, [historyOff, receipts, kindFilter, q]);
+  const deviceCount = txs.length + (historyOff ? (receipts?.length ?? 0) : 0);
   // Sends this device recorded itself (localtx, in this browser/app's storage).
   // These exist and are readable with chain history OFF — they never left the
   // device. Chain-recovered history is the separate, permissioned thing.
@@ -4614,7 +4649,7 @@ function History({
       {historyOff && (
         <div className="history-scope">
           <b>On this device</b>
-          <span>{txs.length === 0 ? "No saved payments" : `${txs.length} saved payment${txs.length === 1 ? "" : "s"}`}</span>
+          <span>{deviceCount === 0 ? "No saved payments" : `${deviceCount} saved payment${deviceCount === 1 ? "" : "s"}`}</span>
         </div>
       )}
       {fresh && (
@@ -4650,6 +4685,19 @@ function History({
             send used to disappear from a history-off wallet entirely — the device knew
             about it the whole time. Chain-recovered rows are listed separately below,
             and `notYetOnChain` keeps the two from showing the same payment twice. */}
+          {historyOff && shownReceipts.map((r) => (
+            <div key={`rcpt-${r.ts}`} className="txrow" aria-label="Received">
+              <span className="txkind in">Received</span>
+              <span className="txamt in">+{trimFc(r.amountFc.toFixed(8))} ZKAS</span>
+              {/* An arrival is INFERRED from the balance moving, so this knows the
+                  amount and roughly when and nothing else. No txid, and no sender —
+                  unknowable for a shielded payment by design. Saying so is the point:
+                  the alternative is dressing a local observation up as a chain record. */}
+              <span className="muted small">
+                {r.whileAway ? "Noticed when you opened the app" : "Seen arriving"} · {new Date(r.ts).toLocaleString()}
+              </span>
+            </div>
+          ))}
           {(historyOff ? deviceRows : pending).map((t) => (
           <button
             key={t.txid}
@@ -5315,6 +5363,9 @@ function SwitchWallet() {
               if (isDesktop()) await forgetWallet(w.token);
               wipeWalletState(w.token);
               forgetWalletLock(w.token);
+              // Its balance baseline and arrival records go too: a new wallet under a
+              // recycled token must not inherit another wallet's income.
+              forgetReceipts(w.token);
               unregisterWallet(w.token);
               // Fall back to another wallet if one exists, rather than dumping the
               // user into onboarding when they still have wallets left.

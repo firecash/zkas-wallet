@@ -280,7 +280,7 @@ export function Mining() {
               {busy === "start" ? stage || "Starting…" : "Start mining"}
             </button>
             <button className="btn ghost compact" onClick={() => setAdvanced((on) => !on)}>
-              {advanced ? "Hide setup" : "Change setup"}
+              {advanced ? "Hide advanced settings" : "Advanced settings"}
             </button>
           </div>
           {busy === "start" && progress && (
@@ -331,7 +331,10 @@ export function Mining() {
         </div>}
 
         <button className="mining-advanced-toggle" onClick={() => setShowAdvanced((value) => !value)} aria-expanded={showAdvanced}>
-          <span>Advanced</span><ChevronDown size={16} className={showAdvanced ? "open" : ""} />
+          {/* Named for what it holds. It sits INSIDE "Advanced settings", and a
+              second control called "Advanced" one level down says nothing about
+              which of the two a person is looking for. */}
+          <span>Stratum &amp; difficulty</span><ChevronDown size={16} className={showAdvanced ? "open" : ""} />
         </button>
         {showAdvanced && <div className="advanced-grid">
           <label className="field-label">Stratum port<input className="control-input" type="number" min={1024} max={65535} value={stratumPort} onChange={(event) => setStratumPort(Number(event.target.value))} disabled={live} /></label>
