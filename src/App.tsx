@@ -20,6 +20,7 @@ import {
 import { ensureSigner, fvkHex, generateWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, walletCanSpend, arrivalAmount } from "./status";
+import { useMaintenance } from "./useMaintenance";
 import { exportFile, exportMessage } from "./exportfile";
 import {
   backupWallet,
@@ -754,12 +755,30 @@ export default function App() {
     }
   }, [pollConfirmations]);
 
+
   // Called by Send the instant a tx is broadcast: record it, jump straight to
   // History (highlighting the new row) so the confirmations can be watched
   // arriving live, and answer with a success haptic on the phone.
   const [justSent, setJustSent] = useState<string | null>(null);
   // "Send again" from a transaction carries the recipient across to the form.
   const [sendPrefill, setSendPrefill] = useState<string | null>(null);
+
+  // Keep the wallet payable. A payment can spend at most ~38 notes, so a wallet
+  // that accumulates more cannot pay its own balance in one transaction — and the
+  // daemon's own merger cannot fix that for a non-custodial wallet, because
+  // merging is a spend and it holds no spend key (measured on the hosted daemon:
+  // zero merges ever, every over-ceiling wallet skipped as watch-only). Doing it
+  // here, where the key is, means the count stays low and ordinary payments remain
+  // single-transaction — which is what makes them all-or-nothing for free.
+  useMaintenance({
+    status,
+    token: activeToken() ?? "default",
+    network: networkOf(status),
+    // Never compete with something the user is waiting on.
+    busy: showConsolidate || tab === "send" || justSent !== null,
+    getSeed: () => resolveDeviceSeed(status?.address ?? undefined),
+    onMerged: () => void refresh(),
+  });
   useEffect(() => {
     const open = () => {
       const request = takePaymentLink();
