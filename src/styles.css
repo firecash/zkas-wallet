@@ -2242,3 +2242,8 @@ select { appearance: none; cursor: pointer; }
   background: var(--bg);
 }
 .asic-credentials .btn.compact { margin-left: auto; }
+
+/* The countdown beside the elapsed clock. Quieter than the elapsed figure: elapsed
+   is a fact, the remaining figure is a measured prediction, and it should not
+   present itself with more authority than it has earned. */
+.sendscene-remaining { opacity: 0.75; }

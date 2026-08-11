@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, lazy, Suspense} from "react";
+import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo} from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
@@ -21,6 +21,7 @@ import { ensureSigner, fvkHex, generateWallet, signLocal, verifyLocal, addressFr
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, walletCanSpend, arrivalAmount } from "./status";
 import { useMaintenance } from "./useMaintenance";
+import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -1657,6 +1658,15 @@ function ConsolidateDialog({
     MAX_CONSOLIDATION_ROUNDS,
     Math.max(1, Math.ceil((status.note_count ?? 0) / MAX_NOTES_PER_TX)),
   );
+  // A whole-run estimate: one pass' measured cost times the passes still to go.
+  // Counting down the entire run rather than the current pass is the honest scope —
+  // what the user is waiting for is a merged wallet, not a particular proof.
+  const passEstimateMs = useMemo(() => {
+    const per = estimateDuration("consolidate-pass", activeToken() ?? "default", MAX_NOTES_PER_TX);
+    if (per === null) return null;
+    const done = passEndedAt.length;
+    return per * Math.max(1, expectedPasses - done);
+  }, [expectedPasses, passEndedAt.length]);
   const elapsed = busy && startedAt ? Math.max(0, Math.round((Math.max(tick, Date.now()) - startedAt) / 1000)) : 0;
   // Average a COMPLETED pass, so the estimate is this machine's real proving rate on
   // this wallet rather than a constant that would be wrong on half the hardware.
@@ -1666,6 +1676,7 @@ function ConsolidateDialog({
       : null;
 
   const run = async () => {
+    const runStartedAt = Date.now();
     setBusy(true);
     setError("");
     setStartedAt(Date.now());
@@ -1704,6 +1715,17 @@ function ConsolidateDialog({
           setPassEndedAt((done) => [...done, Date.now()]);
         },
       );
+      // Each pass is one proof of a known shape (~38 notes), so a single completed
+      // run predicts the next one well. Divide by rounds: what we want to learn is
+      // the cost of a PASS, not of however many happened to run this time.
+      if (consolidated.rounds > 0 && consolidated.inputs > 0) {
+        recordDuration(
+          "consolidate-pass",
+          activeToken() ?? "default",
+          Math.max(1, Math.round(consolidated.inputs / consolidated.rounds)),
+          Math.round((Date.now() - runStartedAt) / consolidated.rounds),
+        );
+      }
       setResult({
         inputs: consolidated.inputs,
         txid: consolidated.txid,
@@ -1765,7 +1787,7 @@ function ConsolidateDialog({
                 <textarea value={seedInput} onChange={(event) => setSeedInput(event.target.value)} placeholder="64 hex characters" />
               </>
             )}
-            {busy && <SendScene stage={stage ?? undefined} />}
+            {busy && <SendScene stage={stage ?? undefined} estimateMs={passEstimateMs} />}
             {/* Each pass is its own proof, so this runs for minutes on a very
                 fragmented wallet. Report the work already banked — those
                 transactions are broadcast and survive closing this dialog. */}
@@ -2613,7 +2635,7 @@ function Onboard({
 /// that make a ZKas payment worth making, shown while the proof builds so the
 /// wait reads as "sealing your payment", not "hanging". The stage drives which
 /// beat is emphasised; the scene loops so a long multi-note send stays alive.
-function SendScene({ stage }: { stage?: SendStage }) {
+function SendScene({ stage, estimateMs }: { stage?: SendStage; estimateMs?: number | null }) {
   const s = stage ?? "proving";
   // Elapsed seconds on the long step. "Proving" is named for the Halo 2 proof, but
   // the proof is the FAST part (~2s): most of the wait is the daemon locating each
@@ -2630,6 +2652,13 @@ function SendScene({ stage }: { stage?: SendStage }) {
     const t = setInterval(() => setSecs((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, [s]);
+  // Counts down against what THIS device measured last time, and only then. Until a
+  // run has been watched to completion there is no honest number, so the elapsed
+  // clock carries it alone — the first send of a wallet's life is genuinely
+  // unpredictable, and inventing a figure teaches people to disbelieve the real ones
+  // later. `remainingLabel` also stops predicting once it overruns, rather than
+  // sitting at zero, which is the other way a countdown loses trust.
+  const remaining = remainingLabel(estimateMs ?? null, secs * 1000);
   const slow = s === "proving" && secs >= 15;
   const caption =
     s === "signing"
@@ -2686,6 +2715,7 @@ function SendScene({ stage }: { stage?: SendStage }) {
       {secs >= 5 && (
         <div className="sendscene-cap sendscene-elapsed" aria-hidden="true">
           {secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`}
+          {remaining && <span className="sendscene-remaining"> · {remaining}</span>}
         </div>
       )}
       {slow && (
@@ -3663,6 +3693,12 @@ function Send({
   const [confirming, setConfirming] = useState(false);
   const [fragmented, setFragmented] = useState(false);
   const [showConsolidate, setShowConsolidate] = useState(false);
+  // What the last comparable send on this device took. `null` until one has
+  // finished, which is exactly when a countdown would be a guess.
+  const sendEstimateMs = useMemo(
+    () => estimateDuration("prepare", activeToken() ?? "default", Math.max(1, Math.min(status?.note_count ?? 1, MAX_NOTES_PER_TX))),
+    [status?.note_count],
+  );
   const [scanning, setScanning] = useState(false);
   // Advanced: a manual fee (ZKAS). Empty = automatic. The daemon treats it as a
   // floor and still raises anything below the network's byte-proportional
@@ -3801,6 +3837,7 @@ function Send({
         }
       }
       const feeSompi = feeCustomSet ? Math.round(feeCustom * 1e8) : undefined;
+      const sendStartedAt = Date.now();
       const r = await sendNonCustodial(
         seed.trim(),
         networkOf(status),
@@ -3811,6 +3848,11 @@ function Send({
         memo,
         allowMultipleTransactions,
       );
+      // Remember how long that actually took, scaled by the notes it spent, so the
+      // NEXT send can count down instead of only counting up. Recorded on success
+      // only: a run that failed part-way measures the failure, not the work.
+      const spent = r.parts?.length ? r.parts.length : 1;
+      recordDuration("prepare", activeToken() ?? "default", Math.max(1, spent), Date.now() - sendStartedAt);
       const toAddr = to.trim();
       setTo("");
       setAmount("");
@@ -3920,7 +3962,7 @@ function Send({
           </>
         )}
         {busy ? (
-          <SendScene stage={stage ?? undefined} />
+          <SendScene stage={stage ?? undefined} estimateMs={sendEstimateMs} />
         ) : status?.warming ? (
           <div className="msg warn small">
             <b>⚡ This first payment will take a few minutes</b> — the wallet has to locate your coins in the chain
