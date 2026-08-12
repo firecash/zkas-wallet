@@ -471,6 +471,8 @@ export default function App() {
   // On-device send history; drives the optimistic (0-conf) balance and History tab.
   const [txs, setTxs] = useState<LocalTx[]>(() => loadTxs());
   const [receipts, setReceipts] = useState<Receipt[]>(() => loadReceipts());
+  /// Set once the on-device signer has been asked to initialise; see the poll below.
+  const signerWarmed = useRef(false);
   // Consecutive polls answering "no wallet"; see the guard in `refresh`.
   const missingPolls = useRef(0);
   // Auto-repair state: when the daemon has genuinely forgotten this token's
@@ -694,6 +696,25 @@ export default function App() {
       setReachable(true);
       // Ask for notification permission only once a wallet actually exists —
       // before that the prompt is noise users refuse, and a refusal is sticky.
+      // Warm the on-device signer the moment a wallet is present, not when Send is
+      // pressed.
+      //
+      // The signer is a ~0.5MB wasm module in its own lazily-fetched chunk — kept out of
+      // the main bundle so first paint is fast, which is right. But it was initialised on
+      // FIRST USE, so the very first payment paid to fetch, base64-decode and instantiate
+      // it before any signing could start. That cost is invisible in the daemon's log
+      // (which showed the same payment taking ~4s server-side) and lands squarely inside
+      // the spinner the user is watching.
+      //
+      // Opening a wallet is a strong signal that a payment may follow, and the seconds
+      // spent reading a balance or typing an address are free. `ensureSigner` is
+      // idempotent and cached, so this only ever moves the work earlier — never repeats
+      // it. Failure is ignored on purpose: the send path awaits the same promise and will
+      // surface a real problem there, in context.
+      if (s.has_wallet && !signerWarmed.current) {
+        signerWarmed.current = true;
+        void ensureSigner().catch(() => {});
+      }
       if (s.has_wallet && !notifAsked.current) {
         notifAsked.current = true;
         void ensureNotificationPermission();
