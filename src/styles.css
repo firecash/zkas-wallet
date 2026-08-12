@@ -2080,10 +2080,17 @@ select { appearance: none; cursor: pointer; }
 .txrow-label { margin-top: 5px; color: var(--ember); font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Self-host -------------------------------------------------------------- */
-.selfhost-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.selfhost-grid .control-card { margin: 0; }
-.service-runtime-card { display: flex; min-height: 220px; flex-direction: column; }
-.service-runtime-card code { margin: 15px 0 8px; }
+/* Host is a status board, not an article: three service cards forced into a 2-column
+   grid at 220px tall each made a short page scroll for no information. They hold a
+   title, a state pill, a URL and one button, so they auto-fit three across and size to
+   their content. `Network access` — the reason people open this screen — now leads. */
+.selfhost-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.selfhost-grid .control-card { margin: 0; padding: 14px; }
+.service-runtime-card { display: flex; flex-direction: column; }
+.service-runtime-card code { margin: 10px 0 8px; }
+.selfhost-page .control-card { margin-bottom: 10px; }
+.selfhost-page .control-card p { margin: 2px 0 0; }
+.selfhost-page .card-title-row { align-items: flex-start; }
 .service-runtime-card .control-actions, .service-runtime-card > .btn { margin-top: auto; }
 .safety-card { border-color: color-mix(in srgb, #e5ae38 40%, var(--border)); }
 .host-access-card h3 { margin: 18px 0 8px; font-size: 13px; }

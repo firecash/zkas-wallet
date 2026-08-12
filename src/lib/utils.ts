@@ -56,6 +56,24 @@ export function parsePaymentUri(text: string): { address: string; amount?: strin
 export type PasteResult = { ok: true; text: string } | { ok: false; reason: "unavailable" | "denied" | "empty" };
 
 export async function pasteText(): Promise<PasteResult> {
+  // Android's WebView does not implement the async clipboard READ api at all — writing
+  // works, reading is simply absent — so Paste could never work in the installed app and
+  // told users "this browser won't share the clipboard" while they stood in a wallet,
+  // not a browser. The native shell has to be asked through the platform plugin instead.
+  //
+  // Tried first, and only on the native shell, so browsers keep the standard path.
+  const cap = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  if (cap?.isNativePlatform?.()) {
+    try {
+      const { Clipboard } = await import("@capacitor/clipboard");
+      const { value } = await Clipboard.read();
+      const native = (value ?? "").trim();
+      return native ? { ok: true, text: native } : { ok: false, reason: "empty" };
+    } catch {
+      // Plugin missing (an older shell) or the read refused — fall through to the web
+      // path, which at worst reports the same failure this would have.
+    }
+  }
   if (!navigator.clipboard?.readText) return { ok: false, reason: "unavailable" };
   let text: string;
   try {

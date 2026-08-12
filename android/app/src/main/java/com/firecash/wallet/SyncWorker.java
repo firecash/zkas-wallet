@@ -68,6 +68,16 @@ public class SyncWorker extends Worker {
         }
 
         if (!status.optBoolean("has_wallet", false)) return Result.success();
+        // Only a FULLY SCANNED wallet reports a balance worth comparing. A wallet that is
+        // still opening or catching up answers with what it has found SO FAR — commonly 0
+        // — and that is not a balance, it is an absence of one.
+        //
+        // Without this gate the worker stored 0 as the baseline while the wallet was
+        // opening, and when the scan finished it announced the delta: "4.93 ZKAS arrived"
+        // for a wallet whose balance had simply become known again. Users saw a payment
+        // notification for their own entire balance. `loading` is checked too, because
+        // older daemons omit it and newer ones set it precisely for this state.
+        if (!status.optBoolean("synced", false) || status.optBoolean("loading", false)) return Result.success();
         // Balance + incoming-not-yet-settled: both are "money that is the user's",
         // and pending_in is how a just-broadcast payment is seen ~1s after it lands.
         BigInteger total;

@@ -79,8 +79,13 @@ export function SelfHost() {
     setError("");
     try {
       if (status.explorer_running) {
-        await desktopServices.stopExplorer();
+        // Cleared BEFORE the stop, not after: if `stopExplorer` throws, the local
+        // explorer is going away regardless and an override that outlives it strands the
+        // whole Explorer tab on a dead port (it then shows a cached snapshot, hours old,
+        // with no sign anything is wrong). Pointing at the public API when a local one is
+        // still up costs nothing; the reverse costs the user their explorer.
         setExplorerBase("");
+        await desktopServices.stopExplorer();
       } else {
         await desktopServices.startExplorer();
         setExplorerBase(status.explorer_url);
@@ -169,56 +174,6 @@ export function SelfHost() {
       {error && <div className="control-error">{error}</div>}
       {!status ? <div className="control-card empty-state"><span className="spin" /> Reading service state…</div> : (
         <>
-          <div className="selfhost-grid">
-            <section className="control-card service-runtime-card">
-              <div className="card-title-row"><div><h2>Wallet engine</h2><p>Sync and proving API embedded in this app.</p></div><span className={`status-pill ${status.wallet_engine_running ? "good" : "warm"}`}>{status.wallet_engine_running ? "Running" : "Stopped"}</span></div>
-              <code>{status.wallet_engine_url || "locked"}</code>
-              <p className="subtle">Bound to this device. The app token is never shown or forwarded.</p>
-            </section>
-            <section className="control-card service-runtime-card">
-              <div className="card-title-row"><div><h2>Node connection</h2><p>{status.node_mode === "local" ? "Managed local ZKAS node." : status.node_mode === "custom" ? "Your configured node." : "ZKAS public node."}</p></div><span className="status-pill good">{status.node_mode}</span></div>
-              <code>{status.node_rpc}</code>
-              <button className="btn ghost compact" onClick={() => navigate("/node")}>Node controls</button>
-            </section>
-            <section className="control-card service-runtime-card">
-              <div className="card-title-row"><div><h2>Explorer API</h2><p>Local chain REST API and transaction index.</p></div><span className={`status-pill ${status.explorer_running ? "good" : status.explorer_installed ? "" : "warm"}`}>{status.explorer_running ? "Running" : status.explorer_installed ? "Stopped" : "Not installed"}</span></div>
-              <code>{status.explorer_url}</code>
-              {/* Opening this in a browser returns 404, because the service answers
-                  /info/… and /blocks/… and has no page at the root. Saying so here is
-                  the difference between "healthy" and "apparently broken". */}
-              <p className="subtle">Data API, not a web page — the address itself returns 404. Try <code>{status.explorer_url}/info/blockdag</code>.</p>
-              {status.explorer_last_exit && (
-                <div className="inline-warning">
-                  Last exit: {status.explorer_last_exit}
-                  {/* An exit code alone sent people hunting. The overwhelmingly common
-                      cause is that the port was already taken by a copy still running,
-                      which ALSO answers the wallet — so the service looks broken and
-                      working at once. */}
-                  {" — if the wallet's Explore tab still works, another copy is already serving this port. Use View logs for the exact reason."}
-                </div>
-              )}
-              <div className="control-actions">
-                {!status.explorer_installed ? <button className="btn compact" disabled={!!busy} onClick={() => void installExplorer()}>{busy === "install" ? "Downloading & verifying…" : "Install verified backend"}</button> : <button className="btn compact" disabled={!!busy} onClick={() => void toggleExplorer()}>{busy === "explorer" ? "Working…" : status.explorer_running ? "Stop" : "Start"}</button>}
-                {status.explorer_running && <button className="btn ghost compact" onClick={() => navigate("/explore")}>Open explorer</button>}
-              </div>
-            </section>
-            {/* The payment gateway card lived here to explain why the app would not
-                one-click install it: there is no signed, hashed gateway release to
-                verify. That is a true statement and a useless one on a screen for
-                controlling services that ARE running — a permanently inert card whose
-                only action was a link to build instructions. It belongs in the Services
-                directory with the rest of the ecosystem, not in local service control.
-                Put it back here when a pinned, digest-verified binary exists. */}
-          </div>
-
-          <section className="control-card">
-            <h2>Data & backup</h2>
-            <p>Wallet backups contain the irreplaceable key. Node chain data and the explorer index are intentionally not copied—they are large, public, and can be rebuilt.</p>
-            <div className="detail-row"><span className="k">App data</span><span className="v mono">{status.data_dir}</span></div>
-            <div className="detail-row"><span className="k">Wallet backups</span><span className="v mono">{status.backup_dir}</span></div>
-            <div className="control-actions"><button className="btn ghost compact" onClick={() => void openPath(status.data_dir)}>Open app data</button><button className="btn ghost compact" onClick={() => void openPath(status.backup_dir)}>Open backups</button><button className="btn compact" onClick={() => navigate("/")}>Back up wallet</button></div>
-          </section>
-
           <section className="control-card safety-card host-access-card">
             <div className="card-title-row">
               <div><h2>Network access</h2><p>Use the wallet service from another device and choose how the node participates.</p></div>
@@ -299,6 +254,57 @@ export function SelfHost() {
               </>
             )}
           </section>
+
+          <div className="selfhost-grid">
+            <section className="control-card service-runtime-card">
+              <div className="card-title-row"><div><h2>Wallet engine</h2><p>Sync and proving API embedded in this app.</p></div><span className={`status-pill ${status.wallet_engine_running ? "good" : "warm"}`}>{status.wallet_engine_running ? "Running" : "Stopped"}</span></div>
+              <code>{status.wallet_engine_url || "locked"}</code>
+              <p className="subtle">Bound to this device. The app token is never shown or forwarded.</p>
+            </section>
+            <section className="control-card service-runtime-card">
+              <div className="card-title-row"><div><h2>Node connection</h2><p>{status.node_mode === "local" ? "Managed local ZKAS node." : status.node_mode === "custom" ? "Your configured node." : "ZKAS public node."}</p></div><span className="status-pill good">{status.node_mode}</span></div>
+              <code>{status.node_rpc}</code>
+              <button className="btn ghost compact" onClick={() => navigate("/node")}>Node controls</button>
+            </section>
+            <section className="control-card service-runtime-card">
+              <div className="card-title-row"><div><h2>Explorer API</h2><p>Local chain REST API and transaction index.</p></div><span className={`status-pill ${status.explorer_running ? "good" : status.explorer_installed ? "" : "warm"}`}>{status.explorer_running ? "Running" : status.explorer_installed ? "Stopped" : "Not installed"}</span></div>
+              <code>{status.explorer_url}</code>
+              {/* Opening this in a browser returns 404, because the service answers
+                  /info/… and /blocks/… and has no page at the root. Saying so here is
+                  the difference between "healthy" and "apparently broken". */}
+              <p className="subtle">Data API, not a web page — the address itself returns 404. Try <code>{status.explorer_url}/info/blockdag</code>.</p>
+              {status.explorer_last_exit && (
+                <div className="inline-warning">
+                  Last exit: {status.explorer_last_exit}
+                  {/* An exit code alone sent people hunting. The overwhelmingly common
+                      cause is that the port was already taken by a copy still running,
+                      which ALSO answers the wallet — so the service looks broken and
+                      working at once. */}
+                  {" — if the wallet's Explore tab still works, another copy is already serving this port. Use View logs for the exact reason."}
+                </div>
+              )}
+              <div className="control-actions">
+                {!status.explorer_installed ? <button className="btn compact" disabled={!!busy} onClick={() => void installExplorer()}>{busy === "install" ? "Downloading & verifying…" : "Install verified backend"}</button> : <button className="btn compact" disabled={!!busy} onClick={() => void toggleExplorer()}>{busy === "explorer" ? "Working…" : status.explorer_running ? "Stop" : "Start"}</button>}
+                {status.explorer_running && <button className="btn ghost compact" onClick={() => navigate("/explore")}>Open explorer</button>}
+              </div>
+            </section>
+            {/* The payment gateway card lived here to explain why the app would not
+                one-click install it: there is no signed, hashed gateway release to
+                verify. That is a true statement and a useless one on a screen for
+                controlling services that ARE running — a permanently inert card whose
+                only action was a link to build instructions. It belongs in the Services
+                directory with the rest of the ecosystem, not in local service control.
+                Put it back here when a pinned, digest-verified binary exists. */}
+          </div>
+
+          <section className="control-card">
+            <h2>Data & backup</h2>
+            <p>Wallet backups contain the irreplaceable key. Node chain data and the explorer index are intentionally not copied—they are large, public, and can be rebuilt.</p>
+            <div className="detail-row"><span className="k">App data</span><span className="v mono">{status.data_dir}</span></div>
+            <div className="detail-row"><span className="k">Wallet backups</span><span className="v mono">{status.backup_dir}</span></div>
+            <div className="control-actions"><button className="btn ghost compact" onClick={() => void openPath(status.data_dir)}>Open app data</button><button className="btn ghost compact" onClick={() => void openPath(status.backup_dir)}>Open backups</button><button className="btn compact" onClick={() => navigate("/")}>Back up wallet</button></div>
+          </section>
+
 
           <section className="control-card safety-card">
             <div className="card-title-row">

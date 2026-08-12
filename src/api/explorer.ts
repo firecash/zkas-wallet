@@ -34,15 +34,72 @@ export function explorerBase(): string {
   return getExplorerBase();
 }
 
+/**
+ * Is this base a locally-run explorer — something that only exists while the user's own
+ * machine is serving it?
+ *
+ * Such a base is allowed to disappear, and when it does the wallet must go back to the
+ * public API on its own. A remote base the user typed deliberately is NOT second-guessed.
+ */
+function isLocalBase(base: string): boolean {
+  try {
+    const host = new URL(base).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    return host === "localhost" || host === "::1" || /^127\./.test(host);
+  } catch {
+    return false;
+  }
+}
+
+/// Consecutive failures of a locally-configured explorer, reset by any success.
+let localMisses = 0;
+/// The dashboard fires eight requests per refresh, so this is well under one refresh —
+/// deliberately: a base that cannot answer a single panel is not serving the wallet.
+const LOCAL_MISSES_BEFORE_GIVING_UP = 12;
+
 async function explorerGet<T>(path: string, timeoutMs = 10_000): Promise<T> {
   if (isDesktop() && getExplorerBase() === DEFAULT_EXPLORER_BASE) {
     const { invoke } = await import("@tauri-apps/api/core");
     return invoke<T>("public_explorer_get", { path });
   }
+  // A locally-served explorer that has stopped answering must not strand the app on it.
+  //
+  // Running a node in the desktop app points `explorer_base` at that local explorer, and
+  // the only code that cleared it ran AFTER `stopExplorer()` returned — so quitting the
+  // app, stopping the node any other way, or an error inside that call left the override
+  // in localStorage permanently. Every panel then failed against a dead port and the
+  // dashboard fell back to its cached snapshot: blocks 40 HOURS old, on a wallet whose
+  // phone showed the same screen up to date, because the phone never had a local node.
+  //
+  // Correctness cannot depend on one toggle's happy path completing. If the local base is
+  // unreachable and the public API answers, the override is stale by demonstration —
+  // drop it and carry on there.
+  const configured = getExplorerBase();
+  if (isLocalBase(configured)) {
+    try {
+      const live = await explorerFetch<T>(configured, path, timeoutMs);
+      localMisses = 0;
+      return live;
+    } catch {
+      // Serve from the public API immediately, but do NOT discard the user's setting on
+      // one failure: a local explorer restarting, or briefly busy, is not a local
+      // explorer that is gone, and silently un-configuring it would be its own bug.
+      // Only a base that keeps failing has demonstrated it is stale.
+      const viaPublic = await explorerFetch<T>(DEFAULT_EXPLORER_BASE, path, timeoutMs);
+      if (++localMisses >= LOCAL_MISSES_BEFORE_GIVING_UP) {
+        setExplorerBase("");
+        localMisses = 0;
+      }
+      return viaPublic;
+    }
+  }
+  return explorerFetch<T>(configured, path, timeoutMs);
+}
+
+async function explorerFetch<T>(base: string, path: string, timeoutMs: number): Promise<T> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const response = await fetch(`${getExplorerBase()}${path}`, {
+    const response = await fetch(`${base}${path}`, {
       signal: ctrl.signal,
       headers: { Accept: "application/json" },
     });

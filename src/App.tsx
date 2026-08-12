@@ -23,6 +23,7 @@ import { walletStatus, walletCanSpend, arrivalAmount } from "./status";
 import { useMaintenance } from "./useMaintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline, type Receipt } from "./receipts";
+import { byNewest, receiptIsOnChain } from "./history";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -4617,6 +4618,27 @@ function History({
     return who.includes(needle) || getTxLabel(t.txid).toLowerCase().includes(needle) || t.amountFc.toFixed(8).includes(needle) || t.txid.toLowerCase().includes(needle);
   });
 
+  // ONE list, in time order, out of three sources that record time differently.
+  //
+  // These used to be rendered as three concatenated blocks — arrivals, then device
+  // sends, then chain rows — each sorted internally and none sorted against the others.
+  // A send at 12:19 was therefore listed BELOW arrivals at 12:23 and 12:12, which reads
+  // as a missing payment. See `history.ts` for how undated chain rows are handled.
+  const merged = useMemo(
+    () =>
+      byNewest([
+        ...shownReceipts
+          // A receipt is an inferred arrival with no txid; if the chain already reports
+          // that payment, the chain row is the authoritative one and this would double it.
+          .filter((r) => !receiptIsOnChain(r, allRows))
+          .map((r) => ({ t: "receipt" as const, ts: r.ts, r })),
+        ...(historyOff ? deviceRows : pending).map((tx) => ({ t: "device" as const, ts: tx.ts, tx })),
+        ...chainRows.map((row) => ({ t: "chain" as const, ts: row.timestamp, daaScore: row.daaScore, row })),
+      ]),
+    [shownReceipts, allRows, historyOff, deviceRows, pending, chainRows],
+  );
+  const shownRows = showAll ? merged : merged.slice(0, HISTORY_PAGE);
+
   // Notes locked by sends still awaiting chain confirmation. Their value includes
   // the change coming back, so this is shown as "held", never as an amount sent —
   // and the daemon returns it all automatically if a transaction never lands.
@@ -4690,7 +4712,12 @@ function History({
           ))}
         </div>
       )}
-      {allRows.length > 0 && chainRows.length === 0 && (
+      {/* ONE list, so ONE empty state. These used to be two guards keyed on the
+          individual sources (`chainRows` here, `deviceRows` below), which contradicted
+          the rendered list the moment the two disagreed: filtering to "Received" with
+          history off leaves `deviceRows` — sends — empty by definition, so the screen
+          announced "nothing matches" directly above the arrivals it was showing. */}
+      {(allRows.length > 0 || txs.length > 0 || (receipts?.length ?? 0) > 0) && merged.length === 0 && (
         <p className="muted small">Nothing matches that filter.</p>
       )}
       <div className="txlist">
@@ -4698,88 +4725,97 @@ function History({
             send used to disappear from a history-off wallet entirely — the device knew
             about it the whole time. Chain-recovered rows are listed separately below,
             and `notYetOnChain` keeps the two from showing the same payment twice. */}
-          {historyOff && shownReceipts.map((r) => (
-            <div key={`rcpt-${r.ts}`} className="txrow" aria-label="Received">
-              <span className="txkind in">Received</span>
-              <span className="txamt in">+{trimFc(r.amountFc.toFixed(8))} ZKAS</span>
-              {/* An arrival is INFERRED from the balance moving, so this knows the
-                  amount and roughly when and nothing else. No txid, and no sender —
-                  unknowable for a shielded payment by design. Saying so is the point:
-                  the alternative is dressing a local observation up as a chain record. */}
-              <span className="muted small">
-                {r.whileAway ? "Noticed when you opened the app" : "Seen arriving"} · {new Date(r.ts).toLocaleString()}
-              </span>
-            </div>
-          ))}
-          {(historyOff ? deviceRows : pending).map((t) => (
-          <button
-            key={t.txid}
-            type="button"
-            className={"txrow" + (t.txid === justSent ? " fresh" : "")}
-            style={{ textAlign: "left", width: "100%", font: "inherit", color: "inherit" }}
-            onClick={() => setDetail(localTxToRow(t))}
-          >
-            <div className="txrow-main">
-              <span className="txrow-amt">− {trimFc(t.amountFc.toFixed(8))} ZKAS</span>
-              <span className={"txrow-badge " + ((t.confs ?? 0) >= 1 ? "done" : "pending")}>{confBadge(t)}</span>
-            </div>
-            <div className="txrow-sub">
-              <span className="mono">to {shortAddr(t.to)}</span>
-              <span>{fmtTime(t.ts)}</span>
-            </div>
-            {getTxLabel(t.txid) && <div className="txrow-label">{getTxLabel(t.txid)}</div>}
-          </button>
-        ))}
-        {(showAll ? chainRows : chainRows.slice(0, HISTORY_PAGE)).map((r, ri) => (
-          <button
-            // Index included deliberately: one transaction can produce several rows of
-            // the same kind (multiple notes received in one payment), and duplicate keys
-            // make React reorder and remount rows — which is what made the list jump
-            // around as the 15s poll replaced it.
-            key={`${r.txid}:${r.kind}:${ri}`}
-            type="button"
-            className="txrow"
-            style={{ textAlign: "left", width: "100%", font: "inherit", color: "inherit" }}
-            onClick={() => setDetail(r)}
-          >
-            <div className="txrow-main">
-              <span className="txrow-amt">
-                {r.kind === "sent" ? "− " : "+ "}
-                {trimFc(r.amountZkas.toFixed(8))} ZKAS
-              </span>
-              <span className={"txrow-badge " + (r.kind === "sent" ? "done" : "recv")}>
-                {r.kind === "coinbase" ? "mined" : r.kind === "received" ? "received" : "sent"}
-              </span>
-            </div>
-            <div className="txrow-sub">
-              {r.kind === "sent" && r.recipient ? (
-                <span className={findContact(r.recipient) ? "" : "mono"}>
-                  to {displayName(r.recipient, shortAddr(r.recipient))}
-                </span>
-              ) : r.memo ? (
-                <span className="memo">“{r.memo}”</span>
-              ) : (
-                <span className="mono">{shortAddr(r.txid)}</span>
-              )}
-              <span>{r.timestamp > 0 ? fmtTime(r.timestamp) : `DAA ${r.daaScore}`}</span>
-            </div>
-            {r.kind === "sent" && r.memo && (
-              <div className="txrow-sub">
-                <span className="memo">“{r.memo}”</span>
-              </div>
-            )}
-            {getTxLabel(r.txid) && <div className="txrow-label">{getTxLabel(r.txid)}</div>}
-          </button>
-        ))}
-        {historyOff && txs.length > 0 && deviceRows.length === 0 && (
-          <div className="history-empty">
-            Nothing matches that filter.
-          </div>
-        )}
+          {shownRows.map((row, ri) => {
+            // An arrival INFERRED from the balance moving: amount and roughly when, and
+            // nothing else — no txid, and no sender, which is unknowable for a shielded
+            // payment by design. It is rendered in the SAME shape as every other row so
+            // the list reads as one history; the sub-line says how it was learned rather
+            // than dressing a local observation up as a chain record.
+            if (row.t === "receipt") {
+              const r = row.r;
+              return (
+                <div key={`rcpt-${r.ts}-${ri}`} className="txrow" aria-label="Received">
+                  <div className="txrow-main">
+                    <span className="txrow-amt">+ {trimFc(r.amountFc.toFixed(8))} ZKAS</span>
+                    <span className="txrow-badge recv">received</span>
+                  </div>
+                  <div className="txrow-sub">
+                    <span>{r.whileAway ? "Noticed when you opened the app" : "Seen arriving"}</span>
+                    <span>{fmtTime(r.ts)}</span>
+                  </div>
+                </div>
+              );
+            }
+            if (row.t === "device") {
+              const t = row.tx;
+              return (
+                <button
+                  key={t.txid}
+                  type="button"
+                  className={"txrow" + (t.txid === justSent ? " fresh" : "")}
+                  style={{ textAlign: "left", width: "100%", font: "inherit", color: "inherit" }}
+                  onClick={() => setDetail(localTxToRow(t))}
+                >
+                  <div className="txrow-main">
+                    <span className="txrow-amt">− {trimFc(t.amountFc.toFixed(8))} ZKAS</span>
+                    <span className={"txrow-badge " + ((t.confs ?? 0) >= 1 ? "done" : "pending")}>{confBadge(t)}</span>
+                  </div>
+                  <div className="txrow-sub">
+                    <span className="mono">to {shortAddr(t.to)}</span>
+                    <span>{fmtTime(t.ts)}</span>
+                  </div>
+                  {getTxLabel(t.txid) && <div className="txrow-label">{getTxLabel(t.txid)}</div>}
+                </button>
+              );
+            }
+            const r = row.row;
+            return (
+              <button
+                // Index included deliberately: one transaction can produce several rows of
+                // the same kind (multiple notes received in one payment), and duplicate keys
+                // make React reorder and remount rows — which is what made the list jump
+                // around as the 15s poll replaced it.
+                key={`${r.txid}:${r.kind}:${ri}`}
+                type="button"
+                className="txrow"
+                style={{ textAlign: "left", width: "100%", font: "inherit", color: "inherit" }}
+                onClick={() => setDetail(r)}
+              >
+                <div className="txrow-main">
+                  <span className="txrow-amt">
+                    {r.kind === "sent" ? "− " : "+ "}
+                    {trimFc(r.amountZkas.toFixed(8))} ZKAS
+                  </span>
+                  <span className={"txrow-badge " + (r.kind === "sent" ? "done" : "recv")}>
+                    {r.kind === "coinbase" ? "mined" : r.kind === "received" ? "received" : "sent"}
+                  </span>
+                </div>
+                <div className="txrow-sub">
+                  {r.kind === "sent" && r.recipient ? (
+                    <span className={findContact(r.recipient) ? "" : "mono"}>
+                      to {displayName(r.recipient, shortAddr(r.recipient))}
+                    </span>
+                  ) : r.memo ? (
+                    <span className="memo">“{r.memo}”</span>
+                  ) : (
+                    <span className="mono">{shortAddr(r.txid)}</span>
+                  )}
+                  <span>{r.timestamp > 0 ? fmtTime(r.timestamp) : `DAA ${r.daaScore}`}</span>
+                </div>
+                {r.kind === "sent" && r.memo && (
+                  <div className="txrow-sub">
+                    <span className="memo">“{r.memo}”</span>
+                  </div>
+                )}
+                {getTxLabel(r.txid) && <div className="txrow-label">{getTxLabel(r.txid)}</div>}
+              </button>
+            );
+          })}
+
       </div>
-      {!showAll && chainRows.length > HISTORY_PAGE && (
+      {!showAll && merged.length > HISTORY_PAGE && (
         <button className="btn ghost small" onClick={() => setShowAll(true)}>
-          Show all {chainRows.length} rows
+          Show all {merged.length} rows
         </button>
       )}
       {heldTxids > 0 && (
