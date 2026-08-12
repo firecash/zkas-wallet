@@ -305,20 +305,9 @@ export function walletStatus(s: StatusInput): WalletStatusView {
   };
 }
 
-/// Should a balance change be announced to the user as money ARRIVING?
+/// `arrivalAmount` lives in `arrivals.ts`.
 ///
-/// Split out of the poll so the rule is testable, because the failure mode is loud: a
-/// scan reports what it has found SO FAR, climbing from zero, so comparing two
-/// mid-scan readings announces a "payment" for every note the wallet rediscovers about
-/// itself. A user restoring a seed would get a burst of fake receive notifications for
-/// their own money.
-///
-/// Hence: only ever compare two FINAL balances, and treat the first final reading as a
-/// baseline rather than a gain (otherwise opening the app announces the whole balance).
-export function arrivalAmount(prev: number | null, next: number, isFinal: boolean): number | null {
-  if (!isFinal) return null;
-  if (prev === null) return null; // first final reading — baseline only
-  const delta = next - prev;
-  // One sompi is 1e-8 ZKAS; below that is float noise, not a payment.
-  return delta > 1e-8 ? delta : null;
-}
+/// Deciding that money ARRIVED needs more than the balance rising: change returning from
+/// your own send raises it too, and announcing that as an incoming payment is a claim the
+/// user cannot check. The rule now weighs this device's own outgoing history, which does
+/// not belong in a module about how a wallet's sync state reads.

@@ -92,13 +92,20 @@ public class SyncWorker extends Worker {
 
         String last = p.getString("lastTotalSompi", null);
         p.edit().putString("lastTotalSompi", total.toString()).apply();
+        // A rise the app can explain by its OWN settling payment is not a payment to
+        // you. The baseline above is still updated — the balance really did change, and
+        // the next comparison must start from where it is now — but nothing is announced.
+        // Reported live: "+100 ZKAS arriving" ten minutes after the user's own send,
+        // which was the change note coming back.
+        long quietUntil = p.getLong("quietUntil", 0L);
+        boolean quiet = quietUntil > 0 && System.currentTimeMillis() < quietUntil;
         WalletWidget.refreshAll(getApplicationContext());
         // First run only records the baseline — announcing the whole balance as
         // "received" is exactly the lie the in-app announcement avoids too.
         if (last != null) {
             try {
                 BigInteger previous = new BigInteger(last);
-                if (total.compareTo(previous) > 0) notifyPayment(formatZkas(total.subtract(previous)));
+                if (!quiet && total.compareTo(previous) > 0) notifyPayment(formatZkas(total.subtract(previous)));
             } catch (NumberFormatException ignored) {
                 // The valid current value written above repairs the baseline.
             }

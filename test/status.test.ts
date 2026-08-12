@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { walletStatus, walletCanSpend, formatDuration, arrivalAmount, type StatusInput } from "../src/status";
+import { walletStatus, walletCanSpend, formatDuration, type StatusInput } from "../src/status";
+import { arrivalAmount } from "../src/arrivals";
 
 const base: StatusInput = {
   online: true,

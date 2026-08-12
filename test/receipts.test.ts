@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline } from "../src/receipts";
-import { arrivalAmount } from "../src/status";
+import { arrivalAmount } from "../src/arrivals";
 
 describe("noticing money that arrived while the app was closed", () => {
   beforeEach(() => {

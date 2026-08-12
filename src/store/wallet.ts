@@ -3,7 +3,6 @@ import { api, type Status, type ChainHistory } from "../api";
 import { loadTxs, recordSend, reconcile, pendingTotal, saveSnapshot, loadSnapshot, type LocalTx } from "../localtx";
 import { loadStatusCache, saveStatusCache } from "../api";
 import { activeToken, listWallets, ensureRegistered, type WalletRef } from "../wallets";
-import { arrivalAmount } from "../status";
 import { snapshotDirty, sameStatus, sameTxs } from "../lib/statushelpers";
 
 interface WalletStore {

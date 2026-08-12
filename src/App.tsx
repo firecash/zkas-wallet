@@ -19,7 +19,8 @@ import {
 } from "./localtx";
 import { ensureSigner, fvkHex, generateWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
-import { walletStatus, walletCanSpend, arrivalAmount } from "./status";
+import { walletStatus, walletCanSpend } from "./status";
+import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
 import { useMaintenance } from "./useMaintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline, type Receipt } from "./receipts";
@@ -728,7 +729,11 @@ export default function App() {
       // condition `balanceIsFinal` uses; the first final reading only sets the baseline.
       if (s.synced && !s.warming && s.has_wallet) {
         const now = parseFloat(s.balance_fc || "0");
-        const gained = arrivalAmount(lastFinalBalance.current, now, true);
+        // `txs` is this device's own outgoing history. A balance rise that our own
+        // settling payment can explain — change coming back, or the optimistic spend
+        // subtraction being released — is not an arrival, and must not be announced as
+        // one. See `arrivals.ts`.
+        const gained = arrivalAmount(lastFinalBalance.current, now, true, txs);
         const whileAway = firstFinalRead.current;
         firstFinalRead.current = false;
         if (gained !== null) {
@@ -864,6 +869,11 @@ export default function App() {
       let list = loadTxs();
       for (const tx of sent) list = recordSend(tx);
       setTxs(list);
+      // Tell the background worker to stop calling balance increases "payments" for a
+      // while. It runs natively against its own baseline and cannot see this list, so a
+      // send it knows nothing about would have it announce the change coming back as
+      // money received. The deadline is recomputed from the list we just wrote.
+      void bgSyncReconfigure();
       // Highlight the first transaction of the payment: it is the one the History
       // tab scrolls to, and the parts are recorded newest-first above it.
       setJustSent(sent[0]?.txid ?? null);
@@ -2274,8 +2284,17 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           takes six has lied, which is worse than quoting nothing. */}
       <div className="sub warmnote notice-slot">{view.phase === "almost-ready" ? `⚡ ${view.detail}` : ""}</div>
       <div className="sub notice-slot" style={{ color: "var(--ember)" }}>
+        {/* Worded by whether WE can explain it.
+            `pending_in` is value the daemon can see landing in blocks too near the tip to
+            ingest — and the change from your own payment lands there too. Announcing that
+            as money "arriving" told users they had been paid when they had in fact just
+            paid someone else; reported live as a "+100 ZKAS arriving" ten minutes after
+            their own send. While a payment of ours is still settling, the same number is
+            true but means something else entirely, so it is named for what it is. */}
         {inNotice.shown
-          ? `+${trimFc(inNotice.amount.toFixed(8))} ZKAS arriving — confirmed, settling into your wallet`
+          ? ownActivityExplainsRise(txs)
+            ? `${trimFc(inNotice.amount.toFixed(8))} ZKAS coming back as change from your payment`
+            : `+${trimFc(inNotice.amount.toFixed(8))} ZKAS arriving — confirmed, settling into your wallet`
           : ""}
       </div>
       <div className="sub notice-slot" style={{ color: "var(--ember)" }}>

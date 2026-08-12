@@ -37,10 +37,18 @@ public class BackgroundSyncPlugin extends Plugin {
         String base = call.getString("baseUrl", "").replaceAll("/+$", "");
         String token = call.getString("token", "");
         String bearer = call.getString("bearer", "").trim();
+        // Until when the worker must not announce a balance increase as a payment.
+        //
+        // The worker compares balances against its own stored baseline and cannot read
+        // the app's record of sends, so it cannot tell an incoming payment from the
+        // CHANGE returning out of one of yours. The app knows, and hands it a deadline.
+        // 0 clears any hold.
+        long quiet = call.getLong("quietUntil", 0L);
         prefs().edit()
             .putString("baseUrl", base)
             .putString("token", token)
             .putString("bearer", bearer)
+            .putLong("quietUntil", quiet)
             .apply();
         call.resolve();
     }
