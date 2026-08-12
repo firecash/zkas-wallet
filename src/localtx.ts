@@ -27,6 +27,10 @@ export type LocalTx = {
   // separate chain-confirmation status used by History.
   pending: boolean;
   confs?: number;   // chain confirmations, for display only — does NOT gate the balance subtraction
+  /// When `confs` was learned. The count grows continuously (~1 block/s) but is only
+  /// sampled every few seconds, so the display interpolates from this instant instead
+  /// of jumping when a poll lands. See `confirmations.ts`.
+  confAt?: number;
   // How many confirmation lookups have come back empty for this row. A txid the
   // chain will never answer for (a send whose transaction was dropped, a record
   // from before a relaunch) used to be retried on EVERY 1-second poll forever —
@@ -85,7 +89,7 @@ export function applyChainStatus(txid: string, confirmations: number): LocalTx[]
   const txs = loadTxs().map((t) => {
     if (t.txid !== txid) return t;
     if (t.confs !== confirmations || t.confTries) changed = true;
-    return { ...t, confs: confirmations, confTries: 0 };
+    return { ...t, confs: confirmations, confAt: Date.now(), confTries: 0 };
   });
   if (changed) save(txs);
   return txs;

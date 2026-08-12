@@ -24,6 +24,7 @@ import { useMaintenance } from "./useMaintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline, type Receipt } from "./receipts";
 import { byNewest, receiptIsOnChain } from "./history";
+import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
@@ -359,7 +360,15 @@ export function visibleDeviceRows(txs: LocalTx[], chainRows: { txid: string; kin
 /// answered for after CONF_MAX_TRIES is not "0-conf" — it was never seen, and
 /// saying otherwise claims a dead send is still live.
 function confBadge(t: LocalTx): string {
-  const confs = t.confs ?? 0;
+  // Interpolated between polls rather than taken raw. The count grows ~1 block/s but is
+  // only sampled every few seconds, so shown raw it sat still and then leapt — 4, then
+  // 12 — which reads as the wallet being asleep. See `confirmations.ts` for why the
+  // local tick runs slow and never counts down.
+  // Only interpolate when we know WHEN the count was learned. Rows recorded before
+  // `confAt` existed would otherwise be dated from their broadcast time, and a row that
+  // stopped being polled would quietly accrue the full local allowance on top of a
+  // stale count. Without that timestamp the raw number is the only honest one.
+  const confs = (t.confAt ? tickedConfirmations({ serverConfs: t.confs ?? null, serverAt: t.confAt }) : t.confs) ?? 0;
   if (confs >= 1) {
     return Date.now() - t.ts > CONF_RECENT_RETRY_MS ? "confirmed" : `${confs} conf${confs === 1 ? "" : "s"}`;
   }
@@ -3802,9 +3811,19 @@ function Send({
   const [showConsolidate, setShowConsolidate] = useState(false);
   // What the last comparable send on this device took. `null` until one has
   // finished, which is exactly when a countdown would be a guess.
+  //
+  // Bucketed by whether the wallet is spend-ready RIGHT NOW. A payment from a warm
+  // wallet skips the witness rebuild entirely, so a cold sample predicts nothing about
+  // it — that mismatch is what produced "about 3 minutes" for a 40-second send.
   const sendEstimateMs = useMemo(
-    () => estimateDuration("prepare", activeToken() ?? "default", Math.max(1, Math.min(status?.note_count ?? 1, MAX_NOTES_PER_TX))),
-    [status?.note_count],
+    () =>
+      estimateDuration(
+        "prepare",
+        activeToken() ?? "default",
+        Math.max(1, Math.min(status?.note_count ?? 1, MAX_NOTES_PER_TX)),
+        !!status?.spend_ready && !status?.warming,
+      ),
+    [status?.note_count, status?.spend_ready, status?.warming],
   );
   const [scanning, setScanning] = useState(false);
   // Advanced: a manual fee (ZKAS). Empty = automatic. The daemon treats it as a
@@ -3945,6 +3964,10 @@ function Send({
       }
       const feeSompi = feeCustomSet ? Math.round(feeCustom * 1e8) : undefined;
       const sendStartedAt = Date.now();
+      // Captured at the START, not at completion: by the time the payment lands the
+      // wallet is warm BECAUSE of it, so reading the flag afterwards would file every
+      // cold run under "warm" and re-create the over-prediction this bucketing fixes.
+      const startedWarm = !!status?.spend_ready && !status?.warming;
       const r = await sendNonCustodial(
         seed.trim(),
         networkOf(status),
@@ -3959,7 +3982,7 @@ function Send({
       // NEXT send can count down instead of only counting up. Recorded on success
       // only: a run that failed part-way measures the failure, not the work.
       const spent = r.parts?.length ? r.parts.length : 1;
-      recordDuration("prepare", activeToken() ?? "default", Math.max(1, spent), Date.now() - sendStartedAt);
+      recordDuration("prepare", activeToken() ?? "default", Math.max(1, spent), Date.now() - sendStartedAt, startedWarm);
       const toAddr = to.trim();
       setTo("");
       setAmount("");
