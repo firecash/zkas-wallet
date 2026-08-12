@@ -2131,6 +2131,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
     chainLen: status.chain_len,
     warming: !!status.warming,
     loading: !!status.loading,
+    blocksBehind: status.blocks_behind,
     haveConfirmedBalance: !!snap,
     etaSeconds: eta,
     warmingSeconds,

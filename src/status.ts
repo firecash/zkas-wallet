@@ -46,6 +46,10 @@ export interface StatusInput {
   /// `synced` true, and the zero fell through to "Finishing up · your balance is up to
   /// date". It said a balance of 0 was final. It was not a balance at all.
   loading?: boolean;
+  /// How far the wallet's view trails the chain tip. Non-zero is normal — a wallet
+  /// deliberately never ingests the newest blocks. Shown only as the caveat attached to
+  /// paying while behind.
+  blocksBehind?: number;
 }
 
 export type WalletPhase = "offline" | "opening" | "setting-up" | "catching-up" | "almost-ready" | "ready";
@@ -114,6 +118,23 @@ export function formatDuration(secs: number): string {
   return rem ? `about ${h}h ${rem}m` : `about ${h} hour${h === 1 ? "" : "s"}`;
 }
 
+/**
+ * What to tell someone who can pay while still behind the tip.
+ *
+ * Two honest caveats, and only the ones that are true: money that arrived in the lag
+ * window is not counted yet, and a spend made from ANOTHER device in that window is
+ * invisible here (consensus rejects such a payment rather than mis-settling it, so the
+ * cost is a failed send, never lost coins). Both shrink to nothing as the wallet
+ * catches up, so this stays a note rather than a warning.
+ */
+function behindDetail(behind?: number): string {
+  const window =
+    behind && behind > 0
+      ? `the newest ${behind.toLocaleString()} block${behind === 1 ? "" : "s"}`
+      : "the newest blocks";
+  return `You can send now — everything a payment needs is already in view. The wallet is still reading ${window}, so anything that arrived in them is not counted yet.`;
+}
+
 function pctOf(scanned: number, total: number): number | null {
   if (!(total > 0) || !(scanned >= 0)) return null;
   return Math.max(0, Math.min(100, Math.round((scanned / total) * 100)));
@@ -174,6 +195,30 @@ export function walletStatus(s: StatusInput): WalletStatusView {
   }
 
   if (!s.synced) {
+    // Behind the tip, but far enough along that the daemon will ACCEPT a payment.
+    //
+    // A spend proves against an anchor ~630 blocks deep, not against the chain head, so
+    // a wallet that trails the tip can still hold every note and witness a payment
+    // consumes. Labelling that "Catching up 99.9%" told people to wait for something
+    // that had already happened — and on a wallet that hovers behind the tip, it never
+    // stops telling them that. Lead with what they can do; keep the caveat, because
+    // arrivals inside the lag window genuinely are not counted yet.
+    if (walletCanSpend(s)) {
+      return {
+        phase: "catching-up",
+        label: "Ready to pay · still catching up",
+        detail: behindDetail(s.blocksBehind),
+        pct,
+        pctFine,
+        progress,
+        eta,
+        tone: "busy",
+        // The balance is NOT final — recent arrivals are still missing — but everything
+        // it does show is real and spendable.
+        balanceIsFinal: false,
+        canSpend: true,
+      };
+    }
     // Never scanned to completion: everything on screen is a running count.
     if (!s.haveConfirmedBalance) {
       return {

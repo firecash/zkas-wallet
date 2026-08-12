@@ -258,3 +258,38 @@ describe("a wallet the daemon has not opened yet", () => {
     expect(walletStatus({ ...opening, loading: false, scannedBlocks: 2_800_000, spendReady: true }).phase).toBe("ready");
   });
 });
+
+// A payment proves against an anchor ~630 blocks deep, not against the chain head, so a
+// wallet that trails the tip can still hold every note and witness the payment consumes.
+// Gating Send on "caught up to the tip" stranded wallets that were fully able to pay —
+// observed live on one holding 4,151,575 ZKAS, all matured, none of it movable.
+describe("a wallet that is behind but can still pay", () => {
+  const behind = {
+    online: true,
+    synced: false,
+    spendReady: true, // daemon says the anchor is covered
+    scannedBlocks: 1_456_000,
+    chainLen: 1_456_300,
+    blocksBehind: 300,
+    warming: false,
+    haveConfirmedBalance: true,
+    etaSeconds: null,
+  };
+
+  it("leads with what the user can do, not with a percentage", () => {
+    const v = walletStatus(behind);
+    expect(v.canSpend).toBe(true);
+    expect(v.label).toBe("Ready to pay · still catching up");
+  });
+
+  it("still says what is being traded away", () => {
+    expect(walletStatus(behind).detail).toContain("300");
+    expect(walletStatus(behind).balanceIsFinal).toBe(false);
+  });
+
+  it("keeps blocking when the daemon says the anchor is NOT covered", () => {
+    const v = walletStatus({ ...behind, spendReady: false, blocksBehind: 2572 });
+    expect(v.canSpend).toBe(false);
+    expect(v.label).not.toBe("Ready to pay · still catching up");
+  });
+});

@@ -233,6 +233,9 @@ export function getToken(): string {
 export interface Status {
   has_wallet: boolean;
   address: string | null;
+  // Blocks between the wallet's view and the chain tip. Non-zero is normal: a wallet
+  // never ingests the newest blocks. Older daemons omit it.
+  blocks_behind?: number;
   network: string;
   node_connected: boolean;
   daa_score: number;
