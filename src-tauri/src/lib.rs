@@ -1484,7 +1484,7 @@ async fn set_node_source(
     };
 
     let (_, _, _, _, synced, _, _) =
-        tokio::time::timeout(std::time::Duration::from_secs(8), query_node_rpc(&target))
+        tokio::time::timeout(std::time::Duration::from_secs(11), query_node_rpc_with_deadline(&target, std::time::Duration::from_secs(8)))
             .await
             .map_err(|_| {
                 format!("node RPC at {target} timed out; wallet connection was not changed")
@@ -1650,7 +1650,49 @@ struct NodeStatus {
     last_exit: Option<String>,
 }
 
-async fn query_node_rpc(addr: &str) -> Result<(u64, u64, u64, usize, bool, usize, f64), String> {
+/// Ask a node for its status, and CLOSE the session however this ends.
+///
+/// The deadline lives inside this function on purpose. Callers used to wrap the whole
+/// thing in `tokio::time::timeout(...)`, which cancels the future by dropping it — and a
+/// dropped future never reaches `client.disconnect()`. The connection had already been
+/// established by then, so every poll that overran its timeout left a live gRPC session
+/// on the node.
+///
+/// That leak amplifies itself: a busy node answers more slowly, more polls overrun, more
+/// sessions leak, and the node gets busier. Reported from the field on Windows — the
+/// desktop app holding **126 established connections** to a Kaspa node whose default
+/// `--rpcmaxclients` is 128, while each mining bridge held exactly one. The parent node
+/// then refused everything with "gRPC service has reached full capacity", and all 126
+/// vanished the moment the app was closed. The same shape as the socat forwarder leak
+/// fixed on the public node the same week: nothing was closing what it opened.
+///
+/// So: connect, run the calls under the deadline, and disconnect unconditionally.
+/// Close a gRPC session when this guard drops — including when the surrounding future is
+/// CANCELLED, which is exactly the case a plain `disconnect().await` at the end misses.
+///
+/// `Drop` cannot await, so the disconnect is spawned. That is sound here: the client is
+/// cloned, so the spawned task owns everything it needs, and a session closed a moment
+/// late still returns the node's slot. Leaving it open does not.
+struct DisconnectOnDrop(Option<kaspa_grpc_client::GrpcClient>);
+
+impl Drop for DisconnectOnDrop {
+    fn drop(&mut self) {
+        if let Some(client) = self.0.take() {
+            tokio::spawn(async move {
+                let _ = client.disconnect().await;
+            });
+        }
+    }
+}
+
+fn scopeguard_disconnect(client: kaspa_grpc_client::GrpcClient) -> DisconnectOnDrop {
+    DisconnectOnDrop(Some(client))
+}
+
+async fn query_node_rpc_with_deadline(
+    addr: &str,
+    deadline: std::time::Duration,
+) -> Result<(u64, u64, u64, usize, bool, usize, f64), String> {
     use kaspa_grpc_client::GrpcClient;
     use kaspa_rpc_core::{api::rpc::RpcApi, notify::mode::NotificationMode};
 
@@ -1666,25 +1708,41 @@ async fn query_node_rpc(addr: &str) -> Result<(u64, u64, u64, usize, bool, usize
     )
     .await
     .map_err(|e| format!("cannot connect to node RPC at {addr}: {e}"))?;
-    let dag = client
-        .get_block_dag_info()
-        .await
-        .map_err(|e| format!("getBlockDagInfo failed: {e}"))?;
-    let synced = client
-        .get_sync_status()
-        .await
-        .map_err(|e| format!("getSyncStatus failed: {e}"))?;
-    let peers = client
-        .get_connected_peer_info()
-        .await
-        .map(|r| r.peer_info.len())
-        .unwrap_or(0);
-    let mempool = client
-        .get_mempool_entries(false, false)
-        .await
-        .map(|r| r.len())
-        .unwrap_or(0);
+
+    // Every call that can hang lives inside this block, so the deadline covers them and
+    // the disconnect below is reached no matter which way it ends.
+    let gathered = tokio::time::timeout(deadline, async {
+        let dag = client
+            .get_block_dag_info()
+            .await
+            .map_err(|e| format!("getBlockDagInfo failed: {e}"))?;
+        let synced = client
+            .get_sync_status()
+            .await
+            .map_err(|e| format!("getSyncStatus failed: {e}"))?;
+        let peers = client
+            .get_connected_peer_info()
+            .await
+            .map(|r| r.peer_info.len())
+            .unwrap_or(0);
+        let mempool = client
+            .get_mempool_entries(false, false)
+            .await
+            .map(|r| r.len())
+            .unwrap_or(0);
+        Ok::<_, String>((dag, synced, peers, mempool))
+    })
+    .await;
+
+    // Unconditional. This is the whole point of the restructure — a timed-out or failed
+    // query must still hand the node its slot back.
     let _ = client.disconnect().await;
+
+    let (dag, synced, peers, mempool) = match gathered {
+        Ok(Ok(v)) => v,
+        Ok(Err(e)) => return Err(e),
+        Err(_) => return Err(format!("node RPC at {addr} did not answer within {}s", deadline.as_secs())),
+    };
     Ok((
         dag.block_count,
         dag.header_count,
@@ -1717,6 +1775,10 @@ async fn verify_wallet_history_rpc(addr: &str) -> Result<(), String> {
     )
     .await
     .map_err(|e| format!("cannot connect to node RPC at {addr}: {e}"))?;
+    // Cleanup guard: see `query_node_rpc_with_deadline`. This function is also called
+    // under an outer timeout, so it must not rely on reaching its own end to disconnect.
+    let closer = client.clone();
+    let _guard = scopeguard_disconnect(closer);
     let genesis = RpcHash::from_bytes(Params::from(NetworkType::Mainnet).genesis.hash.as_bytes());
     let result = client.get_shielded_blocks(genesis, 1).await;
     let _ = client.disconnect().await;
@@ -1799,7 +1861,7 @@ async fn node_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<NodeStatu
         });
     }
     let status =
-        match tokio::time::timeout(std::time::Duration::from_secs(4), query_node_rpc(&rpc_addr))
+        match tokio::time::timeout(std::time::Duration::from_secs(7), query_node_rpc_with_deadline(&rpc_addr, std::time::Duration::from_secs(4)))
             .await
         {
             Ok(Ok((blocks, headers, daa, peers, synced, mempool, difficulty))) => NodeStatus {
@@ -2553,7 +2615,7 @@ async fn mining_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<MiningS
     };
     let zkas_status = if zkas_should_probe {
         Some(
-            tokio::time::timeout(std::time::Duration::from_secs(3), query_node_rpc(&zkas_rpc))
+            tokio::time::timeout(std::time::Duration::from_secs(6), query_node_rpc_with_deadline(&zkas_rpc, std::time::Duration::from_secs(3)))
                 .await,
         )
     } else {
@@ -2562,7 +2624,7 @@ async fn mining_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<MiningS
     let kaspa_status = if kaspa_should_probe {
         if let Some(address) = kaspa_rpc.as_deref() {
             Some(
-                tokio::time::timeout(std::time::Duration::from_secs(3), query_node_rpc(address))
+                tokio::time::timeout(std::time::Duration::from_secs(6), query_node_rpc_with_deadline(address, std::time::Duration::from_secs(3)))
                     .await,
             )
         } else {
