@@ -94,9 +94,17 @@ jobs:
       - name: protoc (macos)
         if: startsWith(matrix.os, 'macos')
         run: brew install protobuf
+      # NOT chocolatey. Its community feed 504'd during the v1.0.6 release build, protoc
+      # never installed, and every Windows bundle failed with "Could not find `protoc`" —
+      # a third-party outage taking out a release. This action pulls a pinned binary
+      # straight from the protobuf GitHub releases, which is where the bytes come from
+      # anyway, and retries are one re-run rather than a wait on someone else's CDN.
       - name: protoc (windows)
         if: startsWith(matrix.os, 'windows')
-        run: choco install protoc -y
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "27.3"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Tauri's Linux bundler needs the webkit/gtk stack and patchelf.
       - name: Tauri system deps (linux)
