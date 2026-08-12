@@ -248,6 +248,10 @@ export interface Status {
   // while Send refused seconds later. Older daemons omit it; absent means "trust
   // `synced`", which is the old behaviour and no worse than it was.
   spend_ready?: boolean;
+  // The daemon has this wallet but has not opened it yet: balance and scan progress are
+  // unknown rather than zero, and `address` may be absent for the same reason. Never a
+  // sign the wallet was forgotten. Older daemons omit it.
+  loading?: boolean;
   // The wallet's view was rebuilt through a node that has PRUNED part of its
   // history: notes older than the node's pruning point exist on-chain but cannot
   // be seen here, so the balance is a lower bound. The UI must say so — silence

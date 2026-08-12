@@ -225,3 +225,36 @@ describe("readiness is the daemon's answer, not our inference", () => {
     expect(walletCanSpend({ online: false, synced: true, spendReady: true })).toBe(false);
   });
 });
+
+// Regression: a daemon restart closes every wallet at once. While a wallet is being
+// re-opened the daemon reports balance 0, and the client's 6s "synced" hold could keep
+// `synced` true across that gap — which used to fall through to "Finishing up · your
+// balance is up to date" over a balance of zero. A user reloaded the page and saw their
+// real balance, which is the tell: nothing was wrong except what the app said.
+describe("a wallet the daemon has not opened yet", () => {
+  const opening = {
+    online: true,
+    synced: true, // held over from before the restart
+    spendReady: false,
+    scannedBlocks: 0,
+    chainLen: 2_800_000,
+    warming: false,
+    loading: true,
+    haveConfirmedBalance: true,
+    etaSeconds: null,
+  };
+
+  it("is reported as opening, never as finished", () => {
+    const v = walletStatus(opening);
+    expect(v.phase).toBe("opening");
+    expect(v.label).toBe("Opening your wallet");
+  });
+
+  it("never calls the balance final while it is unknown", () => {
+    expect(walletStatus(opening).balanceIsFinal).toBe(false);
+  });
+
+  it("still resolves normally once the wallet is open", () => {
+    expect(walletStatus({ ...opening, loading: false, scannedBlocks: 2_800_000, spendReady: true }).phase).toBe("ready");
+  });
+});

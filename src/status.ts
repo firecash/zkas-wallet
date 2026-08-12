@@ -38,6 +38,14 @@ export interface StatusInput {
   etaSeconds: number | null;
   /// How long this wallet has been in the getting-ready state, if known.
   warmingSeconds?: number | null;
+  /// The daemon has the wallet on disk but has not opened it yet, so its balance and
+  /// scan progress are UNKNOWN — not zero. Absent on daemons that predate the field.
+  ///
+  /// Without this, a wallet that had been synced and was then re-opened (a daemon
+  /// restart) reported `balance 0` while the client's own short "synced" hold kept
+  /// `synced` true, and the zero fell through to "Finishing up · your balance is up to
+  /// date". It said a balance of 0 was final. It was not a balance at all.
+  loading?: boolean;
 }
 
 export type WalletPhase = "offline" | "opening" | "setting-up" | "catching-up" | "almost-ready" | "ready";
@@ -143,7 +151,14 @@ export function walletStatus(s: StatusInput): WalletStatusView {
 
   // No progress figure yet: the wallet is being loaded and genuinely knows nothing.
   // The daemon answers zeros here, which is "I don't know yet", never "you have none".
-  if (!s.synced && s.scannedBlocks === 0) {
+  //
+  // `loading` is checked FIRST and on its own, because the other tests infer "not open
+  // yet" from zeros, and inference loses to a stale `synced`: a wallet re-opened after a
+  // daemon restart kept a held `synced: true` for a few seconds while reporting a zero
+  // balance, sailed past this branch, and was announced as finished with 0 ZKAS. When
+  // the daemon states outright that it has not opened the wallet, nothing downstream
+  // may describe the balance at all.
+  if (s.loading || (!s.synced && s.scannedBlocks === 0)) {
     return {
       phase: "opening",
       label: "Opening your wallet",

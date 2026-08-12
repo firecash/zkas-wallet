@@ -559,7 +559,11 @@ export default function App() {
         // synced: hold a displayed "synced" through dips shorter than 6s.
         if (s.synced) unsyncedSince.current = null;
         else if (unsyncedSince.current == null) unsyncedSince.current = now;
-        const syncedStable = s.synced || (!!prev?.synced && now - (unsyncedSince.current ?? now) < 6000);
+        // The hold smooths one-poll dips, but it must NOT paper over a wallet the daemon
+        // has closed and is re-opening: there the balance is unknown, and holding
+        // `synced` true over an unknown balance is what let "0 ZKAS · your balance is up
+        // to date" reach the screen.
+        const syncedStable = s.synced || (!s.loading && !!prev?.synced && now - (unsyncedSince.current ?? now) < 6000);
         // warming: only show the warm-up notice once it has held for 8s — the
         // steady-state background catch-up flips it on for a moment after every
         // new block, and that must not flash the notice.
@@ -572,12 +576,19 @@ export default function App() {
         // guard used to be unconditional, so a wallet the user had deliberately
         // removed was resurrected on every poll and the app looked like it had
         // ignored them. After MISSING_TOLERANCE consecutive denials we believe it.
-        if (s.has_wallet && s.address) {
+        //
+        // Existence is answered by `has_wallet` ALONE. It used to require an address as
+        // well, which conflated "this wallet is gone" with "this wallet is not open yet":
+        // the daemon can only name a wallet it has loaded, and after a daemon restart
+        // every wallet is unloaded at once for minutes. Users were shown the recovery
+        // screen — asked to retype a 64-character seed — for wallets that were merely
+        // still opening. A daemon that says it HAS the wallet has not forgotten it.
+        if (s.has_wallet) {
           missingPolls.current = 0;
           repairAttempts.current = 0;
         } else missingPolls.current += 1;
         const transient = missingPolls.current <= MISSING_TOLERANCE;
-        const denied = !!prev?.has_wallet && (!s.has_wallet || !s.address);
+        const denied = !!prev?.has_wallet && !s.has_wallet;
         // Out of grace with a wallet on record: if this device holds the seed,
         // the daemon has LOST the registration — re-register the viewing key
         // (fired just below the setStatus, never inside it) and hold the wallet
@@ -609,7 +620,7 @@ export default function App() {
         // status, so `denied` is false even though the cached wallet is known.
         // Treat that as the same recoverable server-side registration loss once
         // the normal transient grace has elapsed.
-        const missingKnownWallet = (!s.has_wallet || !s.address) && !!cachedAddress;
+        const missingKnownWallet = !s.has_wallet && !!cachedAddress;
         if ((denied || missingKnownWallet) && !transient && repairAttempts.current < 3 && hasLocalKey && !repairInFlight.current)
           repairNeeded.current = true;
         const holdForRepair =
@@ -2119,6 +2130,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
     scannedBlocks: status.scanned_blocks,
     chainLen: status.chain_len,
     warming: !!status.warming,
+    loading: !!status.loading,
     haveConfirmedBalance: !!snap,
     etaSeconds: eta,
     warmingSeconds,
