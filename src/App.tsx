@@ -24,6 +24,7 @@ import { useMaintenance } from "./useMaintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline, type Receipt } from "./receipts";
 import { byNewest, receiptIsOnChain } from "./history";
+import { pasteText } from "./lib/utils";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -149,19 +150,11 @@ function parsePaymentUri(text: string): { address: string; amount?: string; memo
 /// text, no error, no clue. Reported as "paste doesn't work on some platforms",
 /// which is exactly right and exactly invisible. Now the caller can tell "the
 /// clipboard was empty" from "this browser won't let me" and say so.
-type PasteResult = { ok: true; text: string } | { ok: false; reason: "unavailable" | "denied" | "empty" };
-
-async function pasteText(): Promise<PasteResult> {
-  if (!navigator.clipboard?.readText) return { ok: false, reason: "unavailable" };
-  let text: string;
-  try {
-    text = (await navigator.clipboard.readText()).trim();
-  } catch {
-    // Denied, dismissed, or unsupported at runtime — indistinguishable by design.
-    return { ok: false, reason: "denied" };
-  }
-  return text ? { ok: true, text } : { ok: false, reason: "empty" };
-}
+/// Imported, NOT reimplemented. This file carried its own copy of `pasteText`, and the
+/// Paste button called that copy — so fixing the one in `lib/utils.ts` to use the native
+/// clipboard plugin changed nothing at all on Android, where the web clipboard READ api
+/// does not exist. Two implementations of one behaviour means fixing one of them is a
+/// coin flip; there is now one.
 
 /// Keep a money field to something that can actually be a number: digits, one
 /// decimal point, at most 8 places (a sompi is 1e-8 ZKAS — more digits are not
@@ -2619,16 +2612,18 @@ function Onboard({
           <button
             className="btn ghost small"
             onClick={async () => {
-              try {
-                const text = await navigator.clipboard.readText();
-                if (!text.trim()) {
-                  setError("Your clipboard is empty.");
-                  return;
-                }
-                setRestoreJson(text);
+              // Through `pasteText`, not the raw web api: this is the RESTORE path, and
+              // on Android the web clipboard cannot be read at all — so restoring a
+              // phone backup that left as clipboard text failed every time, which is
+              // precisely the outcome the comment above says must never happen.
+              const r = await pasteText();
+              if (r.ok) {
+                setRestoreJson(r.text);
                 setRestoreName("pasted from clipboard");
                 setError("");
-              } catch {
+              } else if (r.reason === "empty") {
+                setError("Your clipboard is empty.");
+              } else {
                 setError("Couldn't read the clipboard — paste the backup into the box below instead.");
               }
             }}
