@@ -22,8 +22,12 @@ export interface ControlSettings {
   mining_node_addr: string;
   stratum_port: number;
   min_share_diff: number;
+  /// Mining resumes on next launch. Set when mining starts, cleared by Stop — intent,
+  /// not a live status.
   mining_auto_start: boolean;
   mining_mode: "solo" | "dual";
+  /// ZKAS address the last session paid to, used to resume it.
+  mining_payout: string;
 }
 
 export interface ControlConfig {

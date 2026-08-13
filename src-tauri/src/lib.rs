@@ -138,9 +138,15 @@ pub struct Settings {
     pub mining_node_addr: String,
     pub stratum_port: u16,
     pub min_share_diff: f64,
+    /// Resume mining when the app next launches. Set when mining starts, cleared when
+    /// the user stops it, so it records INTENT: a machine that loses power comes back
+    /// mining, one the user deliberately stopped does not.
     pub mining_auto_start: bool,
     /// Last direct-mining mode, used only when mining_auto_start is enabled.
     pub mining_mode: String,
+    /// ZKAS address the last mining session paid to, needed to resume it. Only
+    /// `kaspa_payout` was persisted, so a solo session had no address to come back to.
+    pub mining_payout: String,
     /// "device" | "lan" | "wan". LAN/WAN bind the authenticated wallet API
     /// to all interfaces; WAN additionally requires an operator-supplied HTTPS
     /// URL because raw wallet traffic must never cross the internet.
@@ -174,6 +180,7 @@ impl Default for Settings {
             stratum_port: 5555,
             min_share_diff: 8192.0,
             mining_auto_start: false,
+            mining_payout: String::new(),
             mining_mode: "solo".into(),
             wallet_access: "device".into(),
             wallet_access_port: 8501,
@@ -2294,6 +2301,52 @@ fn configure_mining_zkas_source(
     Ok(())
 }
 
+/// Restart the last mining session on launch. See the call site in `setup`.
+///
+/// Reuses the persisted configuration rather than re-deriving it: the payout address, the
+/// mode, the work source and the Stratum settings are all already saved, and re-deriving
+/// them risks resuming with something the operator did not choose.
+fn resume_mining(e: &mut Engine, app: &tauri::AppHandle) -> Result<u32, String> {
+    let payout = e.settings.mining_payout.clone();
+    if payout.is_empty() {
+        // Sessions started before the payout was persisted. Nothing to resume TO, and
+        // guessing an address is the one thing that must never happen with money.
+        return Err("no saved payout address; start mining once from the Mine page".into());
+    }
+    let dual = e.settings.mining_mode == "dual";
+    // Dual mining merges against a Kaspa parent, and the bridge cannot work without one.
+    // Starting only the bridge here would reproduce precisely the symptom this whole
+    // change exists to remove: hashrate apparently running while the Kaspa side sits at
+    // "Starting" forever. A managed parent is ours to bring up; a `custom` one belongs to
+    // the operator and we only use the address they configured.
+    if dual && e.settings.kaspa_mode == "local" {
+        e.start_local_kaspa_node(app)?;
+        if !e.services.kaspa_node.running() {
+            let error = e
+                .services
+                .kaspa_node
+                .last_exit()
+                .unwrap_or_else(|| "Kaspa node exited during startup".into());
+            e.services.stop_kaspa_node(app);
+            return Err(error);
+        }
+    }
+    // The bridge needs a reachable work source; without this the failure surfaces as an
+    // opaque bridge exit seconds later instead of a sentence naming the node.
+    let zkas_rpc = e.mining_zkas_rpc()?;
+    probe_node(&zkas_rpc)?;
+    match start_bridge(e, app, &payout, dual) {
+        Ok(pid) => Ok(pid),
+        Err(error) => {
+            // Do not leave a parent node running for a merge that never started.
+            if dual && e.settings.kaspa_mode == "local" {
+                e.services.stop_kaspa_node(app);
+            }
+            Err(error)
+        }
+    }
+}
+
 fn start_bridge(
     e: &mut Engine,
     app: &tauri::AppHandle,
@@ -2376,7 +2429,10 @@ fn start_solo_mining(
     e.settings.stratum_port = stratum_port;
     e.settings.min_share_diff = min_share_diff;
     e.settings.mining_mode = "solo".into();
-    e.settings.mining_auto_start = false;
+    // Records intent so a reboot resumes. This used to be set to FALSE here, which is why
+    // `mining_auto_start` was never enabled by anything.
+    e.settings.mining_auto_start = true;
+    e.settings.mining_payout = payout.clone();
     e.services.stop_bridge(&app);
     let pid = start_bridge(&mut e, &app, &payout, false)?;
     e.save_settings();
@@ -2460,7 +2516,8 @@ fn start_dual_mining(
         }
     }
     e.settings.mining_mode = "dual".into();
-    e.settings.mining_auto_start = false;
+    e.settings.mining_auto_start = true;
+    e.settings.mining_payout = zkas_payout.clone();
     e.services.stop_bridge(&app);
     let pid = match start_bridge(&mut e, &app, &zkas_payout, true) {
         Ok(pid) => pid,
@@ -3054,6 +3111,32 @@ pub fn run() {
                 // Running a node and selecting a wallet source are independent.
                 app_engine.settings.mode = "remote".into();
                 app_engine.save_settings();
+            }
+            // Resume mining if that is what the machine was doing when it went down.
+            //
+            // Reported by an operator running two ASICs: after a power cut the wallet
+            // came back but mining did not, so they auto-started `stratum-bridge.exe`
+            // themselves from the saved config. That works — hashrate returns — but the
+            // Mine page still reads "Stopped", because the app decides that from a child
+            // process it owns and it owns nothing it did not spawn.
+            //
+            // Resuming here fixes both halves at once: the bridge runs again AND the app
+            // owns it, so the UI is right and the existing crash-restart supervision
+            // applies. `start_bridge` reclaims orphaned bridge processes matching this
+            // binary and config first, so an operator who keeps their own autostart is
+            // taken over cleanly rather than colliding on the Stratum port.
+            //
+            // Deliberately best-effort and NON-fatal. Mining depends on a node that may
+            // still be starting, on hardware that may have changed, and on a payout
+            // address that must be present. A failure is logged and the intent is left
+            // ALONE so the next launch tries again — a power cut mid-boot must not
+            // silently un-enrol a miner. The user's own Stop is the only thing that
+            // clears it.
+            if app_engine.settings.mining_auto_start {
+                match resume_mining(&mut app_engine, app.handle()) {
+                    Ok(pid) => log_crash(&format!("resumed mining after restart (bridge pid {pid})")),
+                    Err(error) => log_crash(&format!("mining did not resume after restart: {error}")),
+                }
             }
             // Start the engine unless there is an ENCRYPTED seed file that needs a
             // passphrase first. Everything else — no wallet yet, a legacy cleartext
