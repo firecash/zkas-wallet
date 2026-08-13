@@ -2301,6 +2301,59 @@ fn configure_mining_zkas_source(
     Ok(())
 }
 
+/// Wait until a node can actually give the bridge work, then resume mining.
+///
+/// Runs on its own thread (see the call site in `setup`). Deliberately patient: a machine
+/// that just lost power comes back with a node that is both starting AND behind, and the
+/// honest options are to wait or to give up on a miner who asked to keep mining.
+///
+/// Gives up after `RESUME_MINING_DEADLINE`. The intent flag is left set either way, so the
+/// next launch tries again — only the user's own Stop clears it.
+fn wait_then_resume_mining(app: &tauri::AppHandle) -> Result<(), String> {
+    use tauri::Manager;
+
+    const RESUME_MINING_DEADLINE: std::time::Duration = std::time::Duration::from_secs(60 * 60);
+    const POLL: std::time::Duration = std::time::Duration::from_secs(15);
+
+    let rpc = {
+        let state = app.state::<Mutex<Engine>>();
+        let mut e = engine(&state);
+        e.mining_zkas_rpc()?
+    };
+
+    // First the port, then the answer. `wait_for_node_listener` already exists for the
+    // former and reports the last error rather than a bare timeout.
+    wait_for_node_listener(&rpc, RESUME_MINING_DEADLINE)?;
+
+    // Then sync. A listening node is not a useful node: the bridge refuses to build work
+    // against one that is still catching up, so starting here would just burn the
+    // supervisor's restart budget until it gave up and left mining silently off.
+    let deadline = std::time::Instant::now() + RESUME_MINING_DEADLINE;
+    loop {
+        match tauri::async_runtime::block_on(query_node_rpc_with_deadline(
+            &rpc,
+            std::time::Duration::from_secs(8),
+        )) {
+            Ok((_, _, _, _, synced, _, _)) if synced => break,
+            Ok(_) => {}
+            Err(error) if std::time::Instant::now() >= deadline => {
+                return Err(format!("node never became ready: {error}"));
+            }
+            Err(_) => {}
+        }
+        if std::time::Instant::now() >= deadline {
+            return Err("node did not finish syncing in time".into());
+        }
+        std::thread::sleep(POLL);
+    }
+
+    let state = app.state::<Mutex<Engine>>();
+    let mut e = engine(&state);
+    let pid = resume_mining(&mut e, app)?;
+    log_crash(&format!("resumed mining after restart (bridge pid {pid})"));
+    Ok(())
+}
+
 /// Restart the last mining session on launch. See the call site in `setup`.
 ///
 /// Reuses the persisted configuration rather than re-deriving it: the payout address, the
@@ -2331,10 +2384,8 @@ fn resume_mining(e: &mut Engine, app: &tauri::AppHandle) -> Result<u32, String> 
             return Err(error);
         }
     }
-    // The bridge needs a reachable work source; without this the failure surfaces as an
-    // opaque bridge exit seconds later instead of a sentence naming the node.
-    let zkas_rpc = e.mining_zkas_rpc()?;
-    probe_node(&zkas_rpc)?;
+    // No probe here: the caller has already waited for the node to answer and report
+    // itself synced. A second one-shot check would only add a way to fail.
     match start_bridge(e, app, &payout, dual) {
         Ok(pid) => Ok(pid),
         Err(error) => {
@@ -3132,12 +3183,6 @@ pub fn run() {
             // ALONE so the next launch tries again — a power cut mid-boot must not
             // silently un-enrol a miner. The user's own Stop is the only thing that
             // clears it.
-            if app_engine.settings.mining_auto_start {
-                match resume_mining(&mut app_engine, app.handle()) {
-                    Ok(pid) => log_crash(&format!("resumed mining after restart (bridge pid {pid})")),
-                    Err(error) => log_crash(&format!("mining did not resume after restart: {error}")),
-                }
-            }
             // Start the engine unless there is an ENCRYPTED seed file that needs a
             // passphrase first. Everything else — no wallet yet, a legacy cleartext
             // wallet, or the watch-only default where the daemon holds only a
@@ -3152,7 +3197,33 @@ pub fn run() {
             if app_engine.vault() != zkas_walletd::VaultState::Encrypted {
                 app_engine.start_walletd();
             }
+            let resume_mining_wanted = app_engine.settings.mining_auto_start;
             app.manage(Mutex::new(app_engine));
+            // Resume mining if that is what this machine was doing when it went down.
+            //
+            // On a THREAD, and never on the startup path. Two reasons, both of which the
+            // first version of this got wrong:
+            //
+            //   * The node was launched microseconds ago by the block above. It is not
+            //     listening yet — a kaspad takes seconds to open its gRPC port and longer
+            //     to be useful — so probing it once here fails on every cold boot, which
+            //     is precisely the case this feature exists for.
+            //   * Waiting for it synchronously would block `setup`, so the window would
+            //     not appear until mining was sorted out. Nobody wants a wallet that
+            //     takes a minute to open because a miner is warming up.
+            //
+            // So: wait for the node to answer AND report itself synced, then start. The
+            // bridge runs with BRIDGE_ALLOW_UNSYNCED=0 and would exit immediately against
+            // a node still catching up — after a long outage that catch-up is minutes to
+            // hours, which is exactly when a miner is least able to babysit it.
+            if resume_mining_wanted {
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    if let Err(error) = wait_then_resume_mining(&handle) {
+                        log_crash(&format!("mining did not resume after restart: {error}"));
+                    }
+                });
+            }
             #[cfg(desktop)]
             {
                 let open = MenuItem::with_id(app, "open", "Open ZKas Wallet", true, None::<&str>)?;

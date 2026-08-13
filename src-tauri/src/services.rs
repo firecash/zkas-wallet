@@ -703,6 +703,28 @@ impl ServiceManager {
                 return Ok(pid);
             }
             if Instant::now() >= deadline {
+                // A bridge that is UP and waiting for the node is not a failed bridge.
+                //
+                // It refuses to open its Stratum listener until the node reports itself
+                // mining-ready — correctly, since serving work from an unsynced node would
+                // hand miners jobs on a chain they cannot extend. It says so and retries
+                // every 10s:
+                //
+                //   "Waiting for node to fully sync before starting stratum listeners"
+                //   "GetSyncStatus returned false; waiting for the node to become mining-ready"
+                //
+                // Requiring the Stratum port within 30s therefore fails whenever the node
+                // is still catching up — after a reboot, an update, or any outage — and the
+                // old code then KILLED the healthy bridge on its way out. Reported from the
+                // field with exactly those log lines.
+                //
+                // Its health server being live proves the process started and is
+                // functioning, so we hand it back and let it open Stratum when the node is
+                // ready. Supervision keeps it alive; the UI shows it as running, which it
+                // is.
+                if self.bridge.running() && ready(18080) {
+                    return Ok(pid);
+                }
                 let detail = self
                     .logs(Some("stratum-bridge"), 8)
                     .into_iter()
