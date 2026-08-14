@@ -11,6 +11,8 @@ vi.mock("../src/api", () => ({ api: { prepare, submit } }));
 vi.mock("../src/signer", () => ({ fvkHex, verifyAndSignPayment }));
 
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial } from "../src/noncustodial";
+import { feeReserveSompi } from "../src/fees";
+import { MAX_NOTES_PER_TX } from "../src/noncustodial";
 
 /** A consolidation round walletd would answer with. `remaining` is what it could
  * not fit, which is what drives the next round. */
@@ -101,7 +103,14 @@ describe("noncustodial consolidation", () => {
     expect(result.fee_sompi).toBe(6_000_000);
     expect(result.more).toBe(false);
     // Round two asks for what round one could not fit, less another fee reserve.
-    expect(prepare).toHaveBeenNthCalledWith(2, expect.any(String), "zkas:self", 390_000_000n, undefined, undefined, true);
+    //
+    // Derived, not hardcoded. This assertion used to read 390_000_000n, which encoded a
+    // flat 10,000,000 reserve — and that reserve was the bug: the real relay minimum for a
+    // full 38-note transaction is 24,578,600, so consolidation asked for more than it
+    // could pay for and the daemon refused every time with "insufficient matured funds".
+    // Pinning the number here is what let that ship; pinning the FORMULA cannot.
+    const reserve = BigInt(feeReserveSompi(MAX_NOTES_PER_TX));
+    expect(prepare).toHaveBeenNthCalledWith(2, expect.any(String), "zkas:self", 400_000_000n - reserve, undefined, undefined, true);
   });
 
   it("stops at the round cap and says the wallet is not finished", async () => {

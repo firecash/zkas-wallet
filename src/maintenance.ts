@@ -24,6 +24,7 @@
 // refuses to sign anything that is not a payment to this wallet itself.
 
 import { MAX_NOTES_PER_TX } from "./noncustodial";
+import { feeReserveSompi } from "./fees";
 import type { Status } from "./api";
 
 /// Merge once the wallet holds more notes than this.
@@ -42,7 +43,9 @@ export const MAINTENANCE_NOTE_THRESHOLD = MAX_NOTES_PER_TX + 10;
 export const MAINTENANCE_MIN_INTERVAL_MS = 15 * 60 * 1000;
 
 /// Fee ceiling per merge, mirroring the send path's cap.
-const MAX_FEE_SOMPI = 10_000_000;
+// Same figure the consolidation path reserves — see fees.ts. A second hardcoded copy is
+// how the two drifted from the node's byte-priced reality in the first place.
+const MAX_FEE_SOMPI = feeReserveSompi(MAX_NOTES_PER_TX);
 
 const LAST_RUN_KEY = "maintenance_last_run_";
 

@@ -19,6 +19,7 @@
 
 import { api } from "./api";
 import { fvkHex, verifyAndSignPayment, type Network } from "./signer";
+import { feeReserveSompi, minRelayFeeForSpends } from "./fees";
 
 /// One transaction of a payment. Normal payments are exactly one transaction;
 /// this list has several entries only after the user explicitly accepts split
@@ -68,15 +69,35 @@ export interface SendResult {
 /// amount `/prepare` takes.
 export const SOMPI_PER_ZKAS = 100_000_000;
 
-/// Largest per-transaction fee the device will EVER authorize, in sompi (0.1 ZKAS).
-/// The daemon prices fees by transaction bytes; even the largest standard
-/// transaction (38 spends at the node's 500,000-mass cap) stays well under this,
-/// so the bound never bites an honest daemon — but it caps what a malicious or
-/// compromised daemon can burn.
-/// Before this ceiling existed the device signed whatever fee the daemon reported,
-/// which let a lying daemon spend the wallet's entire change as "fee" (collectable
-/// by a miner — plausibly the daemon operator's own pool).
-export const MAX_FEE_SOMPI = 10_000_000;
+/// Largest per-transaction fee the device will authorize, in sompi — priced for the
+/// transaction actually being signed rather than as one flat number.
+///
+/// The ceiling exists because the device used to sign whatever fee the daemon reported,
+/// which let a lying daemon spend the wallet's entire change as "fee" (collectable by a
+/// miner — plausibly the daemon operator's own pool). That reasoning is sound and stays.
+///
+/// The flat 10,000,000 (0.1 ZKAS) that implemented it was not. Its comment claimed "even
+/// the largest standard transaction (38 spends) stays well under this"; the real relay
+/// minimum for 38 spends is 24,578,600 — two and a half times over. Fees here are priced
+/// by BYTES, and a 38-note bundle is ~123 KB, so the ceiling bound legitimate transactions
+/// long before it bound malicious ones. It covered about 15 spends.
+///
+/// Consequences, both reported live: consolidation reserved 0.1 ZKAS for a fee that was
+/// 0.246, so it asked to spend more than it could pay for and the daemon refused with
+/// "insufficient matured funds: have X, need X+fee" — for hours, because waiting cannot
+/// fix arithmetic. And had planning succeeded, the device would then have refused to sign
+/// its own consolidation.
+///
+/// A ceiling that scales with the transaction is both safer and correct: 2x the relay
+/// minimum for that spend count still catches a daemon inflating a fee, while never
+/// blocking an honest one.
+export function maxFeeForSpends(nSpends: number): number {
+  return minRelayFeeForSpends(nSpends) * 2;
+}
+
+/// Ceiling for a full-size transaction — what to use when the spend count is not yet
+/// known, which is every point before the daemon has planned the round.
+export const MAX_FEE_SOMPI = maxFeeForSpends(38);
 
 /// Notes one standard transaction can spend, mirroring the node's 500,000 block-mass
 /// cap. The wallet only ever uses this to *explain* and to estimate — walletd decides
@@ -299,7 +320,8 @@ export async function consolidateNonCustodial(
   maxRounds = MAX_CONSOLIDATION_ROUNDS,
   onRound?: (round: number, mergedNotes: number) => void,
 ): Promise<ConsolidationResult> {
-  if (spendableSompi <= BigInt(MAX_FEE_SOMPI)) throw new Error("There is not enough spendable balance to consolidate safely.");
+  if (spendableSompi <= BigInt(feeReserveSompi(MAX_NOTES_PER_TX)))
+    throw new Error("There is not enough spendable balance to consolidate safely.");
   const fvk = await fvkHex(seedHex);
   const txids: string[] = [];
   let inputs = 0;
@@ -315,7 +337,9 @@ export async function consolidateNonCustodial(
   let available = spendableSompi;
 
   for (let round = 0; round < Math.max(1, maxRounds); round++) {
-    const requested = available - BigInt(MAX_FEE_SOMPI);
+    // Reserve the relay minimum for a FULL transaction. The daemon picks the final note
+    // count, and reserving for fewer than it picks is exactly the bug this replaced.
+    const requested = available - BigInt(feeReserveSompi(MAX_NOTES_PER_TX));
     if (requested <= 0n) break;
     try {
     onStage?.("proving");
@@ -323,7 +347,9 @@ export async function consolidateNonCustodial(
     const roundAmount = BigInt(prep.amount_sompi_exact ?? Math.round(prep.amount_sompi));
     const roundFee = BigInt(prep.fee_sompi_exact ?? Math.round(prep.fee_sompi));
     const remaining = BigInt(prep.remaining_sompi_exact ?? Math.round(prep.remaining_sompi ?? 0));
-    if (roundAmount <= 0n || roundFee > BigInt(MAX_FEE_SOMPI)) {
+    // Priced for the notes this round actually spends, so a small round is held to a
+    // small ceiling instead of the full-size one.
+    if (roundAmount <= 0n || roundFee > BigInt(maxFeeForSpends(prep.spend_auth.length || MAX_NOTES_PER_TX))) {
       if (txids.length) break;
       throw new Error("The wallet service returned an unsafe consolidation.");
     }
@@ -353,7 +379,7 @@ export async function consolidateNonCustodial(
     onRound?.(txids.length, inputs);
 
     // Everything the wallet could offer went into this round.
-    if (remaining <= BigInt(MAX_FEE_SOMPI)) break;
+    if (remaining <= BigInt(feeReserveSompi(MAX_NOTES_PER_TX))) break;
     available = remaining;
     if (round === Math.max(1, maxRounds) - 1) more = true;
     } catch (cause) {
