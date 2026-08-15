@@ -2254,3 +2254,68 @@ select { appearance: none; cursor: pointer; }
    is a fact, the remaining figure is a measured prediction, and it should not
    present itself with more authority than it has earned. */
 .sendscene-remaining { opacity: 0.75; }
+
+/* ── Settings: grouped, collapsed list ───────────────────────────────────────
+   The panel was a wall of always-open cards, each explaining itself in a
+   paragraph. It now reads as a short list: a section label, then one tappable
+   row per setting. Details (and the explanatory copy) reveal only on tap, so the
+   common things are scannable and the rare ones (node source, signatures) stay
+   out of the way until wanted. All colour comes from the shared tokens, so both
+   themes and every accent follow automatically. */
+.settings-section {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 26px 6px 2px;
+}
+.settings-section:first-child { margin-top: 6px; }
+
+.setrow { padding: 0; overflow: hidden; margin-top: 8px; }
+.setrow-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.setrow-head:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.setrow-head:focus-visible { outline: 2px solid var(--ember); outline-offset: -2px; }
+.setrow-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.setrow-right { margin-left: auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.setrow-summary {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 46vw;
+}
+.setrow-chev { color: var(--muted); flex: none; transition: transform 0.22s ease; }
+.setrow.open .setrow-chev { transform: rotate(180deg); }
+.setrow.open .setrow-head { border-bottom: 1px solid var(--border); }
+.setrow-body { padding: 4px 18px 18px; }
+
+/* The card components render their own <div class="card"><h2>…</h2>. Inside a row
+   that chrome is redundant — the row is the card and the head is the title — so
+   flatten the nested card and hide its heading. Scoped to the direct child so a
+   card's own inner cards (wallet list, etc.) keep their styling. */
+.setrow-body > .card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+}
+.setrow-body h2 { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .setrow-chev { transition: none; }
+}

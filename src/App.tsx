@@ -3064,25 +3064,95 @@ function historyCsv(rows: ChainHistoryRow[]): string {
 /// what protects the key, how you get the wallet back, what it talks to, and
 /// the power tools last. Each section is a card so the pane reads as a list of
 /// concerns rather than one wall of controls.
+function walletCountLabel(): string {
+  const n = listWallets().length;
+  return n === 1 ? "1 wallet" : `${n} wallets`;
+}
+
+// A settings row: title always visible, details revealed on tap. Collapsed by default so
+// the panel scans as a short list instead of a wall of open cards. `summary` shows the
+// current value/state on the right while closed, so common settings can be read without
+// opening them.
+function Collapsible({
+  title,
+  summary,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  summary?: React.ReactNode;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={"card setrow" + (open ? " open" : "")}>
+      <button type="button" className="setrow-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className="setrow-title">{title}</span>
+        <span className="setrow-right">
+          {summary && !open && <span className="setrow-summary">{summary}</span>}
+          <ChevronDown className="setrow-chev" size={18} aria-hidden="true" />
+        </span>
+      </button>
+      {open && <div className="setrow-body">{children}</div>}
+    </div>
+  );
+}
+
+function SettingsSection({ label }: { label: string }) {
+  return <div className="settings-section">{label}</div>;
+}
+
 function SettingsPane({ status }: { status: Status }) {
   return (
     <>
-      <ContactsCard />
-      <AppLockSetting />
-      <BackgroundSyncCard />
-      <RevealSeedCard expectedAddress={status.address ?? undefined} />
+      <SettingsSection label="Security" />
+      <Collapsible title="App lock" summary={isLockEnabled() ? (isBiometricConfigured() ? "Fingerprint" : "On") : "Off"}>
+        <AppLockSetting />
+      </Collapsible>
+      <Collapsible title="Recovery seed" summary="Back up">
+        <RevealSeedCard expectedAddress={status.address ?? undefined} />
+      </Collapsible>
+
+      <SettingsSection label="Wallet" />
+      <Collapsible title="Wallets" summary={walletCountLabel()}>
+        <SwitchWallet />
+      </Collapsible>
+      <Collapsible title="Contacts">
+        <ContactsCard />
+      </Collapsible>
       {isDesktop() ? (
         <>
-          <VaultSetting />
-          <NodeSourceSetting />
+          <Collapsible title="Security &amp; backup">
+            <VaultSetting />
+          </Collapsible>
+          <Collapsible title="Wallet node">
+            <NodeSourceSetting />
+          </Collapsible>
         </>
       ) : (
-        <DaemonSetting />
+        <Collapsible title="Wallet service">
+          <DaemonSetting />
+        </Collapsible>
       )}
-      <AppearanceCard />
-      {!ROOMY() && <Signatures status={status} />}
-      <SwitchWallet />
-      <AboutCard />
+
+      <SettingsSection label="Preferences" />
+      <Collapsible title="Appearance" summary={currentTheme() === "light" ? "Light" : "Dark"}>
+        <AppearanceCard />
+      </Collapsible>
+      <Collapsible title="Background sync">
+        <BackgroundSyncCard />
+      </Collapsible>
+      {!ROOMY() && (
+        <Collapsible title="Signatures">
+          <Signatures status={status} />
+        </Collapsible>
+      )}
+
+      <SettingsSection label="About" />
+      <Collapsible title="About ZKas">
+        <AboutCard />
+      </Collapsible>
     </>
   );
 }
