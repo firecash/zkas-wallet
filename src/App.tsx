@@ -5316,6 +5316,19 @@ function AppLockSetting() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [mode, setMode] = useState<"idle" | "enable" | "disable">("idle");
+  // Offer "also enable fingerprint" in the same step as setting the PIN, when the device
+  // has usable biometric hardware — so a new user opts in once instead of hunting Settings.
+  const [bioAvail, setBioAvail] = useState(false);
+  const [alsoBio, setAlsoBio] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    void isBiometricAvailable().then((a) => {
+      if (alive) setBioAvail(a);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // 6 digits, not 4: the seal is only as strong as what derives it, and a
   // 4-digit PIN is 10,000 guesses to anyone who copies the encrypted blob off
@@ -5331,6 +5344,9 @@ function AppLockSetting() {
     try {
       // Seals EVERY wallet on this device, not just the active one.
       await enableLock(secret, kind);
+      // If they opted into fingerprint here, bind it now with the secret in hand — a
+      // failed/declined scan just leaves them PIN-only, which is a fine state to be in.
+      if (bioAvail && alsoBio) await enableBiometricUnlock(secret);
       setEnabled(true);
       setMode("idle");
       setSecret("");
@@ -5397,6 +5413,15 @@ function AppLockSetting() {
             onChange={(e) => setConfirmSecret(e.target.value)}
             placeholder="Enter it again"
           />
+          {bioAvail && (
+            <label className="choice" style={{ margin: "10px 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
+              <input type="checkbox" checked={alsoBio} onChange={(e) => setAlsoBio(e.target.checked)} />
+              <span className="small">
+                Also unlock with fingerprint (you'll scan it once to link). Your {kind === "pin" ? "PIN" : "passphrase"}{" "}
+                keeps working.
+              </span>
+            </label>
+          )}
           {err && <div className="msg err">{err}</div>}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button className="btn" onClick={enable} disabled={busy || !secret}>

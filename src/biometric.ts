@@ -49,7 +49,20 @@ export async function isBiometricAvailable(): Promise<boolean> {
  */
 export async function enableBiometricUnlock(secret: string): Promise<boolean> {
   if (!(await isBiometricAvailable())) return false;
+  // 1. The secret must be correct — never store one that unseals nothing.
   if (!(await unlock(secret))) return false;
+  // 2. A real fingerprint scan must succeed HERE, at enrol time. This binds unlock to a
+  //    finger that is present now (not just "someone typed the PIN"), and it is the same
+  //    gate that will guard retrieval later — so enabling and using prove the same thing.
+  try {
+    await NativeBiometric.verifyIdentity({
+      title: "Enable fingerprint unlock",
+      subtitle: "Confirm your fingerprint",
+      description: "Link this fingerprint to unlock ZKas",
+    });
+  } catch {
+    return false; // no scan, no binding — the PIN stays the only way in
+  }
   await NativeBiometric.setCredentials({ username: "applock", password: secret, server: SERVER });
   localStorage.setItem(FLAG, "1");
   return true;

@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { lockKind, unlock } from "./applock";
-import { isBiometricAvailable, isBiometricConfigured, unlockWithBiometric } from "./biometric";
+import { enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured, unlockWithBiometric } from "./biometric";
 import { listWallets } from "./wallets";
 import { wipeWalletState } from "./walletstate";
 
@@ -20,6 +20,13 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   const [askWipe, setAskWipe] = useState(false);
   // Whether to offer the fingerprint button (configured AND hardware present).
   const [bioReady, setBioReady] = useState(false);
+  // Hardware is present but the user has not turned fingerprint on yet — drives the
+  // one-tap "enable it now?" nudge shown to existing users right after they type the PIN.
+  const [bioOfferable, setBioOfferable] = useState(false);
+  // Showing that nudge (the app is already unlocked underneath — this just gates entry
+  // for one screen while we ask). Holds the just-verified secret to bind without re-entry.
+  const [showOffer, setShowOffer] = useState(false);
+  const verifiedSecret = useRef<string | null>(null);
   const kind = lockKind();
   const label = kind === "pin" ? "PIN" : "Passphrase";
 
@@ -36,19 +43,23 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
     }
   };
 
-  // Offer — and, once, auto-invoke — fingerprint unlock when it is set up on a device
-  // that currently has usable biometric hardware. The auto-prompt runs a single time so
-  // a user who cancels is not stuck in a re-prompt loop.
+  // On mount, figure out which biometric affordance applies:
+  //   - configured + available -> auto-prompt once, and show the "Use fingerprint" button;
+  //   - available but NOT configured -> arm the post-unlock enable nudge (unless dismissed).
   const autoPrompted = useRef(false);
   useEffect(() => {
     let alive = true;
     (async () => {
-      if (!isBiometricConfigured() || !(await isBiometricAvailable())) return;
+      if (!(await isBiometricAvailable())) return;
       if (!alive) return;
-      setBioReady(true);
-      if (!autoPrompted.current) {
-        autoPrompted.current = true;
-        void tryBiometric();
+      if (isBiometricConfigured()) {
+        setBioReady(true);
+        if (!autoPrompted.current) {
+          autoPrompted.current = true;
+          void tryBiometric();
+        }
+      } else if (localStorage.getItem("bio_offer_dismissed") !== "1") {
+        setBioOfferable(true);
       }
     })();
     return () => {
@@ -63,8 +74,17 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
     setBusy(true);
     try {
       if (await unlock(secret)) {
-        setSecret("");
-        onUnlocked();
+        // Existing user, fingerprint-capable but not set up: offer it in one tap using
+        // the secret they JUST proved, so upgrading costs no Settings trip and no
+        // re-typing. Otherwise go straight in.
+        if (bioOfferable) {
+          verifiedSecret.current = secret;
+          setSecret("");
+          setShowOffer(true);
+        } else {
+          setSecret("");
+          onUnlocked();
+        }
       } else {
         // Deliberately not "wrong PIN, 3 tries left": there is no lockout to
         // count down to. The seal is the protection, and it does not weaken.
@@ -74,6 +94,47 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
       setBusy(false);
     }
   };
+
+  const acceptOffer = async () => {
+    setBusy(true);
+    try {
+      // Binds with a live fingerprint scan (see enableBiometricUnlock). If the scan is
+      // cancelled it simply enters without enabling — the PIN unlock already succeeded.
+      await enableBiometricUnlock(verifiedSecret.current ?? "");
+    } finally {
+      verifiedSecret.current = null;
+      setBusy(false);
+      onUnlocked();
+    }
+  };
+
+  const declineOffer = () => {
+    // Respect "not now" — don't nag on every open. Settings can still enable it later.
+    localStorage.setItem("bio_offer_dismissed", "1");
+    verifiedSecret.current = null;
+    onUnlocked();
+  };
+
+  if (showOffer) {
+    return (
+      <div className="lockwrap">
+        <div className="card lockcard">
+          <h2 style={{ marginTop: 0 }}>Unlock faster next time?</h2>
+          <p className="muted small">
+            Use your fingerprint to open ZKas instead of typing your {label.toLowerCase()}. Your {label.toLowerCase()}{" "}
+            still works and is what secures your keys — the fingerprint just unlocks the app on this device, and it never
+            leaves the phone.
+          </p>
+          <button className="btn" onClick={acceptOffer} disabled={busy}>
+            {busy ? "Setting up…" : "Enable fingerprint"}
+          </button>
+          <button type="button" className="btn ghost" style={{ marginTop: 8 }} onClick={declineOffer} disabled={busy}>
+            Not now
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="lockwrap">
