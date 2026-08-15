@@ -68,6 +68,7 @@ import {
   type Contact,
 } from "./contacts";
 import { disableLock, enableLock, forgetWalletLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed, allUnlockedSeeds } from "./applock";
+import { disableBiometricUnlock, enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured } from "./biometric";
 import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReconfigure } from "./bgsync";
 import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
@@ -5202,6 +5203,111 @@ function BackgroundSyncCard() {
   );
 }
 
+// Sits inside the "App lock is on" panel: link the lock secret to this device's
+// fingerprint, or unlink it. Renders nothing when there is no usable biometric hardware
+// (or on the web build), so the option only appears where it can actually work.
+function BiometricToggle() {
+  const [available, setAvailable] = useState(false);
+  const [on, setOn] = useState(isBiometricConfigured());
+  const [mode, setMode] = useState<"idle" | "enable">("idle");
+  const [secret, setSecret] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const pin = lockKind() === "pin";
+
+  useEffect(() => {
+    let alive = true;
+    void isBiometricAvailable().then((a) => {
+      if (alive) setAvailable(a);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!available) return null;
+
+  const enable = async () => {
+    setErr("");
+    setBusy(true);
+    try {
+      // enableBiometricUnlock verifies the secret before storing it.
+      if (await enableBiometricUnlock(secret)) {
+        setOn(true);
+        setMode("idle");
+        setSecret("");
+      } else {
+        setErr(`That ${pin ? "PIN" : "passphrase"} is not correct.`);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disable = async () => {
+    setBusy(true);
+    try {
+      await disableBiometricUnlock();
+      setOn(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{ margin: "10px 0", paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+      {mode === "enable" ? (
+        <>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Enter your current {pin ? "PIN" : "passphrase"} once to link it to this device's fingerprint. It stays
+            sealed on the device; the fingerprint only releases it to open the app.
+          </p>
+          <input
+            type="password"
+            inputMode={pin ? "numeric" : "text"}
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            placeholder={pin ? "Current PIN" : "Current passphrase"}
+          />
+          {err && <div className="msg err">{err}</div>}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className="btn" onClick={enable} disabled={busy || !secret}>
+              {busy ? "Linking…" : "Enable fingerprint"}
+            </button>
+            <button
+              className="btn ghost"
+              onClick={() => {
+                setMode("idle");
+                setSecret("");
+                setErr("");
+              }}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      ) : on ? (
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <span className="small">
+            <b>Fingerprint unlock is on.</b> Open the app with a fingerprint instead of typing.
+          </span>
+          <button className="btn ghost small" onClick={disable} disabled={busy}>
+            Turn off
+          </button>
+        </div>
+      ) : (
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <span className="small muted">Unlock with a fingerprint instead of typing your {pin ? "PIN" : "passphrase"}.</span>
+          <button className="btn small" onClick={() => setMode("enable")}>
+            Enable fingerprint
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AppLockSetting() {
   const [enabled, setEnabled] = useState(isLockEnabled());
   const [kind, setKind] = useState<"pin" | "passphrase">("pin");
@@ -5244,6 +5350,9 @@ function AppLockSetting() {
         setErr("That passphrase does not unlock this device.");
         return;
       }
+      // The stored fingerprint secret unsealed the lock we just removed — drop it too,
+      // or a fingerprint would keep releasing a secret that no longer protects anything.
+      await disableBiometricUnlock();
       setEnabled(false);
       setMode("idle");
       setSecret("");
@@ -5338,6 +5447,7 @@ function AppLockSetting() {
             {lockKind() === "pin" ? "PIN" : "passphrase"} to open. It re-locks itself after a few minutes in the
             background.
           </p>
+          <BiometricToggle />
           <button className="btn ghost" onClick={() => setMode("disable")}>
             Turn off app lock
           </button>

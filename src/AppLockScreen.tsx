@@ -4,8 +4,9 @@
 // holds no spending key at all (see applock.ts), so there is nothing to show and
 // nothing to be tricked into revealing.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { lockKind, unlock } from "./applock";
+import { isBiometricAvailable, isBiometricConfigured, unlockWithBiometric } from "./biometric";
 import { listWallets } from "./wallets";
 import { wipeWalletState } from "./walletstate";
 
@@ -17,8 +18,44 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   // the lock screen was a hard dead end — the promised "restore from your seed"
   // path sat behind the very screen blocking the app.
   const [askWipe, setAskWipe] = useState(false);
+  // Whether to offer the fingerprint button (configured AND hardware present).
+  const [bioReady, setBioReady] = useState(false);
   const kind = lockKind();
   const label = kind === "pin" ? "PIN" : "Passphrase";
+
+  const tryBiometric = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      if (await unlockWithBiometric()) {
+        onUnlocked();
+      }
+      // A cancel or failure is silent: the passphrase field is right there.
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Offer — and, once, auto-invoke — fingerprint unlock when it is set up on a device
+  // that currently has usable biometric hardware. The auto-prompt runs a single time so
+  // a user who cancels is not stuck in a re-prompt loop.
+  const autoPrompted = useRef(false);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!isBiometricConfigured() || !(await isBiometricAvailable())) return;
+      if (!alive) return;
+      setBioReady(true);
+      if (!autoPrompted.current) {
+        autoPrompted.current = true;
+        void tryBiometric();
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +95,11 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
         <button className="btn" type="submit" disabled={busy || !secret}>
           {busy ? "Unlocking…" : "Unlock"}
         </button>
+        {bioReady && (
+          <button type="button" className="btn ghost" style={{ marginTop: 8 }} onClick={tryBiometric} disabled={busy}>
+            Use fingerprint
+          </button>
+        )}
         <p className="muted small" style={{ marginTop: 12 }}>
           Forgotten it? There is nothing to reset — the {label.toLowerCase()} is never stored or sent anywhere. The
           only way back is restoring each wallet from its seed or a backup file.

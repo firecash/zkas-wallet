@@ -1,5 +1,8 @@
 ext {
-    minSdkVersion = 22
+    // 23 (was 22): androidx.biometric / BiometricPrompt requires API 23+. API 22 is a
+    // negligible share of devices, and biometric unlock (opt-in, passphrase-backed) is
+    // worth the floor. Everything else already works far above 22.
+    minSdkVersion = 23
     compileSdkVersion = 34
     targetSdkVersion = 34
     androidxActivityVersion = '1.8.0'
