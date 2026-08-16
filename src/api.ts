@@ -123,7 +123,19 @@ export function daemonEndpointCandidates(raw: string): string[] {
     })();
   const http = primary.replace(/^https:/i, "http:");
   const https = primary.replace(/^http:/i, "https:");
-  return privateLan ? [http, https] : [https];
+  if (privateLan) return [http, https];
+  // Public host — try BOTH transports, don't force one:
+  //   - a bare IP is usually a raw self-hosted walletd on :8501 with NO TLS, so
+  //     `http` must be tried, not only `https` (the old bug: a public IP scanned
+  //     https-only and always failed against an http daemon);
+  //   - a bare DOMAIN is usually a reverse proxy on 443, so try bare HTTPS first,
+  //     then the raw :8501 forms;
+  //   - an explicit port is authoritative: try both transports on exactly it.
+  const gavePort = entered.startsWith("[") ? /\]:\d+$/.test(entered) : /:\d+$/.test(entered);
+  const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(":");
+  if (gavePort) return [https, http];
+  if (isIp) return [http, https];
+  return [https.replace(/:\d+$/, ""), https, http];
 }
 
 /** A wallet service that answered, but refused this caller's credentials. Kept
