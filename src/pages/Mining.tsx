@@ -279,9 +279,6 @@ export function Mining() {
               <Zap size={17} />
               {busy === "start" ? stage || "Starting…" : "Start mining"}
             </button>
-            <button className="btn ghost compact" onClick={() => setAdvanced((on) => !on)}>
-              {advanced ? "Hide advanced settings" : "Advanced settings"}
-            </button>
           </div>
           {busy === "start" && progress && (
             <div className="download-line">
@@ -300,7 +297,7 @@ export function Mining() {
       {config?.dual_mining_supported === false && <p className="subtle mining-platform-note">No verified merged-mining bridge is published for this device. ZKAS-only mining remains available.</p>}
       {error && <div className="control-error">{error}</div>}
 
-      {(advanced || live) && <section className="control-card mining-setup-card">
+      {live && <section className="control-card mining-setup-card">
         <div className="card-title-row">
           <div><h2>{live ? "Mining service" : "Setup"}</h2><p>{live ? "Your ASIC can connect now." : "Recommended choices are ready. Change only what you need."}</p></div>
           {missing.length > 0 && !live && <span className="status-pill">Installs {missing.length}</span>}
@@ -414,57 +411,68 @@ export function Mining() {
       {chooser && (
         <div className="modalwrap" onClick={() => busy === null && setChooser(false)}>
           <div className="card modalcard" onClick={(event) => event.stopPropagation()}>
-            <h2 style={{ marginTop: 0 }}>Which chains?</h2>
+            <h2 style={{ marginTop: 0 }}>Start mining</h2>
             <p className="muted small">
-              The same ASIC work can be paid on one chain or two. Everything else — installing, the node,
-              the Stratum port — is handled for you.
+              Pick what to mine and where the work comes from. The same ASIC hashing can be paid on one chain or two.
             </p>
+
+            {/* 1 — what to mine */}
+            <div className="setup-section-title"><span>1</span><div><b>What to mine</b><small>Merged pays two chains from one ASIC.</small></div></div>
             <div className="choice-grid">
-              <button
-                className={`choice-button ${mode === "solo" ? "selected" : ""}`}
-                onClick={() => setMode("solo")}
-                disabled={busy !== null}
-              >
-                <strong>ZKAS</strong>
-                <span>Paid to this wallet. Nothing else to enter.</span>
+              <button className={`choice-button ${mode === "solo" ? "selected" : ""}`} onClick={() => setMode("solo")} disabled={busy !== null}>
+                <strong>ZKAS only</strong>
+                <span>Paid to this wallet.</span>
               </button>
-              <button
-                className={`choice-button ${mode === "dual" ? "selected" : ""}`}
-                onClick={() => setMode("dual")}
-                disabled={busy !== null || config?.dual_mining_supported === false}
-              >
+              <button className={`choice-button ${mode === "dual" ? "selected" : ""}`} onClick={() => setMode("dual")} disabled={busy !== null || config?.dual_mining_supported === false}>
                 <strong>KAS + ZKAS</strong>
                 <span>One ASIC, both chains, paid separately.</span>
               </button>
             </div>
             {config?.dual_mining_supported === false && (
-              <p className="subtle">No verified merged-mining build is published for this device, so ZKAS-only is available here.</p>
+              <p className="subtle">No verified merged-mining build for this device — ZKAS-only is available here.</p>
             )}
-            {/* The one thing the app cannot know. Asked only when it is actually
-                needed, and at the moment it becomes relevant — not on a setup form
-                somebody has to read through first. */}
+
+            {/* 2 — payouts */}
+            <div className="setup-section-title" style={{ marginTop: 16 }}><span>2</span><div><b>Payouts</b><small>Rewards go straight to you; no pool account.</small></div></div>
+            <label className="field-label">
+              ZKAS address
+              <input className="control-input mono" value={walletAddress} onChange={(event) => setWalletAddress(event.target.value.trim())} placeholder="zkas:…" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy !== null} />
+            </label>
+            {mode === "dual" && (
+              <label className="field-label">
+                Kaspa address
+                <input className="control-input mono" value={kaspaAddress} onChange={(event) => setKaspaAddress(event.target.value.trim())} placeholder="kaspa:…" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy !== null} />
+              </label>
+            )}
+
+            {/* 3 — ZKAS node */}
+            <div className="setup-section-title" style={{ marginTop: 16 }}><span>3</span><div><b>ZKAS node</b><small>Supplies the work and receives ZKAS blocks.</small></div></div>
+            <div className="choice-row">
+              <button className={`choice-button ${zkasMode === "local" ? "selected" : ""}`} onClick={() => setZkasMode("local")} disabled={busy !== null}><strong>Run it for me</strong><span>Installed and synced on this computer.</span></button>
+              <button className={`choice-button ${zkasMode === "custom" ? "selected" : ""}`} onClick={() => setZkasMode("custom")} disabled={busy !== null}><strong>Connect to my node</strong><span>Use a ZKAS mining gRPC you already run.</span></button>
+            </div>
+            {zkasMode === "custom" && <EndpointField label="ZKAS gRPC" value={zkasRpc} onChange={setZkasRpc} placeholder={STANDALONE_ZKAS_RPC_EXAMPLE} disabled={busy !== null} kind="zkas" />}
+
+            {/* 4 — Kaspa node (merged only) */}
             {mode === "dual" && (
               <>
-                <label className="field-label">
-                  Kaspa payout address
-                  <input
-                    className="control-input mono"
-                    value={kaspaAddress}
-                    onChange={(event) => setKaspaAddress(event.target.value.trim())}
-                    placeholder="kaspa:…"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    disabled={busy !== null}
-                  />
-                </label>
-                <p className="subtle">KAS is paid here; ZKAS still goes to this wallet.</p>
+                <div className="setup-section-title" style={{ marginTop: 16 }}><span>4</span><div><b>Kaspa node</b><small>The parent chain for the same ASIC work.</small></div></div>
+                <div className="choice-row">
+                  <button className={`choice-button ${kaspaMode === "local" ? "selected" : ""}`} onClick={() => setKaspaMode("local")} disabled={busy !== null}><strong>Run it for me</strong><span>Installed and run on this computer.</span></button>
+                  <button className={`choice-button ${kaspaMode === "custom" ? "selected" : ""}`} onClick={() => setKaspaMode("custom")} disabled={busy !== null}><strong>Connect to my node</strong><span>Use a Kaspa mining gRPC endpoint.</span></button>
+                </div>
+                {kaspaMode === "custom" && <EndpointField label="Kaspa gRPC" value={kaspaRpc} onChange={setKaspaRpc} placeholder={DEFAULT_KASPA_RPC} disabled={busy !== null} kind="kaspa" />}
               </>
             )}
-            <div className="detail-row">
-              <span className="k">Rewards</span>
-              <span className="v mono">{walletAddress ? `${walletAddress.slice(0, 22)}…` : "this wallet"}</span>
-            </div>
+
+            {/* advanced — one inline disclosure, no separate screen */}
+            <button className="btn ghost compact" style={{ marginTop: 14 }} onClick={() => setAdvanced((on) => !on)}>{advanced ? "Hide advanced" : "Advanced"}</button>
+            {advanced && (
+              <div className="setup-section" style={{ marginTop: 8 }}>
+                <label className="field-label">Stratum port<input className="control-input mono" type="number" value={stratumPort} onChange={(event) => setStratumPort(Number(event.target.value))} disabled={busy !== null} /></label>
+                <label className="field-label">Start difficulty<input className="control-input mono" type="number" value={shareDifficulty} onChange={(event) => setShareDifficulty(Number(event.target.value))} disabled={busy !== null} /></label>
+              </div>
+            )}
             {missing.length > 0 && (
               <p className="subtle">First run installs: {missing.join(", ")}. Verified downloads, then it starts.</p>
             )}
