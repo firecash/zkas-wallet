@@ -410,7 +410,7 @@ export function Mining() {
       </section>}
       {chooser && (
         <div className="modalwrap" onClick={() => busy === null && setChooser(false)}>
-          <div className="card modalcard" onClick={(event) => event.stopPropagation()}>
+          <div className="card modalcard mining-chooser" onClick={(event) => event.stopPropagation()}>
             <h2 style={{ marginTop: 0 }}>Start mining</h2>
             <p className="muted small">
               Pick what to mine and where the work comes from. The same ASIC hashing can be paid on one chain or two.
@@ -434,36 +434,40 @@ export function Mining() {
 
             {/* 2 — payouts */}
             <div className="setup-section-title" style={{ marginTop: 16 }}><span>2</span><div><b>Payouts</b><small>Rewards go straight to you; no pool account.</small></div></div>
-            <label className="field-label">
-              ZKAS address
-              <input className="control-input mono" value={walletAddress} onChange={(event) => setWalletAddress(event.target.value.trim())} placeholder="zkas:…" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy !== null} />
-            </label>
-            {mode === "dual" && (
+            <div className={mode === "dual" ? "pay-row" : undefined}>
               <label className="field-label">
-                Kaspa address
-                <input className="control-input mono" value={kaspaAddress} onChange={(event) => setKaspaAddress(event.target.value.trim())} placeholder="kaspa:…" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy !== null} />
+                ZKAS address
+                <input className="control-input mono" value={walletAddress} onChange={(event) => setWalletAddress(event.target.value.trim())} placeholder="zkas:…" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy !== null} />
               </label>
-            )}
-
-            {/* 3 — ZKAS node */}
-            <div className="setup-section-title" style={{ marginTop: 16 }}><span>3</span><div><b>ZKAS node</b><small>Supplies the work and receives ZKAS blocks.</small></div></div>
-            <div className="choice-row">
-              <button className={`choice-button ${zkasMode === "local" ? "selected" : ""}`} onClick={() => setZkasMode("local")} disabled={busy !== null}><strong>Run it for me</strong><span>Installed and synced on this computer.</span></button>
-              <button className={`choice-button ${zkasMode === "custom" ? "selected" : ""}`} onClick={() => setZkasMode("custom")} disabled={busy !== null}><strong>Connect to my node</strong><span>Use a ZKAS mining gRPC you already run.</span></button>
+              {mode === "dual" && (
+                <label className="field-label">
+                  Kaspa address
+                  <input className="control-input mono" value={kaspaAddress} onChange={(event) => setKaspaAddress(event.target.value.trim())} placeholder="kaspa:…" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy !== null} />
+                </label>
+              )}
             </div>
-            {zkasMode === "custom" && <EndpointField label="ZKAS gRPC" value={zkasRpc} onChange={setZkasRpc} placeholder={STANDALONE_ZKAS_RPC_EXAMPLE} disabled={busy !== null} kind="zkas" />}
 
-            {/* 4 — Kaspa node (merged only) */}
-            {mode === "dual" && (
-              <>
-                <div className="setup-section-title" style={{ marginTop: 16 }}><span>4</span><div><b>Kaspa node</b><small>The parent chain for the same ASIC work.</small></div></div>
+            {/* 3 & 4 — nodes, side by side when merged */}
+            <div className={mode === "dual" ? "node-columns" : undefined} style={{ marginTop: 16 }}>
+              <div>
+                <div className="setup-section-title"><span>3</span><div><b>ZKAS node</b><small>Supplies the work and receives ZKAS blocks.</small></div></div>
                 <div className="choice-row">
-                  <button className={`choice-button ${kaspaMode === "local" ? "selected" : ""}`} onClick={() => setKaspaMode("local")} disabled={busy !== null}><strong>Run it for me</strong><span>Installed and run on this computer.</span></button>
-                  <button className={`choice-button ${kaspaMode === "custom" ? "selected" : ""}`} onClick={() => setKaspaMode("custom")} disabled={busy !== null}><strong>Connect to my node</strong><span>Use a Kaspa mining gRPC endpoint.</span></button>
+                  <button className={`choice-button ${zkasMode === "local" ? "selected" : ""}`} onClick={() => setZkasMode("local")} disabled={busy !== null}><strong>Run it for me</strong><span>Installed and synced here.</span></button>
+                  <button className={`choice-button ${zkasMode === "custom" ? "selected" : ""}`} onClick={() => setZkasMode("custom")} disabled={busy !== null}><strong>Connect to my node</strong><span>A ZKAS gRPC you run.</span></button>
                 </div>
-                {kaspaMode === "custom" && <EndpointField label="Kaspa gRPC" value={kaspaRpc} onChange={setKaspaRpc} placeholder={DEFAULT_KASPA_RPC} disabled={busy !== null} kind="kaspa" />}
-              </>
-            )}
+                {zkasMode === "custom" && <EndpointField label="ZKAS gRPC host:port" value={zkasRpc} onChange={setZkasRpc} placeholder={STANDALONE_ZKAS_RPC_EXAMPLE} disabled={busy !== null} kind="zkas" />}
+              </div>
+              {mode === "dual" && (
+                <div>
+                  <div className="setup-section-title"><span>4</span><div><b>Kaspa node</b><small>The parent chain for the same ASIC work.</small></div></div>
+                  <div className="choice-row">
+                    <button className={`choice-button ${kaspaMode === "local" ? "selected" : ""}`} onClick={() => setKaspaMode("local")} disabled={busy !== null}><strong>Run it for me</strong><span>Installed and run here.</span></button>
+                    <button className={`choice-button ${kaspaMode === "custom" ? "selected" : ""}`} onClick={() => setKaspaMode("custom")} disabled={busy !== null}><strong>Connect to my node</strong><span>A Kaspa gRPC you run.</span></button>
+                  </div>
+                  {kaspaMode === "custom" && <EndpointField label="Kaspa gRPC host:port" value={kaspaRpc} onChange={setKaspaRpc} placeholder={DEFAULT_KASPA_RPC} disabled={busy !== null} kind="kaspa" />}
+                </div>
+              )}
+            </div>
 
             {/* advanced — one inline disclosure, no separate screen */}
             <button className="btn ghost compact" style={{ marginTop: 14 }} onClick={() => setAdvanced((on) => !on)}>{advanced ? "Hide advanced" : "Advanced"}</button>

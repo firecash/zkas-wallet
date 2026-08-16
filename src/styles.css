@@ -1250,6 +1250,20 @@ select { appearance: none; cursor: pointer; }
   width: 100%;
   max-width: 420px;
   margin: 0;
+  /* Never taller than the viewport: a modal that overflows a vertically-centred
+     wrap loses its TOP rows off-screen (they can't be clicked), which read as a
+     dead field while lower rows still worked. Scroll inside instead. */
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+/* Wider, horizontal layout for the mining setup: the two node choices sit
+   side by side so the modal stays short enough to fit without scrolling. */
+.modalcard.mining-chooser { max-width: 660px; }
+.mining-chooser .node-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.mining-chooser .pay-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 640px) {
+  .mining-chooser .node-columns, .mining-chooser .pay-row { grid-template-columns: 1fr; }
 }
 
 /* First-run node choice: radio rows that stay readable at small widths. */
