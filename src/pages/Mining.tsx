@@ -527,7 +527,35 @@ export function Mining() {
 
 function EndpointField({ label, value, onChange, placeholder, disabled, kind }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; disabled: boolean; kind: "zkas" | "kaspa" }) {
   const profiles = (kind === "zkas" ? miningNodeProfiles : kaspaNodeProfiles).load();
-  return <label className="field-label">{label}<div className="endpoint-input-row"><input className="control-input mono" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} disabled={disabled} />{profiles.length > 0 && <select aria-label={`Saved ${label}`} value="" disabled={disabled} onChange={(event) => event.target.value && onChange(event.target.value)}><option value="">Saved…</option>{profiles.map((profile) => <option value={profile.address} key={profile.id}>{profile.name}</option>)}</select>}</div></label>;
+  return (
+    <label className="field-label">
+      {label}
+      {/* The text box IS the field: type any node's IP:port, on this machine or not.
+          Saved nodes are optional shortcuts below, never a replacement for typing. */}
+      <input
+        className="control-input mono"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        autoComplete="off"
+      />
+      <span className="fieldhint muted">Any node's IP and port — it does not have to be on this computer. e.g. 203.0.113.5:16110</span>
+      {profiles.length > 0 && (
+        <div className="saved-chips">
+          <span className="saved-chips-label">Saved</span>
+          {profiles.map((profile) => (
+            <button type="button" key={profile.id} className="chip" disabled={disabled} onClick={() => onChange(profile.address)} title={profile.address}>
+              {profile.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </label>
+  );
 }
 
 function EndpointCard({ icon, title, note, value, id, copied, onCopy }: { icon: React.ReactNode; title: string; note: string; value: string; id: string; copied: string; onCopy: (id: string, value: string) => void }) {

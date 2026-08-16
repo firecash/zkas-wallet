@@ -2333,3 +2333,8 @@ select { appearance: none; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .setrow-chev { transition: none; }
 }
+
+/* Saved-node shortcuts under a gRPC field — small, clearly secondary to the text box. */
+.saved-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.saved-chips-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-right: 2px; }
+.saved-chips .chip { font-size: 12px; padding: 4px 11px; cursor: pointer; }
