@@ -1490,27 +1490,47 @@ async fn set_node_source(
         _ => unreachable!(),
     };
 
-    let (_, _, _, _, synced, _, _) =
-        tokio::time::timeout(std::time::Duration::from_secs(11), query_node_rpc_with_deadline(&target, std::time::Duration::from_secs(8)))
-            .await
-            .map_err(|_| {
-                format!("node RPC at {target} timed out; wallet connection was not changed")
-            })??;
-    if !synced {
-        return Err(format!(
-            "node at {target} is still syncing. The wallet remains on its previous source so its balance cannot become partial."
-        ));
+    // The public node ("remote") is trusted default infrastructure, and walletd
+    // handles a node that is briefly lagging or catching up on its own. So we do
+    // NOT block first launch on probing it: a slow path to it, a momentary
+    // `!synced` under load, or a slot-exhaustion blip must not refuse to open
+    // the wallet — that is exactly what left first-run users staring at
+    // "Connecting…" for ~40s and then an error. walletd retries the connection
+    // and the UI shows reachability as a live status, not a launch gate.
+    //
+    // A user-entered `custom` node stays STRICT: probe it first and fail loudly
+    // on a wrong address or an unsynced node, rather than silently connect to
+    // nothing.
+    if mode != "remote" {
+        let (_, _, _, _, synced, _, _) = tokio::time::timeout(
+            std::time::Duration::from_secs(11),
+            query_node_rpc_with_deadline(&target, std::time::Duration::from_secs(8)),
+        )
+        .await
+        .map_err(|_| format!("node RPC at {target} timed out; wallet connection was not changed"))??;
+        if !synced {
+            return Err(format!(
+                "node at {target} is still syncing. The wallet remains on its previous source so its balance cannot become partial."
+            ));
+        }
+        tokio::time::timeout(
+            std::time::Duration::from_secs(8),
+            verify_wallet_history_rpc(&target),
+        )
+        .await
+        .map_err(|_| {
+            format!("shielded-history check at {target} timed out; wallet connection was not changed")
+        })??;
     }
-    tokio::time::timeout(
-        std::time::Duration::from_secs(8),
-        verify_wallet_history_rpc(&target),
-    )
-    .await
-    .map_err(|_| {
-        format!("shielded-history check at {target} timed out; wallet connection was not changed")
-    })??;
 
     let mut e = engine(&state);
+    // Roll back only to a daemon that was actually up. Normally one is — boot
+    // starts walletd on the default source — so a switch that fails to come up
+    // is correctly restored to the working connection. But if boot's own start
+    // failed (port == 0), `previous` is just unusable defaults: rolling back to
+    // it (a second 15s wait) buys nothing and reports a "previous connection"
+    // that was never live. There, return the real error instead.
+    let had_daemon = e.port != 0;
     let previous = e.settings.clone();
     if let Some(a) = normalized_addr {
         e.settings.node_addr = a;
@@ -1521,12 +1541,15 @@ async fn set_node_source(
     }
     e.start_walletd();
     if let Err(error) = e.wait_walletd_ready(std::time::Duration::from_secs(15)) {
-        // Transactional rollback: never persist a source that leaves the app
-        // dead, and restore the already-working daemon in the same command.
-        e.settings = previous;
-        e.start_walletd();
-        let _ = e.wait_walletd_ready(std::time::Duration::from_secs(15));
-        return Err(format!("{error}; restored the previous wallet connection"));
+        if had_daemon {
+            // Transactional rollback: never persist a source that leaves the app
+            // dead, and restore the already-working daemon in the same command.
+            e.settings = previous;
+            e.start_walletd();
+            let _ = e.wait_walletd_ready(std::time::Duration::from_secs(15));
+            return Err(format!("{error}; restored the previous wallet connection"));
+        }
+        return Err(error);
     }
     e.save_settings();
     Ok(config_of(&mut e))
