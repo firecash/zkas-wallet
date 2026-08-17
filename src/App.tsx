@@ -1070,6 +1070,7 @@ export default function App() {
                 receipts={receipts}
                 justSent={justSent}
                 synced={!!status?.synced}
+                daaScore={status?.daa_score}
                 onSendAnother={(prefill) => {
                   setJustSent(null);
                   setSendPrefill(prefill ?? null);
@@ -3481,7 +3482,7 @@ function EditContact({ contact, onClose }: { contact: Contact; onClose: () => vo
 /// Re-derive the wallet from the chain. Prominent on both Receive and History
 /// because it is the answer to the two things a user panics about: "my payment
 /// hasn't shown up" and "my balance/history is missing something".
-function RescanButton({ label, hint }: { label: string; hint: string }) {
+function RescanButton({ label, hint, daaScore }: { label: string; hint: string; daaScore?: number }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   // Whether history recording is on decides what a rescan can actually give
@@ -3504,7 +3505,7 @@ function RescanButton({ label, hint }: { label: string; hint: string }) {
   const [ask, setAsk] = useState<boolean | null>(null);
   const [err, setErr] = useState("");
 
-  const run = async (alsoEnableHistory: boolean) => {
+  const run = async (alsoEnableHistory: boolean, birthday?: number) => {
     setAsk(null);
     setErr("");
     setBusy(true);
@@ -3513,7 +3514,10 @@ function RescanButton({ label, hint }: { label: string; hint: string }) {
         await api.setHistoryEnabled(true);
         setHistoryOn(true);
       }
-      await api.rescan();
+      // Pass the chosen height through: without it the daemon defaults to genesis
+      // and replays millions of leaves. `birthday` is a DAA height; a wallet the
+      // user knows the age of should never wait for years of chain it never saw.
+      await api.rescan(birthday && birthday > 0 ? Math.floor(birthday) : undefined);
       setDone(true);
       setTimeout(() => setDone(false), 6000);
     } catch (e) {
@@ -3552,11 +3556,9 @@ function RescanButton({ label, hint }: { label: string; hint: string }) {
       </div>
       {err && <div className="msg err">{err}</div>}
       {ask !== null && (
-        <ConfirmDialog
-          title={ask ? "Enable history & recover" : "Rescan wallet"}
-          body={scopeText(ask)}
-          confirmLabel={ask ? "Enable & rescan" : "Rescan"}
-          onConfirm={() => run(ask)}
+        <RecoverHistoryDialog
+          daaScore={daaScore ?? 0}
+          onConfirm={(birthday) => run(ask, birthday)}
           onCancel={() => setAsk(null)}
         />
       )}
@@ -3618,7 +3620,7 @@ function Receive({ status }: { status: Status }) {
         </span>
       </div>
 
-      <RescanButton label="Payment not showing up?" hint="Re-read the chain for this wallet — recovers anything the local view is missing." />
+      <RescanButton label="Payment not showing up?" hint="Re-read the chain for this wallet — recovers anything the local view is missing." daaScore={status?.daa_score} />
 
       <p className="muted small" style={{ marginTop: 18 }}>
         Looking for your recovery seed? It moved to <b>Settings → Recovery seed</b>, behind your app lock.
@@ -4595,6 +4597,7 @@ function History({
   justSent,
   onSendAnother,
   synced,
+  daaScore,
 }: {
   txs: LocalTx[];
   /// Arrivals this device noticed, shown only in the on-device scope: with full
@@ -4603,6 +4606,9 @@ function History({
   justSent?: string | null;
   onSendAnother?: (prefillAddress?: string) => void;
   synced?: boolean;
+  /// Current chain DAA height, so the rescan dialog can turn a calendar date into
+  /// a birthday. Optional — without it, exact-height entry still works.
+  daaScore?: number;
 }) {
   // Chain-derived history (mints, receives, and OVK-recovered sends): fetched
   // from the daemon, so it survives a seed restore and shows on every device.
@@ -4955,7 +4961,7 @@ function History({
       )}
       {!historyOff && (
         <>
-          <RescanButton label="Something missing?" hint="Re-read the chain to rebuild this history and recover any funds the local view lost." />
+          <RescanButton label="Something missing?" hint="Re-read the chain to rebuild this history and recover any funds the local view lost." daaScore={daaScore} />
 
           <p className="muted small" style={{ marginTop: 14 }}>
             Recovered from the chain by your viewing key. Tap a payment for details.{" "}
