@@ -3122,7 +3122,11 @@ function SettingsPane({ status }: { status: Status }) {
       <Collapsible title="Contacts">
         <ContactsCard />
       </Collapsible>
-      {isDesktop() ? (
+      {/* Desktop keeps node-source controls (it runs its own daemon). Web/mobile talk
+          to the hosted service and do not need — and should not offer — a raw
+          daemon-URL override in Settings: it confused users and did not work for the
+          hosted wallet. The topline connection chooser remains for the rare self-host. */}
+      {isDesktop() && (
         <>
           <Collapsible title="Security &amp; backup">
             <VaultSetting />
@@ -3131,10 +3135,6 @@ function SettingsPane({ status }: { status: Status }) {
             <NodeSourceSetting />
           </Collapsible>
         </>
-      ) : (
-        <Collapsible title="Wallet service">
-          <DaemonSetting />
-        </Collapsible>
       )}
 
       <SettingsSection label="Preferences" />
