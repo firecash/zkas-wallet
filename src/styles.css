@@ -464,9 +464,15 @@ a { color: var(--ember); }
    for by shape. Sized up and given a fixed, square-ish footprint so it does not
    stretch to a quarter of the row like the text tabs do. */
 .tabs button.gear {
-  font-size: 23px;
+  font-size: 24px;
   line-height: 1;
-  padding: 4px 16px;
+  /* A comfortable tap target for the settings gear — it was a thin sliver next to
+     History. ~44px tall matches the platform minimum on touch. */
+  padding: 10px 20px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
 }
 
@@ -863,6 +869,18 @@ select { appearance: none; cursor: pointer; }
 
 /* Transaction history list (on-device sends). */
 .txlist { display: flex; flex-direction: column; gap: 8px; }
+
+/* On phones the history list was eating the screen — full-size cards with generous
+   padding, one per payment. Tighten the rows so more fit per screen without losing
+   legibility: less padding, a smaller gap, and a slightly smaller amount. Desktop
+   keeps the roomier cards. */
+@media (max-width: 640px) {
+  .txlist { gap: 6px; }
+  .txrow { padding: 8px 12px; border-radius: 10px; }
+  .txrow-amt { font-size: 13px; }
+  .txrow-sub { margin-top: 2px; font-size: 11.5px; }
+  .txrow-badge { font-size: 10px; padding: 2px 7px; }
+}
 .txrow {
   display: block;
   text-decoration: none;
