@@ -3,6 +3,7 @@ export type ServiceCategory = "store" | "use" | "earn" | "verify" | "build";
 export type ServiceStatus = "Live" | "Testing" | "Developer preview" | "Available" | "Published" | "Open";
 
 export type ServiceIcon =
+  | "bot"
   | "book"
   | "code"
   | "credit-card"
@@ -49,12 +50,13 @@ const REQUEST_TIMEOUT_MS = 5_000;
 
 const CATEGORIES = new Set<ServiceCategory>(["store", "use", "earn", "verify", "build"]);
 const STATUSES = new Set<ServiceStatus>(["Live", "Testing", "Developer preview", "Available", "Published", "Open"]);
-const ICONS = new Set<ServiceIcon>(["book", "code", "credit-card", "file-key", "git", "pickaxe", "search", "server", "terminal", "users", "wallet"]);
+const ICONS = new Set<ServiceIcon>(["bot", "book", "code", "credit-card", "file-key", "git", "pickaxe", "search", "server", "terminal", "users", "wallet"]);
 
 // This copy is deliberately bundled with every wallet build. It is used only
 // until the live directory arrives, or when the directory is unreachable and
 // this device has no previously validated copy.
 export const BUNDLED_SERVICES: DirectoryService[] = [
+  { id: "ai-uncensored", name: "AI Uncensored", description: "Private, uncensored AI you pay for with ZKAS — no accounts, no tracking.", categories: ["use"], status: "Live", tags: ["Pay with ZKAS", "Private", "AI"], action: "Open AI Uncensored", href: "https://ai-uncensored.online/", icon: "bot" },
   { id: "cli-wallet", name: "CLI & self-hosted wallet", description: "Run walletd or shielded-pay on your own machine.", categories: ["store", "build"], status: "Live", tags: ["Local custody", "Self-hosted", "CLI + API"], action: "View wallet tools", href: "https://github.com/firecash/zkas-rusty#wallet", icon: "terminal" },
   { id: "web-wallet", name: "Web Wallet", description: "Browser wallet for everyday ZKAS. Web keys are less protected than local custody.", categories: ["store"], status: "Live", tags: ["Web", "Less secure"], action: "Open web wallet", href: "https://wallet.zkas.info", icon: "wallet" },
   { id: "app-wallet", name: "Light Wallet", description: "Wallet app with local keys for secure ZKAS custody.", categories: ["store"], status: "Available", tags: ["App", "Secure", "Self-custody"], action: "Download app", href: "https://github.com/firecash/zkas-wallet/releases", icon: "wallet" },
@@ -67,7 +69,7 @@ export const BUNDLED_SERVICES: DirectoryService[] = [
     { label: "CoreBlock", href: "https://coreblock.cc" },
   ] },
   { id: "node-solo-mining", name: "Node & Solo Mining", description: "Run a node, verify the chain and mine to your own shielded address.", categories: ["earn", "verify"], status: "Live", tags: ["Self-verified", "Self-hosted", "CLI"], action: "Run the software", href: "https://github.com/firecash/zkas-rusty#run-a-node--join-the-network", icon: "server" },
-  { id: "payment-gateway", name: "Payment Gateway", description: "Accept ZKAS with invoices, checkout pages and webhooks.", categories: ["use", "build"], status: "Testing", tags: ["Watch-only", "Self-hosted", "WooCommerce"], action: "View gateway project", href: "https://github.com/firecash/zkas-rusty/tree/main/gateway", icon: "credit-card" },
+  { id: "payment-gateway", name: "Payment Gateway", description: "Accept ZKAS with invoices, checkout pages and webhooks.", categories: ["build"], status: "Testing", tags: ["Watch-only", "Self-hosted", "WooCommerce"], action: "View gateway project", href: "https://github.com/firecash/zkas-rusty/tree/main/gateway", icon: "credit-card" },
   { id: "sdk", name: "ZKAS SDK", description: "Rust and TypeScript tools for addresses, wallets and private payments.", categories: ["build"], status: "Developer preview", tags: ["SDK", "Rust", "TypeScript"], action: "Build with ZKAS", href: "https://github.com/firecash/zkas-rusty/tree/main/sdk", icon: "code" },
   { id: "core-source", name: "Core Source", description: "Source code for the node, consensus, wallet and mining tools.", categories: ["build", "verify"], status: "Live", tags: ["Source", "Open", "Rust"], action: "View repository", href: "https://github.com/firecash/zkas-rusty", icon: "git" },
   { id: "whitepaper", name: "Whitepaper", description: "Learn how ZKas privacy, consensus and economics work.", categories: ["build"], status: "Published", tags: ["Documentation", "Protocol"], action: "Read whitepaper", href: "https://zkas.info/whitepaper.html", icon: "book" },

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   BookOpen,
+  Bot,
   Code2,
   CreditCard,
   FileKey,
@@ -26,6 +27,7 @@ import {
 type Category = ServiceCategory;
 
 const ICONS: Record<ServiceIcon, LucideIcon> = {
+  bot: Bot,
   book: BookOpen,
   code: Code2,
   "credit-card": CreditCard,
