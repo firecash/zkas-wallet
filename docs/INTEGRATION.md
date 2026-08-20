@@ -1,327 +1,284 @@
-# Integrating ZKAS into an existing wallet
+# Add ZKAS to your wallet — non-custodial, from zero
 
-This guide is for developers of an **existing wallet** (custodial exchange wallet,
-multi-asset mobile/desktop wallet, point-of-sale, or accounting backend) who want to
-**add ZKAS support** — receive, view, and send — without reimplementing any
-cryptography.
+For developers of an existing wallet (mobile, desktop, exchange, PoS) who want to add
+**ZKAS receive + view + send** the same way our light wallet does: **the customer's seed
+never leaves their device**, and a keyless daemon does the heavy Halo 2 proving but
+**can never move the funds**.
 
-**ZKAS** is a private-by-default Kaspa fork: GHOSTDAG/kHeavyHash for consensus,
-**Orchard + Halo 2** for value privacy. Every balance and payment lives in the shielded
-pool, so a ZKAS address has **no public balance** and a payment reveals neither sender,
-recipient, nor amount on-chain. That shapes what "wallet support" means here — you never
-scan a UTXO set for an address; you hold a **viewing key** and let a daemon scan for you.
+You do not implement any cryptography. You pull in three ready-made pieces:
 
-> The good news: the split between *proving* a spend and *authorizing* it means you can
-> add **fully non-custodial** ZKAS spending to a light client — the seed never leaves the
-> device and the heavy Halo 2 proving is done by a service that **cannot move the funds**.
-> See [Why non-custody works](#why-non-custody-works).
-
----
-
-## 1. Pick your integration tier
-
-| Tier | Capability | What you integrate | Keys you hold |
-|---|---|---|---|
-| **0 — Receive** | Show a `zkas:` address, accept a QR/deeplink | Address derivation only (the signer WASM, or the Rust `zkas-signer` crate) | 32-byte seed (or import an address to display) |
-| **1 — Watch-only** | Balance, history, per-invoice reconciliation | Tier 0 **+** `zkas-walletd` (yours or hosted); register the **full viewing key (FVK)** | FVK only — cannot spend |
-| **2 — Non-custodial spend** | Send private payments; seed stays on-device | Tier 1 **+** the signer's `verify_and_sign_payment`, via `@zkas/sdk` or raw REST | Seed on device; FVK at the service |
-| **3 — Fully local** | Everything private from any service | Run `zkas-walletd` in-process (Rust crates), or embed it | Everything local |
-
-Most integrations want **Tier 2**: it is non-custodial, the client stays light (no Halo 2
-in the browser/app), and it is the model the official web/mobile wallets ship.
-
----
-
-## 2. The building blocks (the files/packages you actually pull in)
-
-| Component | What it is | Where |
+| Piece | Role | Where |
 |---|---|---|
-| **`@zkas/sdk`** | Typed TypeScript client for the hosted non-custodial flow: `status`, `watch`, `balance`, `history`, and the full verified `send` (prepare → verify on-device → sign → submit) with automatic multi-tx chunking and progress events. **The fast path.** | [`firecash/zkas-sdk`](https://github.com/firecash/zkas-sdk) · `npm i @zkas/sdk` |
-| **`zkas-signer`** (a.k.a. `firecash-signer`) | The on-device key primitive, compiled to **WebAssembly** (no proving circuit — small, ~665 KB). This is the piece that makes non-custody real: it derives addresses, derives the FVK, signs messages, and does the **anti-blind-signing** payment check + spend-auth signature. Files: `firecash_signer.js`, `firecash_signer.d.ts`, `firecash_signer_bg.wasm`. | [`firecash/zkas-signer`](https://github.com/firecash/zkas-signer) (wasm-bindgen). A prebuilt copy also lives in this repo at [`src/signer/`](../src/signer). |
-| **`zkas-walletd`** | The wallet daemon: a keyless (FVK-only) REST service that scans the chain, builds Orchard proofs, and broadcasts. You can point at the **hosted** daemon or **run your own**. | [`zkas-rusty`](https://github.com/firecash/zkas-rusty) → `zkas-walletd`. REST reference: `docs/WALLETD.md`; design: `docs/NON_CUSTODIAL_WALLET.md`. |
-| **Rust crates** `zkas-sdk` · `zkas-signer` · `zkas-wallet-engine` | The canonical implementation for **native/local (Tier 3)** integrations, developed inside the node workspace so the daemon and SDK can never drift. | [`zkas-rusty/sdk`](https://github.com/firecash/zkas-rusty/tree/main/sdk) |
-| **`shielded-pay`** | A CLI for offline/scripted use: derive an address, export an FVK from a seed **without putting it in argv** (`sign --seed-stdin`), sign/verify a message, or send. Good for backend jobs and cold key handling. | `zkas-rusty` → `shielded-pay`; see `docs/CLI-WALLET.md`. |
+| **`zkas-signer`** (WASM) | on-device keys: derive address, derive viewing key, **verify + sign** a payment | [`firecash/zkas-signer`](https://github.com/firecash/zkas-signer) · prebuilt in this repo at [`src/signer/`](../src/signer) |
+| **`@zkas/sdk`** (npm) | typed client for the whole send flow, with progress + auto-chunking | [`firecash/zkas-sdk`](https://github.com/firecash/zkas-sdk) |
+| **`zkas-walletd`** | keyless daemon that scans + proves + broadcasts (hosted, or run your own) | [`zkas-rusty`](https://github.com/firecash/zkas-rusty) |
 
-If you are TypeScript/JS: use **`@zkas/sdk` + the `zkas-signer` WASM**. If you are native
-(Rust, or FFI from another language): use the **Rust crates**, or shell out to
-**`shielded-pay`**, or run **`zkas-walletd`** and speak REST.
+**Trust model in one line:** you send the daemon a **viewing key** (it can watch), never
+the seed (only the seed can spend), and the device **re-checks and signs every payment**
+so a hostile daemon can neither redirect funds nor inflate the fee.
 
 ---
 
-## 3. Addresses & units
+## Quickstart — 0 → sending in 4 calls
 
-ZKAS addresses are **shielded (Orchard)** and use the same **CashAddr** encoding as
-`kaspa:` addresses, so if you already parse Kaspa addresses you are 90% there — you only
-add one version byte and a longer payload.
-
-| Field | Value |
-|---|---|
-| **HRP (prefix)** | `zkas` (mainnet), `zkastest` (testnet), `zkasdev` (devnet), `zkassim` (simnet) |
-| Legacy HRP | `firecash*` still parses forever (pre-rebrand addresses); always **emit** `zkas`. |
-| **Version byte** | `9` = `ShieldedOrchard` (Kaspa's own addresses are `0`/`1`/`8`) |
-| **Payload** | the **43-byte** raw Orchard address = 11-byte diversifier ‖ 32-byte `pk_d` |
-| Encoding | CashAddr: charset `qpzry9x8gf2tvdw0s3jn54khce6mua7l`, BCH polymod checksum over the HRP actually present |
-| Example shape | `zkas:qz…` (single string; validate the checksum, do not string-match the prefix) |
-
-A shielded address has **no on-chain balance** and maps to **no transparent script** — do
-not try to look it up in a UTXO index. Treat it purely as a payment destination.
-
-**Units.** `1 ZKAS = 100,000,000 sompi` (1e8). **Always move integer sompi across any wire
-as a decimal string** — never a JS float. Do the one decimal→integer conversion where the
-user types the amount, never in transport.
-
+```bash
+npm install @zkas/sdk
+# build the signer WASM from github.com/firecash/zkas-signer (wasm-bindgen, no circuit),
+# or copy the prebuilt src/signer/ from this repo.
 ```
-1 ZKAS            = 100_000_000 sompi
-0.001 ZKAS        =     100_000 sompi
-amount_sompi      = "150000000000"   // 1,500 ZKAS, as a string
-```
-
----
-
-## 4. Why non-custody works
-
-Orchard splits a spend into two independent steps:
-
-1. **`create_proof(fvk, …)`** — the heavy Halo 2 proof. Needs **only the full viewing
-   key (FVK)**, notes, and witnesses. **No spend authority.**
-2. **`apply_signatures(…, ask)`** — the RedPallas spend-authorization signature. This is
-   the **only** step that needs `ask`, the secret derived from the 32-byte seed.
-
-`ask` **cannot** be derived from the FVK (one-way). So a service holding only the FVK can
-build a fully-proven bundle that is **worthless until the seed-holder signs it**. That is
-the entire basis for the hosted-hybrid model:
-
-- **Seed** (32 bytes) → stays on the device. The secret. Whoever holds it owns the funds.
-- **FVK** (`ak ‖ nk ‖ rivk`, 96 bytes) → derived on-device, handed to the daemon. Grants
-  **viewing** (scan for your notes, build proofs) but **not spending**.
-
-The daemon can see your balance and history. It **cannot** move a coin, and — because of
-the on-device check in §6 — it cannot trick the device into signing a payment it did not
-intend.
-
----
-
-## 5. The signer WASM API
-
-From `zkas-signer` (`firecash-signer`). Every function runs **entirely on-device**; no key
-material leaves the page. `network` is `"mainnet"` or `"testnet"`.
-
-| Function | Returns | Use |
-|---|---|---|
-| `new_wallet(network)` | `{ seed_hex, address }` | Generate a wallet (browser CSPRNG). |
-| `address_from_seed(seed_hex, network)` | `string` | Derive the `zkas:` address (Tier 0). |
-| `fvk_hex(seed_hex)` | `string` (96-byte hex) | Derive the FVK to register with the daemon (Tier 1+). |
-| `sign(seed_hex, network, message)` | `{ address, signature_hex }` | Prove address control without spending. `signature_hex` is `fvk ‖ sig`. |
-| `verify(address, message, signature_hex)` | `boolean` | Verify such a signature (network taken from the address prefix). |
-| `sign_spend_auth(seed_hex, alpha_hex, sighash_hex)` | `string` (64-byte hex) | Low-level: sign one spend's `alpha` over a sighash. Prefer `verify_and_sign_payment`. |
-| **`verify_and_sign_payment(seed_hex, network, to, amount_sompi, max_fee_sompi, bundle_hex, disclosure_json, alphas_json)`** | `string` → `[{index, sig}]` JSON | **The anti-blind-signing entry point.** Verifies the daemon's unsigned bundle actually pays `to`/`amount_sompi` (everything else change back to you), that the **fee the bundle really pays** is ≤ `max_fee_sompi`, recomputes the sighash itself, and only then signs. Throws with a reason on any mismatch. |
-
-The `src/signer/index.ts` wrapper in this repo shows the idiomatic async binding
-(`ensureSigner()` then the typed helpers `generateWallet`, `addressFromSeed`, `fvkHex`,
-`verifyAndSignPayment`, …). The WASM is base64-inlined so it works identically in a hosted
-page and a native (Capacitor/Tauri) build.
-
----
-
-## 6. The `zkas-walletd` REST API
-
-All requests carry an `X-Wallet-Token` header (a random per-wallet token that selects
-which wallet on the daemon you mean). A self-hosted daemon also enforces
-`--allow-origin`.
-
-| Method | Path | Purpose |
-|---|---|---|
-| `GET`  | `/api/status` | wallet + node + sync status. Check `missing_history` — if true the node pruned history and the balance is a **lower bound**; show it, do not rescan through this node. |
-| `POST` | `/api/wallet/watch` | register a **viewing-key-only** wallet: `{ fvk_hex, birthday }`. Never sends a seed. |
-| `GET`  | `/api/wallet/balance` | balance + note count |
-| `GET`  | `/api/wallet/history` | chain-derived history (mints, receives, and — via the OVK — own sends) |
-| `POST` | `/api/wallet/prepare` | build+prove an **unsigned** payment (see below) |
-| `POST` | `/api/wallet/submit` | apply device signatures and broadcast |
-| `POST` | `/api/wallet/sign` · `/api/verify` | message sign / verify |
-| `POST` | `/api/wallet/create` · `GET /api/wallet/reveal` · `POST /api/wallet/import` | **custodial/self-hosted only** — the daemon holds the seed. Do **not** use these for a non-custodial integration. |
-| `POST` | `/api/wallet/send-many` · `/api/wallet/consolidate` | self-hosted batch payout / note consolidation |
-
-**`/api/wallet/prepare`** request:
-
-```json
-{ "fvk_hex": "…96-byte hex…", "to": "zkas:…", "amount_sompi": "150000000000",
-  "fee": null, "memo": null, "allow_partial": false }
-```
-
-**`/api/wallet/prepare`** response (the fields the device must verify are in **bold**):
-
-```jsonc
-{
-  "session": "…",              // opaque handle to pass back to /submit
-  "sighash": "…",              // do NOT trust this — the device recomputes it
-  "amount_sompi": 150000000000,
-  "fee_sompi": 25000,
-  "remaining_sompi": 0,        // >0 only when allow_partial and the wallet is fragmented
-  "spend_auth": [ { "index": 0, "alpha": "…" } ],   // one alpha per real spend
-  "bundle_hex": "…",           // ** the unsigned bundle the device reconstructs **
-  "disclosure": [              // ** per-action claim of what it pays **
-    { "spend_value": …, "out_value": …, "out_recipient": "…", "out_rseed": "…", "rcv": "…" }
-  ]
-}
-```
-
-**`/api/wallet/submit`** request: `{ "session": "…", "sigs": [ { "index": 0, "sig": "…" } ] }`
-→ `{ "txid": "…", "amount_sompi": …, "fee_sompi": … }`.
-
-The **golden rule**: pass `bundle_hex`, `disclosure`, and `spend_auth` into the signer's
-`verify_and_sign_payment` and sign **only** what it returns. Never sign the server's
-`sighash` directly — that is blind signing, and it is what the on-device check exists to
-prevent.
-
----
-
-## 7. Recipe A — receive-only (Tier 0)
-
-The minimum to accept ZKAS. No daemon needed to *derive and display* an address.
-
-```ts
-import { generateWallet, addressFromSeed } from "./signer"; // wraps the zkas-signer WASM
-
-// New wallet (seed is the secret — store it the way you store any private key):
-const { seedHex, address } = await generateWallet("mainnet");
-showQr(address);          // "zkas:qz…"
-
-// Or an address for a seed you already hold:
-const addr = await addressFromSeed(seedHex, "mainnet");
-```
-
-To also **see incoming funds**, register the FVK with a daemon (Tier 1):
-
-```ts
-import { fvkHex } from "./signer";
-await fetch(`${walletd}/api/wallet/watch`, {
-  method: "POST",
-  headers: { "X-Wallet-Token": token, "Content-Type": "application/json" },
-  body: JSON.stringify({ fvk_hex: await fvkHex(seedHex), birthday: creationDaaScore }),
-});
-// then poll GET /api/wallet/balance and /api/wallet/history
-```
-
-`birthday` is the DAA score at wallet creation; it bounds the scan so a new wallet syncs
-fast. Use `0` to scan from genesis.
-
----
-
-## 8. Recipe B — non-custodial send with `@zkas/sdk` (Tier 2, recommended)
 
 ```ts
 import { ZKasClient, wasmPaymentSigner, DEFAULT_MAX_FEE_SOMPI } from "@zkas/sdk";
-import { fvkHex, verifyAndSignPayment } from "./signer"; // the zkas-signer WASM
+import { generateWallet, fvkHex, verifyAndSignPayment } from "./signer"; // the WASM wrapper
 
-const client = new ZKasClient({ baseUrl: walletdUrl, token });
+// 1. Keys on the device. `seedHex` is the secret — store it like any private key.
+const { seedHex, address } = await generateWallet("mainnet");   // show `address` / QR to receive
 
-// one-time: register viewing key (never a seed)
-await client.watch(await fvkHex(seedHex), birthdayDaa);
+// 2. Point at a daemon and register the VIEWING KEY (never the seed).
+const client = new ZKasClient({ baseUrl: WALLETD_URL, token: perWalletToken });
+await client.watch(await fvkHex(seedHex), /* birthday DAA */ 0);
 
-// send — the SDK runs prepare → on-device verify+sign → submit, and chunks a
-// fragmented wallet across standard transactions automatically.
+// 3. Read state whenever you like. balance_sompi is a decimal string — BigInt it.
+const bal = BigInt((await client.balance()).balance_sompi);   // 1 ZKAS = 100_000_000 sompi
+
+// 4. Send. prepare → verify-on-device → sign → submit, all inside client.send().
 const signer = wasmPaymentSigner({ seedHex, fvkHex, verifyAndSignPayment });
-const result = await client.send(
+const res = await client.send(
   signer,
-  { to: "zkas:…", amountSompi: 150_000_000_000n, maxFeeSompi: DEFAULT_MAX_FEE_SOMPI },
-  (stage, p) => console.log(stage, p),   // "proving" | "signing" | "broadcasting"
+  { to: "zkas:…", amountSompi: 5_000_000_000n, maxFeeSompi: DEFAULT_MAX_FEE_SOMPI },
+  (stage) => console.log(stage),   // "proving" | "signing" | "broadcasting"
 );
-console.log(result.txids, result.feeSompi);
+console.log(res.txids, res.feeSompi);
 ```
 
-`amountSompi` and `maxFeeSompi` are **bigints** — exact integers, never floats.
+That is a complete non-custodial integration. Everything below is either the **from-scratch
+version** (if you can't use the SDK) or **reference**.
 
 ---
 
-## 9. Recipe C — non-custodial send over raw REST (no SDK)
+## The drop-in client (no SDK) — exactly what our light wallet does
 
-If you cannot use the TS SDK (e.g. you drive the WASM from another host), the whole
-protocol is four calls. The device signs **only the bundle it verified**:
+If you drive the WASM yourself (another framework, another language via FFI, or you just
+want no dependency), this ~90-line module is a faithful reduction of our wallet's
+`src/noncustodial.ts`. **The safety checks are the point — do not remove them.**
 
 ```ts
-// 1. viewing key, on-device
-const fvk = await fvkHex(seedHex);
+// zkas.ts — a self-contained non-custodial ZKAS client.
+import {
+  generateWallet, addressFromSeed, fvkHex, verifyAndSignPayment,
+} from "./signer"; // your wrapper around the zkas-signer WASM (see src/signer/index.ts)
 
-// 2. ask the (keyless) daemon to build + prove an UNSIGNED bundle
-const prep = await post("/api/wallet/prepare", {
-  fvk_hex: fvk, to, amount_sompi: amountSompi.toString(), allow_partial: false,
-});
+const SOMPI_PER_ZKAS = 100_000_000n;
 
-// 3. ON DEVICE: verify it really pays `to`/amount (rest = change), fee within ceiling,
-//    recompute the sighash, and sign. Throws if the daemon lied.
-const sigs = await verifyAndSignPayment(
-  seedHex, "mainnet", to, amountSompi, maxFeeSompi,
-  prep.bundle_hex, JSON.stringify(prep.disclosure), JSON.stringify(prep.spend_auth),
-); // -> [{ index, sig }]
+export class Zkas {
+  constructor(
+    private base: string,       // walletd base URL, e.g. https://wallet.example/daemon
+    private token: string,      // random 16-byte hex; selects this wallet on the daemon
+    private network: "mainnet" | "testnet" = "mainnet",
+  ) {}
 
-// 4. hand the signatures back; the daemon finalizes and broadcasts
-const { txid } = await post("/api/wallet/submit", { session: prep.session, sigs });
+  private async call<T>(method: string, path: string, body?: unknown): Promise<T> {
+    const r = await fetch(this.base + path, {
+      method,
+      headers: { "X-Wallet-Token": this.token, ...(body ? { "Content-Type": "application/json" } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!r.ok) throw new Error(`${path} → HTTP ${r.status}: ${await r.text()}`);
+    return r.json() as Promise<T>;
+  }
+
+  // ---- keys (on device) ----
+  static async create(net: "mainnet" | "testnet") { return generateWallet(net); }        // {seedHex,address}
+  address(seedHex: string) { return addressFromSeed(seedHex, this.network); }
+
+  // ---- register viewing key (never the seed) ----
+  async watch(seedHex: string, birthdayDaa = 0) {
+    await this.call("POST", "/api/wallet/watch", { fvk_hex: await fvkHex(seedHex), birthday: birthdayDaa });
+  }
+
+  // balance_sompi / balance_fc are decimal STRINGS (float-safe). Parse with BigInt(balance_sompi).
+  balance() { return this.call<{ balance_sompi: string; balance_fc: string }>("GET", "/api/wallet/balance"); }
+
+  // ---- non-custodial send: prepare → verify-on-device → sign → submit ----
+  async send(seedHex: string, to: string, amountSompi: bigint, maxFeeSompi: bigint) {
+    const fvk = await fvkHex(seedHex);
+
+    // 1. Daemon builds + PROVES an UNSIGNED bundle from the viewing key. It cannot sign it.
+    const prep = await this.call<PrepareResp>("POST", "/api/wallet/prepare", {
+      fvk_hex: fvk, to, amount_sompi: amountSompi.toString(), allow_partial: false,
+    });
+
+    // 2. Refuse a daemon that quietly changed the amount. (Single-tx path: remaining must be 0.)
+    const paid = BigInt(prep.amount_sompi_exact ?? Math.round(prep.amount_sompi));
+    const remaining = BigInt(prep.remaining_sompi_exact ?? Math.round(prep.remaining_sompi ?? 0));
+    if (paid !== amountSompi || remaining !== 0n)
+      throw new Error("Daemon changed the requested amount. Refusing to sign.");
+
+    // 3. Refuse an inflated fee BEFORE any signing (the signer re-checks from the bundle too).
+    const fee = BigInt(prep.fee_sompi_exact ?? Math.round(prep.fee_sompi));
+    if (fee > maxFeeSompi) throw new Error(`Daemon asked ${fee} sompi fee > ceiling ${maxFeeSompi}. Refusing.`);
+
+    // 4. ON DEVICE: verify the bundle really pays `to` this amount (rest = change back to us),
+    //    that the fee READ FROM THE BUNDLE is ≤ ceiling, recompute the sighash, and sign.
+    //    Throws on any lie. This is what makes a hostile daemon powerless.
+    const sigs = await verifyAndSignPayment(
+      seedHex, this.network, to.trim(), amountSompi, maxFeeSompi,
+      prep.bundle_hex, JSON.stringify(prep.disclosure), JSON.stringify(prep.spend_auth),
+    );
+
+    // 5. Daemon applies the signatures and broadcasts. It never held spend authority.
+    return this.call<{ txid: string; amount_sompi: number; fee_sompi: number }>(
+      "POST", "/api/wallet/submit", { session: prep.session, sigs });
+  }
+}
+
+interface PrepareResp {
+  session: string; bundle_hex: string;
+  amount_sompi: number; fee_sompi: number; remaining_sompi?: number;
+  amount_sompi_exact?: string; fee_sompi_exact?: string; remaining_sompi_exact?: string;
+  spend_auth: { index: number; alpha: string }[];
+  disclosure: { spend_value: number; out_value: number; out_recipient: string; out_rseed: string; rcv: string }[];
+}
 ```
 
-A wallet fragmented into many small notes may not fit one transaction (standard cap
-≈ **38 spends** / 500,000 block-mass). Pass `allow_partial: true`, read
-`remaining_sompi`, and repeat prepare→sign→submit until it reaches `0` — but only after
-the user explicitly accepts split delivery, and record every broadcast chunk before
-showing any error (a broadcast chunk is real money in flight).
+Usage:
+
+```ts
+const z = new Zkas("https://wallet.example/daemon", token, "mainnet");
+const { seedHex, address } = await Zkas.create("mainnet");   // back up seedHex; show address
+await z.watch(seedHex);
+await z.send(seedHex, "zkas:…", 5_000_000_000n, 10_000_000n); // 50 ZKAS, ≤0.1 ZKAS fee
+```
+
+> **Fragmented wallets.** One transaction spends at most ~38 notes (the 500,000
+> block-mass cap). A wallet holding many small notes (e.g. a miner's per-block coinbase)
+> may need several transactions for one payment: pass `allow_partial: true`, read
+> `remaining_sompi`, and loop prepare→sign→submit until it hits `0` — **but only after the
+> user accepts split delivery, and record each broadcast chunk before any error** (a
+> broadcast chunk is money already in flight). The SDK's `client.send()` does this for
+> you; `src/noncustodial.ts` in this repo is the full reference implementation.
 
 ---
 
-## 10. Security requirements (non-negotiable)
+## Map it onto your wallet
 
-These are enforced by the signer and the daemon, not by convention. If you skip them you
-lose the property that makes hosted ZKAS safe.
-
-- **Never blind-sign.** Always route a spend through `verify_and_sign_payment` (or the
-  SDK, which does). Signing the server's `sighash` directly hands a malicious daemon your
-  funds.
-- **Enforce a fee ceiling.** The device reads the fee from the **bundle's own public value
-  balance**, never from a number the server reports, and refuses anything above
-  `max_fee_sompi`. Without it a lying daemon can burn your entire change as "fee"
-  (collectable by a miner — plausibly the daemon's own pool). Price the ceiling to the
-  transaction (≈2× the relay minimum for that spend count), not one flat number.
-- **The seed stays on-device.** Only ever send the **FVK** to a daemon. Never
-  `/api/wallet/create` / `import` / `reveal` in a non-custodial integration — those are
-  for a daemon that deliberately holds the seed.
-- **Pin the code you run.** A hosted web page's residual risk is the server serving
-  tampered code that reads the seed from storage. Mitigate with a strict CSP
-  (`script-src 'self'` + the WASM; `connect-src` scoped to your daemon and services). For
-  the strongest guarantee, ship a fixed/signed native build or self-host.
-- **Transport.** The hosted HTTPS page can only reach an HTTPS daemon; a native app may
-  reach an `http://<LAN-IP>:8501` daemon directly. Lock the daemon's CORS to your exact
-  origin (`--allow-origin`) and require the wallet token.
-- **Back up the seed.** It is the only way to restore a wallet. Losing the per-browser
-  `wallet_token` loses nothing; losing the seed loses the funds.
+| Our light wallet | What you write | Notes |
+|---|---|---|
+| `src/signer/index.ts` | your WASM wrapper (or copy ours) | `ensureSigner()` once, then the typed helpers |
+| `src/api.ts` | the `call()`/`prepare`/`submit` above | one `X-Wallet-Token` header per wallet |
+| `src/noncustodial.ts` | `Zkas.send()` above (or `@zkas/sdk`) | keep the amount + fee checks verbatim |
+| per-browser `wallet_token` | one random 16-byte hex per wallet | picks the wallet on the daemon; **not** a secret — the seed is |
+| seed in device storage | your secure key store | the only thing that must be backed up |
 
 ---
 
-## 11. Test, then go live
+## What "ZKAS support" can mean — pick a tier
 
-- **Testnet first.** Use the `zkastest` HRP and a testnet daemon (`--network testnet`).
-- **Run a local daemon** for development and allow your dev origin:
+| Tier | You get | You add |
+|---|---|---|
+| **Receive** | show a `zkas:` address | signer's `address_from_seed` only — no daemon |
+| **Watch-only** | balance + history | + register the FVK with a daemon (`/watch`) |
+| **Non-custodial spend** ← *the quickstart* | private send, seed on device | + `verify_and_sign_payment` (SDK or drop-in) |
+| **Fully local** | nothing trusts a service | run `zkas-walletd` yourself / the Rust crates |
 
+---
+
+## Addresses & units (reference)
+
+ZKAS addresses are **shielded (Orchard)** and use the **same CashAddr encoding as
+`kaspa:` addresses** — if you already parse Kaspa addresses, you add one version byte.
+
+| Field | Value |
+|---|---|
+| HRP | `zkas` (mainnet) · `zkastest` · `zkasdev` · `zkassim`. Legacy `firecash*` still parses; always emit `zkas`. |
+| Version byte | `9` = `ShieldedOrchard` |
+| Payload | 43 bytes: 11-byte diversifier ‖ 32-byte `pk_d` |
+| Checksum | BCH polymod over the HRP present (validate it — don't prefix-match) |
+
+A shielded address has **no on-chain balance** — never look it up in a UTXO index; it is
+only a destination.
+
+**Units:** `1 ZKAS = 100,000,000 sompi`. **Always move integer sompi as a decimal string**
+(bigints in JS) — never a float. Convert the user's decimal input to sompi once, at input.
+
+---
+
+## Why the daemon can't steal (the whole basis)
+
+Orchard splits a spend in two:
+
+1. **prove** — the heavy Halo 2 proof, built from the **viewing key only**. No spend power.
+2. **authorize** — a RedPallas signature that needs `ask`, derived from the **seed**.
+
+`ask` can't be derived from the viewing key (one-way). So a daemon with only the FVK can
+build a fully-proven bundle that is **worthless until the device signs it** — and the
+device only signs after `verify_and_sign_payment` confirms recipient, amount, and fee.
+Design doc: `zkas-rusty/docs/NON_CUSTODIAL_WALLET.md`.
+
+- **Seed** (32 B) → device only. The secret.
+- **FVK** = `ak ‖ nk ‖ rivk` (96 B) → derived on-device, given to the daemon. Viewing, not spending.
+
+---
+
+## Signer WASM API (reference)
+
+| Function | Returns | Use |
+|---|---|---|
+| `new_wallet(network)` | `{ seed_hex, address }` | generate |
+| `address_from_seed(seed_hex, network)` | `string` | receive address |
+| `fvk_hex(seed_hex)` | 96-byte hex | register watch-only |
+| `sign` / `verify` | `{address, signature_hex}` / `bool` | prove address control (no spend) |
+| **`verify_and_sign_payment(seed_hex, network, to, amount_sompi, max_fee_sompi, bundle_hex, disclosure_json, alphas_json)`** | `[{index, sig}]` JSON | **verify the prepared bundle on-device, then sign. Throws on any mismatch.** |
+| `sign_spend_auth(seed_hex, alpha_hex, sighash_hex)` | 64-byte hex | low-level; prefer the one above |
+
+## walletd REST (reference)
+
+Every call carries `X-Wallet-Token`. A self-hosted daemon also enforces `--allow-origin`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/wallet/watch` | register `{ fvk_hex, birthday }` — viewing key only |
+| `GET`  | `/api/wallet/balance` · `/api/wallet/history` | state |
+| `GET`  | `/api/status` | node/sync status — check `missing_history` (balance is a lower bound if the node pruned) |
+| `POST` | `/api/wallet/prepare` → `/api/wallet/submit` | the non-custodial send pair |
+| `POST` | `/api/wallet/sign` · `/api/verify` | message sign/verify |
+| `POST` | `/api/wallet/create` · `import` · `GET /reveal` | **custodial only** — daemon holds the seed. Don't use these for a non-custodial wallet. |
+
+Admin/operator warmup endpoints (`/api/admin/warm_chain_tree`, `/api/admin/warm_wallet`)
+and full field docs are in `zkas-rusty/docs/WALLETD.md`.
+
+---
+
+## Security checklist (non-negotiable)
+
+- [ ] **Never blind-sign.** Every spend goes through `verify_and_sign_payment` (or the SDK).
+- [ ] **Amount reconciliation.** `paid + remaining === requested`, else refuse.
+- [ ] **Fee ceiling.** The device reads the fee from the **bundle**, not the response, and refuses above the cap. Price it to the tx (≈2× relay min for that spend count), not one flat number.
+- [ ] **Seed stays on device.** Only ever send the **FVK**. Never `create`/`import`/`reveal` in a non-custodial integration.
+- [ ] **Pin your code.** A web page's residual risk is a tampered script reading the seed from storage — enforce a strict CSP (`script-src 'self'` + WASM; `connect-src` scoped to your daemon/services). A signed native build removes it.
+- [ ] **Transport + CORS.** HTTPS from web; a native app may use `http://<LAN-IP>:8501`. Lock the daemon to your exact origin and require the token.
+- [ ] **Back up the seed.** It is the only recovery. The wallet token is not a secret and loses nothing.
+- [ ] **Record broadcast chunks** before surfacing any post-broadcast error (money in flight).
+
+---
+
+## Test, then ship
+
+- **Testnet first:** `zkastest` HRP + a `--network testnet` daemon.
+- **Local daemon for dev:**
   ```bash
   zkas-walletd --network mainnet --rpc-server 127.0.0.1:16110 \
-    --wallet-dir ./fc-wallets --listen 127.0.0.1:8501 \
-    --allow-origin http://localhost:5173
+    --wallet-dir ./fc-wallets --listen 127.0.0.1:8501 --allow-origin http://localhost:5173
   ```
+- **Adversarial test for free:** `@zkas/sdk`'s `npm test` runs the full flow against a
+  scripted **fake daemon**, including the on-device rejection of a lying prover — prove
+  your integration refuses to sign a redirected payment.
+- **Wire format is pinned:** `PreparedPaymentEnvelope` v2 has a golden vector on the Rust
+  side; `zkas-sdk/src/types.ts` mirrors it field-for-field, so drift is a build error.
 
-- **The SDK ships a scripted fake daemon** (`npm test` in `zkas-sdk`) so you can exercise
-  the full prepare→verify→sign→submit path — including the on-device rejection of a lying
-  daemon — with no chain.
-- **Golden vectors.** The prepared-payment wire format (`PreparedPaymentEnvelope`,
-  version 2) is pinned by a golden test on the Rust side; the TS types in
-  `zkas-sdk/src/types.ts` mirror it field-for-field, so a mismatch is a build failure, not
-  a runtime surprise.
+## Repos
 
----
-
-## Reference repositories
-
-- **[zkas-rusty](https://github.com/firecash/zkas-rusty)** — node, miner, `zkas-walletd`,
-  the Rust SDK crates, `shielded-pay`. Docs: `docs/WALLETD.md`,
-  `docs/NON_CUSTODIAL_WALLET.md`, `docs/CLI-WALLET.md`.
-- **[zkas-sdk](https://github.com/firecash/zkas-sdk)** — `@zkas/sdk` TypeScript client +
-  `docs/ARCHITECTURE.md`, `docs/USAGE.md`.
-- **[zkas-signer](https://github.com/firecash/zkas-signer)** — the on-device WASM signer.
-- **[zkas-wallet](https://github.com/firecash/zkas-wallet)** — this repo: a complete
-  reference wallet (web + desktop + mobile) built on exactly the pieces above.
+- **[zkas-signer](https://github.com/firecash/zkas-signer)** — the WASM signer
+- **[zkas-sdk](https://github.com/firecash/zkas-sdk)** — `@zkas/sdk` + `docs/ARCHITECTURE.md`, `docs/USAGE.md`
+- **[zkas-rusty](https://github.com/firecash/zkas-rusty)** — node, `zkas-walletd`, Rust SDK crates, `shielded-pay`; `docs/WALLETD.md`, `docs/NON_CUSTODIAL_WALLET.md`
+- **[zkas-wallet](https://github.com/firecash/zkas-wallet)** — this repo: the full reference wallet (web + desktop + mobile) built on exactly these pieces
