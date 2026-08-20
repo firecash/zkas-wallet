@@ -165,6 +165,19 @@ Requests carry `X-Wallet-Token`. See `src/api.ts` for the typed client.
   `--wallet-secret`. Always launch it with the exact origin you serve this app from.
 - Never paste your recovery seed into any site other than a wallet daemon you trust.
 
+## Integrate ZKAS into your own wallet
+
+Building an existing wallet, exchange, or point-of-sale and want to add ZKAS
+receive/view/send? You don't need to reimplement any cryptography — the on-device
+`zkas-signer` (WASM), the `@zkas/sdk` TypeScript client, and the keyless `zkas-walletd`
+daemon give you a **fully non-custodial** integration where the seed never leaves the
+device. See the developer guide:
+
+- **[`docs/INTEGRATION.md`](./docs/INTEGRATION.md)** — integration tiers (receive →
+  watch-only → non-custodial spend → fully local), the address format and units, the
+  key model, the signer and REST APIs, copy-paste send recipes, and the security rules
+  that keep a hosted daemon powerless.
+
 ## Related repositories
 
 - **[zkas-rusty](https://github.com/firecash/zkas-rusty)** — node, miner,
