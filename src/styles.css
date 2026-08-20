@@ -349,6 +349,68 @@ a { color: var(--ember); }
   .connect-shield-path, .connect-shield-check { animation: none; stroke-dashoffset: 0; }
 }
 
+/* Full-window boot loader (main.tsx Suspense fallback). Mirrors the inline splash
+   in index.html so browser first-paint → this React screen → the app is one
+   continuous animation. Teal aurora, a shield drawing itself, the wordmark, and a
+   shimmering progress bar. See components/BootLoader.tsx. */
+.bootload {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  overflow: hidden;
+  animation: bootload-in 0.5s ease both;
+}
+.bootload-aurora { position: absolute; inset: -20%; pointer-events: none; }
+.bootload-aurora::before, .bootload-aurora::after {
+  content: ""; position: absolute; border-radius: 50%; filter: blur(64px);
+  animation: aurora 12s ease-in-out infinite alternate;
+}
+.bootload-aurora::before {
+  width: 42vmax; height: 42vmax; top: 4%; left: 2%;
+  background: color-mix(in srgb, var(--ember) 20%, transparent);
+}
+.bootload-aurora::after {
+  width: 36vmax; height: 36vmax; bottom: 2%; right: 4%;
+  background: color-mix(in srgb, var(--ember-hover) 14%, transparent);
+  animation-delay: -6s;
+}
+.bootload-stage {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.bootload-shield { filter: drop-shadow(0 0 20px color-mix(in srgb, var(--ember) 35%, transparent)); }
+.bootload-mark {
+  font-size: 32px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink);
+  animation: bootload-rise 0.6s 0.1s ease both;
+}
+.bootload-mark span { color: var(--ember); }
+.bootload-tag {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--muted);
+  animation: bootload-rise 0.6s 0.18s ease both;
+}
+.bootload-bar {
+  width: 132px; height: 3px; border-radius: 999px; overflow: hidden;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  margin-top: 4px;
+}
+.bootload-bar span {
+  display: block; height: 100%; width: 40%; border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--ember), transparent);
+  animation: bootload-shimmer 1.15s ease-in-out infinite;
+}
+@keyframes bootload-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bootload-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes bootload-shimmer {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(330%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bootload, .bootload-mark, .bootload-tag { animation: none; }
+  .bootload-aurora::before, .bootload-aurora::after { animation: none; }
+  .bootload-bar span { animation: none; width: 100%; }
+}
+
 /* Accent swatches (Appearance). A row of color chips; the chosen one wears a ring
    of its own color and lifts. */
 .swatches { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -464,16 +526,25 @@ a { color: var(--ember); }
    for by shape. Sized up and given a fixed, square-ish footprint so it does not
    stretch to a quarter of the row like the text tabs do. */
 .tabs button.gear {
-  font-size: 24px;
+  font-size: 29px;
   line-height: 1;
   /* A comfortable tap target for the settings gear — it was a thin sliver next to
      History. ~44px tall matches the platform minimum on touch. */
   padding: 10px 20px;
-  min-height: 44px;
+  min-height: 46px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+}
+/* The gear is the one control people scan for by shape — a small, delightful
+   turn on hover/press makes it feel alive without shouting. */
+.tabs button.gear svg { transition: transform 0.45s cubic-bezier(0.2, 1.3, 0.3, 1); }
+.tabs button.gear:hover svg { transform: rotate(45deg); }
+.tabs button.gear:active svg { transform: rotate(90deg); }
+.tabs button.gear.active svg { transform: rotate(30deg); }
+@media (prefers-reduced-motion: reduce) {
+  .tabs button.gear svg { transition: none; }
 }
 
 /* Very narrow phones: shave the padding before anything is allowed to clip. */

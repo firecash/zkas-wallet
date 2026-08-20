@@ -1041,7 +1041,7 @@ export default function App() {
                   setTab(TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length]);
                 }}
               >
-                {t === "settings" ? <Settings aria-hidden="true" size={24} strokeWidth={2.4} /> : TAB_LABEL[t]}
+                {t === "settings" ? <Settings aria-hidden="true" size={29} strokeWidth={2.2} /> : TAB_LABEL[t]}
               </button>
             ))}
             </div>

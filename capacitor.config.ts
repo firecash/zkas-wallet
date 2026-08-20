@@ -8,8 +8,10 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "com.firecash.wallet",
   appName: "ZKas Wallet",
+  // Matches the boot splash / app background (styles.css --bg and index.html),
+  // so the native launch → WebView → animated boot hand-off has no colour flash.
   webDir: "dist",
-  backgroundColor: "#0b0b0f",
+  backgroundColor: "#08080c",
   android: {
     // Installed apps may connect straight to a walletd on the user's LAN. That
     // service commonly has no public DNS name/certificate, so HTTPS is not a

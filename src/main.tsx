@@ -9,6 +9,7 @@ import { ToastHost } from "./toast";
 import { applyStoredTheme } from "./theme";
 import { initDesktop, isDesktop, vaultStatus } from "./desktop";
 import { FirstRunNode, needsNodeChoice } from "./FirstRunNode";
+import { BootLoader } from "./components/BootLoader";
 import { listWallets } from "./wallets";
 import { isNative, loadStatusCache } from "./api";
 import { internalRouteFromLink, queuePaymentLink } from "./paymentlinks";
@@ -47,7 +48,7 @@ function Root({ locked, askNode }: { locked: boolean; askNode: boolean }) {
 
   return (
     <HashRouter>
-      <Suspense fallback={<div className="route-loading"><span className="spin" /> Opening…</div>}>
+      <Suspense fallback={<BootLoader label="Opening…" />}>
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<WalletApp />} />
