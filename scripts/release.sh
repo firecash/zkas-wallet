@@ -65,11 +65,13 @@ if [ "$DO_BUMP" = 1 ]; then
   [ "$(git branch --show-current)" = "main" ] || die "not on main"
   git diff --quiet && git diff --cached --quiet || die "working tree dirty — commit or stash first"
   node -e "const f='package.json',p=require('./'+f);p.version='$VERSION';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+  # tauri (desktop): version drives the bundle filenames the macOS workflow emits
+  node -e "const f='src-tauri/tauri.conf.json',p=require('./'+f);p.version='$VERSION';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
   # android: versionName follows, versionCode auto-increments
   gver="android/app/build.gradle"
   code=$(grep -oE 'versionCode [0-9]+' "$gver" | grep -oE '[0-9]+'); newcode=$((code+1))
   sed -i -E "s/versionCode [0-9]+/versionCode $newcode/; s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" "$gver"
-  git add package.json "$gver"
+  git add package.json src-tauri/tauri.conf.json "$gver"
   git -c user.name='firecash' -c user.email='dev@firecash.info' commit -q -m "release $VERSION"
   git fetch -q origin main
   [ "$(git merge-base main origin/main)" = "$(git rev-parse origin/main)" ] || die "main is not fast-forward — rebase first"
@@ -83,8 +85,8 @@ fi
 log "Syncing source to $BUILD_HOST:$BUILD_DIR"
 BH "mkdir -p '$BUILD_DIR'"
 sshpass -e rsync -az --delete \
-  --exclude .git --exclude node_modules --exclude dist \
-  --exclude 'android/app/build' --exclude 'android/.gradle' --exclude 'android/build' \
+  --exclude .git --exclude node_modules --exclude dist --exclude release-artifacts \
+  --exclude 'android/*/build' --exclude 'android/build' --exclude 'android/.gradle' \
   -e "ssh -o StrictHostKeyChecking=accept-new" \
   "$ROOT/" "$BUILD_USER@$BUILD_HOST:$BUILD_DIR/"
 
