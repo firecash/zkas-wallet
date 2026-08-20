@@ -22,6 +22,7 @@ import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, Parti
 import { walletStatus, walletCanSpend } from "./status";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
 import { useMaintenance } from "./useMaintenance";
+import { isMaintenanceEnabled, setMaintenanceEnabled } from "./maintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline, type Receipt } from "./receipts";
 import { byNewest, receiptIsOnChain } from "./history";
@@ -3144,6 +3145,9 @@ function SettingsPane({ status }: { status: Status }) {
       <Collapsible title="Background sync">
         <BackgroundSyncCard />
       </Collapsible>
+      <Collapsible title="Automatic consolidation" summary={isMaintenanceEnabled() ? "On" : "Off"}>
+        <AutoConsolidationCard />
+      </Collapsible>
       {!ROOMY() && (
         <Collapsible title="Signatures">
           <Signatures status={status} />
@@ -5232,6 +5236,45 @@ function VaultSetting() {
 /// a lock that only hid the UI would leave it readable to anyone with the
 /// device's data or a backup of it. Sealed, a locked app holds nothing spendable.
 /// Android only: an opt-in periodic native wake (~every 15 min) that keeps the
+/// Automatic note consolidation. While on, the app occasionally merges the oldest
+/// notes in the background — a device-signed self-payment over the ordinary
+/// prepare/verify/sign path, never something the server can do — so the whole
+/// balance keeps fitting one payment (a payment spends at most `MAX_NOTES_PER_TX`
+/// notes). Each merge costs a small network fee, so a user who would rather pay
+/// that on their own schedule can turn it off and consolidate manually. Default
+/// on: a wallet that quietly stops being able to pay is a worse surprise than an
+/// occasional background fee. The switch is the same flag `useMaintenance` reads,
+/// so turning it off makes the next maintenance tick skip with `disabled`.
+function AutoConsolidationCard() {
+  const [on, setOn] = useState(isMaintenanceEnabled());
+  const toggle = () => {
+    const next = !on;
+    setMaintenanceEnabled(next);
+    setOn(next);
+  };
+  return (
+    <div className="card">
+      <h2>Automatic consolidation</h2>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        A private payment can spend at most {MAX_NOTES_PER_TX} notes at once. While this is on, the app
+        occasionally merges your oldest notes in the background — signed on this device, never by the
+        server — so your whole balance always fits a single payment. Each merge costs a small network
+        fee. Turn it off to avoid those background fees and merge yourself with the <b>Consolidate</b>
+        {" "}button on the wallet screen whenever you choose.
+      </p>
+      <button className={"btn small" + (on ? " ghost" : "")} onClick={toggle}>
+        {on ? "Turn automatic consolidation off" : "Turn automatic consolidation on"}
+      </button>
+      {!on && (
+        <p className="muted small" style={{ marginTop: 8 }}>
+          Off. If your balance ends up spread across many small notes, a large payment may need to be
+          sent in parts until you consolidate. You can merge anytime with <b>Consolidate</b>.
+        </p>
+      )}
+    </div>
+  );
+}
+
 /// daemon-side scan warm and posts a local notification when a payment lands
 /// while the app is closed (see bgsync.ts). Off by default — a convenience worth
 /// a little battery is the user's to choose, not ours to take.
