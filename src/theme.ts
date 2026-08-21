@@ -8,7 +8,10 @@
 // the primary button, the active tab, every highlight derive from it. It is a
 // personalization, not a rebrand: teal is the default and the identity.
 
-export type Theme = "dark" | "light";
+// "system" is an explicit, opt-in choice — the wallet still never follows the OS
+// on its own (dark is the default identity). Only a user who picks "system" gets
+// OS-tracking, and then it is honest: switching the OS palette updates the app.
+export type Theme = "dark" | "light" | "system";
 
 export type Accent = "teal" | "violet" | "amber" | "rose" | "ice";
 
@@ -27,10 +30,21 @@ const KEY = "theme";
 const ACCENT_KEY = "accent";
 
 export function currentTheme(): Theme {
-  // Dark unless the user explicitly chose light. Deliberately NOT derived from
-  // the OS: auto-switching flipped the palette while the window stayed dark and
-  // made the wallet's own title invisible.
-  return localStorage.getItem(KEY) === "light" ? "light" : "dark";
+  // Dark unless the user explicitly chose otherwise. Never derived from the OS on
+  // its own — only if the user deliberately selected "system".
+  const v = localStorage.getItem(KEY);
+  return v === "light" || v === "system" ? v : "dark";
+}
+
+/// The concrete palette to paint right now: "system" resolves against the OS,
+/// everything else is literal.
+function resolveTheme(t: Theme): "dark" | "light" {
+  if (t !== "system") return t;
+  try {
+    return window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  } catch {
+    return "dark";
+  }
 }
 
 export function currentAccent(): Accent {
@@ -41,12 +55,29 @@ export function currentAccent(): Accent {
 export function applyStoredTheme(): void {
   apply(currentTheme());
   applyAccent(currentAccent());
+  installSystemThemeWatcher();
 }
 
 export function setTheme(t: Theme): void {
   if (t === "dark") localStorage.removeItem(KEY);
   else localStorage.setItem(KEY, t);
   apply(t);
+}
+
+/// When (and only when) the user chose "system", track OS palette changes live so
+/// the app follows the OS the moment it flips. Installed once; a no-op otherwise.
+let watcherInstalled = false;
+function installSystemThemeWatcher(): void {
+  if (watcherInstalled) return;
+  watcherInstalled = true;
+  try {
+    const mq = window.matchMedia("(prefers-color-scheme: light)");
+    mq.addEventListener?.("change", () => {
+      if (currentTheme() === "system") apply("system");
+    });
+  } catch {
+    /* engines without matchMedia simply never fire — dark stays */
+  }
 }
 
 export function setAccent(a: Accent): void {
@@ -57,8 +88,10 @@ export function setAccent(a: Accent): void {
 
 function apply(t: Theme): void {
   const root = document.documentElement;
-  if (t === "dark") root.removeAttribute("data-theme"); // :root defaults to dark
-  else root.setAttribute("data-theme", "light");
+  // Resolve "system" to a concrete palette; :root defaults to dark, so only light
+  // needs the attribute.
+  if (resolveTheme(t) === "light") root.setAttribute("data-theme", "light");
+  else root.removeAttribute("data-theme");
 }
 
 /// Push the chosen accent into the CSS custom properties every highlight reads.

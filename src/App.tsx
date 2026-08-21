@@ -3179,13 +3179,13 @@ function AppearanceCard() {
     <div className="card">
       <h2>Appearance</h2>
       <p className="muted small" style={{ marginTop: 0 }}>
-        ZKas is dark by default. Light is here if you want it — it does not follow your system, so nothing changes
-        under you unexpectedly.
+        ZKas is dark by default. Pick Light if you prefer it, or System to follow your device — the wallet only
+        tracks the OS if you choose System, so nothing changes under you unexpectedly.
       </p>
       <div className="filterbar" style={{ marginBottom: 18 }}>
-        {(["dark", "light"] as Theme[]).map((opt) => (
+        {(["dark", "light", "system"] as Theme[]).map((opt) => (
           <button key={opt} className={"chip" + (t === opt ? " on" : "")} onClick={() => choose(opt)}>
-            {opt === "dark" ? "Dark" : "Light"}
+            {opt === "dark" ? "Dark" : opt === "light" ? "Light" : "System"}
           </button>
         ))}
       </div>

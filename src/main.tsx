@@ -9,6 +9,7 @@ import { ToastHost } from "./toast";
 import { applyStoredTheme } from "./theme";
 import { initDesktop, isDesktop, vaultStatus } from "./desktop";
 import { FirstRunNode, needsNodeChoice } from "./FirstRunNode";
+import { FirstRunConnect } from "./FirstRunConnect";
 import { BootLoader } from "./components/BootLoader";
 import { listWallets } from "./wallets";
 import { isNative, loadStatusCache } from "./api";
@@ -42,9 +43,14 @@ function Root({ locked, askNode }: { locked: boolean; askNode: boolean }) {
   }, []);
   if (isLockEnabled() && !appUnlocked) return <AppLockScreen onUnlocked={() => setAppUnlocked(true)} />;
   if (!unlocked) return <LockScreen onUnlocked={() => setUnlocked(true)} />;
-  // Asked after unlock: the node choice changes what the daemon connects to,
-  // and there is no point configuring a connection for a wallet still locked.
-  if (!nodeChosen) return <FirstRunNode onDone={() => setNodeChosen(true)} />;
+  // Asked after unlock: the connection choice changes what the wallet talks to,
+  // and there is no point configuring one for a wallet still locked. Desktop
+  // picks a NODE for its embedded daemon (FirstRunNode); mobile/web pick the
+  // wallet SERVICE (FirstRunConnect) — and crucially contact nothing until then.
+  if (!nodeChosen)
+    return isDesktop()
+      ? <FirstRunNode onDone={() => setNodeChosen(true)} />
+      : <FirstRunConnect onDone={() => setNodeChosen(true)} />;
 
   return (
     <HashRouter>
@@ -177,7 +183,12 @@ async function boot() {
   // unlocked / browser paths.
   if (!locked) await initDesktop().catch(() => null);
 
-  const askNode = isDesktop() && needsNodeChoice();
+  // First-run connection gate. It matters where the app bundle is LOCAL and its
+  // first act would otherwise be to contact a server: native mobile (privacy-
+  // first service chooser) and desktop (its existing node chooser). Plain web is
+  // excluded — the host already served the page, so gating the walletd poll adds
+  // friction without adding privacy.
+  const askNode = needsNodeChoice() && (isDesktop() || isNative());
 
   // Theme before first paint so a light-theme user never sees a dark flash.
   applyStoredTheme();
