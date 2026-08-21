@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { ACCENTS, applyStoredTheme, currentAccent, setAccent } from "../src/theme";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ACCENTS, applyStoredTheme, currentAccent, currentTheme, setAccent, setTheme } from "../src/theme";
 
 describe("accent theme", () => {
   beforeEach(() => {
@@ -42,5 +42,40 @@ describe("accent theme", () => {
   it("ignores a garbage stored accent", () => {
     localStorage.setItem("accent", "chartreuse");
     expect(currentAccent()).toBe("teal");
+  });
+});
+
+describe("light/dark/system theme", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    document.documentElement.removeAttribute("data-theme");
+  });
+
+  it("defaults to dark and stores nothing for it", () => {
+    expect(currentTheme()).toBe("dark");
+    setTheme("dark");
+    expect(localStorage.getItem("theme")).toBeNull();
+    expect(document.documentElement.getAttribute("data-theme")).toBeNull();
+  });
+
+  it("light persists and stamps data-theme", () => {
+    setTheme("light");
+    expect(currentTheme()).toBe("light");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+  });
+
+  it("system resolves against the OS and only tracks it when chosen", () => {
+    // Pretend the OS prefers light.
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      matches: q.includes("light"),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    setTheme("system");
+    expect(currentTheme()).toBe("system");
+    expect(localStorage.getItem("theme")).toBe("system");
+    // System + OS-light → painted light.
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    vi.unstubAllGlobals();
   });
 });

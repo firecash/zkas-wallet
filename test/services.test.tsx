@@ -22,8 +22,8 @@ describe("services directory", () => {
     expect(screen.getByRole("group", { name: "Filter services" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Use 1" })).toHaveClass("active");
     expect(screen.getAllByRole("article")).toHaveLength(1);
-    await user.click(screen.getByRole("button", { name: "All 12" }));
-    expect(screen.getAllByRole("article")).toHaveLength(12);
+    await user.click(screen.getByRole("button", { name: "All 13" }));
+    expect(screen.getAllByRole("article")).toHaveLength(13);
   });
 
   // The landing category is chosen for the user, and the directory it filters is

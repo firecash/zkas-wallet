@@ -8,7 +8,7 @@ import { installAutoLock, isLockEnabled, isUnlocked } from "./applock";
 import { ToastHost } from "./toast";
 import { applyStoredTheme } from "./theme";
 import { initDesktop, isDesktop, vaultStatus } from "./desktop";
-import { FirstRunNode, needsNodeChoice } from "./FirstRunNode";
+import { FirstRunNode, needsNodeChoice, markNodeChoiceMade } from "./FirstRunNode";
 import { FirstRunConnect } from "./FirstRunConnect";
 import { BootLoader } from "./components/BootLoader";
 import { listWallets } from "./wallets";
@@ -188,6 +188,15 @@ async function boot() {
   // first service chooser) and desktop (its existing node chooser). Plain web is
   // excluded — the host already served the page, so gating the walletd poll adds
   // friction without adding privacy.
+  //
+  // Fresh installs only. A device that has already used the wallet has a wallet,
+  // a token or a cached status — it effectively chose its server long ago, so an
+  // upgrade must not drop it onto a setup screen. Settle the choice silently so
+  // the gate never reappears for them, and so no poll is deferred for a returning
+  // user who already consented by using the app.
+  const hasWalletHistory =
+    listWallets().length > 0 || !!loadStatusCache() || !!localStorage.getItem("wallet_token");
+  if (hasWalletHistory && needsNodeChoice()) markNodeChoiceMade();
   const askNode = needsNodeChoice() && (isDesktop() || isNative());
 
   // Theme before first paint so a light-theme user never sees a dark flash.

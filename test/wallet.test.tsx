@@ -240,7 +240,8 @@ describe("dialogs leave nothing behind", () => {
     await waitFor(() => expect(screen.getByRole("tab", { name: "Settings" })).toBeInTheDocument());
     await user.click(screen.getByRole("tab", { name: "Settings" }));
 
-    // Any confirm-style dialog will do; the wallet-removal one is always present.
+    // Any confirm-style dialog will do; the wallet-removal one is under Wallets.
+    await user.click(await screen.findByRole("button", { name: /Wallets/ }));
     const remove = await screen.findByText(/Remove this wallet|Use a different wallet/);
     await user.click(remove);
     await waitFor(() => expect(document.querySelector(".modalwrap")).not.toBeNull());

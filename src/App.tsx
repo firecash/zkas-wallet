@@ -1430,7 +1430,7 @@ function ConnectionButton() {
             <p className="muted small">
               {desktop
                 ? "Embedded walletd and your keys stay private inside this app. Choose the ZKAS node it reads for complete wallet history; a mining-only node is refused."
-                : `Hosted is easiest. A walletd you run yourself keeps your viewing key and wallet scan on your own machine. ${isNative() ? "This installed app accepts HTTPS or plain HTTP on your LAN." : "In a browser, your walletd must use HTTPS; install the app to use plain HTTP on a LAN."}`}
+                : `Hosted is easiest. A walletd you run yourself keeps your viewing key and wallet scan on your own machine. ${isNative() ? "This installed app accepts HTTPS, plain HTTP on your LAN, or an .onion address over Tor (Orbot)." : "In a browser, your walletd must use HTTPS or an .onion over Tor; install the app to use plain HTTP on a LAN."}`}
             </p>
 
             <div className="connection-list">
@@ -5291,39 +5291,66 @@ function networkPrivacyLabel(): string {
 /// service can still learn is that SOME IP is asking about a given viewing key. The
 /// choice of service is what controls that, so it belongs in plain sight.
 function NetworkPrivacyCard() {
+  const desktop = isDesktop();
   const base = getBase();
   const onion = isOnionAddress(base);
   const label = networkPrivacyLabel();
   return (
     <div className="card">
       <h2>Network privacy</h2>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        Your balance and payments are shielded on-chain no matter what. What a wallet service can still see is that
-        <i> someone</i> at your IP is asking about your viewing key. Which service you use decides who that is —
-        change it any time from the <b>Wallet service</b> control at the top of the wallet.
-      </p>
-      <div className="privacy-modes">
-        <div className="privacy-mode">
-          <b>Public service</b>
-          <span className="muted small">Easiest. The hosted service sees your IP. Fine for everyday use.</span>
-        </div>
-        <div className="privacy-mode">
-          <b>Your own <code>zkas-walletd</code></b>
-          <span className="muted small">Strongest. Nobody else sees which coins you ask about. Run it on your machine or LAN.</span>
-        </div>
-        <div className="privacy-mode">
-          <b>Over Tor (<code>.onion</code>)</b>
-          <span className="muted small">
-            Point the wallet at an <code>.onion</code> wallet service — it never learns your IP, and Tor encrypts the
-            path. Turn on a Tor transport first: <b>Orbot</b> (VPN mode) on Android, or Tor running on desktop. Then add
-            the <code>.onion</code> address under <b>Wallet service → Add</b>.
-          </span>
-        </div>
-      </div>
+      {desktop ? (
+        <>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Your keys and wallet scan stay inside this app. What is still visible at the network layer is the
+            <b> node</b> your wallet reads the chain from: a node you ask can see that <i>someone</i> at your IP is
+            interested. Change it from the <b>Wallet source</b> control at the top of the wallet.
+          </p>
+          <div className="privacy-modes">
+            <div className="privacy-mode">
+              <b>Local node (managed here)</b>
+              <span className="muted small">Strongest. You run the node; nobody else sees what you ask. Set it up on the Node page.</span>
+            </div>
+            <div className="privacy-mode">
+              <b>Your own node</b>
+              <span className="muted small">A node you already run, on this machine or your LAN. Also fully private from third parties.</span>
+            </div>
+            <div className="privacy-mode">
+              <b>Public node</b>
+              <span className="muted small">Easiest. The public node sees your IP. Fine for everyday use.</span>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Your balance and payments are shielded on-chain no matter what. What a wallet service can still see is that
+            <i> someone</i> at your IP is asking about your viewing key. Which service you use decides who that is —
+            change it any time from the <b>Wallet service</b> control at the top of the wallet.
+          </p>
+          <div className="privacy-modes">
+            <div className="privacy-mode">
+              <b>Public service</b>
+              <span className="muted small">Easiest. The hosted service sees your IP. Fine for everyday use.</span>
+            </div>
+            <div className="privacy-mode">
+              <b>Your own <code>zkas-walletd</code></b>
+              <span className="muted small">Strongest. Nobody else sees which coins you ask about. Run it on your machine or LAN.</span>
+            </div>
+            <div className="privacy-mode">
+              <b>Over Tor (<code>.onion</code>)</b>
+              <span className="muted small">
+                Point the wallet at an <code>.onion</code> wallet service — it never learns your IP, and Tor encrypts
+                the path. Turn on a Tor transport first: <b>Orbot</b> (VPN mode) on Android, or Tor running on desktop.
+                Then add the <code>.onion</code> address under <b>Wallet service → Add</b>.
+              </span>
+            </div>
+          </div>
+        </>
+      )}
       <div className="privacy-status">
         <span className="eyebrow">This device</span>
         <span className={"status-pill " + (onion ? "good" : "")}>
-          {onion ? "Connected over Tor" : `Wallet service: ${label}`}
+          {onion ? "Connected over Tor" : `${desktop ? "Wallet source" : "Wallet service"}: ${label}`}
         </span>
       </div>
     </div>

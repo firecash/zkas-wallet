@@ -182,6 +182,8 @@ describe("settings", () => {
     const user = userEvent.setup();
     await mountApp();
     await user.click(await screen.findByRole("tab", { name: "Settings" }));
+    // Appearance lives in a collapsed section; open it before touching the chips.
+    await user.click(await screen.findByRole("button", { name: /Appearance/ }));
     await user.click(await screen.findByRole("button", { name: "Light" }));
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     await user.click(screen.getByRole("button", { name: "Dark" }));
