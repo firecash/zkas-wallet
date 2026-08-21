@@ -47,7 +47,7 @@ import {
 } from "./desktop";
 import { makeBackup, readBackup } from "./backup";
 import { MANAGED_ZKAS_RPC, STANDALONE_ZKAS_RPC_EXAMPLE } from "./ports";
-import { ACCENTS, currentAccent, currentTheme, setAccent, setTheme, type Accent, type Theme } from "./theme";
+import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
 import { wipeWalletState } from "./walletstate";
 import {
   activeToken,
@@ -74,6 +74,7 @@ import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReco
 import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
+import { ONION_WALLETD_URL, ORBOT_PLAY_URL } from "./lib/relay";
 import { desktopServices } from "./desktop-services";
 import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, Server, Settings, ShieldAlert, Trash2, WalletCards } from "lucide-react";
@@ -3139,7 +3140,7 @@ function SettingsPane({ status }: { status: Status }) {
       )}
 
       <SettingsSection label="Preferences" />
-      <Collapsible title="Appearance" summary={currentTheme() === "light" ? "Light" : "Dark"}>
+      <Collapsible title="Accent color" summary={ACCENTS[currentAccent()].label}>
         <AppearanceCard />
       </Collapsible>
       <Collapsible title="Background sync">
@@ -3168,33 +3169,16 @@ function SettingsPane({ status }: { status: Status }) {
 /// Light/dark. Defaults to following the system, which is what most people
 /// expect and nobody has to discover.
 function AppearanceCard() {
-  const [t, setT] = useState<Theme>(currentTheme());
   const [a, setA] = useState<Accent>(currentAccent());
-  const choose = (next: Theme) => {
-    setTheme(next);
-    setT(next);
-  };
   const chooseAccent = (next: Accent) => {
     setAccent(next);
     setA(next);
   };
   return (
     <div className="card">
-      <h2>Appearance</h2>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        ZKas is dark by default. Pick Light if you prefer it, or System to follow your device — the wallet only
-        tracks the OS if you choose System, so nothing changes under you unexpectedly.
-      </p>
-      <div className="filterbar" style={{ marginBottom: 18 }}>
-        {(["dark", "light", "system"] as Theme[]).map((opt) => (
-          <button key={opt} className={"chip" + (t === opt ? " on" : "")} onClick={() => choose(opt)}>
-            {opt === "dark" ? "Dark" : opt === "light" ? "Light" : "System"}
-          </button>
-        ))}
-      </div>
-      <h3 style={{ marginTop: 0 }}>Accent</h3>
+      <h2>Accent color</h2>
       <p className="muted small" style={{ marginTop: 0, marginBottom: 12 }}>
-        The color your balance, buttons and highlights glow with. Teal is the ZKas signature.
+        Balance, buttons and highlights. Teal is the ZKas signature.
       </p>
       <div className="swatches">
         {(Object.keys(ACCENTS) as Accent[]).map((opt) => (
@@ -5291,68 +5275,81 @@ function networkPrivacyLabel(): string {
 /// service can still learn is that SOME IP is asking about a given viewing key. The
 /// choice of service is what controls that, so it belongs in plain sight.
 function NetworkPrivacyCard() {
-  const desktop = isDesktop();
   const base = getBase();
   const onion = isOnionAddress(base);
-  const label = networkPrivacyLabel();
+  const current: "public" | "tor" | "custom" =
+    onion ? "tor" : !base || /wallet\.zkas\.info/i.test(base) || base.endsWith("/daemon") ? "public" : "custom";
+
+  const [busy, setBusy] = useState<null | "public" | "tor" | "custom">(null);
+  const [showCustom, setShowCustom] = useState(false);
+  const [addr, setAddr] = useState("");
+  const [bearer, setBearer] = useState("");
+  const [err, setErr] = useState("");
+  const [needTor, setNeedTor] = useState(false);
+
+  // Desktop switches the NODE its embedded daemon reads — that flow lives in the
+  // top "Wallet source" control, so keep this a pointer there rather than a second
+  // switcher that could disagree with it.
+  if (isDesktop()) {
+    return (
+      <div className="card">
+        <h2>Network privacy</h2>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Your keys stay in this app. For the strongest privacy, run your own node (Node page) so nobody else sees
+          what you ask. Switch the node from <b>Wallet source</b> at the top.
+        </p>
+      </div>
+    );
+  }
+
+  const run = (which: "public" | "tor" | "custom", fn: () => Promise<void>) => {
+    if (busy) return;
+    setErr(""); setNeedTor(false); setBusy(which);
+    void fn()
+      .then(() => location.reload())
+      .catch((e) => {
+        if (which === "tor") { setNeedTor(true); setErr("Couldn't reach Tor. Turn on Orbot (VPN) and try again."); }
+        else setErr((e as Error).message || String(e));
+        setBusy(null);
+      });
+  };
+  const usePublic = () => run("public", async () => { setBase(""); setWalletdBearer(""); });
+  const useTor = () => run("tor", async () => { const u = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000); setBase(u); setWalletdBearer(""); });
+  const useCustom = () => {
+    const entered = addr.trim();
+    if (!entered) return setErr("Enter a wallet-service address (host:port or an .onion).");
+    run("custom", async () => {
+      const u = await findReachableDaemon(entered, bearer);
+      setBase(u); setWalletdBearer(bearer.trim());
+      walletdProfiles.save(entered.replace(/^https?:\/\//, "").split("/")[0], u, bearer.trim() || undefined);
+    });
+  };
+  const tag = (m: typeof current) => (busy === m ? "Connecting…" : current === m ? "On" : "Use");
+
   return (
     <div className="card">
       <h2>Network privacy</h2>
-      {desktop ? (
-        <>
-          <p className="muted small" style={{ marginTop: 0 }}>
-            Your keys and wallet scan stay inside this app. What is still visible at the network layer is the
-            <b> node</b> your wallet reads the chain from: a node you ask can see that <i>someone</i> at your IP is
-            interested. Change it from the <b>Wallet source</b> control at the top of the wallet.
-          </p>
-          <div className="privacy-modes">
-            <div className="privacy-mode">
-              <b>Local node (managed here)</b>
-              <span className="muted small">Strongest. You run the node; nobody else sees what you ask. Set it up on the Node page.</span>
-            </div>
-            <div className="privacy-mode">
-              <b>Your own node</b>
-              <span className="muted small">A node you already run, on this machine or your LAN. Also fully private from third parties.</span>
-            </div>
-            <div className="privacy-mode">
-              <b>Public node</b>
-              <span className="muted small">Easiest. The public node sees your IP. Fine for everyday use.</span>
-            </div>
+      <p className="muted small" style={{ marginTop: 0 }}>What your wallet connects to. Tap to switch.</p>
+      <div className="connection-list">
+        <button className={"connection-option" + (current === "public" ? " active" : "")} disabled={!!busy} onClick={usePublic}>
+          <span><b>Public service</b><small>Fastest. Sees your IP.</small></span><span>{tag("public")}</span>
+        </button>
+        <button className={"connection-option" + (current === "tor" ? " active" : "")} disabled={!!busy} onClick={useTor}>
+          <span><b>Connect over Tor</b><small>Hides your IP. Needs Orbot.</small></span><span>{tag("tor")}</span>
+        </button>
+        <button className={"connection-option" + (current === "custom" ? " active" : "")} disabled={!!busy} onClick={() => { setShowCustom((v) => !v); setErr(""); }}>
+          <span><b>My own service</b><small>Most private. Run your own.</small></span><span>{current === "custom" ? "On" : showCustom ? "▲" : "▾"}</span>
+        </button>
+        {showCustom && (
+          <div className="connection-add firstrun-custom">
+            <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="host:port, http://<lan-ip>:8501, or .onion" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />
+            <input value={bearer} onChange={(e) => setBearer(e.target.value)} placeholder="Access token (optional)" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />
+            <button className="btn small" disabled={busy === "custom"} onClick={useCustom}>{busy === "custom" ? "Connecting…" : "Connect"}</button>
           </div>
-        </>
-      ) : (
-        <>
-          <p className="muted small" style={{ marginTop: 0 }}>
-            Your balance and payments are shielded on-chain no matter what. What a wallet service can still see is that
-            <i> someone</i> at your IP is asking about your viewing key. Which service you use decides who that is —
-            change it any time from the <b>Wallet service</b> control at the top of the wallet.
-          </p>
-          <div className="privacy-modes">
-            <div className="privacy-mode">
-              <b>Public service</b>
-              <span className="muted small">Easiest. The hosted service sees your IP. Fine for everyday use.</span>
-            </div>
-            <div className="privacy-mode">
-              <b>Your own <code>zkas-walletd</code></b>
-              <span className="muted small">Strongest. Nobody else sees which coins you ask about. Run it on your machine or LAN.</span>
-            </div>
-            <div className="privacy-mode">
-              <b>Over Tor (<code>.onion</code>)</b>
-              <span className="muted small">
-                Point the wallet at an <code>.onion</code> wallet service — it never learns your IP, and Tor encrypts
-                the path. Turn on a Tor transport first: <b>Orbot</b> (VPN mode) on Android, or Tor running on desktop.
-                Then add the <code>.onion</code> address under <b>Wallet service → Add</b>.
-              </span>
-            </div>
-          </div>
-        </>
-      )}
-      <div className="privacy-status">
-        <span className="eyebrow">This device</span>
-        <span className={"status-pill " + (onion ? "good" : "")}>
-          {onion ? "Connected over Tor" : `${desktop ? "Wallet source" : "Wallet service"}: ${label}`}
-        </span>
+        )}
       </div>
+      {err && <div className="msg err">{err}</div>}
+      {needTor && <a className="btn small ghost" href={ORBOT_PLAY_URL} target="_blank" rel="noreferrer" style={{ marginTop: 8 }}>Get Orbot</a>}
     </div>
   );
 }

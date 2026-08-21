@@ -10,6 +10,7 @@ import { applyStoredTheme } from "./theme";
 import { initDesktop, isDesktop, vaultStatus } from "./desktop";
 import { FirstRunNode, needsNodeChoice, markNodeChoiceMade } from "./FirstRunNode";
 import { FirstRunConnect } from "./FirstRunConnect";
+import { WhatsNew, shouldShowWhatsNew } from "./WhatsNew";
 import { BootLoader } from "./components/BootLoader";
 import { listWallets } from "./wallets";
 import { isNative, loadStatusCache } from "./api";
@@ -31,9 +32,10 @@ const SelfHost = lazy(() => import("./pages/SelfHost").then((module) => ({ defau
 // order is — ask the shell whether this device is locked, show the lock screen if
 // it is, and only mount the wallet once the daemon is up. In the browser there is
 // no vault and this resolves straight to the app.
-function Root({ locked, askNode }: { locked: boolean; askNode: boolean }) {
+function Root({ locked, askNode, whatsNew }: { locked: boolean; askNode: boolean; whatsNew: boolean }) {
   const [unlocked, setUnlocked] = useState(!locked);
   const [nodeChosen, setNodeChosen] = useState(!askNode);
+  const [showWhatsNew, setShowWhatsNew] = useState(whatsNew);
   // The app lock (PIN/passphrase over the on-device seed) is independent of the
   // desktop vault: it guards the key this device holds, on every platform, and
   // is what mobile uses. Re-locks itself after time in the background.
@@ -53,7 +55,9 @@ function Root({ locked, askNode }: { locked: boolean; askNode: boolean }) {
       : <FirstRunConnect onDone={() => setNodeChosen(true)} />;
 
   return (
-    <HashRouter>
+    <>
+      {showWhatsNew && <WhatsNew onClose={() => setShowWhatsNew(false)} />}
+      <HashRouter>
       <Suspense fallback={<BootLoader label="Opening…" />}>
         <Routes>
           <Route element={<AppShell />}>
@@ -72,7 +76,8 @@ function Root({ locked, askNode }: { locked: boolean; askNode: boolean }) {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
-    </HashRouter>
+      </HashRouter>
+    </>
   );
 }
 
@@ -198,8 +203,13 @@ async function boot() {
     listWallets().length > 0 || !!loadStatusCache() || !!localStorage.getItem("wallet_token");
   if (hasWalletHistory && needsNodeChoice()) markNodeChoiceMade();
   const askNode = needsNodeChoice() && (isDesktop() || isNative());
+  // Existing users skip first-run, so announce the new connection/privacy/theme
+  // features once via a "what's new" popup instead.
+  const whatsNew = shouldShowWhatsNew(hasWalletHistory);
 
-  // Theme before first paint so a light-theme user never sees a dark flash.
+  // Dark is the identity and the only theme now (light was dropped). Clear any
+  // stored light/system preference so an early adopter is not stuck on it.
+  try { localStorage.removeItem("theme"); } catch { /* ignore */ }
   applyStoredTheme();
 
   // QR images are cached per address and were only ever swept when a wallet was
@@ -232,7 +242,7 @@ async function boot() {
     <StrictMode>
       <ToastHost>
         <Boundary>
-          <Root locked={locked} askNode={askNode} />
+          <Root locked={locked} askNode={askNode} whatsNew={whatsNew} />
         </Boundary>
       </ToastHost>
     </StrictMode>,

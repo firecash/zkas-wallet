@@ -174,7 +174,7 @@ describe("settings", () => {
     await user.click(await screen.findByRole("tab", { name: "Settings" }));
     expect(await screen.findByText(/App lock/)).toBeInTheDocument();
     expect(screen.getByText(/Wallets/)).toBeInTheDocument();
-    expect(screen.getByText(/Appearance/)).toBeInTheDocument();
+    expect(screen.getByText(/Accent color/)).toBeInTheDocument();
     expect(screen.getByText(/Contacts/)).toBeInTheDocument();
   });
 
@@ -182,12 +182,10 @@ describe("settings", () => {
     const user = userEvent.setup();
     await mountApp();
     await user.click(await screen.findByRole("tab", { name: "Settings" }));
-    // Appearance lives in a collapsed section; open it before touching the chips.
-    await user.click(await screen.findByRole("button", { name: /Appearance/ }));
-    await user.click(await screen.findByRole("button", { name: "Light" }));
-    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
-    await user.click(screen.getByRole("button", { name: "Dark" }));
-    expect(document.documentElement.getAttribute("data-theme")).toBeNull();
+    // Accent color lives in a collapsed section; open it before choosing a swatch.
+    await user.click(await screen.findByRole("button", { name: /Accent color/ }));
+    await user.click(await screen.findByRole("button", { name: "Violet" }));
+    expect(document.documentElement.style.getPropertyValue("--ember")).toBe("#9d8bff");
   });
 });
 

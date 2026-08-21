@@ -2443,3 +2443,8 @@ select { appearance: none; cursor: pointer; }
 .firstrun-conn .connection-option { width: 100%; }
 .firstrun-custom { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .firstrun-custom .btn.small { align-self: flex-start; }
+
+/* What's-new update notice */
+.whatsnew-list { display: flex; flex-direction: column; gap: 12px; }
+.whatsnew-list > div { display: flex; flex-direction: column; gap: 2px; }
+.whatsnew-list b { font-size: 14px; }

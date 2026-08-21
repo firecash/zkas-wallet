@@ -14,7 +14,7 @@ import { useState } from "react";
 import { markNodeChoiceMade } from "./FirstRunNode";
 import { findReachableDaemon, setBase, setWalletdBearer, normalizeDaemonInput, isNative } from "./api";
 import { walletdProfiles } from "./connection-profiles";
-import { ACCENTS, currentAccent, currentTheme, setAccent, setTheme, type Accent, type Theme } from "./theme";
+import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
 import { ONION_WALLETD_URL, ORBOT_PLAY_URL } from "./lib/relay";
 
 export function FirstRunConnect({ onDone }: { onDone: () => void }) {
@@ -25,10 +25,8 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
   const [err, setErr] = useState("");
   const [needTor, setNeedTor] = useState(false);
 
-  // Appearance, applied live (localStorage + CSS only — never a network call).
-  const [theme, setTh] = useState<Theme>(currentTheme());
+  // Accent, applied live (localStorage + CSS only — never a network call).
   const [accent, setAcc] = useState<Accent>(currentAccent());
-  const chooseTheme = (t: Theme) => { setTheme(t); setTh(t); };
   const chooseAccent = (a: Accent) => { setAccent(a); setAcc(a); };
 
   const finish = () => { markNodeChoiceMade(); onDone(); };
@@ -76,9 +74,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
       <div className="card lockcard firstrun">
         <h2 style={{ marginTop: 0 }}>Set up your wallet</h2>
         <p className="muted small">
-          Nothing has left this device yet. Pick where your wallet connects — the app contacts no server until you tap.
-          Your balance and payments stay shielded either way; the server you choose only sees that <i>someone</i> is
-          asking about the chain.
+          Nothing leaves this device until you tap. Pick where your wallet connects.
         </p>
 
         <span className="eyebrow">Connect</span>
@@ -128,14 +124,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
           </a>
         )}
 
-        <span className="eyebrow" style={{ marginTop: 14 }}>Appearance</span>
-        <div className="filterbar" style={{ marginBottom: 12 }}>
-          {(["dark", "light", "system"] as Theme[]).map((opt) => (
-            <button key={opt} type="button" className={"chip" + (theme === opt ? " on" : "")} onClick={() => chooseTheme(opt)} disabled={!!busy}>
-              {opt === "dark" ? "Dark" : opt === "light" ? "Light" : "System"}
-            </button>
-          ))}
-        </div>
+        <span className="eyebrow" style={{ marginTop: 14 }}>Accent color</span>
         <div className="swatches">
           {(Object.keys(ACCENTS) as Accent[]).map((opt) => (
             <button
