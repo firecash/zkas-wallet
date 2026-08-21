@@ -664,6 +664,10 @@ export interface ChainTx {
 /// its confirmation lookup can never succeed. Detecting only Capacitor missed the
 /// desktop app entirely. Both native shells must reach the public host directly.
 function chainBase(): string {
+  // Over Tor the whole wallet stays on the onion: walletd is at the onion root and
+  // the chain API at /chain, so history/confirmation lookups never touch clearnet.
+  const base = getBase();
+  if (isOnionAddress(base)) return base.replace(/\/+$/, "") + "/chain";
   const native = isNative() || "__TAURI_INTERNALS__" in globalThis;
   return native ? "https://wallet.zkas.info/chain" : window.location.origin + "/chain";
 }

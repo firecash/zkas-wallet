@@ -5,6 +5,8 @@
 // through a tiny native relay. Keeping the contract here (instead of copying the
 // explorer website's React Query internals) gives every platform identical data.
 
+import { getBase, isOnionAddress } from "../api";
+
 const DEFAULT_EXPLORER_BASE = "https://wallet.zkas.info/chain";
 
 function isDesktop(): boolean {
@@ -12,6 +14,10 @@ function isDesktop(): boolean {
 }
 
 function getExplorerBase(): string {
+  // On Tor, the chain API is served on the same onion at /chain — keep the in-app
+  // explorer inside Tor rather than reaching out to clearnet wallet.zkas.info.
+  const wallet = getBase();
+  if (isOnionAddress(wallet)) return wallet.replace(/\/+$/, "") + "/chain";
   const configured = localStorage.getItem("explorer_base");
   if (configured) return configured;
   // The hosted web wallet already exposes the explorer through /chain. Using
