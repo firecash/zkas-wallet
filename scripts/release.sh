@@ -33,16 +33,20 @@ log() { printf '\n\033[1;36m== %s\033[0m\n' "$*"; }
 die() { printf '\033[1;31mERROR: %s\033[0m\n' "$*" >&2; exit 1; }
 
 # ---- args ----
-DO_BUMP=1; DO_DEPLOY=1; VERSION=""
+DO_BUMP=1; DO_DEPLOY=1; DO_PRE=0; VERSION=""
 for a in "$@"; do
   case "$a" in
     --build|--build-only) DO_BUMP=0 ;;
     --no-deploy)          DO_DEPLOY=0 ;;
+    --pre|--prerelease)   DO_PRE=1 ;;
     -*)                   die "unknown flag: $a" ;;
     *)                    VERSION="$a" ;;
   esac
 done
-[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "usage: release.sh [--build] [--no-deploy] <x.y.z>"
+# Allow a prerelease suffix (e.g. 1.0.17-rc1). A suffixed version is a prerelease
+# regardless of --pre, and --pre marks the GitHub release as a prerelease too.
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || die "usage: release.sh [--build] [--no-deploy] [--pre] <x.y.z[-suffix]>"
+[[ "$VERSION" == *-* ]] && DO_PRE=1
 TAG="v$VERSION"
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
@@ -135,8 +139,12 @@ done
 if [ -z "$rel_id" ]; then
   echo "release $TAG not created yet by CI; creating it now"
   rel_id="$(gh_api -X POST "https://api.github.com/repos/$REPO/releases" \
-    -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"body\":\"zkas-wallet $VERSION\"}" \
+    -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"body\":\"zkas-wallet $VERSION\",\"prerelease\":$([ "$DO_PRE" = 1 ] && echo true || echo false)}" \
     | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')"
+fi
+# The desktop CI may have created the release without the prerelease flag; mark it.
+if [ "$DO_PRE" = 1 ]; then
+  gh_api -X PATCH "https://api.github.com/repos/$REPO/releases/$rel_id" -d '{"prerelease":true}' >/dev/null && echo "marked $TAG as a pre-release"
 fi
 upload() { # <file> <label>
   local f="$1" name; name="$(basename "$1")"
