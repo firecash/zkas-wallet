@@ -1,3 +1,5 @@
+import { getBase, isOnionAddress } from "./api";
+
 export type ServiceCategory = "store" | "use" | "earn" | "verify" | "build";
 
 export type ServiceStatus = "Live" | "Testing" | "Developer preview" | "Available" | "Published" | "Open";
@@ -42,6 +44,16 @@ type ServicesDocument = {
 
 export const SERVICES_DIRECTORY_URL =
   import.meta.env.VITE_SERVICES_DIRECTORY_URL || "https://services.zkas.info/services.v1.json";
+
+/// The directory URL to fetch right now. On Tor it is served on the same onion so
+/// the services list never reaches clearnet either; otherwise the default host.
+function servicesDirectoryUrl(): string {
+  try {
+    const base = getBase();
+    if (isOnionAddress(base)) return base.replace(/\/+$/, "") + "/services.v1.json";
+  } catch { /* fall through to default */ }
+  return SERVICES_DIRECTORY_URL;
+}
 
 const CACHE_KEY = "zkas_services_directory_v1";
 const MAX_DOCUMENT_BYTES = 256 * 1024;
@@ -204,7 +216,7 @@ export async function refreshServicesDirectory(
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetcher(SERVICES_DIRECTORY_URL, {
+    const response = await fetcher(servicesDirectoryUrl(), {
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-cache",
