@@ -35,6 +35,19 @@ describe("walletd transport policy", () => {
     expect(walletdTransportError("http://192.168.1.20:9000")).toBeNull();
   });
 
+  it("accepts .onion services over http on every platform (Tor encrypts them)", () => {
+    const onion = "abcdefghij234567.onion";
+    // Onion is http, never forced to HTTPS, even from a plain browser.
+    expect(normalizeDaemonInput(onion)).toBe(`http://${onion}`);
+    expect(normalizeDaemonInput(`${onion}:8501`)).toBe(`http://${onion}:8501`);
+    // Browser (no installed-app flags set): still allowed, because .onion is encrypted.
+    expect(walletdTransportError(`http://${onion}`)).toBeNull();
+    expect(walletdTransportError(`http://${onion}:8501`)).toBeNull();
+    // Bare onion tries the virtual port 80 and the walletd default; an explicit port wins.
+    expect(daemonEndpointCandidates(onion)).toEqual([`http://${onion}`, `http://${onion}:8501`]);
+    expect(daemonEndpointCandidates(`${onion}:9000`)).toEqual([`http://${onion}:9000`]);
+  });
+
   it("uses the transport that actually answers", async () => {
     (globalThis as { Capacitor?: unknown }).Capacitor = { isNativePlatform: () => true };
     const fetchMock = vi.spyOn(globalThis, "fetch")

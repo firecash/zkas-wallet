@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo} from
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, chainTx, findReachableDaemon, getBase, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
+import { api, chainTx, findReachableDaemon, getBase, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, isOnionAddress, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { parsePairingUri } from "./pairing";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
@@ -3148,6 +3148,9 @@ function SettingsPane({ status }: { status: Status }) {
       <Collapsible title="Automatic consolidation" summary={isMaintenanceEnabled() ? "On" : "Off"}>
         <AutoConsolidationCard />
       </Collapsible>
+      <Collapsible title="Network privacy" summary={networkPrivacyLabel()}>
+        <NetworkPrivacyCard />
+      </Collapsible>
       {!ROOMY() && (
         <Collapsible title="Signatures">
           <Signatures status={status} />
@@ -5271,6 +5274,58 @@ function AutoConsolidationCard() {
           sent in parts until you consolidate. You can merge anytime with <b>Consolidate</b>.
         </p>
       )}
+    </div>
+  );
+}
+
+/// Short state for the Network privacy row's collapsed summary.
+function networkPrivacyLabel(): string {
+  const base = getBase();
+  if (isOnionAddress(base)) return "Tor (.onion)";
+  if (!base || /wallet\.zkas\.info/i.test(base) || base.endsWith("/daemon")) return "Public";
+  return "Custom";
+}
+
+/// Explains the network-level privacy choices and how to reach each. On a shielded
+/// chain your amounts and payments are already hidden on-chain; what a wallet
+/// service can still learn is that SOME IP is asking about a given viewing key. The
+/// choice of service is what controls that, so it belongs in plain sight.
+function NetworkPrivacyCard() {
+  const base = getBase();
+  const onion = isOnionAddress(base);
+  const label = networkPrivacyLabel();
+  return (
+    <div className="card">
+      <h2>Network privacy</h2>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Your balance and payments are shielded on-chain no matter what. What a wallet service can still see is that
+        <i> someone</i> at your IP is asking about your viewing key. Which service you use decides who that is —
+        change it any time from the <b>Wallet service</b> control at the top of the wallet.
+      </p>
+      <div className="privacy-modes">
+        <div className="privacy-mode">
+          <b>Public service</b>
+          <span className="muted small">Easiest. The hosted service sees your IP. Fine for everyday use.</span>
+        </div>
+        <div className="privacy-mode">
+          <b>Your own <code>zkas-walletd</code></b>
+          <span className="muted small">Strongest. Nobody else sees which coins you ask about. Run it on your machine or LAN.</span>
+        </div>
+        <div className="privacy-mode">
+          <b>Over Tor (<code>.onion</code>)</b>
+          <span className="muted small">
+            Point the wallet at an <code>.onion</code> wallet service — it never learns your IP, and Tor encrypts the
+            path. Turn on a Tor transport first: <b>Orbot</b> (VPN mode) on Android, or Tor running on desktop. Then add
+            the <code>.onion</code> address under <b>Wallet service → Add</b>.
+          </span>
+        </div>
+      </div>
+      <div className="privacy-status">
+        <span className="eyebrow">This device</span>
+        <span className={"status-pill " + (onion ? "good" : "")}>
+          {onion ? "Connected over Tor" : `Wallet service: ${label}`}
+        </span>
+      </div>
     </div>
   );
 }

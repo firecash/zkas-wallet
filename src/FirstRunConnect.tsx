@@ -148,6 +148,10 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
               autoCorrect="off"
               spellCheck={false}
             />
+            <p className="muted small" style={{ marginTop: 6 }}>
+              Tip: enter a <code>.onion</code> address to reach your service over Tor — the server never learns your
+              IP. Needs a Tor transport on this device (Orbot's VPN on Android, or Tor running on desktop).
+            </p>
           </>
         )}
 

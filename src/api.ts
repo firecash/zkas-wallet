@@ -61,6 +61,21 @@ export function allowsInsecureWalletd(): boolean {
   return "__TAURI_INTERNALS__" in globalThis || isNative();
 }
 
+/** True when the address points at a Tor onion service. Onion connections are
+ * end-to-end encrypted and self-authenticating by the address itself, so plain
+ * `http://` to a `.onion` is safe (no TLS needed) — and, crucially, the service
+ * never learns the client's IP. It only actually routes when the device has a
+ * Tor transport (Orbot's VPN on Android, or a running Tor on desktop); we add no
+ * Tor client of our own. Accepts a bare host, `host:port`, or a full URL. */
+export function isOnionAddress(raw: string): boolean {
+  const s = raw.trim().toLowerCase();
+  let host = s;
+  const scheme = s.match(/^https?:\/\/([^/]+)/i);
+  if (scheme) host = scheme[1];
+  host = host.split("/")[0].replace(/^\[|\]$/g, "").split(":")[0];
+  return host.endsWith(".onion");
+}
+
 /**
  * Turn whatever the user typed into their own node's box into a full wallet-service
  * URL. The point is that "just paste your node's IP" works — nobody should have to
@@ -78,6 +93,9 @@ export function normalizeDaemonInput(raw: string): string {
   if (!s) return "";
   // Already a URL — respect the user's scheme/port exactly.
   if (/^https?:\/\//i.test(s)) return s;
+  // Onion service: plain http is correct (Tor encrypts the transport). Keep an
+  // explicit port; leave a missing one to the candidate list.
+  if (isOnionAddress(s)) return `http://${s}`;
   const localApp = allowsInsecureWalletd();
   // Bare host or host:port. IPv6 must be bracketed in a URL. In particular,
   // `::1` is an ADDRESS, not the host `:` with port 1 — the old final-`:digits`
@@ -101,6 +119,13 @@ export function daemonEndpointCandidates(raw: string): string[] {
   const entered = raw.trim().replace(/\/+$/, "");
   if (!entered) return [];
   if (/^https?:\/\//i.test(entered)) return [normalizeDaemonInput(entered)].filter(Boolean);
+
+  // Onion: http only (no TLS on a hidden service). Try the given port, else the
+  // HS virtual port 80 and the walletd default.
+  if (isOnionAddress(entered)) {
+    if (/:\d+$/.test(entered)) return [`http://${entered}`];
+    return [`http://${entered}`, `http://${entered}:${DEFAULT_WALLETD_PORT}`];
+  }
 
   const primary = normalizeDaemonInput(entered);
   if (!primary || !allowsInsecureWalletd()) return primary ? [primary] : [];
@@ -208,8 +233,13 @@ export async function findReachableDaemon(raw: string, accessToken = "", timeout
 export function walletdTransportError(url: string): string | null {
   if (!url || allowsInsecureWalletd()) return null;
   try {
+    // Onion is encrypted by Tor and self-authenticating, so http to a .onion is
+    // legitimate even from the web wallet. (A hosted HTTPS page may still be
+    // mixed-content-blocked by the browser; that is the browser's call, and Tor
+    // Browser / the installed app do not impose it.)
+    if (isOnionAddress(url)) return null;
     if (new URL(url).protocol !== "https:") {
-      return "The web wallet can connect only to an HTTPS wallet service. Use an HTTPS URL, or use the installed desktop/mobile app for a plain HTTP LAN connection.";
+      return "The web wallet can connect only to an HTTPS wallet service. Use an HTTPS URL, an .onion address over Tor, or the installed desktop/mobile app for a plain HTTP LAN connection.";
     }
   } catch {
     return "Enter a valid HTTPS wallet-service URL.";
