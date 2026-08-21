@@ -122,7 +122,10 @@ echo "artifacts:"; ls -la "$OUT"
 if [ "$DO_DEPLOY" = 1 ]; then
   log "Deploying web bundle to $WEB_HOST:$WEB_DIR"
   tmp="$(mktemp -d)"; tar xzf "$OUT/web-dist-$VERSION.tgz" -C "$tmp"
-  rsync -az --delete -e "ssh -o StrictHostKeyChecking=accept-new" "$tmp/" "$WEB_HOST:$WEB_DIR/"
+  # Force web-readable modes on the wire: without this, rsync -a propagates the
+  # mktemp dir's 0700 onto $WEB_DIR and nginx (www-data) gets 403 (can't traverse).
+  rsync -az --delete --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r -e "ssh -o StrictHostKeyChecking=accept-new" "$tmp/" "$WEB_HOST:$WEB_DIR/"
+  ssh "$WEB_HOST" "chmod 755 '$WEB_DIR' && chmod -R u=rwX,go=rX '$WEB_DIR'" || true
   ssh "$WEB_HOST" "systemctl reload nginx" || true
   rm -rf "$tmp"
   echo "web deployed → https://wallet.zkas.info"
