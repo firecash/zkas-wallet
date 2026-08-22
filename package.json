@@ -1,7 +1,7 @@
 {
   "name": "zkas-wallet",
   "private": true,
-  "version": "1.0.17-rc10",
+  "version": "1.0.17-rc11",
   "description": "Private ZKas wallet for web, mobile and desktop, with desktop node and mining controls.",
   "license": "ISC",
   "homepage": "https://wallet.zkas.info",
