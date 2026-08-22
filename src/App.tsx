@@ -29,7 +29,7 @@ import { byNewest, receiptIsOnChain } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
 import { isSecretShaped } from "./lib/deviceseed";
-import { masterMnemonic, setMasterMnemonic, setAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
+import { masterMnemonic, setMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -2437,23 +2437,79 @@ function addSeparateWallet(): void {
   location.reload();
 }
 
+/// Persist a device seed and WAIT for it to actually land.
+///
+/// `setDeviceSeed` seals asynchronously when the app lock is on and returns
+/// immediately, which is fine mid-session but fatal just before a reload: the
+/// page can tear down before the seal completes and the new wallet comes back
+/// with no key at all. Anything that reloads must await this instead.
+async function persistDeviceSeed(seed: string): Promise<boolean> {
+  try {
+    if (isLockEnabled()) {
+      const token = localStorage.getItem("wallet_token") || "default";
+      const ok = await sealNewSeed(token, seed);
+      if (!ok) {
+        // Same principle as setDeviceSeed: never drop a key silently.
+        localStorage.setItem(deviceSeedKey(), seed);
+        localStorage.setItem(`seed_unsealed_${token}`, "1");
+      }
+    } else {
+      localStorage.setItem(deviceSeedKey(), seed);
+    }
+  } catch {
+    return false; // storage full / private mode / quota — nothing was written
+  }
+  // Prove it. A wallet whose key did not land is a wallet that can RECEIVE and
+  // never spend, which is the single worst state this app can leave a user in —
+  // so the caller must be able to refuse to create it.
+  return getDeviceSeed().trim() === seed.trim();
+}
+
 async function addAccountWallet(): Promise<void> {
   const phrase = masterMnemonic();
   if (!phrase) {
-    addWallet();
-    location.reload();
+    // No phrase on this device (only a legacy hex wallet): a new account cannot
+    // be derived, so make an independent wallet instead of pretending otherwise.
+    addSeparateWallet();
     return;
   }
+  // Everything that can fail is done BEFORE the active wallet is touched, so a
+  // failure leaves the user exactly where they were.
   const account = nextFreeAccount();
-  const token = addWallet();
-  setAccountOf(token, account);
+  let secret: string;
+  let fvk: string;
+  let birthday = 0;
   try {
-    // Cache the derived key under the new token, exactly as a created wallet does,
-    // so every existing path finds it synchronously.
-    setDeviceSeed(await accountSeedHex(phrase, account));
+    secret = await accountSeedHex(phrase, account);
+    fvk = await fvkHex(secret);
+    // Born now: the daemon fast-syncs from the tip instead of replaying a chain
+    // this account cannot have history on.
+    birthday = (await api.status().catch(() => null))?.daa_score ?? 0;
   } catch {
-    // Leave the token unseeded rather than half-seeded; the wallet screen will
-    // report it needs a key instead of silently opening the wrong account.
+    return; // nothing was changed
+  }
+
+  const previous = activeToken();
+  const token = addWallet(); // mints the token AND makes it active
+  try {
+    setAccountOf(token, account);
+    // Key FIRST, and only continue if it verifiably landed. Registering a wallet
+    // the device cannot sign for would leave the user able to receive coins they
+    // could never spend.
+    if (!(await persistDeviceSeed(secret))) throw new Error("could not store the account key");
+    // THE STEP THAT WAS MISSING. Without registering the viewing key, the daemon
+    // has no wallet under this token, `has_wallet` comes back false, and the app
+    // greets the user with onboarding asking them to import a phrase — for an
+    // account it just created. Register first, then reload into a ready wallet.
+    await api.watch(fvk, birthday);
+    rememberBirthday(birthday);
+  } catch {
+    // Roll the half-made account back rather than stranding the user on an
+    // onboarding screen for a wallet they did not ask to create.
+    clearAccountOf(token);
+    unregisterWallet(token);
+    if (previous) switchWallet(previous);
+    return;
   }
   location.reload();
 }
@@ -2673,10 +2729,17 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
       }
       await api.watch(await fvkHex(s), walletBirthday());
       setDeviceSeed(s);
-      // Restoring from a phrase makes it this device's master, so "add wallet"
-      // creates accounts under it instead of orphan wallets with their own words.
       const restoredToken = activeToken();
-      if (restoredToken) await adoptExistingPhrase(restoredToken, s).catch(() => undefined);
+      if (restoredToken) {
+        // This token now holds a DIFFERENT secret, so any "Account N" mapping it
+        // carried is stale: leaving it would label this wallet as backed by the
+        // master phrase when it is not, which is exactly the kind of false promise
+        // that loses coins.
+        clearAccountOf(restoredToken);
+        // Restoring from a phrase makes it this device's master (if there isn't
+        // one), so "add account" derives under it instead of orphan wallets.
+        await adoptExistingPhrase(restoredToken, s).catch(() => undefined);
+      }
       onRecovered();
     } catch (e) {
       setErr((e as Error).message);
@@ -2764,19 +2827,35 @@ function Onboard({
       // is only ever one thing to back up. Existing wallets keep their own hex seed
       // and every path below accepts either.
       const w = await generateMnemonicWallet(networkOf(status));
-      setMasterMnemonic(w.mnemonic);
       const token = activeToken() ?? "";
-      // This wallet is account 0 of the phrase. Cache its derived key in the
-      // per-token slot so every existing (synchronous) path keeps working; the
-      // phrase itself is the backup, not this cache.
-      const secret = await accountSeedHex(w.mnemonic, 0);
-      if (token) setAccountOf(token, 0);
+      let secret: string;
+      if (hasMaster()) {
+        // A SEPARATE wallet: this device already has a master phrase, and
+        // overwriting it would be silent fund loss — the existing accounts would
+        // keep working locally while the app told the user their (new) phrase
+        // backed them up, which it cannot. So this wallet stands alone, secured by
+        // its OWN phrase, and is not an account of anything.
+        secret = w.mnemonic;
+        if (token) clearAccountOf(token);
+      } else {
+        // The device's FIRST phrase becomes the master; this wallet is account 0.
+        // Cache the derived key in the per-token slot so every existing
+        // (synchronous) path keeps working; the phrase is the backup, not the cache.
+        setMasterMnemonic(w.mnemonic);
+        secret = await accountSeedHex(w.mnemonic, 0);
+        if (token) setAccountOf(token, 0);
+      }
       // Born now: the daemon fast-syncs from the current tip instead of scanning
       // the whole chain for history this wallet cannot have.
       const birthday = status?.daa_score ?? 0;
+      // Store the key BEFORE registering the wallet, and only proceed once it is
+      // verifiably on the device: the reverse order can register a wallet whose
+      // key never landed, which receives coins it can never spend.
+      if (!(await persistDeviceSeed(secret))) {
+        throw new Error("This device could not store the wallet key — free up space and try again.");
+      }
       await api.watch(await fvkHex(secret), birthday);
       rememberBirthday(birthday);
-      setDeviceSeed(secret);
       // The backup screen shows the PHRASE — that is what restores everything.
       onCreated(w.mnemonic, w.address);
     } catch (e) {
@@ -2810,9 +2889,20 @@ function Onboard({
     try {
       const seed = importHex.trim();
       const b = birthdayFromInputs();
+      // Key first, verified — never register a wallet this device cannot sign for.
+      if (!(await persistDeviceSeed(seed))) {
+        throw new Error("This device could not store the wallet key — free up space and try again.");
+      }
       await api.watch(await fvkHex(seed), b);
       rememberBirthday(b);
-      setDeviceSeed(seed);
+      const importedToken = activeToken();
+      if (importedToken) {
+        // The token now holds an imported secret, so any inherited "Account N"
+        // mapping is stale and would misrepresent which phrase backs it up.
+        clearAccountOf(importedToken);
+        // An imported PHRASE can become this device's master when there isn't one.
+        await adoptExistingPhrase(importedToken, seed).catch(() => undefined);
+      }
       onImported();
     } catch (e) {
       setError((e as Error).message);

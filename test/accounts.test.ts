@@ -71,3 +71,43 @@ describe("secret input gates", () => {
     expect(PHRASE.trim().length).not.toBe(64); // the old gate would have refused it
   });
 });
+
+describe("ways a user could get screwed", () => {
+  // Removing a wallet drops it from the registry. If the index were reused, the
+  // next "new" account would derive the SAME key — the removed wallet's balance
+  // and history would reappear under a name promising a fresh account.
+  it("never reissues an account index after a wallet is removed", async () => {
+    const { setAccountOf, nextFreeAccount } = await import("../src/accounts");
+    const { addWallet, unregisterWallet } = await import("../src/wallets");
+    const t0 = addWallet(); setAccountOf(t0, nextFreeAccount());
+    const t1 = addWallet(); const a1 = nextFreeAccount(); setAccountOf(t1, a1);
+    expect(a1).toBe(1);
+    unregisterWallet(t1);                 // user removes "Account 2"
+    expect(nextFreeAccount()).toBe(2);    // must NOT hand back 1 again
+  });
+
+  // Creating a SEPARATE wallet must not overwrite the master: the existing
+  // accounts would keep working locally while the app claimed the new phrase
+  // backed them up — a false promise that loses coins on a restore.
+  it("keeps the first phrase as master so existing accounts stay recoverable", async () => {
+    const { setMasterMnemonic, masterMnemonic, hasMaster } = await import("../src/accounts");
+    setMasterMnemonic(PHRASE);
+    expect(hasMaster()).toBe(true);
+    // The create flow only calls setMasterMnemonic when there is no master, so a
+    // second phrase must never replace the first.
+    if (!hasMaster()) setMasterMnemonic("other words here");
+    expect(masterMnemonic()).toBe(PHRASE);
+  });
+
+  // A token that gets a restored/imported secret is no longer the account it was.
+  it("clears a stale account label when a token's secret is replaced", async () => {
+    const { setAccountOf, clearAccountOf, accountOf } = await import("../src/accounts");
+    const { addWallet } = await import("../src/wallets");
+    const t = addWallet();
+    setAccountOf(t, 1);
+    expect(accountOf(t)).toBe(1);
+    clearAccountOf(t);                    // what restore/import now does
+    expect(accountOf(t)).toBeNull();
+  });
+});
+

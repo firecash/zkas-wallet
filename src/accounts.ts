@@ -65,6 +65,7 @@ export function accountOf(token: string): number | null {
 export function setAccountOf(token: string, account: number): void {
   try {
     localStorage.setItem(ACCOUNT_KEY + token, String(account));
+    reserveAccount(account);
   } catch {
     /* best effort */
   }
@@ -78,16 +79,42 @@ export function clearAccountOf(token: string): void {
   }
 }
 
-/** The lowest account index not already used by a registered wallet. */
+/// Highest account index ever handed out on this device. It only ever goes UP.
+const HWM_KEY = "account_high_water";
+
+function highWater(): number {
+  const n = Number(localStorage.getItem(HWM_KEY) ?? "-1");
+  return Number.isInteger(n) ? n : -1;
+}
+
+/**
+ * The next account index to use — and NEVER one that has been used before.
+ *
+ * Scanning only the registered wallets is not enough, because removing a wallet
+ * drops it from the registry and would free its index for reuse. The next "new"
+ * account would then derive the SAME key as the wallet the user just removed, and
+ * its balance and history would reappear under a name suggesting a fresh account.
+ * A high-water mark that only increases makes an index single-use for the life of
+ * the device, so "add account" always means a genuinely new account.
+ */
 export function nextFreeAccount(): number {
   const used = new Set<number>();
   for (const w of listWallets()) {
     const a = accountOf(w.token);
     if (a !== null) used.add(a);
   }
-  let i = 0;
+  let i = highWater() + 1;
   while (used.has(i)) i++;
   return i;
+}
+
+/// Record that an index has been handed out, so it is never issued again.
+export function reserveAccount(account: number): void {
+  try {
+    if (account > highWater()) localStorage.setItem(HWM_KEY, String(account));
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
