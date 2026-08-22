@@ -8,6 +8,8 @@ export const __wbg_set_mnemonicwallet_address: (a: number, b: number, c: number)
 export const __wbg_set_mnemonicwallet_mnemonic: (a: number, b: number, c: number) => void;
 export const __wbg_signature_free: (a: number, b: number) => void;
 export const __wbg_wallet_free: (a: number, b: number) => void;
+export const account_address: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+export const account_seed_hex: (a: number, b: number, c: number) => [number, number, number, number];
 export const address_from_seed: (a: number, b: number, c: number, d: number) => [number, number, number, number];
 export const fvk_hex: (a: number, b: number) => [number, number, number, number];
 export const is_valid_mnemonic: (a: number, b: number) => number;

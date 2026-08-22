@@ -117,7 +117,7 @@ describe("history", () => {
 
     await user.click(screen.getByRole("button", { name: "Recover full history" }));
     expect(await screen.findByRole("heading", { name: "Recover full history" })).toBeInTheDocument();
-    expect(screen.getByText(/anyone with access to its wallet data can read them/i)).toBeInTheDocument();
+    expect(screen.getByText(/anyone with its data can read them/i)).toBeInTheDocument();
 
     // Recovery replays the chain, so it asks WHEN the wallet started rather than
     // always starting at genesis. "Not sure" is the safe default and still scans

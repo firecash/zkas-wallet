@@ -17,7 +17,7 @@ import {
   loadSnapshot,
   type LocalTx,
 } from "./localtx";
-import { ensureSigner, fvkHex, generateMnemonicWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
+import { ensureSigner, fvkHex, generateMnemonicWallet, accountSeedHex, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, walletCanSpend } from "./status";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
@@ -29,6 +29,7 @@ import { byNewest, receiptIsOnChain } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
 import { isSecretShaped } from "./lib/deviceseed";
+import { masterMnemonic, setMasterMnemonic, setAccountOf, nextFreeAccount, accountOf } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -1512,7 +1513,7 @@ function ConnectionButton() {
               <div className={`connection-add-grid ${desktop ? "" : "walletd"}`}>
                 <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name · Home node" />
                 <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={desktop ? STANDALONE_ZKAS_RPC_EXAMPLE : isNative() ? `192.168.1.20:${DEFAULT_WALLETD_PORT}` : "https://wallet.example.com"} />
-                {!desktop && <input type="password" className="mono" value={bearer} onChange={(event) => setBearer(event.target.value)} placeholder="Access token · if required" autoCapitalize="none" autoCorrect="off" spellCheck={false} />}
+                {!desktop && <input type="password" className="mono" value={bearer} onChange={(event) => setBearer(event.target.value)} placeholder="Access token" autoCapitalize="none" autoCorrect="off" spellCheck={false} />}
                 <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? "Checking…" : "Save & connect"}</button>
               </div>
             </div>
@@ -1577,6 +1578,9 @@ function WalletSwitcher({ onClose }: { onClose: () => void }) {
               <div className="contact-name">
                 {w.label} {w.token === active && <span className="muted small">· active</span>}
               </div>
+              {accountOf(w.token) !== null && (
+                <div className="muted small">Account {accountOf(w.token)! + 1}</div>
+              )}
               {w.address && <div className="contact-addr">{w.address}</div>}
             </div>
           </div>
@@ -1585,8 +1589,7 @@ function WalletSwitcher({ onClose }: { onClose: () => void }) {
           <button
             className="btn"
             onClick={() => {
-              addWallet();
-              location.reload();
+              void addAccountWallet();
             }}
           >
             Add another wallet
@@ -1596,8 +1599,7 @@ function WalletSwitcher({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <p className="muted small" style={{ marginTop: 10 }}>
-          Every wallet stays on this device with its own key, history and contacts. Rename or remove them under
-          Settings.
+          One phrase backs up every account.
         </p>
       </div>
     </div>,
@@ -1758,9 +1760,8 @@ function RecoverHistoryDialog({
       <div className="card modalcard" onClick={(event) => event.stopPropagation()}>
         <h2 style={{ marginTop: 0 }}>Recover full history</h2>
         <p className="muted small">
-          Payment details are rebuilt from the chain and saved with this wallet, so anyone with access to
-          its wallet data can read them. Payments stay private on-chain either way.
-        </p>
+          Details are saved with this wallet, so anyone with its data can read them.
+          </p>
         <div className="choice-grid">
           <button className={`choice-button ${when === "date" ? "selected" : ""}`} onClick={() => setWhen("date")}>
             <strong>I know roughly when</strong>
@@ -1947,10 +1948,8 @@ function ConsolidateDialog({
         ) : (
           <>
             <p className="muted small">
-              Merge your small notes back into your own wallet, so a payment can reach your whole balance in one
-              transaction. Each pass costs one network fee and briefly makes the merged value unavailable while it
-              matures. Nothing leaves your wallet.
-            </p>
+              Merge small notes so one payment can spend your whole balance. Each pass costs a fee.
+          </p>
             <div className="confirm-row"><span className="muted">Current notes</span><b>{status.note_count}</b></div>
             {typeof status.note_count === "number" && status.note_count > MAX_NOTES_PER_TX && (
               <div className="confirm-row">
@@ -2407,6 +2406,34 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
 
 // One-time seed backup, shown right after creation. Rendered at the App level so
 // the periodic status poll can't unmount it — it stays until the user dismisses it.
+
+/// "Add another wallet" — the next ACCOUNT of the device's recovery phrase.
+///
+/// This is the payoff of the phrase model: the new wallet is independent and
+/// unlinkable on-chain, but it needs NO new backup, because the same twelve words
+/// already restore it. A device with no master phrase (only legacy wallets) keeps
+/// the old behaviour: a fresh, independent wallet.
+async function addAccountWallet(): Promise<void> {
+  const phrase = masterMnemonic();
+  if (!phrase) {
+    addWallet();
+    location.reload();
+    return;
+  }
+  const account = nextFreeAccount();
+  const token = addWallet();
+  setAccountOf(token, account);
+  try {
+    // Cache the derived key under the new token, exactly as a created wallet does,
+    // so every existing path finds it synchronously.
+    setDeviceSeed(await accountSeedHex(phrase, account));
+  } catch {
+    // Leave the token unseeded rather than half-seeded; the wallet screen will
+    // report it needs a key instead of silently opening the wrong account.
+  }
+  location.reload();
+}
+
 function SeedBackup({ seed, address, onDone }: { seed: string; address: string; onDone: () => void }) {
   // New wallets are phrases; wallets created before phrases existed are 64-hex.
   const isPhrase = !/^[0-9a-fA-F]{64}$/.test(seed.trim());
@@ -2430,6 +2457,26 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
   });
   const [answers, setAnswers] = useState<string[]>(["", "", ""]);
   const [quizErr, setQuizErr] = useState("");
+  // Three choices per asked position: the real word plus two decoys taken from
+  // the user's OWN phrase. Same-phrase decoys are deliberate — they test that the
+  // word was recorded at the RIGHT POSITION, which is the mistake that actually
+  // loses wallets, and they avoid shipping the 2048-word list to the client.
+  const [options] = useState<string[][]>(() =>
+    quiz.map((target) => {
+      const others = words.map((w, i) => ({ w, i })).filter(({ i }) => i !== target).map(({ w }) => w);
+      const picks: string[] = [];
+      while (picks.length < 2 && others.length) {
+        const [taken] = others.splice(Math.floor(Math.random() * others.length), 1);
+        if (taken !== words[target] && !picks.includes(taken)) picks.push(taken);
+      }
+      const all = [words[target], ...picks];
+      for (let i = all.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [all[i], all[j]] = [all[j], all[i]];
+      }
+      return all;
+    }),
+  );
 
   const copy = async () => {
     try {
@@ -2457,8 +2504,7 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
       <div className="card">
         <h2>Save your wallet</h2>
         <div className="msg warn">
-          This wallet exists only on this device. If you lose it with no backup, the coins are gone — nobody,
-          including us, can restore them.
+          This wallet exists only on this device. No backup, no recovery.
         </div>
         <DeviceSeedBackup />
         <label style={{ marginTop: 16 }}>Your shielded address</label>
@@ -2478,24 +2524,29 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
       <div className="card">
         <h2>Check your backup</h2>
         <p className="muted small" style={{ marginTop: 0 }}>
-          Type these words from your written copy — not from memory.
+          Pick each word from your written copy.
         </p>
         {quiz.map((w, i) => (
-          <div key={w} style={{ marginTop: 12 }}>
+          <div key={w} style={{ marginTop: 14 }}>
             <label>Word #{w + 1}</label>
-            <input
-              value={answers[i]}
-              onChange={(e) => {
-                const next = [...answers];
-                next[i] = e.target.value;
-                setAnswers(next);
-                setQuizErr("");
-              }}
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder={`The ${ordinal(w + 1)} word`}
-            />
+            <div className="seed-choices">
+              {options[i].map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  className={"seed-choice" + (answers[i] === opt ? " on" : "")}
+                  aria-pressed={answers[i] === opt}
+                  onClick={() => {
+                    const next = [...answers];
+                    next[i] = opt;
+                    setAnswers(next);
+                    setQuizErr("");
+                  }}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
           </div>
         ))}
         {quizErr && <div className="msg err">{quizErr}</div>}
@@ -2518,8 +2569,7 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
     <div className="card">
       <h2>Write down your recovery phrase</h2>
       <div className="msg warn">
-        These 12 words are the only way to restore this wallet. Anyone who has them owns the funds — and if you lose
-        them, nobody, including us, can bring the coins back.
+        These 12 words restore your wallet. Anyone who has them owns the funds.
       </div>
 
       <div className={"seed-reveal" + (revealed ? " on" : "")}>
@@ -2539,7 +2589,7 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
         <button className="btn ghost small" onClick={copy}>{copied ? "Copied ✓" : "Copy phrase"}</button>
       </div>
       <p className="muted small" style={{ marginTop: 8 }}>
-        Write them on paper in this order. Avoid screenshots and cloud notes.
+        Write them on paper, in order.
       </p>
 
       <button className="btn" style={{ marginTop: 16 }} disabled={!revealed} onClick={() => setStep("verify")}>
@@ -2554,13 +2604,6 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
       </details>
     </div>
   );
-}
-
-/// "1st", "2nd", "3rd" … for the backup check, so the prompt reads naturally.
-function ordinal(n: number): string {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
 /// Prove the backup was actually written down.
@@ -2617,10 +2660,8 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
     <div className="card">
       <h2>Reconnect your wallet</h2>
       <div className="msg ok">
-        <b>Nothing is lost.</b> Your coins are on-chain and only your seed can ever move them. The wallet service
-        restarted and forgot this wallet's registration — reconnecting takes a moment, then your balance rebuilds
-        itself automatically.
-      </div>
+        <b>Nothing is lost.</b> Your coins are safe on-chain. The service forgot this wallet — reconnecting restores it.
+          </div>
       {cached?.address && (
         <>
           <label>This wallet's address</label>
@@ -2643,9 +2684,8 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
         {busy ? "Reconnecting…" : "Reconnect wallet"}
       </button>
       <p className="muted small">
-        The seed is checked on this device against the address above and never sent anywhere. After reconnecting, the
-        wallet rebuilds its view from the chain — the balance climbs back over the next minutes.
-      </p>
+        Checked on this device against the address above, and never sent anywhere.
+          </p>
       <button className="linkbtn" onClick={onStartOver}>
         Not your wallet? Create or import a different one
       </button>
@@ -2691,15 +2731,25 @@ function Onboard({
         return;
       }
       // New wallets are born with a 12-word recovery phrase: it can actually be
-      // written down and typed back, which a 64-hex seed cannot. Existing wallets
-      // keep their hex seed and every path below accepts either.
+      // written down and typed back, which a 64-hex seed cannot. The phrase is the
+      // DEVICE master — every wallet added later is an account under it, so there
+      // is only ever one thing to back up. Existing wallets keep their own hex seed
+      // and every path below accepts either.
       const w = await generateMnemonicWallet(networkOf(status));
+      setMasterMnemonic(w.mnemonic);
+      const token = activeToken() ?? "";
+      // This wallet is account 0 of the phrase. Cache its derived key in the
+      // per-token slot so every existing (synchronous) path keeps working; the
+      // phrase itself is the backup, not this cache.
+      const secret = await accountSeedHex(w.mnemonic, 0);
+      if (token) setAccountOf(token, 0);
       // Born now: the daemon fast-syncs from the current tip instead of scanning
       // the whole chain for history this wallet cannot have.
       const birthday = status?.daa_score ?? 0;
-      await api.watch(await fvkHex(w.mnemonic), birthday);
+      await api.watch(await fvkHex(secret), birthday);
       rememberBirthday(birthday);
-      setDeviceSeed(w.mnemonic);
+      setDeviceSeed(secret);
+      // The backup screen shows the PHRASE — that is what restores everything.
       onCreated(w.mnemonic, w.address);
     } catch (e) {
       setError((e as Error).message);
@@ -2864,10 +2914,8 @@ function Onboard({
           inputMode="numeric"
         />
         <div className="msg small" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--muted)" }}>
-          The scan starts a safe margin before the date you pick, so nothing is missed — leave both blank to scan the
-          whole chain. If this wallet has been used on this service before (any device), sync resumes instantly
-          regardless.
-        </div>
+          Scanning starts just before the date you pick. Leave blank to scan everything.
+          </div>
         {error && <div className="msg err">{error}</div>}
         <div className="row">
           <button className="btn ghost" onClick={() => setMode("choose")}>
@@ -3155,9 +3203,8 @@ function TxDetail({
           </a>
         </div>
         <p className="muted small" style={{ marginTop: 12 }}>
-          The explorer shows that a shielded transaction happened — never its amount, sender, recipient or note. This
-          screen is the only place those exist, and only for you.
-        </p>
+          The explorer shows only that a shielded transaction happened — never its details.
+          </p>
         <button className="btn ghost" onClick={onClose}>
           Close
         </button>
@@ -4542,8 +4589,7 @@ function Send({
             autoFocus
           />
           <div className="fieldhint muted">
-            Leave this empty and the wallet picks the fee for you. Set a higher one only if a payment came back with a
-            fee error — anything below the network minimum is raised automatically, so this cannot break a payment.
+            Leave empty and the wallet picks the fee. Raise it only after a fee error.
           </div>
         </div>
       )}
@@ -4587,9 +4633,8 @@ function Send({
         <div className="msg warn warmbanner">
           <b>⚡ Your first payment will take a few minutes.</b>
           <br />
-          The wallet is locating your coins in the chain — it does this once, then payments take seconds. You can
-          start the payment now; just leave the screen open.
-        </div>
+          Locating your coins — this happens once. You can start the payment now.
+          </div>
       )}
       {error && <div className="msg err">{error}</div>}
 
@@ -5254,13 +5299,13 @@ function DaemonSetting() {
               {busy ? <span className="spin" /> : "Connect"}
             </button>
           </div>
-          <label style={{ marginTop: 10 }}>Access token <span className="muted">(if the host requires one)</span></label>
+          <label style={{ marginTop: 10 }}>Access token <span className="muted">(if required)</span></label>
           <input
             type="password"
             value={bearer}
             onChange={(e) => setBearer(e.target.value)}
             className="mono"
-            placeholder="64-character host access token"
+            placeholder="Access token"
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
@@ -5329,8 +5374,7 @@ function VaultSetting() {
       {state === "encrypted" && (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Your seed is encrypted on this device. Locking stops the wallet daemon and forgets your passphrase until you
-            enter it again — do this when you step away.
+            Locking stops the daemon and forgets your passphrase until you re-enter it.
           </p>
           <button className="btn ghost" onClick={() => setAskLock(true)}>
             Lock wallet
@@ -5480,7 +5524,7 @@ function NetworkPrivacyCard() {
         {showCustom && (
           <div className="connection-add firstrun-custom">
             <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="host:port, http://<lan-ip>:8501, or .onion" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />
-            <input value={bearer} onChange={(e) => setBearer(e.target.value)} placeholder="Access token (optional)" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />
+            <input value={bearer} onChange={(e) => setBearer(e.target.value)} placeholder="Access token" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />
             <button className="btn small" disabled={busy === "custom"} onClick={useCustom}>{busy === "custom" ? "Connecting…" : "Connect"}</button>
           </div>
         )}
@@ -5771,9 +5815,8 @@ function AppLockSetting() {
           </p>
           {kind === "pin" && (
             <p className="muted small">
-              A PIN stops someone who picks up your phone. It is short enough to be guessed by anyone who copies the
-              encrypted key off the device itself — choose a passphrase if that is your concern.
-            </p>
+              A PIN stops someone who picks up your phone. Use a passphrase for stronger protection.
+          </p>
           )}
         </>
       ) : mode === "disable" ? (
@@ -5866,7 +5909,10 @@ function SwitchWallet() {
             <div className="contact-name">
               {w.label} {w.token === active && <span className="muted small">· active</span>}
             </div>
-            {w.address && <div className="contact-addr">{w.address}</div>}
+            {accountOf(w.token) !== null && (
+                <div className="muted small">Account {accountOf(w.token)! + 1}</div>
+              )}
+              {w.address && <div className="contact-addr">{w.address}</div>}
           </div>
           {w.token === active ? (
             <button className="linkbtn" onClick={() => setRenaming(w)}>
@@ -5892,11 +5938,11 @@ function SwitchWallet() {
         <button
           className="btn"
           onClick={() => {
-            // A brand-new token with nothing behind it: the app then shows
-            // onboarding for it (create / restore / import) while every existing
-            // wallet stays untouched under its own token.
-            addWallet();
-            location.reload();
+            // The next ACCOUNT of the device's recovery phrase — independent and
+            // unlinkable on-chain, but covered by the backup already made. With no
+            // phrase on the device this falls back to a brand-new independent
+            // wallet, and the app shows onboarding for it.
+            void addAccountWallet();
           }}
         >
           Add another wallet
@@ -6061,9 +6107,7 @@ function DeviceSeedBackup() {
       return (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            <b>Your backup is copied.</b> Paste it somewhere safe right now — a password manager, a syncing notes
-            app, a message to yourself. Nothing was saved as a file on this phone. The text is encrypted: useless
-            without the backup passphrase.
+            <b>Your backup is copied.</b> Paste it somewhere safe now — a password manager or a note to yourself.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
             <button className="btn small" onClick={() => void copyText(lastDoc)}>
@@ -6079,9 +6123,8 @@ function DeviceSeedBackup() {
     return (
       <>
         <p className="muted small" style={{ marginTop: 0 }}>
-          <b>Backup written.</b> Copy it somewhere off this computer — a USB stick, cloud storage, or a password
-          manager. It is encrypted, so it is useless to anyone without the backup passphrase.
-        </p>
+          <b>Backup written.</b> Keep it off this computer. It is encrypted, useless without the passphrase.
+          </p>
         <div className="addr" style={{ fontSize: 12 }}>
           {done.path}
         </div>
@@ -6104,9 +6147,8 @@ function DeviceSeedBackup() {
   return (
     <>
       <p className="muted small" style={{ marginTop: 0 }}>
-        <b>Back up your wallet.</b> Your spending key is stored by this app on this computer. Save an encrypted copy to
-        a file so you can restore the wallet if this machine is lost — give the file its own passphrase.
-      </p>
+        <b>Back up your wallet.</b> Save an encrypted copy so you can restore this wallet if the machine is lost.
+          </p>
       <label>Backup passphrase</label>
       <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="At least 8 characters" />
       <label>Confirm backup passphrase</label>
@@ -6250,9 +6292,8 @@ function BackupWallet() {
     return (
       <>
         <p className="muted small" style={{ marginTop: 0 }}>
-          <b>Backup written.</b> Copy this file somewhere off this computer — a USB stick, cloud storage, or a password
-          manager. It is encrypted, so it is useless to anyone without the backup passphrase.
-        </p>
+          <b>Backup written.</b> Keep it off this computer — a USB stick or password manager. It is encrypted.
+          </p>
         <div className="addr" style={{ fontSize: 12 }}>
           {done.path}
         </div>
@@ -6354,9 +6395,8 @@ function DesktopEngineDown({ requestError }: { requestError?: string | null }) {
           : "The wallet engine in this app isn't answering. Your funds are safe on-chain."}
       </div>
       <p className="muted small">
-        Retry first. If this began after choosing another node, switch the connection back to the public history node.
-        Neither action changes your wallet files or seed.
-      </p>
+        Retry first. If it started after switching nodes, switch back to the public one.
+          </p>
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <button
           className="btn"

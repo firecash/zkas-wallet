@@ -106,7 +106,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
               <input
                 value={bearer}
                 onChange={(e) => setBearer(e.target.value)}
-                placeholder="Access token (optional)"
+                placeholder="Access token"
                 disabled={busy === "custom"}
                 autoCapitalize="none" autoCorrect="off" spellCheck={false}
               />

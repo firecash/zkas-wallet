@@ -1,6 +1,15 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * True if `secret` is a well-formed recovery phrase (right words, right checksum).
+ * Lets the UI validate what was typed before trying to open a wallet with it.
+ */
+export function is_valid_mnemonic(secret: string): boolean;
+/**
+ * Derive the `zkas:` address for an existing seed on a network.
+ */
+export function address_from_seed(seed_hex: string, network: string): string;
+/**
  * Sign `message`, proving control of the seed's address on `network`. The
  * returned `signature_hex` is `fvk ‖ sig`, interoperable with `shielded-pay` and
  * the mining-pool claim verifier.
@@ -62,14 +71,23 @@ export function new_wallet(network: string): Wallet;
  */
 export function new_wallet_mnemonic(network: string): MnemonicWallet;
 /**
- * True if `secret` is a well-formed recovery phrase (right words, right checksum).
- * Lets the UI validate what was typed before trying to open a wallet with it.
+ * Derive the spending key of ONE ACCOUNT from a recovery phrase, as 64-hex.
+ *
+ * This is what makes one phrase back up many wallets. ZIP-32 gives every account
+ * index its own independent key under `m/32'/coin'/account'`, so account 0, 1, 2…
+ * are unlinkable on-chain yet all restore from the same twelve words. The result
+ * is a plain 32-byte secret, so every existing path — address, viewing key,
+ * signing, spending — consumes it unchanged.
+ *
+ * Account 0 is the wallet the phrase creates by default; `add account` simply
+ * asks for the next index, and needs no new backup.
  */
-export function is_valid_mnemonic(secret: string): boolean;
+export function account_seed_hex(mnemonic: string, account: number): string;
 /**
- * Derive the `zkas:` address for an existing seed on a network.
+ * The `zkas:` address of one account of a recovery phrase, without going through
+ * the raw key — so a caller can preview or discover accounts cheaply.
  */
-export function address_from_seed(seed_hex: string, network: string): string;
+export function account_address(mnemonic: string, network: string, account: number): string;
 /**
  * Initialize Rust panic handler in console mode.
  *
@@ -292,6 +310,8 @@ export interface InitOutput {
   readonly __wbg_set_mnemonicwallet_mnemonic: (a: number, b: number, c: number) => void;
   readonly __wbg_signature_free: (a: number, b: number) => void;
   readonly __wbg_wallet_free: (a: number, b: number) => void;
+  readonly account_address: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+  readonly account_seed_hex: (a: number, b: number, c: number) => [number, number, number, number];
   readonly address_from_seed: (a: number, b: number, c: number, d: number) => [number, number, number, number];
   readonly fvk_hex: (a: number, b: number) => [number, number, number, number];
   readonly is_valid_mnemonic: (a: number, b: number) => number;

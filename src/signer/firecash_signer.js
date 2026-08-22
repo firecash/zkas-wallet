@@ -166,12 +166,53 @@ function debugString(val) {
     // TODO we could test for more things here, like `Set`s and `Map`s.
     return className;
 }
+/**
+ * True if `secret` is a well-formed recovery phrase (right words, right checksum).
+ * Lets the UI validate what was typed before trying to open a wallet with it.
+ * @param {string} secret
+ * @returns {boolean}
+ */
+export function is_valid_mnemonic(secret) {
+    const ptr0 = passStringToWasm0(secret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.is_valid_mnemonic(ptr0, len0);
+    return ret !== 0;
+}
 
 function takeFromExternrefTable0(idx) {
     const value = wasm.__wbindgen_export_2.get(idx);
     wasm.__externref_table_dealloc(idx);
     return value;
 }
+/**
+ * Derive the `zkas:` address for an existing seed on a network.
+ * @param {string} seed_hex
+ * @param {string} network
+ * @returns {string}
+ */
+export function address_from_seed(seed_hex, network) {
+    let deferred4_0;
+    let deferred4_1;
+    try {
+        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.address_from_seed(ptr0, len0, ptr1, len1);
+        var ptr3 = ret[0];
+        var len3 = ret[1];
+        if (ret[3]) {
+            ptr3 = 0; len3 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred4_0 = ptr3;
+        deferred4_1 = len3;
+        return getStringFromWasm0(ptr3, len3);
+    } finally {
+        wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+    }
+}
+
 /**
  * Sign `message`, proving control of the seed's address on `network`. The
  * returned `signature_hex` is `fvk ‖ sig`, interoperable with `shielded-pay` and
@@ -379,33 +420,58 @@ export function new_wallet_mnemonic(network) {
 }
 
 /**
- * True if `secret` is a well-formed recovery phrase (right words, right checksum).
- * Lets the UI validate what was typed before trying to open a wallet with it.
- * @param {string} secret
- * @returns {boolean}
+ * Derive the spending key of ONE ACCOUNT from a recovery phrase, as 64-hex.
+ *
+ * This is what makes one phrase back up many wallets. ZIP-32 gives every account
+ * index its own independent key under `m/32'/coin'/account'`, so account 0, 1, 2…
+ * are unlinkable on-chain yet all restore from the same twelve words. The result
+ * is a plain 32-byte secret, so every existing path — address, viewing key,
+ * signing, spending — consumes it unchanged.
+ *
+ * Account 0 is the wallet the phrase creates by default; `add account` simply
+ * asks for the next index, and needs no new backup.
+ * @param {string} mnemonic
+ * @param {number} account
+ * @returns {string}
  */
-export function is_valid_mnemonic(secret) {
-    const ptr0 = passStringToWasm0(secret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.is_valid_mnemonic(ptr0, len0);
-    return ret !== 0;
+export function account_seed_hex(mnemonic, account) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(mnemonic, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.account_seed_hex(ptr0, len0, account);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
 }
 
 /**
- * Derive the `zkas:` address for an existing seed on a network.
- * @param {string} seed_hex
+ * The `zkas:` address of one account of a recovery phrase, without going through
+ * the raw key — so a caller can preview or discover accounts cheaply.
+ * @param {string} mnemonic
  * @param {string} network
+ * @param {number} account
  * @returns {string}
  */
-export function address_from_seed(seed_hex, network) {
+export function account_address(mnemonic, network, account) {
     let deferred4_0;
     let deferred4_1;
     try {
-        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const ptr0 = passStringToWasm0(mnemonic, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len1 = WASM_VECTOR_LEN;
-        const ret = wasm.address_from_seed(ptr0, len0, ptr1, len1);
+        const ret = wasm.account_address(ptr0, len0, ptr1, len1, account);
         var ptr3 = ret[0];
         var len3 = ret[1];
         if (ret[3]) {

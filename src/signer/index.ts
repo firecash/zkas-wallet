@@ -11,6 +11,8 @@ import init, {
   new_wallet,
   new_wallet_mnemonic,
   is_valid_mnemonic,
+  account_seed_hex,
+  account_address,
   address_from_seed,
   sign as _sign,
   verify as _verify,
@@ -170,4 +172,23 @@ export async function verifyAndSignPayment(
     alphasJson,
   );
   return JSON.parse(out) as DeviceSig[];
+}
+
+/**
+ * The spending key of ONE ACCOUNT of a recovery phrase, as 64-hex.
+ *
+ * This is what lets a single phrase back up many wallets: ZIP-32 gives every
+ * account index an independent, on-chain-unlinkable key, and the result is a plain
+ * 32-byte secret that every existing path (address, viewing key, signing) already
+ * accepts. Account 0 is the wallet the phrase creates by default.
+ */
+export async function accountSeedHex(mnemonic: string, account: number): Promise<string> {
+  await ensureSigner();
+  return account_seed_hex(mnemonic, account);
+}
+
+/** The `zkas:` address of one account of a phrase — for previews and discovery. */
+export async function accountAddress(mnemonic: string, network: Network, account: number): Promise<string> {
+  await ensureSigner();
+  return account_address(mnemonic, network, account);
 }

@@ -2469,3 +2469,18 @@ select { appearance: none; cursor: pointer; }
 .seed-reveal .seed-words { filter: blur(7px); transition: filter 0.2s ease; user-select: none; }
 .seed-reveal.on .seed-words { filter: none; user-select: text; }
 .seed-reveal-btn { position: absolute; inset: 0; margin: auto; width: max-content; height: max-content; }
+
+/* Backup check: pick the right word per position (tap, don't type). */
+.seed-choices { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.seed-choice { flex: 1 1 0; min-width: 92px; padding: 11px 10px; border-radius: 10px;
+  border: 1px solid var(--border); background: transparent; color: var(--ink);
+  font: inherit; font-weight: 600; cursor: pointer; transition: all 0.12s ease; }
+.seed-choice:hover { border-color: var(--ember); }
+.seed-choice.on { background: var(--ember); color: var(--ember-ink); border-color: var(--ember); }
+
+/* Token fields: the value is a long hex string and the label must never clip.
+   16px also stops iOS zooming the page when the field is focused. */
+input.mono, .host-token { font-size: 16px; }
+.detail-row .k, .notegrid .k { white-space: nowrap; }
+.detail-row.stacked { display: block; }
+.detail-row.stacked .v { display: block; text-align: left; margin-top: 4px; overflow-wrap: anywhere; }
