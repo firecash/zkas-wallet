@@ -2514,6 +2514,23 @@ async function addAccountWallet(): Promise<void> {
   location.reload();
 }
 
+/// The secret to SHOW or BACK UP for the active wallet.
+///
+/// For a wallet derived from the device's recovery phrase, that is the PHRASE —
+/// not the per-account key cached under its token. The phrase restores this wallet
+/// AND every sibling account; the derived key restores only this one, so revealing
+/// or backing up the key would hand the user something that looks like a complete
+/// backup and silently is not.
+///
+/// A legacy wallet (or a separately imported one) has no phrase behind it — its own
+/// secret is the strongest thing that exists — so it is returned unchanged.
+async function walletBackupSecret(expectedAddress?: string): Promise<string> {
+  const account = accountOf(activeToken() ?? "");
+  const master = masterMnemonic();
+  if (account !== null && master) return master;
+  return resolveDeviceSeed(expectedAddress);
+}
+
 function SeedBackup({ seed, address, onDone }: { seed: string; address: string; onDone: () => void }) {
   // New wallets are phrases; wallets created before phrases existed are 64-hex.
   const isPhrase = !/^[0-9a-fA-F]{64}$/.test(seed.trim());
@@ -3963,7 +3980,7 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
       // The seed lives on this device, not on the server. The address lets a
       // seed orphaned under a stale token be found and reattached (see
       // resolveDeviceSeed) instead of wrongly claiming the key is gone.
-      setSeed(await resolveDeviceSeed(expectedAddress));
+      setSeed(await walletBackupSecret(expectedAddress));
       setStep("shown");
       setPass("");
     } catch (e) {
@@ -3987,12 +4004,18 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // A wallet derived from the device phrase shows the PHRASE (it restores every
+  // account); a legacy wallet has only its raw seed. Label what is actually shown,
+  // so nobody writes down 64 hex characters believing it is their phrase.
+  const showsPhrase = accountOf(activeToken() ?? "") !== null && !!masterMnemonic();
+  const noun = showsPhrase ? "recovery phrase" : "recovery seed";
   return (
     <div className="card">
-      <h2>Recovery phrase</h2>
+      <h2>{showsPhrase ? "Recovery phrase" : "Recovery seed"}</h2>
       <p className="muted small" style={{ marginTop: 4 }}>
-        Your seed is the only way to restore this wallet. Anyone who sees it can spend your funds — reveal it only
-        somewhere private.
+        {showsPhrase
+          ? "These words restore this wallet and every account under it. Reveal only somewhere private."
+          : "This seed is the only way to restore this wallet. Reveal only somewhere private."}
       </p>
       {error && <div className="msg err">{error}</div>}
       {step === "idle" && (
@@ -4003,7 +4026,7 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
             setStep("gate");
           }}
         >
-          Reveal recovery phrase…
+          Reveal {noun}…
         </button>
       )}
       {step === "gate" &&
@@ -6183,14 +6206,8 @@ function DeviceSeedBackup() {
   // The last backup document, kept so the native (clipboard) path can offer
   // "copy again" without re-encrypting.
   const [lastDoc, setLastDoc] = useState("");
-  // What the file must contain to be a COMPLETE backup.
-  //
-  // For a phrase-derived account the per-token secret is the DERIVED key, not the
-  // phrase. Backing that up would restore this one account and silently lose the
-  // recovery phrase — and with it every other account the phrase covers. So when
-  // this wallet is an account of the device's phrase, back up the PHRASE: it
-  // restores this wallet and all its siblings. A legacy hex wallet has no phrase
-  // (that entropy is gone), so its raw seed is the strongest thing that exists.
+  // The file must hold a COMPLETE backup — the phrase when there is one, so it
+  // restores every account, not just this one. See walletBackupSecret.
   const derivedAccount = accountOf(activeToken() ?? "");
   const seed = derivedAccount !== null && masterMnemonic() ? masterMnemonic() : getDeviceSeed();
 

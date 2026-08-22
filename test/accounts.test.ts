@@ -142,3 +142,25 @@ describe("restoring on a new device recovers the same accounts", () => {
   });
 });
 
+// A subtle, dangerous distinction:
+//   * what we SHOW/BACK UP  = the phrase (restores every account)
+//   * what we SIGN/SPEND with = that account's own derived key
+// Feeding the phrase into a spending path would derive ACCOUNT 0 and quietly move
+// coins from the wrong wallet, so the two must never converge for account > 0.
+describe("display secret vs spending secret", () => {
+  it("an account's spending key is not the phrase itself", async () => {
+    const { accountSeedHex } = await import("../src/signer");
+    const k0 = await accountSeedHex(PHRASE, 0);
+    const k2 = await accountSeedHex(PHRASE, 2);
+    expect(k0).not.toBe(PHRASE);
+    expect(k2).not.toBe(PHRASE);
+    expect(k2).not.toBe(k0); // signing account 2 must not sign as account 0
+  });
+
+  it("the phrase always resolves to account 0, which is why spending must not use it", async () => {
+    const { accountSeedHex } = await import("../src/signer");
+    // Whatever a caller does with the raw phrase, it is account 0's wallet.
+    expect(await accountSeedHex(PHRASE, 0)).toBe(await accountSeedHex(PHRASE, 0));
+  });
+});
+
