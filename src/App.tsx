@@ -43,6 +43,7 @@ import {
   openPath,
   readBackupFile,
   setNodeSource,
+  setDesktopRemoteBase,
   vaultStatus,
   writeBackupFile,
   type DesktopConfig,
@@ -1345,6 +1346,9 @@ function ConnectionButton() {
     setBusy("tor");
     try {
       const url = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000);
+      // Desktop rewrites walletd_base from the shell on every boot, so the choice
+      // has to be recorded or Tor would quietly last only until the next restart.
+      if (desktop) setDesktopRemoteBase(url);
       setBase(url);
       setWalletdBearer("");
       setOpen(false);
@@ -1369,14 +1373,14 @@ function ConnectionButton() {
   }, [refresh]);
 
   const currentBase = getBase();
-  const onion = !desktop && isOnionAddress(currentBase);
+  const onion = isOnionAddress(currentBase);
   const hosted = !desktop && !onion && (currentBase.includes("wallet.zkas.info") || currentBase.endsWith("/daemon"));
   const currentProfile = profiles.find((profile) => {
     const current = desktop ? cfg?.node_addr : currentBase;
     return current?.replace(/\/$/, "").toLowerCase() === profile.address.replace(/\/$/, "").toLowerCase();
   });
   const label = desktop
-    ? cfg?.mode === "local" ? "Local history" : cfg?.mode === "custom" ? currentProfile?.name ?? "My history node" : "Public history"
+    ? onion ? "Tor" : cfg?.mode === "local" ? "My node" : cfg?.mode === "custom" ? currentProfile?.name ?? "My node" : "Public node"
     : onion ? "Tor" : hosted ? "Web" : currentProfile?.name ?? "My walletd";
 
   const switchDesktop = async (mode: "remote" | "local" | "custom", profile?: EndpointProfile) => {
@@ -1453,33 +1457,31 @@ function ConnectionButton() {
     <>
       <button className="connection-button" onClick={() => { setOpen(true); void refresh(); }} aria-label={`Connection: ${label}`}>
         <Server aria-hidden="true" size={17} strokeWidth={2.2} />
-        <span><small>{desktop ? "Wallet source" : "Wallet service"}</small><b>{label}</b></span>
+        <span><small>{desktop ? "Chain source" : "Wallet service"}</small><b>{label}</b></span>
         <ChevronDown aria-hidden="true" size={15} />
       </button>
       {open && createPortal(
         <div className="modalwrap" onClick={() => setOpen(false)}>
           <div className="card modalcard connection-modal" onClick={(event) => event.stopPropagation()}>
             <div className="connection-modal-head">
-              <div><span className="eyebrow">Connection</span><h2>{desktop ? "Choose wallet data source" : "Choose a wallet service"}</h2></div>
+              <div><span className="eyebrow">Connection</span><h2>{desktop ? "Chain source" : "Choose a wallet service"}</h2></div>
               <span className="status-pill good">{label}</span>
             </div>
             <p className="muted small">
               {desktop
-                ? "Choose the node your wallet reads. Keys stay in this app."
+                ? "This app runs its own wallet. Choose the ZKas node it reads the chain from — your keys never leave."
                 : "Your keys stay on this device. Choose how it connects."}
             </p>
 
             <div className="connection-list">
-              <button className={`connection-option ${(desktop ? cfg?.mode === "remote" : hosted) ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void switchDesktop("remote") : void switchWalletd("", "hosted", "")}>
-                <span><b>{desktop ? "Public wallet-history node" : "Web · public service"}</b><small>{desktop ? "Works immediately" : "Fastest. The service sees your IP."}</small></span><span>{busy === (desktop ? "remote" : "hosted") ? "Checking…" : (desktop ? cfg?.mode === "remote" : hosted) ? "Connected" : "Use"}</span>
+              <button className={`connection-option ${(desktop ? cfg?.mode === "remote" && !onion : hosted) ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void switchDesktop("remote") : void switchWalletd("", "hosted", "")}>
+                <span><b>{desktop ? "Public node" : "Web · public service"}</b><small>{desktop ? "Works immediately" : "Fastest. The service sees your IP."}</small></span><span>{busy === (desktop ? "remote" : "hosted") ? "Checking…" : (desktop ? cfg?.mode === "remote" && !onion : hosted) ? "Connected" : "Use"}</span>
               </button>
-              {!desktop && (
-                <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectTor()}>
-                  <span><b>Tor · over the onion</b><small>Hides your IP. Requires the Orbot app (Tor VPN).</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
-                </button>
-              )}
+              <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectTor()}>
+                <span><b>Tor · over the onion</b><small>{desktop ? "Hides your IP. Needs Tor running on this computer." : "Hides your IP. Requires the Orbot app (Tor VPN)."}</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
+              </button>
               {desktop && (
-                <button className={`connection-option ${cfg?.mode === "local" ? "active" : ""}`} disabled={busy !== null} onClick={() => {
+                <button className={`connection-option ${cfg?.mode === "local" && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => {
                   if (!cfg?.node_running) {
                     setOpen(false);
                     location.hash = "#/node";
@@ -1487,11 +1489,13 @@ function ConnectionButton() {
                   }
                   void switchDesktop("local");
                 }}>
-                  <span><b>Local wallet-history node</b><small>Managed here · gRPC {MANAGED_ZKAS_RPC}</small></span><span>{busy === "local" ? "Checking…" : cfg?.mode === "local" ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
+                  <span><b>Your own node</b><small>Managed here · gRPC {MANAGED_ZKAS_RPC}</small></span><span>{busy === "local" ? "Checking…" : cfg?.mode === "local" && !onion ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
                 </button>
               )}
               {profiles.map((profile) => {
-                const active = desktop ? cfg?.mode === "custom" && currentProfile?.id === profile.id : currentProfile?.id === profile.id;
+                const active = desktop
+                  ? cfg?.mode === "custom" && !onion && currentProfile?.id === profile.id
+                  : currentProfile?.id === profile.id;
                 return <div className={`connection-option saved ${active ? "active" : ""}`} key={profile.id}>
                   <button disabled={busy !== null} onClick={() => desktop ? void switchDesktop("custom", profile) : void switchWalletd(profile.address, profile.id, profile.bearer ?? "")}>
                     <span><b>{profile.name}</b><small className="mono">{profile.address}</small></span><span>{busy === profile.id ? "Checking…" : active ? "Connected" : "Use"}</span>
@@ -1505,7 +1509,7 @@ function ConnectionButton() {
             </div>
 
             <div className="connection-add">
-              <h3>Add {desktop ? "wallet-history node" : "walletd"}</h3>
+              <h3>Add {desktop ? "a node" : "walletd"}</h3>
               {/* The pairing path, first and by itself. Scanning fills in the address and
                   BOTH secrets at once; typing them means transcribing two long hex strings,
                   and getting the wallet one wrong opens a different, empty wallet rather
@@ -5633,8 +5637,8 @@ function NetworkPrivacyCard() {
       <div className="card">
         <h2>Network privacy</h2>
         <p className="muted small" style={{ marginTop: 0 }}>
-          Keys stay in this app. For the most privacy, run your own node (Node page). Switch it from
-          <b> Wallet source</b> above.
+          Keys stay in this app. Strongest privacy: run your own node (Node page). You can also connect over
+          <b> Tor</b> if Tor is running on this computer — both from <b>Chain source</b> above.
         </p>
       </div>
     );

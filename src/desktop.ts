@@ -27,10 +27,39 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
 }
 
 /** Fetch the embedded daemon's address+token and install them for the SPA. */
+/// A wallet service the user deliberately chose INSTEAD of the embedded daemon —
+/// today that means the Tor onion service.
+///
+/// It needs its own key because `initDesktop()` rewrites `walletd_base` from the
+/// Tauri shell on every boot: without a persistent record of the user's choice,
+/// connecting over Tor would work until the next restart and then silently snap
+/// back to the embedded daemon — the worst kind of privacy failure, because the UI
+/// would still be showing what the user picked.
+const REMOTE_KEY = "desktop_remote_base";
+
+export function desktopRemoteBase(): string {
+  try {
+    return localStorage.getItem(REMOTE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function setDesktopRemoteBase(url: string): void {
+  try {
+    if (url.trim()) localStorage.setItem(REMOTE_KEY, url.trim().replace(/\/$/, ""));
+    else localStorage.removeItem(REMOTE_KEY);
+  } catch {
+    /* best effort */
+  }
+}
+
 export async function initDesktop(): Promise<DesktopConfig | null> {
   if (!isDesktop()) return null;
   const cfg = await invoke<DesktopConfig>("wallet_config");
-  localStorage.setItem("walletd_base", cfg.base);
+  // Honour a deliberate remote choice (Tor) over the embedded daemon's address.
+  const remote = desktopRemoteBase();
+  localStorage.setItem("walletd_base", remote || cfg.base);
   if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
   else localStorage.removeItem("walletd_bearer");
   // The shell's token is the FIRST wallet, not the only one. Writing it on every
@@ -41,6 +70,9 @@ export async function initDesktop(): Promise<DesktopConfig | null> {
 }
 
 /** Switch node source (restarts the embedded daemon; wallet data is untouched). */
+/// Picking a node means using the embedded daemon again, so any remote (Tor)
+/// override must be dropped — otherwise the app would keep talking to the onion
+/// while the UI showed a node selection.
 export async function setNodeSource(
   mode: "remote" | "custom" | "local",
   nodeAddr?: string,
@@ -51,6 +83,7 @@ export async function setNodeSource(
     nodeAddr: nodeAddr ?? null,
     nodeBinary: nodeBinary ?? null,
   });
+  setDesktopRemoteBase("");
   localStorage.setItem("walletd_base", cfg.base);
   if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
   else localStorage.removeItem("walletd_bearer");

@@ -1,16 +1,13 @@
 // One-time "what's new" for EXISTING users on update.
 //
-// Fresh installs learn about connection + privacy in the first-run screen. But an
-// existing wallet skips first-run (it already chose a server long ago), so without
-// this it would silently gain Tor, server choice and accent colors and never know.
-// Shown once, gated by a version key; closing (or acting) sets the flag.
-
-import { useState } from "react";
+// Fresh installs learn about phrases and connection choices in the first-run
+// screens. An existing wallet skips all of that, so without this it would silently
+// gain recovery phrases, accounts and Tor and the user would never know. Shown
+// once per release that needs it, gated by the version key below.
 
 const SEEN_KEY = "whatsnew_seen_v1_0_17";
 
-/** Whether to show the update notice: an existing wallet that hasn't seen it. A
- * fresh install has no wallet history yet and gets the first-run screen instead. */
+/** Whether to show the update notice: an existing wallet that hasn't seen it. */
 export function shouldShowWhatsNew(hasWalletHistory: boolean): boolean {
   try {
     return hasWalletHistory && !localStorage.getItem(SEEN_KEY);
@@ -20,32 +17,37 @@ export function shouldShowWhatsNew(hasWalletHistory: boolean): boolean {
 }
 
 export function WhatsNew({ onClose }: { onClose: () => void }) {
-  const [closing, setClosing] = useState(false);
   const dismiss = () => {
-    if (closing) return;
-    setClosing(true);
     try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
     onClose();
   };
-  const openPrivacy = () => {
+  const openSettings = () => {
     try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
-    // Land in Settings; the Network privacy card is there.
     location.hash = "#/?tab=settings";
     onClose();
   };
   return (
     <div className="modalwrap" onClick={dismiss}>
       <div className="card modalcard" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
-        <span className="eyebrow">New in this version</span>
-        <h2 style={{ margin: "6px 0 12px" }}>Private by choice</h2>
+        <span className="eyebrow">New in 1.0.17</span>
+        <h2 style={{ margin: "6px 0 12px" }}>Recovery phrases</h2>
         <div className="whatsnew-list">
-          <div><b>🧅 Connect over Tor</b><span className="muted small">Hide your IP from the wallet service. One tap in Network privacy (needs Orbot).</span></div>
-          <div><b>🔌 Choose your server</b><span className="muted small">Public, your own, or Tor — and nothing is contacted until you pick.</span></div>
-          <div><b>🎨 Accent colors</b><span className="muted small">Make it yours under Settings → Accent color.</span></div>
+          <div>
+            <b>🔑 12-word phrase (BIP-39)</b>
+            <span className="muted small">New wallets use a standard BIP-39 phrase instead of a 64-character seed. Your existing seed keeps working.</span>
+          </div>
+          <div>
+            <b>🗂 Accounts</b>
+            <span className="muted small">Add accounts from one phrase — one backup covers them all.</span>
+          </div>
+          <div>
+            <b>🧅 Tor</b>
+            <span className="muted small">Connect over an onion so the service never sees your IP.</span>
+          </div>
         </div>
         <div className="row" style={{ marginTop: 16, gap: 10 }}>
           <button className="btn ghost" onClick={dismiss}>Got it</button>
-          <button className="btn" onClick={openPrivacy}>Network privacy</button>
+          <button className="btn" onClick={openSettings}>Open settings</button>
         </div>
       </div>
     </div>
