@@ -7,9 +7,12 @@
 // device has a Tor transport up (Orbot's VPN on Android, or Tor on desktop);
 // otherwise the connection attempt fails and the UI points the user at Orbot.
 // Baked so "Connect over Tor" is genuinely one tap, and overridable at build time.
+// The onion mirrors wallet.zkas.info: walletd is at /daemon, the chain API at
+// /chain, services at /services.v1.json, and the web wallet itself at /. So the
+// native app connects to <onion>/daemon and derives the rest from the same origin.
 export const ONION_WALLETD_URL: string =
   (import.meta.env.VITE_ONION_WALLETD_URL as string | undefined)?.trim() ||
-  "http://plqu6zzg5u6lkofv76m3pnnxzbaus6pgs4thced4wejdroi7z7exd6qd.onion";
+  "http://plqu6zzg5u6lkofv76m3pnnxzbaus6pgs4thced4wejdroi7z7exd6qd.onion/daemon";
 
 // A private relay (a plain forward/reverse proxy in front of walletd) is a second,
 // optional seam. Unset by default, so its option only appears once configured.

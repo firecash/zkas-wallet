@@ -1,4 +1,4 @@
-import { getBase, isOnionAddress } from "./api";
+import { onionSiblingBase } from "./api";
 
 export type ServiceCategory = "store" | "use" | "earn" | "verify" | "build";
 
@@ -49,8 +49,8 @@ export const SERVICES_DIRECTORY_URL =
 /// the services list never reaches clearnet either; otherwise the default host.
 function servicesDirectoryUrl(): string {
   try {
-    const base = getBase();
-    if (isOnionAddress(base)) return base.replace(/\/+$/, "") + "/services.v1.json";
+    const onion = onionSiblingBase();
+    if (onion) return onion + "/services.v1.json";
   } catch { /* fall through to default */ }
   return SERVICES_DIRECTORY_URL;
 }

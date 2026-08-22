@@ -1335,14 +1335,15 @@ function ConnectionButton() {
   }, [refresh]);
 
   const currentBase = getBase();
-  const hosted = !desktop && (currentBase.includes("wallet.zkas.info") || currentBase.endsWith("/daemon"));
+  const onion = !desktop && isOnionAddress(currentBase);
+  const hosted = !desktop && !onion && (currentBase.includes("wallet.zkas.info") || currentBase.endsWith("/daemon"));
   const currentProfile = profiles.find((profile) => {
     const current = desktop ? cfg?.node_addr : currentBase;
     return current?.replace(/\/$/, "").toLowerCase() === profile.address.replace(/\/$/, "").toLowerCase();
   });
   const label = desktop
     ? cfg?.mode === "local" ? "Local history" : cfg?.mode === "custom" ? currentProfile?.name ?? "My history node" : "Public history"
-    : hosted ? "Hosted" : currentProfile?.name ?? "My walletd";
+    : onion ? "Tor" : hosted ? "Web" : currentProfile?.name ?? "My walletd";
 
   const switchDesktop = async (mode: "remote" | "local" | "custom", profile?: EndpointProfile) => {
     setBusy(profile?.id ?? mode);
@@ -1431,13 +1432,18 @@ function ConnectionButton() {
             <p className="muted small">
               {desktop
                 ? "Embedded walletd and your keys stay private inside this app. Choose the ZKAS node it reads for complete wallet history; a mining-only node is refused."
-                : `Hosted is easiest. A walletd you run yourself keeps your viewing key and wallet scan on your own machine. ${isNative() ? "This installed app accepts HTTPS, plain HTTP on your LAN, or an .onion address over Tor (Orbot)." : "In a browser, your walletd must use HTTPS or an .onion over Tor; install the app to use plain HTTP on a LAN."}`}
+                : "Switch how your wallet connects. Web is fastest; Tor hides your IP (needs Orbot); your own walletd is the most private. Your keys never leave this device either way."}
             </p>
 
             <div className="connection-list">
               <button className={`connection-option ${(desktop ? cfg?.mode === "remote" : hosted) ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void switchDesktop("remote") : void switchWalletd("", "hosted", "")}>
-                <span><b>{desktop ? "Public wallet-history node" : "Hosted wallet service"}</b><small>Works immediately</small></span><span>{busy === (desktop ? "remote" : "hosted") ? "Checking…" : (desktop ? cfg?.mode === "remote" : hosted) ? "Connected" : "Use"}</span>
+                <span><b>{desktop ? "Public wallet-history node" : "Web · public service"}</b><small>{desktop ? "Works immediately" : "Fastest. The service sees your IP."}</small></span><span>{busy === (desktop ? "remote" : "hosted") ? "Checking…" : (desktop ? cfg?.mode === "remote" : hosted) ? "Connected" : "Use"}</span>
               </button>
+              {!desktop && (
+                <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void switchWalletd(ONION_WALLETD_URL, "tor")}>
+                  <span><b>Tor · over the onion</b><small>Hides your IP from the service. Needs Orbot (VPN) on Android.</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
+                </button>
+              )}
               {desktop && (
                 <button className={`connection-option ${cfg?.mode === "local" ? "active" : ""}`} disabled={busy !== null} onClick={() => {
                   if (!cfg?.node_running) {

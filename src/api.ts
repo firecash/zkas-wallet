@@ -663,11 +663,19 @@ export interface ChainTx {
 /// fails, and every broadcast payment is stuck reading "0-conf" forever because
 /// its confirmation lookup can never succeed. Detecting only Capacitor missed the
 /// desktop app entirely. Both native shells must reach the public host directly.
-function chainBase(): string {
-  // Over Tor the whole wallet stays on the onion: walletd is at the onion root and
-  // the chain API at /chain, so history/confirmation lookups never touch clearnet.
+/// When on Tor, the onion origin that also serves /chain and /services.v1.json —
+/// i.e. the walletd base with its `/daemon` suffix removed. `null` off Tor.
+export function onionSiblingBase(): string | null {
   const base = getBase();
-  if (isOnionAddress(base)) return base.replace(/\/+$/, "") + "/chain";
+  if (!isOnionAddress(base)) return null;
+  return base.replace(/\/+$/, "").replace(/\/daemon$/, "");
+}
+
+function chainBase(): string {
+  // Over Tor the whole wallet stays on the onion: the chain API is at <onion>/chain,
+  // so history/confirmation lookups never touch clearnet.
+  const onion = onionSiblingBase();
+  if (onion) return onion + "/chain";
   const native = isNative() || "__TAURI_INTERNALS__" in globalThis;
   return native ? "https://wallet.zkas.info/chain" : window.location.origin + "/chain";
 }
