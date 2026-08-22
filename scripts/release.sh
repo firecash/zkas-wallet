@@ -70,7 +70,15 @@ if [ "$DO_BUMP" = 1 ]; then
   git diff --quiet && git diff --cached --quiet || die "working tree dirty — commit or stash first"
   node -e "const f='package.json',p=require('./'+f);p.version='$VERSION';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
   # tauri (desktop): version drives the bundle filenames the macOS workflow emits
-  node -e "const f='src-tauri/tauri.conf.json',p=require('./'+f);p.version='$VERSION';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+  # Tauri drives the desktop bundles, and the WiX/MSI target refuses a pre-release
+  # identifier that is not numeric ("optional pre-release identifier in app version
+  # must be numeric-only"). So `1.0.17-rc9` fails the Windows build while every
+  # other platform succeeds. Feed Tauri a numeric-safe form — 1.0.17-rc9 -> 1.0.17-9
+  # — which keeps the builds distinguishable and satisfies MSI. A plain release
+  # version passes through untouched.
+  TAURI_VERSION="$(printf '%s' "$VERSION" | sed -E 's/-[A-Za-z._-]*([0-9]+)$/-\1/; s/-[A-Za-z._-]+$//')"
+  echo "tauri/desktop version: $TAURI_VERSION"
+  node -e "const f='src-tauri/tauri.conf.json',p=require('./'+f);p.version='$TAURI_VERSION';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
   # android: versionName follows, versionCode auto-increments
   gver="android/app/build.gradle"
   code=$(grep -oE 'versionCode [0-9]+' "$gver" | grep -oE '[0-9]+'); newcode=$((code+1))

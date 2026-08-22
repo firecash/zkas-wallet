@@ -1613,7 +1613,7 @@ function WalletSwitcher({ onClose }: { onClose: () => void }) {
         </div>
         <p className="muted small" style={{ marginTop: 10 }}>
           {hasMaster()
-            ? "Accounts share your recovery phrase. A separate wallet gets its own."
+            ? "Accounts share your phrase. Restoring on a new device? Add account brings each one back, in order."
             : "A separate wallet gets its own recovery phrase."}
         </p>
       </div>

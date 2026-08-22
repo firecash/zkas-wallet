@@ -111,3 +111,34 @@ describe("ways a user could get screwed", () => {
   });
 });
 
+// THE PROMISE THE UI MAKES: "one phrase backs up every account". This proves the
+// mechanism actually keeps it — restoring the phrase on a FRESH device and adding
+// accounts re-derives the SAME keys, in the same order, so the old accounts (and
+// their funds) come back rather than being lost.
+describe("restoring on a new device recovers the same accounts", () => {
+  it("re-derives identical account keys in the same order", async () => {
+    const { accountSeedHex } = await import("../src/signer");
+    // Device A: the user had accounts 0, 1, 2.
+    const deviceA = [0, 1, 2];
+    const keysA = await Promise.all(deviceA.map((a) => accountSeedHex(PHRASE, a)));
+
+    // Device B: fresh install, phrase restored, then "Add account" twice.
+    localStorage.clear();
+    const { adoptExistingPhrase, setAccountOf, nextFreeAccount, accountOf } = await import("../src/accounts");
+    const { addWallet } = await import("../src/wallets");
+    const t0 = addWallet();
+    await adoptExistingPhrase(t0, PHRASE);
+    expect(accountOf(t0)).toBe(0); // the restored wallet is account 0
+
+    const recovered = [0];
+    for (let i = 0; i < 2; i++) {
+      const next = nextFreeAccount();
+      setAccountOf(addWallet(), next);
+      recovered.push(next);
+    }
+    expect(recovered).toEqual(deviceA); // same indexes, same order
+    const keysB = await Promise.all(recovered.map((a) => accountSeedHex(PHRASE, a)));
+    expect(keysB).toEqual(keysA);       // and therefore the same wallets
+  });
+});
+
