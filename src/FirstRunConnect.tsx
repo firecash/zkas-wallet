@@ -34,12 +34,12 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
 
   // The default. Clearing the override resolves getBase() to the hosted daemon.
   // No request here — the wallet contacts it once it mounts, which IS proceeding.
-  const usePublic = () => {
+  const connectPublic = () => {
     if (busy) return;
     setBase(""); setWalletdBearer(""); finish();
   };
 
-  const useTor = async () => {
+  const connectTor = async () => {
     if (busy) return;
     setErr(""); setNeedTor(false); setBusy("tor");
     try {
@@ -53,7 +53,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
     }
   };
 
-  const useCustom = async () => {
+  const connectCustom = async () => {
     if (busy) return;
     const entered = addr.trim();
     if (!entered) return setErr("Enter the address of your wallet service (host:port, or an .onion).");
@@ -79,12 +79,12 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
 
         <span className="eyebrow">Connect</span>
         <div className="connection-list firstrun-conn">
-          <button className="connection-option" disabled={!!busy} onClick={usePublic}>
+          <button className="connection-option" disabled={!!busy} onClick={connectPublic}>
             <span><b>Public wallet service</b><small>Fastest. Works instantly, nothing to install.</small></span>
             <span>{busy === "public" ? "…" : "Use"}</span>
           </button>
 
-          <button className="connection-option" disabled={!!busy} onClick={() => void useTor()}>
+          <button className="connection-option" disabled={!!busy} onClick={() => void connectTor()}>
             <span><b>Connect over Tor</b><small>Hides your IP from the service. Needs Orbot (VPN) on Android.</small></span>
             <span>{busy === "tor" ? "Connecting…" : "Use"}</span>
           </button>
@@ -110,7 +110,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
                 disabled={busy === "custom"}
                 autoCapitalize="none" autoCorrect="off" spellCheck={false}
               />
-              <button className="btn small" disabled={busy === "custom"} onClick={() => void useCustom()}>
+              <button className="btn small" disabled={busy === "custom"} onClick={() => void connectCustom()}>
                 {busy === "custom" ? "Connecting…" : "Connect"}
               </button>
             </div>

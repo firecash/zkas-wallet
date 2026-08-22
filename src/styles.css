@@ -2462,3 +2462,10 @@ select { appearance: none; cursor: pointer; }
   border: 1px solid var(--border); border-radius: 9px; background: var(--ember-soft);
   font-size: 14px; font-weight: 600; }
 .seed-num { font-size: 11px; color: var(--muted); font-weight: 500; min-width: 14px; }
+
+/* Recovery phrase reveal: words are blurred until deliberately revealed, so the
+   screen can be opened without exposing the phrase to whoever is nearby. */
+.seed-reveal { position: relative; margin-top: 10px; }
+.seed-reveal .seed-words { filter: blur(7px); transition: filter 0.2s ease; user-select: none; }
+.seed-reveal.on .seed-words { filter: none; user-select: text; }
+.seed-reveal-btn { position: absolute; inset: 0; margin: auto; width: max-content; height: max-content; }

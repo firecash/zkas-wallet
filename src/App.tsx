@@ -17,7 +17,7 @@ import {
   loadSnapshot,
   type LocalTx,
 } from "./localtx";
-import { ensureSigner, fvkHex, generateWallet, generateMnemonicWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
+import { ensureSigner, fvkHex, generateMnemonicWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, walletCanSpend } from "./status";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
@@ -2410,8 +2410,27 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
 function SeedBackup({ seed, address, onDone }: { seed: string; address: string; onDone: () => void }) {
   // New wallets are phrases; wallets created before phrases existed are 64-hex.
   const isPhrase = !/^[0-9a-fA-F]{64}$/.test(seed.trim());
+  const words = seed.trim().split(/\s+/);
   const [copied, setCopied] = useState(false);
-  const [showSeed, setShowSeed] = useState(false);
+  // A recovery phrase is only a backup once it is OFF this device, so a new
+  // wallet walks: read the words -> confirm -> prove you have them. Skipping
+  // straight into the wallet is how people discover, months later, that they
+  // never wrote anything down. A legacy hex seed keeps the old single screen.
+  const [step, setStep] = useState<"read" | "verify">("read");
+  const [revealed, setRevealed] = useState(false);
+  // Which words to ask for. Chosen once (lazy init) so they cannot reshuffle
+  // under the user mid-answer.
+  const [quiz] = useState<number[]>(() => {
+    const idx = words.map((_, i) => i);
+    for (let i = idx.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [idx[i], idx[j]] = [idx[j], idx[i]];
+    }
+    return idx.slice(0, 3).sort((a, b) => a - b);
+  });
+  const [answers, setAnswers] = useState<string[]>(["", "", ""]);
+  const [quizErr, setQuizErr] = useState("");
+
   const copy = async () => {
     try {
       await copyText(seed);
@@ -2422,63 +2441,128 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const checkQuiz = () => {
+    const ok = quiz.every((w, i) => answers[i].trim().toLowerCase() === words[w].toLowerCase());
+    if (!ok) {
+      setQuizErr("That does not match. Check your written copy and try again.");
+      return;
+    }
+    onDone();
+  };
+
+  // Legacy hex seed: unchanged single screen (an encrypted file is the only
+  // realistic backup for 64 characters nobody can transcribe).
+  if (!isPhrase) {
+    return (
+      <div className="card">
+        <h2>Save your wallet</h2>
+        <div className="msg warn">
+          This wallet exists only on this device. If you lose it with no backup, the coins are gone — nobody,
+          including us, can restore them.
+        </div>
+        <DeviceSeedBackup />
+        <label style={{ marginTop: 16 }}>Your shielded address</label>
+        <div className="addr">{address}</div>
+        <label style={{ marginTop: 16 }}>Recovery seed</label>
+        <div className="addr">{seed}</div>
+        <button className="btn ghost small" style={{ marginTop: 10 }} onClick={copy}>
+          {copied ? "Copied ✓" : "Copy seed"}
+        </button>
+        <button className="btn" style={{ marginTop: 18 }} onClick={onDone}>Open wallet</button>
+      </div>
+    );
+  }
+
+  if (step === "verify") {
+    return (
+      <div className="card">
+        <h2>Check your backup</h2>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Type these words from your written copy — not from memory.
+        </p>
+        {quiz.map((w, i) => (
+          <div key={w} style={{ marginTop: 12 }}>
+            <label>Word #{w + 1}</label>
+            <input
+              value={answers[i]}
+              onChange={(e) => {
+                const next = [...answers];
+                next[i] = e.target.value;
+                setAnswers(next);
+                setQuizErr("");
+              }}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder={`The ${ordinal(w + 1)} word`}
+            />
+          </div>
+        ))}
+        {quizErr && <div className="msg err">{quizErr}</div>}
+        <button
+          className="btn"
+          style={{ marginTop: 18 }}
+          disabled={answers.some((a) => !a.trim())}
+          onClick={checkQuiz}
+        >
+          Confirm &amp; open wallet
+        </button>
+        <button className="btn ghost small" style={{ marginTop: 10 }} onClick={() => { setStep("read"); setQuizErr(""); }}>
+          Show me the phrase again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="card">
-      <h2>Save your wallet</h2>
+      <h2>Write down your recovery phrase</h2>
       <div className="msg warn">
-        This wallet exists only on this device. If you lose it with no backup, the coins are gone — nobody, including
-        us, can restore them.
+        These 12 words are the only way to restore this wallet. Anyone who has them owns the funds — and if you lose
+        them, nobody, including us, can bring the coins back.
       </div>
 
-      {/* An encrypted backup file is the primary path, deliberately.
-          The alternative is 64 hex characters, which nobody transcribes by hand
-          and which is trivially mistyped when they try — an earlier version of
-          this screen displayed it in numbered groups and then quizzed the user
-          on two of them, which is a lot of ceremony to make a bad artifact
-          slightly less bad. A file with its own passphrase is the thing people
-          will actually keep, on a USB stick or in a password manager. */}
-      <DeviceSeedBackup />
-
-      <label style={{ marginTop: 16 }}>Your shielded address</label>
-      <div className="addr">{address}</div>
-
-      {showSeed ? (
-        <>
-          <label style={{ marginTop: 16 }}>{isPhrase ? "Recovery phrase" : "Recovery seed"}</label>
-          {/* A phrase is meant to be transcribed, so number the words: it is the
-              difference between copying 12 words correctly and losing a wallet to
-              a mis-ordered one. A legacy hex seed stays a single blob. */}
-          {isPhrase ? (
-            <ol className="seed-words">
-              {seed.trim().split(/\s+/).map((w, i) => (
-                <li key={i}><span className="seed-num">{i + 1}</span>{w}</li>
-              ))}
-            </ol>
-          ) : (
-            <div className="addr">{seed}</div>
-          )}
-          <button className="btn ghost small" style={{ marginTop: 10 }} onClick={copy}>
-            {copied ? "Copied ✓" : isPhrase ? "Copy phrase" : "Copy seed"}
+      <div className={"seed-reveal" + (revealed ? " on" : "")}>
+        <ol className="seed-words">
+          {words.map((w, i) => (
+            <li key={i}><span className="seed-num">{i + 1}</span>{w}</li>
+          ))}
+        </ol>
+        {!revealed && (
+          <button className="btn small seed-reveal-btn" onClick={() => setRevealed(true)}>
+            Tap to reveal
           </button>
-          <p className="muted small">
-            Anyone who has this controls the funds. Write it down and keep it offline — not in a screenshot.
-          </p>
-        </>
-      ) : (
-        <button className="btn ghost small" style={{ marginTop: 16 }} onClick={() => setShowSeed(true)}>
-          {isPhrase ? "Show recovery phrase instead" : "Show recovery seed instead"}
-        </button>
-      )}
+        )}
+      </div>
 
-      <button className="btn" style={{ marginTop: 18 }} onClick={onDone}>
-        Open wallet
-      </button>
-      <p className="muted small" style={{ marginTop: 10 }}>
-        You can make a backup or view the seed at any time under Settings.
+      <div className="row" style={{ marginTop: 12, gap: 10 }}>
+        <button className="btn ghost small" onClick={copy}>{copied ? "Copied ✓" : "Copy phrase"}</button>
+      </div>
+      <p className="muted small" style={{ marginTop: 8 }}>
+        Write them on paper in this order. Avoid screenshots and cloud notes.
       </p>
+
+      <button className="btn" style={{ marginTop: 16 }} disabled={!revealed} onClick={() => setStep("verify")}>
+        I&apos;ve written it down
+      </button>
+
+      <details style={{ marginTop: 14 }}>
+        <summary className="muted small">Also save an encrypted backup file</summary>
+        <div style={{ marginTop: 10 }}><DeviceSeedBackup /></div>
+        <label style={{ marginTop: 12 }}>Your shielded address</label>
+        <div className="addr">{address}</div>
+      </details>
     </div>
   );
 }
+
+/// "1st", "2nd", "3rd" … for the backup check, so the prompt reads naturally.
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
 /// Prove the backup was actually written down.
 ///
 /// This used to be a checkbox. A checkbox costs one click and verifies nothing,
@@ -3724,7 +3808,7 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
 
   return (
     <div className="card">
-      <h2>Recovery seed</h2>
+      <h2>Recovery phrase</h2>
       <p className="muted small" style={{ marginTop: 4 }}>
         Your seed is the only way to restore this wallet. Anyone who sees it can spend your funds — reveal it only
         somewhere private.
@@ -3738,7 +3822,7 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
             setStep("gate");
           }}
         >
-          Reveal recovery seed…
+          Reveal recovery phrase…
         </button>
       )}
       {step === "gate" &&
@@ -3780,10 +3864,21 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
       {step === "shown" && (
         <>
           <div className="msg warn small">Keep this private. Anyone with it controls your funds.</div>
-          <div className="addr">{seed}</div>
+          {/* Same presentation as the first-run backup screen: a phrase is words in
+              a fixed order, and reading it as one run-on line is how the order gets
+              lost. A legacy hex seed stays a single blob. */}
+          {/^[0-9a-fA-F]{64}$/.test(seed.trim()) ? (
+            <div className="addr">{seed}</div>
+          ) : (
+            <ol className="seed-words">
+              {seed.trim().split(/\s+/).map((w, i) => (
+                <li key={i}><span className="seed-num">{i + 1}</span>{w}</li>
+              ))}
+            </ol>
+          )}
           <div className="row" style={{ marginTop: 12 }}>
             <button className="btn ghost small" onClick={copy}>
-              {copied ? "Copied ✓" : "Copy seed"}
+              {copied ? "Copied ✓" : "Copy"}
             </button>
             <button
               className="btn ghost small"
