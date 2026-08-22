@@ -1,21 +1,28 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
-export const __wbg_get_signature_address: (a: number) => [number, number];
-export const __wbg_get_signature_signature_hex: (a: number) => [number, number];
-export const __wbg_set_signature_address: (a: number, b: number, c: number) => void;
-export const __wbg_set_signature_signature_hex: (a: number, b: number, c: number) => void;
+export const __wbg_get_mnemonicwallet_address: (a: number) => [number, number];
+export const __wbg_get_mnemonicwallet_mnemonic: (a: number) => [number, number];
+export const __wbg_mnemonicwallet_free: (a: number, b: number) => void;
+export const __wbg_set_mnemonicwallet_address: (a: number, b: number, c: number) => void;
+export const __wbg_set_mnemonicwallet_mnemonic: (a: number, b: number, c: number) => void;
 export const __wbg_signature_free: (a: number, b: number) => void;
 export const __wbg_wallet_free: (a: number, b: number) => void;
 export const address_from_seed: (a: number, b: number, c: number, d: number) => [number, number, number, number];
 export const fvk_hex: (a: number, b: number) => [number, number, number, number];
+export const is_valid_mnemonic: (a: number, b: number) => number;
 export const new_wallet: (a: number, b: number) => [number, number, number];
+export const new_wallet_mnemonic: (a: number, b: number) => [number, number, number];
 export const sign: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
 export const sign_spend_auth: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
 export const verify: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
 export const verify_and_sign_payment: (a: number, b: number, c: number, d: number, e: number, f: number, g: bigint, h: bigint, i: number, j: number, k: number, l: number, m: number, n: number) => [number, number, number, number];
+export const __wbg_set_signature_address: (a: number, b: number, c: number) => void;
+export const __wbg_set_signature_signature_hex: (a: number, b: number, c: number) => void;
 export const __wbg_set_wallet_address: (a: number, b: number, c: number) => void;
 export const __wbg_set_wallet_seed_hex: (a: number, b: number, c: number) => void;
+export const __wbg_get_signature_address: (a: number) => [number, number];
+export const __wbg_get_signature_signature_hex: (a: number) => [number, number];
 export const __wbg_get_wallet_address: (a: number) => [number, number];
 export const __wbg_get_wallet_seed_hex: (a: number) => [number, number];
 export const __wbg_hash_free: (a: number, b: number) => void;

@@ -2454,3 +2454,11 @@ select { appearance: none; cursor: pointer; }
 .orbot-help > b { font-size: 14px; }
 .orbot-steps { margin: 4px 0 10px; padding-left: 18px; }
 .orbot-steps li { font-size: 12.5px; color: var(--muted); margin: 3px 0; }
+
+/* Recovery phrase: numbered words, so transcription order can't be lost. */
+.seed-words { list-style: none; margin: 8px 0 0; padding: 0; display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.seed-words li { display: flex; align-items: baseline; gap: 7px; padding: 7px 10px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--ember-soft);
+  font-size: 14px; font-weight: 600; }
+.seed-num { font-size: 11px; color: var(--muted); font-weight: 500; min-width: 14px; }

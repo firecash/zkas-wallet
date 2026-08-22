@@ -1,16 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Generate a brand-new wallet: a random 32-byte seed (browser CSPRNG) and its
- * `zkas:` address. Retries the negligibly-rare case where a random seed is
- * not a valid Orchard spending key.
- */
-export function new_wallet(network: string): Wallet;
-/**
- * Derive the `zkas:` address for an existing seed on a network.
- */
-export function address_from_seed(seed_hex: string, network: string): string;
-/**
  * Sign `message`, proving control of the seed's address on `network`. The
  * returned `signature_hex` is `fvk ‖ sig`, interoperable with `shielded-pay` and
  * the mining-pool claim verifier.
@@ -56,6 +46,30 @@ export function sign_spend_auth(seed_hex: string, alpha_hex: string, sighash_hex
  * function signs. Returns `[{index, sig}]` JSON on success, or throws with the reason.
  */
 export function verify_and_sign_payment(seed_hex: string, network: string, to_address: string, amount_sompi: bigint, max_fee_sompi: bigint, bundle_hex: string, disclosure_json: string, alphas_json: string): string;
+/**
+ * Generate a brand-new wallet: a random 32-byte seed (browser CSPRNG) and its
+ * `zkas:` address. Retries the negligibly-rare case where a random seed is
+ * not a valid Orchard spending key.
+ */
+export function new_wallet(network: string): Wallet;
+/**
+ * Generate a new wallet as a **12-word recovery phrase** (128 bits of entropy).
+ *
+ * Twelve words is not a shortcut: an Orchard key lives on the Pallas curve, whose
+ * ~128-bit security caps what any seed can buy. A longer phrase would be more to
+ * write down for no additional strength — and a phrase people actually finish
+ * writing down is the one that saves their funds.
+ */
+export function new_wallet_mnemonic(network: string): MnemonicWallet;
+/**
+ * True if `secret` is a well-formed recovery phrase (right words, right checksum).
+ * Lets the UI validate what was typed before trying to open a wallet with it.
+ */
+export function is_valid_mnemonic(secret: string): boolean;
+/**
+ * Derive the `zkas:` address for an existing seed on a network.
+ */
+export function address_from_seed(seed_hex: string, network: string): string;
 /**
  * Initialize Rust panic handler in console mode.
  *
@@ -219,6 +233,22 @@ export class Hash {
   toString(): string;
 }
 /**
+ * A freshly generated wallet backed by a recovery phrase.
+ */
+export class MnemonicWallet {
+  private constructor();
+  free(): void;
+  /**
+   * The BIP-39 recovery phrase. **This is the secret** — it restores the wallet
+   * anywhere, forever.
+   */
+  mnemonic: string;
+  /**
+   * The `zkas:` shielded address the phrase derives.
+   */
+  address: string;
+}
+/**
  * A message signature asserting control of an address.
  */
 export class Signature {
@@ -255,21 +285,28 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly __wbg_get_signature_address: (a: number) => [number, number];
-  readonly __wbg_get_signature_signature_hex: (a: number) => [number, number];
-  readonly __wbg_set_signature_address: (a: number, b: number, c: number) => void;
-  readonly __wbg_set_signature_signature_hex: (a: number, b: number, c: number) => void;
+  readonly __wbg_get_mnemonicwallet_address: (a: number) => [number, number];
+  readonly __wbg_get_mnemonicwallet_mnemonic: (a: number) => [number, number];
+  readonly __wbg_mnemonicwallet_free: (a: number, b: number) => void;
+  readonly __wbg_set_mnemonicwallet_address: (a: number, b: number, c: number) => void;
+  readonly __wbg_set_mnemonicwallet_mnemonic: (a: number, b: number, c: number) => void;
   readonly __wbg_signature_free: (a: number, b: number) => void;
   readonly __wbg_wallet_free: (a: number, b: number) => void;
   readonly address_from_seed: (a: number, b: number, c: number, d: number) => [number, number, number, number];
   readonly fvk_hex: (a: number, b: number) => [number, number, number, number];
+  readonly is_valid_mnemonic: (a: number, b: number) => number;
   readonly new_wallet: (a: number, b: number) => [number, number, number];
+  readonly new_wallet_mnemonic: (a: number, b: number) => [number, number, number];
   readonly sign: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
   readonly sign_spend_auth: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
   readonly verify: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
   readonly verify_and_sign_payment: (a: number, b: number, c: number, d: number, e: number, f: number, g: bigint, h: bigint, i: number, j: number, k: number, l: number, m: number, n: number) => [number, number, number, number];
+  readonly __wbg_set_signature_address: (a: number, b: number, c: number) => void;
+  readonly __wbg_set_signature_signature_hex: (a: number, b: number, c: number) => void;
   readonly __wbg_set_wallet_address: (a: number, b: number, c: number) => void;
   readonly __wbg_set_wallet_seed_hex: (a: number, b: number, c: number) => void;
+  readonly __wbg_get_signature_address: (a: number) => [number, number];
+  readonly __wbg_get_signature_signature_hex: (a: number) => [number, number];
   readonly __wbg_get_wallet_address: (a: number) => [number, number];
   readonly __wbg_get_wallet_seed_hex: (a: number) => [number, number];
   readonly __wbg_hash_free: (a: number, b: number) => void;

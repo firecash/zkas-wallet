@@ -99,7 +99,12 @@ export async function readBackup(json: string, passphrase: string): Promise<{ se
     throw new Error("Wrong passphrase for this backup file.");
   }
   const seedHex = new TextDecoder().decode(plain).trim();
-  if (!/^[0-9a-fA-F]{64}$/.test(seedHex)) throw new Error("Backup decrypted but does not contain a valid seed.");
+  // A backup holds either a legacy 64-hex seed or a recovery phrase. Both restore
+  // a wallet; rejecting the phrase here would make phrase-era backups unreadable.
+  const isHex = /^[0-9a-fA-F]{64}$/.test(seedHex);
+  const words = seedHex.split(/\s+/);
+  const isPhrase = words.length >= 12 && words.length <= 24 && words.every((w) => /^[a-z]+$/i.test(w));
+  if (!isHex && !isPhrase) throw new Error("Backup decrypted but does not contain a valid seed.");
   return { seedHex, birthday: doc.birthday ?? 0 };
 }
 

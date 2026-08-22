@@ -173,52 +173,6 @@ function takeFromExternrefTable0(idx) {
     return value;
 }
 /**
- * Generate a brand-new wallet: a random 32-byte seed (browser CSPRNG) and its
- * `zkas:` address. Retries the negligibly-rare case where a random seed is
- * not a valid Orchard spending key.
- * @param {string} network
- * @returns {Wallet}
- */
-export function new_wallet(network) {
-    const ptr0 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.new_wallet(ptr0, len0);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return Wallet.__wrap(ret[0]);
-}
-
-/**
- * Derive the `zkas:` address for an existing seed on a network.
- * @param {string} seed_hex
- * @param {string} network
- * @returns {string}
- */
-export function address_from_seed(seed_hex, network) {
-    let deferred4_0;
-    let deferred4_1;
-    try {
-        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len1 = WASM_VECTOR_LEN;
-        const ret = wasm.address_from_seed(ptr0, len0, ptr1, len1);
-        var ptr3 = ret[0];
-        var len3 = ret[1];
-        if (ret[3]) {
-            ptr3 = 0; len3 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred4_0 = ptr3;
-        deferred4_1 = len3;
-        return getStringFromWasm0(ptr3, len3);
-    } finally {
-        wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
-    }
-}
-
-/**
  * Sign `message`, proving control of the seed's address on `network`. The
  * returned `signature_hex` is `fvk ‖ sig`, interoperable with `shielded-pay` and
  * the mining-pool claim verifier.
@@ -384,6 +338,85 @@ export function verify_and_sign_payment(seed_hex, network, to_address, amount_so
         return getStringFromWasm0(ptr7, len7);
     } finally {
         wasm.__wbindgen_free(deferred8_0, deferred8_1, 1);
+    }
+}
+
+/**
+ * Generate a brand-new wallet: a random 32-byte seed (browser CSPRNG) and its
+ * `zkas:` address. Retries the negligibly-rare case where a random seed is
+ * not a valid Orchard spending key.
+ * @param {string} network
+ * @returns {Wallet}
+ */
+export function new_wallet(network) {
+    const ptr0 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.new_wallet(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return Wallet.__wrap(ret[0]);
+}
+
+/**
+ * Generate a new wallet as a **12-word recovery phrase** (128 bits of entropy).
+ *
+ * Twelve words is not a shortcut: an Orchard key lives on the Pallas curve, whose
+ * ~128-bit security caps what any seed can buy. A longer phrase would be more to
+ * write down for no additional strength — and a phrase people actually finish
+ * writing down is the one that saves their funds.
+ * @param {string} network
+ * @returns {MnemonicWallet}
+ */
+export function new_wallet_mnemonic(network) {
+    const ptr0 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.new_wallet_mnemonic(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return MnemonicWallet.__wrap(ret[0]);
+}
+
+/**
+ * True if `secret` is a well-formed recovery phrase (right words, right checksum).
+ * Lets the UI validate what was typed before trying to open a wallet with it.
+ * @param {string} secret
+ * @returns {boolean}
+ */
+export function is_valid_mnemonic(secret) {
+    const ptr0 = passStringToWasm0(secret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.is_valid_mnemonic(ptr0, len0);
+    return ret !== 0;
+}
+
+/**
+ * Derive the `zkas:` address for an existing seed on a network.
+ * @param {string} seed_hex
+ * @param {string} network
+ * @returns {string}
+ */
+export function address_from_seed(seed_hex, network) {
+    let deferred4_0;
+    let deferred4_1;
+    try {
+        const ptr0 = passStringToWasm0(seed_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.address_from_seed(ptr0, len0, ptr1, len1);
+        var ptr3 = ret[0];
+        var len3 = ret[1];
+        if (ret[3]) {
+            ptr3 = 0; len3 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred4_0 = ptr3;
+        deferred4_1 = len3;
+        return getStringFromWasm0(ptr3, len3);
+    } finally {
+        wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
     }
 }
 
@@ -752,6 +785,87 @@ export class Hash {
     }
 }
 
+const MnemonicWalletFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_mnemonicwallet_free(ptr >>> 0, 1));
+/**
+ * A freshly generated wallet backed by a recovery phrase.
+ */
+export class MnemonicWallet {
+
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(MnemonicWallet.prototype);
+        obj.__wbg_ptr = ptr;
+        MnemonicWalletFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        MnemonicWalletFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_mnemonicwallet_free(ptr, 0);
+    }
+    /**
+     * The BIP-39 recovery phrase. **This is the secret** — it restores the wallet
+     * anywhere, forever.
+     * @returns {string}
+     */
+    get mnemonic() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.__wbg_get_mnemonicwallet_mnemonic(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * The BIP-39 recovery phrase. **This is the secret** — it restores the wallet
+     * anywhere, forever.
+     * @param {string} arg0
+     */
+    set mnemonic(arg0) {
+        const ptr0 = passStringToWasm0(arg0, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.__wbg_set_mnemonicwallet_mnemonic(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * The `zkas:` shielded address the phrase derives.
+     * @returns {string}
+     */
+    get address() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.__wbg_get_mnemonicwallet_address(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * The `zkas:` shielded address the phrase derives.
+     * @param {string} arg0
+     */
+    set address(arg0) {
+        const ptr0 = passStringToWasm0(arg0, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.__wbg_set_mnemonicwallet_address(this.__wbg_ptr, ptr0, len0);
+    }
+}
+
 const SignatureFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_signature_free(ptr >>> 0, 1));
@@ -802,7 +916,7 @@ export class Signature {
     set address(arg0) {
         const ptr0 = passStringToWasm0(arg0, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        wasm.__wbg_set_signature_address(this.__wbg_ptr, ptr0, len0);
+        wasm.__wbg_set_mnemonicwallet_mnemonic(this.__wbg_ptr, ptr0, len0);
     }
     /**
      * `fvk ‖ sig`, hex-encoded (96 + 64 bytes). Discloses viewing capability by
@@ -829,7 +943,7 @@ export class Signature {
     set signature_hex(arg0) {
         const ptr0 = passStringToWasm0(arg0, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        wasm.__wbg_set_signature_signature_hex(this.__wbg_ptr, ptr0, len0);
+        wasm.__wbg_set_mnemonicwallet_address(this.__wbg_ptr, ptr0, len0);
     }
 }
 
@@ -885,7 +999,7 @@ export class Wallet {
     set seed_hex(arg0) {
         const ptr0 = passStringToWasm0(arg0, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        wasm.__wbg_set_signature_address(this.__wbg_ptr, ptr0, len0);
+        wasm.__wbg_set_mnemonicwallet_mnemonic(this.__wbg_ptr, ptr0, len0);
     }
     /**
      * The `zkas:` shielded address derived from the seed.
@@ -910,7 +1024,7 @@ export class Wallet {
     set address(arg0) {
         const ptr0 = passStringToWasm0(arg0, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        wasm.__wbg_set_signature_signature_hex(this.__wbg_ptr, ptr0, len0);
+        wasm.__wbg_set_mnemonicwallet_address(this.__wbg_ptr, ptr0, len0);
     }
 }
 

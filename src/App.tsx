@@ -17,7 +17,7 @@ import {
   loadSnapshot,
   type LocalTx,
 } from "./localtx";
-import { ensureSigner, fvkHex, generateWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
+import { ensureSigner, fvkHex, generateWallet, generateMnemonicWallet, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, walletCanSpend } from "./status";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
@@ -28,6 +28,7 @@ import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline
 import { byNewest, receiptIsOnChain } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
+import { isSecretShaped } from "./lib/deviceseed";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -1175,7 +1176,9 @@ async function findOrphanedSeed(expectedAddress: string): Promise<string> {
     const k = localStorage.key(i);
     if (k?.startsWith("device_seed_")) {
       const v = localStorage.getItem(k);
-      if (v && /^[0-9a-fA-F]{64}$/.test(v)) candidates.add(v.trim());
+      // Legacy 64-hex seed OR a recovery phrase — both are valid secrets, and
+      // the address check below is what actually confirms which wallet it opens.
+      if (v && isSecretShaped(v)) candidates.add(v.trim());
     }
   }
   // Unsealed lock-record seeds too (a locked device's seeds live only in memory).
@@ -1861,7 +1864,7 @@ function ConsolidateDialog({
         seed = await resolveDeviceSeed(status.address ?? undefined);
       } catch (cause) {
         if ((cause as Error).message !== SEED_REQUIRED) throw cause;
-        if (!/^[0-9a-fA-F]{64}$/.test(seedInput.trim())) {
+        if (!isSecretShaped(seedInput.trim())) {
           setNeedSeed(true);
           throw new Error("Enter this wallet's 64-character recovery seed to sign on this device.");
         }
@@ -1958,7 +1961,7 @@ function ConsolidateDialog({
             {needSeed && (
               <>
                 <label>Recovery seed · stays on this device</label>
-                <textarea value={seedInput} onChange={(event) => setSeedInput(event.target.value)} placeholder="64 hex characters" />
+                <textarea value={seedInput} onChange={(event) => setSeedInput(event.target.value)} placeholder="Your 12-word recovery phrase" />
               </>
             )}
             {busy && <SendScene stage={stage ?? undefined} estimateMs={passEstimateMs} />}
@@ -2405,6 +2408,8 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
 // One-time seed backup, shown right after creation. Rendered at the App level so
 // the periodic status poll can't unmount it — it stays until the user dismisses it.
 function SeedBackup({ seed, address, onDone }: { seed: string; address: string; onDone: () => void }) {
+  // New wallets are phrases; wallets created before phrases existed are 64-hex.
+  const isPhrase = !/^[0-9a-fA-F]{64}$/.test(seed.trim());
   const [copied, setCopied] = useState(false);
   const [showSeed, setShowSeed] = useState(false);
   const copy = async () => {
@@ -2439,18 +2444,29 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
 
       {showSeed ? (
         <>
-          <label style={{ marginTop: 16 }}>Recovery seed</label>
-          <div className="addr">{seed}</div>
+          <label style={{ marginTop: 16 }}>{isPhrase ? "Recovery phrase" : "Recovery seed"}</label>
+          {/* A phrase is meant to be transcribed, so number the words: it is the
+              difference between copying 12 words correctly and losing a wallet to
+              a mis-ordered one. A legacy hex seed stays a single blob. */}
+          {isPhrase ? (
+            <ol className="seed-words">
+              {seed.trim().split(/\s+/).map((w, i) => (
+                <li key={i}><span className="seed-num">{i + 1}</span>{w}</li>
+              ))}
+            </ol>
+          ) : (
+            <div className="addr">{seed}</div>
+          )}
           <button className="btn ghost small" style={{ marginTop: 10 }} onClick={copy}>
-            {copied ? "Copied ✓" : "Copy seed"}
+            {copied ? "Copied ✓" : isPhrase ? "Copy phrase" : "Copy seed"}
           </button>
           <p className="muted small">
-            Anyone who has this controls the funds. Keep it in a password manager rather than a screenshot or a note.
+            Anyone who has this controls the funds. Write it down and keep it offline — not in a screenshot.
           </p>
         </>
       ) : (
         <button className="btn ghost small" style={{ marginTop: 16 }} onClick={() => setShowSeed(true)}>
-          Show recovery seed instead
+          {isPhrase ? "Show recovery phrase instead" : "Show recovery seed instead"}
         </button>
       )}
 
@@ -2491,7 +2507,7 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
   const recover = async () => {
     setErr("");
     const s = seed.trim();
-    if (!/^[0-9a-fA-F]{64}$/.test(s)) return setErr("That doesn't look like a recovery seed (64 hex characters).");
+    if (!isSecretShaped(s)) return setErr("That doesn't look like a recovery phrase (12 words) or a recovery seed (64 hex characters).");
     setBusy(true);
     try {
       // Never re-register the WRONG wallet over this token: the seed must derive
@@ -2529,7 +2545,7 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
           </div>
         </>
       )}
-      <label>Recovery seed (64 hex characters)</label>
+      <label>Recovery phrase (or legacy 64-hex seed)</label>
       <textarea
         value={seed}
         onChange={(e) => setSeed(e.target.value)}
@@ -2590,14 +2606,17 @@ function Onboard({
         );
         return;
       }
-      const w = await generateWallet(networkOf(status));
+      // New wallets are born with a 12-word recovery phrase: it can actually be
+      // written down and typed back, which a 64-hex seed cannot. Existing wallets
+      // keep their hex seed and every path below accepts either.
+      const w = await generateMnemonicWallet(networkOf(status));
       // Born now: the daemon fast-syncs from the current tip instead of scanning
       // the whole chain for history this wallet cannot have.
       const birthday = status?.daa_score ?? 0;
-      await api.watch(await fvkHex(w.seedHex), birthday);
+      await api.watch(await fvkHex(w.mnemonic), birthday);
       rememberBirthday(birthday);
-      setDeviceSeed(w.seedHex);
-      onCreated(w.seedHex, w.address);
+      setDeviceSeed(w.mnemonic);
+      onCreated(w.mnemonic, w.address);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -2749,7 +2768,7 @@ function Onboard({
     return (
       <div className="card">
         <h2>Import wallet</h2>
-        <label>Recovery seed (64 hex characters)</label>
+        <label>Recovery phrase (or legacy 64-hex seed)</label>
         <textarea value={importHex} onChange={(e) => setImportHex(e.target.value)} placeholder="e.g. 0a1b2c…" />
         <label>When was this wallet created? (optional — makes sync much faster)</label>
         <input type="date" value={createdDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setCreatedDate(e.target.value)} />
@@ -4064,7 +4083,7 @@ function Send({
         seed = await resolveDeviceSeed(status?.address ?? undefined);
       } catch (e) {
         if ((e as Error).message === SEED_REQUIRED) {
-          if (!/^[0-9a-fA-F]{64}$/.test(unlock.trim())) {
+          if (!isSecretShaped(unlock.trim())) {
             setNeedSeed(true);
             setConfirming(false);
             setError("This device doesn't hold this wallet's key yet. Enter your recovery seed once to unlock sending here.");
@@ -4219,7 +4238,7 @@ function Send({
         {needSeed && (
           <>
             <label>Recovery seed (unlocks signing on this device — stored only here)</label>
-            <textarea value={unlock} onChange={(e) => setUnlock(e.target.value)} placeholder="64 hex characters" />
+            <textarea value={unlock} onChange={(e) => setUnlock(e.target.value)} placeholder="Your 12-word recovery phrase" />
           </>
         )}
         {busy ? (

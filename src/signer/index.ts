@@ -9,6 +9,8 @@
 
 import init, {
   new_wallet,
+  new_wallet_mnemonic,
+  is_valid_mnemonic,
   address_from_seed,
   sign as _sign,
   verify as _verify,
@@ -55,6 +57,42 @@ export async function generateWallet(network: Network): Promise<LocalWallet> {
   await ensureSigner();
   const w = new_wallet(network);
   return { seedHex: w.seed_hex, address: w.address };
+}
+
+/// A wallet backed by a 12-word recovery phrase. The phrase IS the secret — it
+/// restores the wallet on any device, forever.
+export interface MnemonicWallet {
+  mnemonic: string;
+  address: string;
+}
+
+/**
+ * Generate a new wallet as a 12-word recovery phrase, entirely on-device.
+ *
+ * This is the default for new wallets: a phrase can actually be written down and
+ * typed back, which a 64-character hex seed cannot. Twelve words carries 128 bits
+ * of entropy — the same effective strength as a longer phrase, because an Orchard
+ * key's security is capped by the Pallas curve at ~128 bits.
+ *
+ * Everything downstream (`addressFromSeed`, `fvkHex`, signing) accepts either this
+ * phrase or a legacy hex seed, so existing wallets keep working unchanged.
+ */
+export async function generateMnemonicWallet(network: Network): Promise<MnemonicWallet> {
+  await ensureSigner();
+  const w = new_wallet_mnemonic(network);
+  return { mnemonic: w.mnemonic, address: w.address };
+}
+
+/** True if `secret` is a well-formed recovery phrase (correct words + checksum). */
+export async function isValidMnemonic(secret: string): Promise<boolean> {
+  await ensureSigner();
+  return is_valid_mnemonic(secret);
+}
+
+/// A wallet secret is either a recovery phrase or a legacy 64-hex seed. Used to
+/// validate user input and to label what a device is holding.
+export function looksLikeHexSeed(secret: string): boolean {
+  return /^[0-9a-fA-F]{64}$/.test(secret.trim());
 }
 
 /** Derive the `firecash:` address for an existing seed, on-device. */

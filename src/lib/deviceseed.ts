@@ -2,6 +2,16 @@ import { api, type Status } from "../api";
 import { addressFromSeed, type Network } from "../signer";
 import { unlockedDeviceSeed, isLockEnabled, sealNewSeed, allUnlockedSeeds } from "../applock";
 
+/// Cheap shape test for a stored wallet secret: a legacy 64-hex seed, or a
+/// recovery phrase (BIP-39 words are lowercase letters separated by spaces).
+/// Deliberately permissive — callers confirm by deriving the address.
+export function isSecretShaped(v: string): boolean {
+  const s = v.trim();
+  if (/^[0-9a-fA-F]{64}$/.test(s)) return true;
+  const words = s.split(/\s+/);
+  return words.length >= 12 && words.length <= 24 && words.every((w) => /^[a-z]+$/i.test(w));
+}
+
 function deviceSeedKey(): string {
   return `device_seed_${localStorage.getItem("wallet_token") || "default"}`;
 }
@@ -56,7 +66,11 @@ async function findOrphanedSeed(expectedAddress: string): Promise<string> {
     const k = localStorage.key(i);
     if (k?.startsWith("device_seed_")) {
       const v = localStorage.getItem(k);
-      if (v && /^[0-9a-fA-F]{64}$/.test(v)) candidates.add(v.trim());
+      // A stored secret is either a legacy 64-hex seed or a recovery phrase.
+      // Accept both shapes here: this is only a cheap pre-filter, and the
+      // address-derivation check below is what actually decides. Rejecting
+      // phrases here would make an orphaned mnemonic wallet unrecoverable.
+      if (v && isSecretShaped(v)) candidates.add(v.trim());
     }
   }
   for (const v of Object.values(allUnlockedSeeds() ?? {})) candidates.add(v.trim());
