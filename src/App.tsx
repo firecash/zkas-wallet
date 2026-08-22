@@ -1431,8 +1431,8 @@ function ConnectionButton() {
             </div>
             <p className="muted small">
               {desktop
-                ? "Embedded walletd and your keys stay private inside this app. Choose the ZKAS node it reads for complete wallet history; a mining-only node is refused."
-                : "Switch how your wallet connects. Web is fastest; Tor hides your IP (needs Orbot); your own walletd is the most private. Your keys never leave this device either way."}
+                ? "Choose the node your wallet reads. Keys stay in this app."
+                : "Your keys stay on this device. Choose how it connects."}
             </p>
 
             <div className="connection-list">
@@ -4792,8 +4792,8 @@ function History({
           {chain === null
             ? ""
             : recovering
-              ? "Recovering your history from the chain — this takes a minute or two. Rows appear here as the scan catches up; you can leave this tab."
-              : "Nothing yet. Mints, payments you receive, and sends from this wallet all show up here — recovered from the chain itself, so this list follows your seed, not this device."}
+              ? "Recovering your history from the chain — a minute or two. You can leave this tab."
+              : "Nothing yet. Payments you receive and send show up here."}
         </p>
         {chain !== null && (
           <button className="btn ghost small" onClick={() => setAskDisable(true)} disabled={busy}>
@@ -5025,7 +5025,7 @@ function History({
       {askDisable && (
         <ConfirmDialog
           title="Turn history off?"
-          body="The stored transaction record is erased from this wallet immediately. Your balance and funds are not affected, and payments stay shielded on-chain either way."
+          body="Erases the stored transaction list only. Your balance and funds are unaffected."
           confirmLabel="Turn off & erase"
           danger
           onConfirm={() => setHistory(false)}
@@ -5249,19 +5249,15 @@ function AutoConsolidationCard() {
     <div className="card">
       <h2>Automatic consolidation</h2>
       <p className="muted small" style={{ marginTop: 0 }}>
-        A private payment can spend at most {MAX_NOTES_PER_TX} notes at once. While this is on, the app
-        occasionally merges your oldest notes in the background — signed on this device, never by the
-        server — so your whole balance always fits a single payment. Each merge costs a small network
-        fee. Turn it off to avoid those background fees and merge yourself with the <b>Consolidate</b>
-        {" "}button on the wallet screen whenever you choose.
+        Occasionally merges your oldest notes in the background so a payment always fits. Each merge
+        costs a small fee — turn it off to merge yourself with <b>Consolidate</b> instead.
       </p>
       <button className={"btn small" + (on ? " ghost" : "")} onClick={toggle}>
         {on ? "Turn automatic consolidation off" : "Turn automatic consolidation on"}
       </button>
       {!on && (
         <p className="muted small" style={{ marginTop: 8 }}>
-          Off. If your balance ends up spread across many small notes, a large payment may need to be
-          sent in parts until you consolidate. You can merge anytime with <b>Consolidate</b>.
+          Off. A large payment may need splitting until you merge with <b>Consolidate</b>.
         </p>
       )}
     </div>
@@ -5301,8 +5297,8 @@ function NetworkPrivacyCard() {
       <div className="card">
         <h2>Network privacy</h2>
         <p className="muted small" style={{ marginTop: 0 }}>
-          Your keys stay in this app. For the strongest privacy, run your own node (Node page) so nobody else sees
-          what you ask. Switch the node from <b>Wallet source</b> at the top.
+          Keys stay in this app. For the most privacy, run your own node (Node page). Switch it from
+          <b> Wallet source</b> above.
         </p>
       </div>
     );
@@ -5389,9 +5385,8 @@ function BackgroundSyncCard() {
     <div className="card">
       <h2>Background sync</h2>
       <p className="muted small" style={{ marginTop: 0 }}>
-        While on, the phone wakes briefly about every 15 minutes — even with the app closed — to keep your wallet
-        caught up and to show a notification when a payment arrives. Off, the wallet catches up when you open the
-        app. Light on battery; the seed stays on this device either way.
+        While on, the phone wakes about every 15 min (even closed) to stay synced and notify you of payments.
+        Off, it catches up when you open the app. The seed stays on this device either way.
       </p>
       <button className={"btn small" + (on ? " ghost" : "")} disabled={busy} onClick={toggle}>
         {busy ? "…" : on ? "Turn background sync off" : "Turn background sync on"}
@@ -6221,7 +6216,7 @@ function DesktopEngineDown({ requestError }: { requestError?: string | null }) {
       <div className="msg warn">
         {engineAlive
           ? "The embedded wallet engine is running, but the display request failed. Retry reconnects the display to the engine's current internal port."
-          : "ZKas Wallet runs its wallet engine inside this app, and it isn't answering. Your funds are safe on-chain — this is a local problem, not a chain one."}
+          : "The wallet engine in this app isn't answering. Your funds are safe on-chain."}
       </div>
       <p className="muted small">
         Retry first. If this began after choosing another node, switch the connection back to the public history node.
@@ -6285,7 +6280,7 @@ function Setup({ error: requestError }: { error?: string | null }) {
       <div className="msg warn">
         {isNative()
           ? "The wallet service isn't responding. Check your connection and try again shortly — your funds are safe on-chain."
-          : "The hosted wallet service isn't responding right now. It normally runs on our side, connected to ZKas's public node — you don't need to run anything. Try again shortly."}
+          : "The hosted wallet service isn't responding. Nothing for you to run — try again shortly."}
       </div>
       <p className="muted small">
         Your spending key is on this device either way — it is never sent to the service. What running your own{" "}
