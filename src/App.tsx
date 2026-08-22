@@ -29,7 +29,7 @@ import { byNewest, receiptIsOnChain } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
 import { isSecretShaped } from "./lib/deviceseed";
-import { masterMnemonic, setMasterMnemonic, setAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase } from "./accounts";
+import { masterMnemonic, setMasterMnemonic, setAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -1596,20 +1596,25 @@ function WalletSwitcher({ onClose }: { onClose: () => void }) {
           </div>
         ))}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-          <button
-            className="btn"
-            onClick={() => {
-              void addAccountWallet();
-            }}
-          >
-            Add another wallet
+          {/* Two genuinely different things, so the user picks rather than the app
+              guessing: an ACCOUNT is covered by the backup they already made, a
+              separate WALLET has its own phrase and needs its own backup. */}
+          {hasMaster() && (
+            <button className="btn" onClick={() => void addAccountWallet()}>
+              Add account
+            </button>
+          )}
+          <button className={hasMaster() ? "btn ghost" : "btn"} onClick={() => void addSeparateWallet()}>
+            Add separate wallet
           </button>
           <button className="btn ghost" onClick={onClose}>
             Close
           </button>
         </div>
         <p className="muted small" style={{ marginTop: 10 }}>
-          One phrase backs up every account.
+          {hasMaster()
+            ? "Accounts share your recovery phrase. A separate wallet gets its own."
+            : "A separate wallet gets its own recovery phrase."}
         </p>
       </div>
     </div>,
@@ -2423,6 +2428,15 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
 /// unlinkable on-chain, but it needs NO new backup, because the same twelve words
 /// already restore it. A device with no master phrase (only legacy wallets) keeps
 /// the old behaviour: a fresh, independent wallet.
+/// "Add separate wallet" — a brand-new independent wallet with its OWN recovery
+/// phrase. Chosen when the user wants a wallet that is NOT covered by the backup
+/// they already made (a different person, a different purpose, a different risk).
+/// The new token starts empty, so onboarding runs and creates + backs up its phrase.
+function addSeparateWallet(): void {
+  addWallet();
+  location.reload();
+}
+
 async function addAccountWallet(): Promise<void> {
   const phrase = masterMnemonic();
   if (!phrase) {
@@ -5952,14 +5966,15 @@ function SwitchWallet() {
         <button
           className="btn"
           onClick={() => {
-            // The next ACCOUNT of the device's recovery phrase — independent and
-            // unlinkable on-chain, but covered by the backup already made. With no
-            // phrase on the device this falls back to a brand-new independent
-            // wallet, and the app shows onboarding for it.
+            // An ACCOUNT of the device's phrase: independent and unlinkable
+            // on-chain, but covered by the backup already made.
             void addAccountWallet();
           }}
         >
-          Add another wallet
+          Add account
+        </button>
+        <button className="btn ghost" onClick={() => void addSeparateWallet()}>
+          Add separate wallet
         </button>
         {wallets.length > 0 && (
           <button
