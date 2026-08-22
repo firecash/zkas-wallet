@@ -202,7 +202,7 @@ describe("onboarding", () => {
     current = base({ has_wallet: false, address: null });
     await mountApp();
     await user.click(await screen.findByText(/Import from seed/));
-    const box = await screen.findByPlaceholderText(/0a1b2c/);
+    const box = await screen.findByPlaceholderText(/12-word phrase, or a 64-hex seed/i);
     const seed = "ab".repeat(32);
     await user.click(box);
     await user.paste(seed);

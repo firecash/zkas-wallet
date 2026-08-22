@@ -29,7 +29,7 @@ import { byNewest, receiptIsOnChain } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
 import { isSecretShaped } from "./lib/deviceseed";
-import { masterMnemonic, setMasterMnemonic, setAccountOf, nextFreeAccount, accountOf } from "./accounts";
+import { masterMnemonic, setMasterMnemonic, setAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -853,6 +853,16 @@ export default function App() {
     getSeed: () => resolveDeviceSeed(status?.address ?? undefined),
     onMerged: () => void refresh(),
   });
+  // Turn accounts on for a device that already had a phrase wallet. Without this
+  // the master is only ever written when a wallet is CREATED, so every existing
+  // user kept the old "each wallet is its own island" behaviour and never saw the
+  // feature at all. No-op once a master exists, and never touches a legacy hex
+  // wallet (a raw key has no phrase to adopt).
+  useEffect(() => {
+    const token = activeToken();
+    const secret = getDeviceSeed();
+    if (token && secret) void adoptExistingPhrase(token, secret).catch(() => undefined);
+  }, [status?.address]);
   useEffect(() => {
     const open = () => {
       const request = takePaymentLink();
@@ -1959,7 +1969,7 @@ function ConsolidateDialog({
             )}
             {needSeed && (
               <>
-                <label>Recovery seed · stays on this device</label>
+                <label>Recovery phrase · stays on this device</label>
                 <textarea value={seedInput} onChange={(event) => setSeedInput(event.target.value)} placeholder="Your 12-word recovery phrase" />
               </>
             )}
@@ -2649,6 +2659,10 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
       }
       await api.watch(await fvkHex(s), walletBirthday());
       setDeviceSeed(s);
+      // Restoring from a phrase makes it this device's master, so "add wallet"
+      // creates accounts under it instead of orphan wallets with their own words.
+      const restoredToken = activeToken();
+      if (restoredToken) await adoptExistingPhrase(restoredToken, s).catch(() => undefined);
       onRecovered();
     } catch (e) {
       setErr((e as Error).message);
@@ -2674,7 +2688,7 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
       <textarea
         value={seed}
         onChange={(e) => setSeed(e.target.value)}
-        placeholder="The seed saved when this wallet was created"
+        placeholder="Your recovery phrase, or the seed you saved"
         autoCapitalize="off"
         autoCorrect="off"
         spellCheck={false}
@@ -2903,7 +2917,7 @@ function Onboard({
       <div className="card">
         <h2>Import wallet</h2>
         <label>Recovery phrase (or legacy 64-hex seed)</label>
-        <textarea value={importHex} onChange={(e) => setImportHex(e.target.value)} placeholder="e.g. 0a1b2c…" />
+        <textarea value={importHex} onChange={(e) => setImportHex(e.target.value)} placeholder="12-word phrase, or a 64-hex seed" />
         <label>When was this wallet created? (optional — makes sync much faster)</label>
         <input type="date" value={createdDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setCreatedDate(e.target.value)} />
         <label>Advanced — exact block height (overrides the date)</label>
@@ -2921,7 +2935,7 @@ function Onboard({
           <button className="btn ghost" onClick={() => setMode("choose")}>
             Back
           </button>
-          <button className="btn" disabled={busy || importHex.trim().length !== 64} onClick={doImport}>
+          <button className="btn" disabled={busy || !isSecretShaped(importHex)} onClick={doImport}>
             {busy ? <span className="spin" /> : "Import"}
           </button>
         </div>
@@ -4379,7 +4393,7 @@ function Send({
         )}
         {needSeed && (
           <>
-            <label>Recovery seed (unlocks signing on this device — stored only here)</label>
+            <label>Recovery phrase · unlocks signing here</label>
             <textarea value={unlock} onChange={(e) => setUnlock(e.target.value)} placeholder="Your 12-word recovery phrase" />
           </>
         )}

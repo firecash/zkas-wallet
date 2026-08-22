@@ -20,7 +20,7 @@
 //
 // Nothing migrates, nothing is rewritten, and an old wallet never notices.
 
-import { accountSeedHex, accountAddress } from "./signer";
+import { accountSeedHex, accountAddress, isValidMnemonic } from "./signer";
 import type { Network } from "./signer";
 import { listWallets, type WalletRef } from "./wallets";
 
@@ -107,6 +107,34 @@ export async function addressOfAccount(account: number, network: Network): Promi
   const phrase = masterMnemonic();
   if (!phrase) return "";
   return accountAddress(phrase, network, account);
+}
+
+/**
+ * Adopt the wallet this device already holds as account 0 of the master phrase.
+ *
+ * Without this, accounts never switch on for anyone who already had a wallet: the
+ * master is only written when a wallet is CREATED, so an existing user's "add
+ * wallet" kept falling back to the old independent-wallet behaviour and the whole
+ * feature was invisible to them.
+ *
+ * Two cases:
+ *  - the stored secret IS a recovery phrase (any wallet made since phrases shipped)
+ *    -> promote it to master and mark this wallet account 0. Nothing else changes:
+ *       the derived account-0 key is the same key the wallet already uses.
+ *  - the stored secret is a legacy 64-hex seed -> leave it completely alone. A raw
+ *    key cannot be turned into a phrase (the words encode the entropy, and that
+ *    entropy is gone), so pretending otherwise would be a lie. That wallet keeps
+ *    working exactly as before; any wallet added later starts a phrase of its own.
+ *
+ * Safe to call on every boot: it does nothing once a master exists.
+ */
+export async function adoptExistingPhrase(token: string, secret: string): Promise<void> {
+  if (hasMaster() || !token || !secret.trim()) return;
+  const phrase = secret.trim();
+  // Only a real, checksum-valid phrase may become the master.
+  if (!(await isValidMnemonic(phrase))) return;
+  setMasterMnemonic(phrase);
+  if (accountOf(token) === null) setAccountOf(token, 0);
 }
 
 /// A wallet plus how its key is obtained — used by the switcher so it can label a
