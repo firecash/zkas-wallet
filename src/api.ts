@@ -509,8 +509,6 @@ export const api = {
   // Wallet registration/load can take minutes on the hosted daemon (a cold wallet
   // loads its scan state from disk, then catches up to the tip) — hence 2-3 min
   // ceilings here vs the 10s default for lightweight calls.
-  create: () =>
-    req<{ address: string; seed_hex: string; network: string; warning: string }>("POST", "/api/wallet/create", {}, 120_000),
   // Register a WATCH-ONLY wallet: the daemon gets the 96-byte viewing key only —
   // enough to sync the wallet and prove spends, powerless to authorize them. The
   // seed stays on this device. This is how the wallet is created/restored now;
@@ -518,17 +516,6 @@ export const api = {
   // self-hosted daemon you run yourself.
   watch: (fvk_hex: string, birthday?: number) =>
     req<{ address: string }>("POST", "/api/wallet/watch", { fvk_hex, birthday: birthday ?? 0 }, 180_000),
-  reveal: () => req<{ address: string; seed_hex: string; network: string }>("GET", "/api/wallet/reveal", undefined, 30_000),
-  import: (seed_hex: string, birthday?: number) =>
-    req<{ address: string; seed_hex: string; network: string; warning: string }>(
-      "POST",
-      "/api/wallet/import",
-      {
-        seed_hex,
-        birthday: birthday && birthday > 0 ? Math.floor(birthday) : 0,
-      },
-      120_000,
-    ),
   // `memo` rides inside the recipient's encrypted note — readable by them, and by
   // this wallet only if recoverable history is on. The daemon has always accepted
   // it; the UI simply never offered it. Custodial send proves in-daemon — allow

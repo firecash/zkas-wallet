@@ -1,4 +1,4 @@
-import { api, type Status } from "../api";
+import { type Status } from "../api";
 import { addressFromSeed, type Network } from "../signer";
 import { unlockedDeviceSeed, isLockEnabled, sealNewSeed, allUnlockedSeeds } from "../applock";
 
@@ -98,11 +98,9 @@ export async function resolveDeviceSeed(expectedAddress?: string): Promise<strin
       return orphan;
     }
   }
-  try {
-    const r = await api.reveal();
-    setDeviceSeed(r.seed_hex);
-    return r.seed_hex;
-  } catch {
-    throw new Error(SEED_REQUIRED);
-  }
+  // No custodial fallback. The wallet service is viewing-key-only and holds no
+  // seed to hand back, so asking it for one could only ever help a wallet from
+  // the old custodial model — at the cost of a path that pulls a spending key
+  // over the network. The device asks the user to restore instead.
+  throw new Error(SEED_REQUIRED);
 }

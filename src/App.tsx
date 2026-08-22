@@ -1214,9 +1214,9 @@ export const SEED_REQUIRED = "SEED_REQUIRED";
 
 /// The seed to sign with. From this device's storage first; then a stale-token
 /// orphan scan (the key may be present under another token — that is the
-/// difference between "lost" and "misfiled"); then, for wallets created under
-/// the old hosted model, the daemon's custodial copy; a watch-only wallet on a
-/// fresh device has none of these — the user must restore from their backup.
+/// difference between "lost" and "misfiled"). There is no third source: the
+/// wallet service is viewing-key-only, so a device that holds neither must be
+/// restored from the user's recovery phrase or backup.
 export async function resolveDeviceSeed(expectedAddress?: string): Promise<string> {
   const stored = getDeviceSeed();
   if (stored) return stored;
@@ -1227,13 +1227,11 @@ export async function resolveDeviceSeed(expectedAddress?: string): Promise<strin
       return orphan;
     }
   }
-  try {
-    const r = await api.reveal();
-    setDeviceSeed(r.seed_hex);
-    return r.seed_hex;
-  } catch {
-    throw new Error(SEED_REQUIRED);
-  }
+  // No custodial fallback. The wallet service is viewing-key-only and holds no
+  // seed to hand back, so asking it for one could only ever help a wallet from
+  // the old custodial model — at the cost of a path that pulls a spending key
+  // over the network. The device asks the user to restore instead.
+  throw new Error(SEED_REQUIRED);
 }
 
 function HostedNotice() {
@@ -3990,7 +3988,7 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
     } catch (e) {
       setError(
         (e as Error).message === SEED_REQUIRED
-          ? "This device doesn't hold this wallet's seed — it was never sent to the server. Restore it from the backup you saved when you created the wallet."
+          ? "This device doesn't hold this wallet's key — it is never sent to the server. Restore it with your recovery phrase or backup."
           : (e as Error).message,
       );
     } finally {
@@ -4389,7 +4387,7 @@ function Send({
           if (!isSecretShaped(unlock.trim())) {
             setNeedSeed(true);
             setConfirming(false);
-            setError("This device doesn't hold this wallet's key yet. Enter your recovery seed once to unlock sending here.");
+            setError("This device doesn't hold this wallet's key yet. Enter your recovery phrase once to unlock sending here.");
             return;
           }
           seed = unlock.trim();
