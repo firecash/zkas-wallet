@@ -2727,8 +2727,13 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
           return;
         }
       }
+      // Key first and verified, then register — a wallet registered without its
+      // key can receive coins it can never spend.
+      if (!(await persistDeviceSeed(s))) {
+        setErr("This device could not store the wallet key — free up space and try again.");
+        return;
+      }
       await api.watch(await fvkHex(s), walletBirthday());
-      setDeviceSeed(s);
       const restoredToken = activeToken();
       if (restoredToken) {
         // This token now holds a DIFFERENT secret, so any "Account N" mapping it
@@ -2922,9 +2927,20 @@ function Onboard({
     try {
       if (!restoreJson.trim()) throw new Error("Choose your backup .json file, or paste the backup text.");
       const { seedHex, birthday } = await readBackup(restoreJson, restorePass);
+      // Key first and verified: never register a wallet this device cannot sign for.
+      if (!(await persistDeviceSeed(seedHex))) {
+        throw new Error("This device could not store the wallet key — free up space and try again.");
+      }
       await api.watch(await fvkHex(seedHex), birthday);
       rememberBirthday(birthday);
-      setDeviceSeed(seedHex);
+      const tk = activeToken();
+      if (tk) {
+        clearAccountOf(tk);
+        // A backup holding a PHRASE restores every account it covers, so make it
+        // this device's master — otherwise "add account" could not bring the
+        // siblings back and the backup would silently be worth less than it is.
+        await adoptExistingPhrase(tk, seedHex).catch(() => undefined);
+      }
       onImported();
     } catch (e) {
       setError((e as Error).message);
@@ -6167,7 +6183,16 @@ function DeviceSeedBackup() {
   // The last backup document, kept so the native (clipboard) path can offer
   // "copy again" without re-encrypting.
   const [lastDoc, setLastDoc] = useState("");
-  const seed = getDeviceSeed();
+  // What the file must contain to be a COMPLETE backup.
+  //
+  // For a phrase-derived account the per-token secret is the DERIVED key, not the
+  // phrase. Backing that up would restore this one account and silently lose the
+  // recovery phrase — and with it every other account the phrase covers. So when
+  // this wallet is an account of the device's phrase, back up the PHRASE: it
+  // restores this wallet and all its siblings. A legacy hex wallet has no phrase
+  // (that entropy is gone), so its raw seed is the strongest thing that exists.
+  const derivedAccount = accountOf(activeToken() ?? "");
+  const seed = derivedAccount !== null && masterMnemonic() ? masterMnemonic() : getDeviceSeed();
 
   if (!seed) {
     return (
@@ -6316,11 +6341,19 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
     try {
       const json = await readBackupFile(path.trim());
       const { seedHex, birthday } = await readBackup(json, pass);
-      // Register the viewing key with the daemon and keep the seed on-device —
-      // the same shape as a freshly created wallet, so spending works after this.
+      // Keep the seed on-device FIRST (and prove it landed), then register the
+      // viewing key — the same shape as a freshly created wallet, so spending
+      // works after this and no wallet is ever registered without its key.
+      if (!(await persistDeviceSeed(seedHex))) {
+        throw new Error("This device could not store the wallet key — free up space and try again.");
+      }
       await api.watch(await fvkHex(seedHex), birthday);
       rememberBirthday(birthday);
-      setDeviceSeed(seedHex);
+      const tk = activeToken();
+      if (tk) {
+        clearAccountOf(tk);
+        await adoptExistingPhrase(tk, seedHex).catch(() => undefined);
+      }
       setOk(true);
     } catch (e) {
       setErr((e as Error).message);
