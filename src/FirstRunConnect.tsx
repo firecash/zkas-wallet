@@ -15,7 +15,8 @@ import { markNodeChoiceMade } from "./FirstRunNode";
 import { findReachableDaemon, setBase, setWalletdBearer, normalizeDaemonInput, isNative } from "./api";
 import { walletdProfiles } from "./connection-profiles";
 import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
-import { ONION_WALLETD_URL, ORBOT_PLAY_URL } from "./lib/relay";
+import { ONION_WALLETD_URL } from "./lib/relay";
+import { OrbotHelp } from "./OrbotHelp";
 
 export function FirstRunConnect({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState<null | "public" | "tor" | "custom">(null);
@@ -45,10 +46,9 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
       const url = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000);
       setBase(url); setWalletdBearer(""); finish();
     } catch {
-      // The onion is only reachable when a Tor transport is up. Don't dump a raw
-      // fetch error at the user — tell them the one thing to do.
+      // The onion is only reachable when a Tor transport is up. Show the Orbot
+      // steps instead of a raw fetch error.
       setNeedTor(true);
-      setErr("Couldn't reach the Tor service. Turn on Orbot (VPN mode) and tap Connect over Tor again.");
       setBusy(null);
     }
   };
@@ -118,11 +118,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
         </div>
 
         {err && <div className="msg err">{err}</div>}
-        {needTor && (
-          <a className="btn small ghost" href={ORBOT_PLAY_URL} target="_blank" rel="noreferrer" style={{ marginTop: 8 }}>
-            Get Orbot
-          </a>
-        )}
+        {needTor && <OrbotHelp />}
 
         <span className="eyebrow" style={{ marginTop: 14 }}>Accent color</span>
         <div className="swatches">

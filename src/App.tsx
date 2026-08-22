@@ -74,7 +74,8 @@ import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReco
 import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
-import { ONION_WALLETD_URL, ORBOT_PLAY_URL } from "./lib/relay";
+import { ONION_WALLETD_URL } from "./lib/relay";
+import { OrbotHelp } from "./OrbotHelp";
 import { desktopServices } from "./desktop-services";
 import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, Server, Settings, ShieldAlert, Trash2, WalletCards } from "lucide-react";
@@ -1320,6 +1321,25 @@ function ConnectionButton() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [scanning, setScanning] = useState(false);
+  const [torFailed, setTorFailed] = useState(false);
+
+  // Connecting over Tor fails almost only because no Tor transport is up — so on
+  // failure show the Orbot steps, not a bare connection error.
+  const connectTor = async () => {
+    setTorFailed(false);
+    setError("");
+    setBusy("tor");
+    try {
+      const url = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000);
+      setBase(url);
+      setWalletdBearer("");
+      setOpen(false);
+      location.reload();
+    } catch {
+      setTorFailed(true);
+      setBusy(null);
+    }
+  };
 
   const refresh = useCallback(async () => {
     if (desktop) {
@@ -1440,8 +1460,8 @@ function ConnectionButton() {
                 <span><b>{desktop ? "Public wallet-history node" : "Web · public service"}</b><small>{desktop ? "Works immediately" : "Fastest. The service sees your IP."}</small></span><span>{busy === (desktop ? "remote" : "hosted") ? "Checking…" : (desktop ? cfg?.mode === "remote" : hosted) ? "Connected" : "Use"}</span>
               </button>
               {!desktop && (
-                <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void switchWalletd(ONION_WALLETD_URL, "tor")}>
-                  <span><b>Tor · over the onion</b><small>Hides your IP from the service. Needs Orbot (VPN) on Android.</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
+                <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectTor()}>
+                  <span><b>Tor · over the onion</b><small>Hides your IP. Requires the Orbot app (Tor VPN).</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
                 </button>
               )}
               {desktop && (
@@ -1515,6 +1535,7 @@ function ConnectionButton() {
               />
             )}
             {desktop && !cfg?.node_binary && <p className="muted small">Managed local node is not installed yet. The Mine and Node screens can install the verified release automatically.</p>}
+            {torFailed && <OrbotHelp />}
             {error && <div className="msg err">{error}</div>}
             <button className="btn ghost small" onClick={() => setOpen(false)}>Close</button>
           </div>
@@ -5310,7 +5331,7 @@ function NetworkPrivacyCard() {
     void fn()
       .then(() => location.reload())
       .catch((e) => {
-        if (which === "tor") { setNeedTor(true); setErr("Couldn't reach Tor. Turn on Orbot (VPN) and try again."); }
+        if (which === "tor") setNeedTor(true);
         else setErr((e as Error).message || String(e));
         setBusy(null);
       });
@@ -5351,7 +5372,7 @@ function NetworkPrivacyCard() {
         )}
       </div>
       {err && <div className="msg err">{err}</div>}
-      {needTor && <a className="btn small ghost" href={ORBOT_PLAY_URL} target="_blank" rel="noreferrer" style={{ marginTop: 8 }}>Get Orbot</a>}
+      {needTor && <OrbotHelp />}
     </div>
   );
 }
