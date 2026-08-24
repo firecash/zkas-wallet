@@ -319,6 +319,14 @@ export async function consolidateNonCustodial(
   onStage?: (stage: SendStage) => void,
   maxRounds = MAX_CONSOLIDATION_ROUNDS,
   onRound?: (round: number, mergedNotes: number) => void,
+  /// How many spendable notes to LEAVE the wallet holding.
+  ///
+  /// Sweeping everything into a single note is the tidiest result and the worst
+  /// one to live with: the next payment spends that note and its change is
+  /// unmatured for ~10 minutes, so the wallet cannot pay again until it matures.
+  /// Ending with a few notes lets the user pay several times back to back. 1 keeps
+  /// the old behaviour, which is what background maintenance wants.
+  targetNotes = 1,
 ): Promise<ConsolidationResult> {
   if (spendableSompi <= BigInt(feeReserveSompi(MAX_NOTES_PER_TX)))
     throw new Error("There is not enough spendable balance to consolidate safely.");
@@ -339,8 +347,18 @@ export async function consolidateNonCustodial(
   for (let round = 0; round < Math.max(1, maxRounds); round++) {
     // Reserve the relay minimum for a FULL transaction. The daemon picks the final note
     // count, and reserving for fewer than it picks is exactly the bug this replaced.
-    const requested = available - BigInt(feeReserveSompi(MAX_NOTES_PER_TX));
-    if (requested <= 0n) break;
+    const sweepable = available - BigInt(feeReserveSompi(MAX_NOTES_PER_TX));
+    if (sweepable <= 0n) break;
+    // Ask for a SHARE of what is left rather than all of it, so the wallet ends up
+    // holding `targetNotes` notes instead of one. Each round still merges as many
+    // input notes as a transaction can carry — only the size of the note it
+    // produces changes. The last wanted note takes the remainder, so nothing is
+    // stranded by integer division.
+    const stillWanted = Math.max(1, targetNotes - txids.length);
+    const share = stillWanted > 1 ? sweepable / BigInt(stillWanted) : sweepable;
+    // Never mint dust: a note worth less than a few fees is not usable change.
+    const floor = BigInt(feeReserveSompi(MAX_NOTES_PER_TX)) * 2n;
+    const requested = share < floor ? sweepable : share;
     try {
     onStage?.("proving");
     const prep = await api.prepare(fvk, ownAddress, requested, undefined, undefined, true);
@@ -353,7 +371,9 @@ export async function consolidateNonCustodial(
       if (txids.length) break;
       throw new Error("The wallet service returned an unsafe consolidation.");
     }
-    if (prep.spend_auth.length < MIN_NOTES_PER_ROUND) {
+    // Splitting deliberately produces rounds that spend few notes (a 5-note wallet
+    // divided three ways), which is not the "nothing to merge" case this guards.
+    if (targetNotes <= 1 && prep.spend_auth.length < MIN_NOTES_PER_ROUND) {
       // Not a failure once work is already done — it is the natural end of the
       // loop, and reporting it as an error would hide rounds that succeeded.
       if (txids.length) break;
@@ -380,7 +400,10 @@ export async function consolidateNonCustodial(
 
     // Everything the wallet could offer went into this round.
     if (remaining <= BigInt(feeReserveSompi(MAX_NOTES_PER_TX))) break;
-    available = remaining;
+    // When splitting, `remaining` is only the part of THIS round's share that did
+    // not fit; the rest of the balance is still there for the next note.
+    available = targetNotes > 1 ? available - roundAmount - roundFee : remaining;
+    if (available <= BigInt(feeReserveSompi(MAX_NOTES_PER_TX))) break;
     if (round === Math.max(1, maxRounds) - 1) more = true;
     } catch (cause) {
       // Rounds already broadcast are real transactions. Throwing here would

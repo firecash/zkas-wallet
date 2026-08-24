@@ -1832,6 +1832,10 @@ function ConsolidateDialog({
   const [error, setError] = useState("");
   const [needSeed, setNeedSeed] = useState(false);
   const [seedInput, setSeedInput] = useState("");
+  // How many notes to LEAVE. One tidy note is the worst result to live with: the
+  // next payment's change is unmatured for ~10 minutes, so the wallet cannot pay
+  // again until it matures. Three lets the user pay a few times back to back.
+  const [targetNotes, setTargetNotes] = useState(3);
   const [result, setResult] = useState<{ inputs: number; txid: string; fee: number; rounds: number; more: boolean } | null>(null);
   // Live count of merged notes. A fragmented wallet needs several transactions,
   // which takes minutes — without this the dialog looks hung.
@@ -1909,6 +1913,7 @@ function ConsolidateDialog({
           setMerged({ round, notes });
           setPassEndedAt((done) => [...done, Date.now()]);
         },
+        targetNotes,
       );
       // Each pass is one proof of a known shape (~38 notes), so a single completed
       // run predicts the next one well. Divide by rounds: what we want to learn is
@@ -1968,6 +1973,25 @@ function ConsolidateDialog({
               Merge small notes so one payment can spend your whole balance. Each pass costs a fee.
           </p>
             <div className="confirm-row"><span className="muted">Current notes</span><b>{status.note_count}</b></div>
+            <label style={{ marginTop: 12 }}>Notes to keep</label>
+            <div className="filterbar" style={{ marginBottom: 6 }}>
+              {[1, 2, 3, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={"chip" + (targetNotes === n ? " on" : "")}
+                  disabled={busy}
+                  onClick={() => setTargetNotes(n)}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <p className="muted small" style={{ marginTop: 0 }}>
+              {targetNotes === 1
+                ? "One note. After your next payment you wait ~10 min before paying again."
+                : `${targetNotes} notes, so you can pay ${targetNotes} times without waiting for change to mature.`}
+            </p>
             {typeof status.note_count === "number" && status.note_count > MAX_NOTES_PER_TX && (
               <div className="confirm-row">
                 <span className="muted">Passes needed</span>
