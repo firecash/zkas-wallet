@@ -449,13 +449,19 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
   // different port and add a bearer gate, and Rust is the single authoritative
   // owner of both values. This removes stale-port/CORS/auth races while keeping
   // the exact same HTTP API boundary. Web/mobile still talk to walletd directly.
-  // ...but ONLY for the embedded engine. `wallet_api_request` hardcodes
-  // `http://127.0.0.1:{port}` in Rust, so routing a deliberately chosen REMOTE
-  // wallet service through it sent every call to the local daemon instead: the
-  // desktop "connect to a wallet service" choice was inert, while the UI showed
-  // it as connected. A remote choice therefore takes the ordinary fetch path,
-  // which the desktop CSP allows (connect-src includes https:).
-  if ("__TAURI_INTERNALS__" in globalThis && !desktopRemoteBase()) {
+  // ...but only where Rust is the right transport.
+  //
+  // `wallet_api_request` used to hardcode `http://127.0.0.1:{port}`, so routing a
+  // deliberately chosen REMOTE service through it sent every call to the local
+  // daemon while the UI showed the remote as connected. Now:
+  //   - no remote choice  -> Rust, to the embedded engine (as before);
+  //   - a .onion service  -> Rust, which proxies it through Tor (the WebView has
+  //     no SOCKS, so this cannot be done from here);
+  //   - anything else     -> ordinary fetch, allowed by the desktop CSP.
+  const desktopShell = "__TAURI_INTERNALS__" in globalThis;
+  const remoteChoice = desktopShell ? desktopRemoteBase() : "";
+  const viaTor = !!remoteChoice && isOnionAddress(remoteChoice);
+  if (desktopShell && (!remoteChoice || viaTor)) {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const response = await invoke<{ status: number; body: string }>("wallet_api_request", {
@@ -464,12 +470,13 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
         body: body ?? null,
         walletToken: getToken(),
         timeoutMs,
+        base: viaTor ? remoteChoice : null,
       });
       status = response.status;
       text = response.body;
     } catch (e) {
       const detail = typeof e === "string" ? e : (e as Error)?.message || String(e);
-      throw new Error("Cannot reach the embedded wallet engine. (" + detail + ")");
+      throw new Error((viaTor ? "Cannot reach the Tor wallet service. (" : "Cannot reach the embedded wallet engine. (") + detail + ")");
     }
   } else {
     let res: Response;

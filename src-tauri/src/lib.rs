@@ -83,6 +83,48 @@ fn engine(m: &Mutex<Engine>) -> MutexGuard<'_, Engine> {
 const EXPLORER_API_PORT: u16 = 8500;
 
 const DEFAULT_REMOTE_NODE: &str = "185.147.157.125:16110";
+
+/// Where a local Tor daemon listens for SOCKS connections. `socks5h` so the
+/// PROXY resolves the hostname — a .onion has no DNS entry, so resolving it here
+/// would fail, and resolving it locally would also leak the lookup.
+const TOR_SOCKS_PROXY: &str = "socks5h://127.0.0.1:9050";
+
+/// An HTTP client that reaches .onion services through the local Tor daemon.
+///
+/// The WebView cannot do this itself — it has no SOCKS support — which is why a
+/// desktop user who chose Tor previously had every call answered by the LOCAL
+/// engine while the UI showed Tor as connected. Built once and reused.
+fn tor_client() -> Result<reqwest::Client, String> {
+    static TOR: std::sync::OnceLock<Result<reqwest::Client, String>> = std::sync::OnceLock::new();
+    TOR.get_or_init(|| {
+        let proxy = reqwest::Proxy::all(TOR_SOCKS_PROXY)
+            .map_err(|e| format!("cannot use the Tor proxy at {TOR_SOCKS_PROXY}: {e}"))?;
+        reqwest::Client::builder()
+            .proxy(proxy)
+            .build()
+            .map_err(|e| format!("cannot build the Tor client: {e}"))
+    })
+    .clone()
+}
+
+/// Build the URL for a remote wallet service, refusing anything that is not a
+/// plain-HTTP .onion.
+///
+/// Deliberately narrow: this command is reachable from page script, so allowing
+/// an arbitrary base would turn it into a request forwarder pointed at anything
+/// the shell can see, loopback included. Tor's own encryption and authentication
+/// are what make plain http correct here.
+fn onion_target(base: &str, path: &str) -> Result<String, String> {
+    let base = base.trim().trim_end_matches('/');
+    let rest = base
+        .strip_prefix("http://")
+        .ok_or_else(|| "a Tor wallet service must be a plain http:// onion address".to_string())?;
+    let host = rest.split('/').next().unwrap_or("").split(':').next().unwrap_or("");
+    if !host.ends_with(".onion") {
+        return Err("that address is not a .onion service".into());
+    }
+    Ok(format!("{base}{path}"))
+}
 /// Our public P2P entry — handed to a spawned local node so it can join the
 /// network (release binaries ship with no DNS seeders).
 const PUBLIC_PEERS: [&str; 2] = ["185.147.157.125:16111", "160.187.211.153:16111"];
@@ -1043,6 +1085,10 @@ async fn wallet_api_request(
     body: Option<serde_json::Value>,
     wallet_token: String,
     timeout_ms: u64,
+    // A Tor wallet service the user deliberately chose, instead of the engine on
+    // this computer. Only .onion is accepted here — a clearnet service is reached
+    // by the WebView directly and never needs to come through Rust.
+    base: Option<String>,
 ) -> Result<WalletApiResponse, String> {
     if !matches!(method.as_str(), "GET" | "POST") {
         return Err("wallet API method is not allowed".into());
@@ -1052,6 +1098,32 @@ async fn wallet_api_request(
     }
     if !valid_wallet_token(&wallet_token) {
         return Err("invalid wallet token".into());
+    }
+
+    // A Tor service is reached through the SOCKS proxy, not the embedded engine.
+    // This is the whole reason the command takes a base at all: without it every
+    // "connected over Tor" call was answered by the local daemon.
+    if let Some(onion) = base.as_deref().map(str::trim).filter(|b| !b.is_empty()) {
+        let url = onion_target(onion, &path)?;
+        let client = tor_client()?;
+        let mut request = match method.as_str() {
+            "GET" => client.get(url),
+            "POST" => client.post(url),
+            _ => unreachable!(),
+        }
+        .header("X-Wallet-Token", wallet_token)
+        .timeout(std::time::Duration::from_millis(
+            timeout_ms.clamp(1_000, 900_000),
+        ));
+        if let Some(value) = body {
+            request = request.json(&value);
+        }
+        let response = request.send().await.map_err(|error| {
+            format!("cannot reach the Tor wallet service (is Tor running on {TOR_SOCKS_PROXY}?): {error}")
+        })?;
+        let status = response.status().as_u16();
+        let body = response.text().await.unwrap_or_default();
+        return Ok(WalletApiResponse { status, body });
     }
 
     // Never hold the Engine mutex across network I/O. In particular, walletd's

@@ -34,6 +34,9 @@ describe("desktop embedded wallet transport", () => {
       body: null,
       walletToken: "0123456789abcdef0123456789abcdef",
       timeoutMs: 10_000,
+      // No remote service chosen, so Rust talks to the embedded engine. A base
+      // here would mean the call was being proxied somewhere else.
+      base: null,
     });
     fetchMock.mockRestore();
   });

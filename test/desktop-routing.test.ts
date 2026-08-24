@@ -12,15 +12,18 @@ import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
 const invoked: string[] = [];
 const fetched: string[] = [];
 
+const invokeArgs: Record<string, unknown>[] = [];
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: async (cmd: string) => {
+  invoke: async (cmd: string, args: Record<string, unknown>) => {
     invoked.push(cmd);
+    invokeArgs.push(args);
     return { status: 200, body: "{}" };
   },
 }));
 
 beforeEach(() => {
   invoked.length = 0;
+  invokeArgs.length = 0;
   fetched.length = 0;
   localStorage.clear();
   (globalThis as Record<string, unknown>).__TAURI_INTERNALS__ = {};
@@ -53,12 +56,21 @@ describe("desktop request routing", () => {
     expect(fetched[0]).toContain("https://wallet.zkas.info/daemon");
   });
 
-  it("routes a Tor onion off the loopback path too", async () => {
+  it("sends a Tor onion through Rust, which owns the SOCKS proxy", async () => {
+    // The WebView has no SOCKS, so a fetch to .onion cannot work — this one has
+    // to go through Rust, and it has to carry the onion base with it.
     localStorage.setItem("desktop_remote_base", "http://abc.onion");
     localStorage.setItem("walletd_base", "http://abc.onion");
     const { api } = await import("../src/api");
-    await api.status().catch(() => undefined);
-    expect(invoked).not.toContain("wallet_api_request");
-    expect(fetched[0]).toContain("abc.onion");
+    await api.status();
+    expect(invoked).toContain("wallet_api_request");
+    expect(invokeArgs[0].base).toBe("http://abc.onion");
+    expect(fetched).toHaveLength(0);
+  });
+
+  it("does not hand the embedded-engine path a base", async () => {
+    const { api } = await import("../src/api");
+    await api.status();
+    expect(invokeArgs[0].base).toBeNull();
   });
 });
