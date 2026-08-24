@@ -18,7 +18,7 @@ import {
   type LocalTx,
 } from "./localtx";
 import { ensureSigner, fvkHex, generateMnemonicWallet, accountSeedHex, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
-import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
+import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, MIN_NOTES_PER_ROUND, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, walletCanSpend } from "./status";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
 import { useMaintenance } from "./useMaintenance";
@@ -457,34 +457,27 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // Opens on History, not Receive. "Receive" is now a button, and landing inside it
   // meant every launch started with a QR code nobody asked for; what a person wants on
   // opening a wallet is to see that their money is there and what happened to it.
-  const [tab, setTab] = useState<Tab>(() => asTab(routeTab) ?? walletTabFromHash() ?? "history");
+  const [tab, setTab] = useState<Tab>(() => (routeSticky ? null : asTab(routeTab)) ?? walletTabFromHash() ?? "history");
   // Switching tabs aligns the new pane under the tab bar so its form/content is
   // instantly usable — e.g. tapping Send lands you on the address field, not on
   // the balance hero with the form below the fold. Skipped on first render so
   // opening the wallet still starts at the top with the balance visible.
   const firstTab = useRef(true);
-  // The URL drives the tab. A quick action (?tab=) is consumed once applied so
-  // Back cannot reopen it later; /settings is a real location and stays.
-  const wasSticky = useRef(routeSticky);
+  // A ?tab= quick action is consumed once applied, so Back cannot reopen it.
+  //
+  // /settings deliberately does NOT touch `tab`: it is its own screen, and the
+  // two used to fight. Arriving on the route re-ran the tab->route effect with
+  // the tab the user was still on, which cleared the route right back to "/" and
+  // landed them on History — tapping Settings bounced straight to the wallet.
   useEffect(() => {
+    if (routeSticky) return;
     const routed = asTab(routeTab);
-    if (routed) {
-      setTab(routed);
-      if (!routeSticky) onClearRoute?.();
-    } else if (wasSticky.current) {
-      // Left /settings from the nav (e.g. tapped Wallet). Show the wallet —
-      // leaving the tab on Settings would contradict the highlighted nav item.
-      setTab("history");
-    }
-    wasSticky.current = routeSticky;
-    // Deliberately not depending on onClearRoute: it is memoised per navigate,
-    // but a caller passing an inline arrow would loop this effect forever.
+    if (!routed) return;
+    setTab(routed);
+    onClearRoute?.();
+    // onClearRoute is intentionally not a dependency: a caller passing an inline
+    // arrow would re-create it every render and loop this effect forever.
   }, [routeTab, routeSticky]);
-  // ...and the tab drives the URL: switching away from Settings from inside the
-  // wallet must leave the /settings route, or the nav stays lit on Settings.
-  useEffect(() => {
-    if (routeSticky && tab !== "settings") onClearRoute?.();
-  }, [tab, routeSticky]);
   useEffect(() => {
     if (firstTab.current) {
       firstTab.current = false;
@@ -1010,7 +1003,27 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       {reachable && !freshSeed && !walletLost && status && !status.has_wallet && (
         <Onboard status={status} onCreated={(seed, address) => setFreshSeed({ seed, address })} onImported={refresh} />
       )}
-      {reachable && !freshSeed && status && status.has_wallet && (
+      {/* Settings is its own screen, the way a phone expects: the nav opens it,
+          Back leaves it, and the wallet underneath keeps whichever tab the user
+          was on. Making it a wallet TAB is what caused Settings to bounce to
+          History. The desktop gear still opens the tab-based pane below. */}
+      {reachable && !freshSeed && status && status.has_wallet && routeSticky && (
+        <div className="wallet-dashboard">
+          <section className="wallet-overview" aria-label="Settings">
+            <div className="pane appear">
+              <button
+                className="btn ghost"
+                style={{ marginBottom: 12 }}
+                onClick={() => onClearRoute?.()}
+              >
+                ← Wallet
+              </button>
+              <SettingsPane status={status} />
+            </div>
+          </section>
+        </div>
+      )}
+      {reachable && !freshSeed && status && status.has_wallet && !routeSticky && (
         <div className="wallet-dashboard">
           <section className="wallet-overview" aria-label="Wallet balance and actions">
             <BalanceHero status={status} txs={txs} />
@@ -1862,7 +1875,12 @@ function ConsolidateDialog({
   // How many notes to LEAVE. One tidy note is the worst result to live with: the
   // next payment's change is unmatured for ~10 minutes, so the wallet cannot pay
   // again until it matures. Three lets the user pay a few times back to back.
-  const [targetNotes, setTargetNotes] = useState(3);
+  // Each note kept has to be MERGED from at least MIN_NOTES_PER_ROUND others,
+  // or the round pays a fee to move a single note and leaves the wallet more
+  // fragmented than it started. So what the user may ask for is capped by what
+  // the wallet actually holds — a 5-note wallet can only be asked for one.
+  const maxKeep = Math.max(1, Math.floor((status.note_count ?? 0) / MIN_NOTES_PER_ROUND));
+  const [targetNotes, setTargetNotes] = useState(() => Math.min(3, maxKeep));
   const [result, setResult] = useState<{ inputs: number; txid: string; fee: number; rounds: number; more: boolean } | null>(null);
   // Live count of merged notes. A fragmented wallet needs several transactions,
   // which takes minutes — without this the dialog looks hung.
@@ -1941,6 +1959,7 @@ function ConsolidateDialog({
           setPassEndedAt((done) => [...done, Date.now()]);
         },
         targetNotes,
+        status.note_count ?? 0,
       );
       // Each pass is one proof of a known shape (~38 notes), so a single completed
       // run predicts the next one well. Divide by rounds: what we want to learn is
@@ -2000,20 +2019,24 @@ function ConsolidateDialog({
               Merge small notes so one payment can spend your whole balance. Each pass costs a fee.
           </p>
             <div className="confirm-row"><span className="muted">Current notes</span><b>{status.note_count}</b></div>
-            <label style={{ marginTop: 12 }}>Notes to keep</label>
-            <div className="filterbar" style={{ marginBottom: 6 }}>
-              {[1, 2, 3, 5].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className={"chip" + (targetNotes === n ? " on" : "")}
-                  disabled={busy}
-                  onClick={() => setTargetNotes(n)}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
+            {maxKeep > 1 && (
+              <>
+                <label style={{ marginTop: 12 }}>Notes to keep</label>
+                <div className="filterbar" style={{ marginBottom: 6 }}>
+                  {[1, 2, 3, 5].filter((n) => n <= maxKeep).map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className={"chip" + (targetNotes === n ? " on" : "")}
+                      disabled={busy}
+                      onClick={() => setTargetNotes(n)}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <p className="muted small" style={{ marginTop: 0 }}>
               {targetNotes === 1
                 ? "One note. After your next payment you wait ~10 min before paying again."

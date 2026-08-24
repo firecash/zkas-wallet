@@ -23,7 +23,9 @@ export function WhatsNew({ onClose }: { onClose: () => void }) {
   };
   const openSettings = () => {
     try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
-    location.hash = "#/?tab=settings";
+    // The settings SCREEN, not the in-wallet tab, so this lands where the nav
+    // sends people and Back returns to the wallet.
+    location.hash = "#/settings";
     onClose();
   };
   return (

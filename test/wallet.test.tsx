@@ -346,12 +346,31 @@ describe("settings route props", () => {
     await waitFor(() => expect(onClearRoute).toHaveBeenCalled());
   });
 
-  it("leaves the /settings route when the user switches tab inside the wallet", async () => {
+  it("does not bounce back to the wallet when the nav opens it", async () => {
+    // The reported bug: tapping Settings landed the user on History. Arriving on
+    // the route re-ran the tab->route sync with the tab they were still on, which
+    // cleared the route immediately. Simulates the nav tap: a live App that is
+    // showing the wallet is handed the settings route.
+    const onClearRoute = vi.fn();
+    const { rerender } = await mountApp({ routeTab: null, routeSticky: false, onClearRoute });
+    await screen.findByText(/Shielded balance/);
+
+    const { default: App } = await import("../src/App");
+    const { ToastHost } = await import("../src/toast");
+    rerender(<ToastHost><App routeTab="settings" routeSticky onClearRoute={onClearRoute} /></ToastHost>);
+
+    expect(await screen.findByText("Recovery seed")).toBeInTheDocument();
+    // It must STAY there: clearing the route is what sent the user to History.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(onClearRoute).not.toHaveBeenCalled();
+    expect(screen.getByText("Recovery seed")).toBeInTheDocument();
+  });
+
+  it("leaves the route from its own Back button, not by switching tab", async () => {
     const onClearRoute = vi.fn();
     await mountApp({ routeTab: "settings", routeSticky: true, onClearRoute });
     await screen.findByText("Recovery seed");
-    await userEvent.click(screen.getByRole("tab", { name: "History" }));
-    // Otherwise the nav stays lit on Settings while History is on screen.
+    await userEvent.click(screen.getByRole("button", { name: "← Wallet" }));
     await waitFor(() => expect(onClearRoute).toHaveBeenCalled());
   });
 
