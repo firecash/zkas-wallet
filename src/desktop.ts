@@ -54,12 +54,25 @@ export function setDesktopRemoteBase(url: string): void {
   }
 }
 
+/// Point the app at the daemon it should be using after a shell operation.
+///
+/// The shell always reports the EMBEDDED daemon's address, so writing it blindly
+/// (as unlock/set-passphrase/restore-backup all used to) silently dragged the user
+/// back to the local daemon after they had deliberately chosen a remote one — Tor
+/// included — while the UI still showed their choice. Unlocking the app was enough
+/// to do it. A deliberate remote choice outranks the shell's default; only
+/// `setNodeSource` clears it, because picking a node IS choosing the embedded one.
+function applyDaemonBase(cfg: DesktopConfig): void {
+  const remote = desktopRemoteBase();
+  localStorage.setItem("walletd_base", remote || cfg.base);
+  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
+  else localStorage.removeItem("walletd_bearer");
+}
+
 export async function initDesktop(): Promise<DesktopConfig | null> {
   if (!isDesktop()) return null;
   const cfg = await invoke<DesktopConfig>("wallet_config");
-  // Honour a deliberate remote choice (Tor) over the embedded daemon's address.
-  const remote = desktopRemoteBase();
-  localStorage.setItem("walletd_base", remote || cfg.base);
+  applyDaemonBase(cfg);
   if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
   else localStorage.removeItem("walletd_bearer");
   // The shell's token is the FIRST wallet, not the only one. Writing it on every
@@ -84,9 +97,7 @@ export async function setNodeSource(
     nodeBinary: nodeBinary ?? null,
   });
   setDesktopRemoteBase("");
-  localStorage.setItem("walletd_base", cfg.base);
-  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
-  else localStorage.removeItem("walletd_bearer");
+  applyDaemonBase(cfg);
   return cfg;
 }
 
@@ -111,9 +122,7 @@ export function vaultStatus(): Promise<VaultStatus> {
 /** Unlock an existing wallet and start the daemon. Rejects a wrong passphrase. */
 export async function unlockVault(passphrase: string): Promise<DesktopConfig> {
   const cfg = await invoke<DesktopConfig>("unlock", { passphrase });
-  localStorage.setItem("walletd_base", cfg.base);
-  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
-  else localStorage.removeItem("walletd_bearer");
+  applyDaemonBase(cfg);
   // Same rule as initDesktop: the shell token is the FIRST wallet, not the only
   // one. Unlocking restarted the daemon but changed nothing about which wallet
   // the user had selected — writing it here switched them back to wallet #1 on
@@ -125,9 +134,7 @@ export async function unlockVault(passphrase: string): Promise<DesktopConfig> {
 /** Set the passphrase: encrypts an existing cleartext wallet in place. */
 export async function setPassphrase(passphrase: string): Promise<DesktopConfig> {
   const cfg = await invoke<DesktopConfig>("set_passphrase", { passphrase });
-  localStorage.setItem("walletd_base", cfg.base);
-  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
-  else localStorage.removeItem("walletd_bearer");
+  applyDaemonBase(cfg);
   // Preserve the active wallet, exactly like unlockVault — encrypting at rest is
   // not a wallet switch.
   if (!localStorage.getItem("wallet_token")) localStorage.setItem("wallet_token", cfg.token);
@@ -159,9 +166,7 @@ export async function restoreBackup(
   passphrase: string,
 ): Promise<DesktopConfig> {
   const cfg = await invoke<DesktopConfig>("restore_backup", { path, backupPassphrase, passphrase });
-  localStorage.setItem("walletd_base", cfg.base);
-  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
-  else localStorage.removeItem("walletd_bearer");
+  applyDaemonBase(cfg);
   localStorage.setItem("wallet_token", cfg.token);
   return cfg;
 }
