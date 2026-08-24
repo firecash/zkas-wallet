@@ -196,6 +196,14 @@ function walletTabFromHash(): Tab | null {
     ? requested as Tab
     : null;
 }
+
+/// True when the app is on the dedicated /settings route (the mobile nav item).
+/// Unlike a `?tab=` quick action this is a real location, so it must NOT be
+/// consumed — rewriting the URL would drop the route and unhighlight the tab.
+function onSettingsRoute(): boolean {
+  if (typeof location === "undefined") return false;
+  return location.hash.split("?", 2)[0].replace(/^#/, "").replace(/\/$/, "") === "/settings";
+}
 const TAB_LABEL: Record<Tab, string> = {
   receive: "Receive",
   send: "Send",
@@ -439,9 +447,14 @@ export default function App() {
   // Opens on History, not Receive. "Receive" is now a button, and landing inside it
   // meant every launch started with a QR code nobody asked for; what a person wants on
   // opening a wallet is to see that their money is there and what happened to it.
-  const [tab, setTab] = useState<Tab>(() => walletTabFromHash() ?? "history");
+  const [tab, setTab] = useState<Tab>(() => (onSettingsRoute() ? "settings" : walletTabFromHash() ?? "history"));
   useEffect(() => {
     const applyWalletRoute = () => {
+      // A real route, not a one-shot parameter: switch to it and leave the URL be.
+      if (onSettingsRoute()) {
+        setTab("settings");
+        return;
+      }
       const routed = walletTabFromHash();
       if (!routed) return;
       setTab(routed);
@@ -458,6 +471,13 @@ export default function App() {
   // the balance hero with the form below the fold. Skipped on first render so
   // opening the wallet still starts at the top with the balance visible.
   const firstTab = useRef(true);
+  // Leaving Settings from inside the wallet must leave the /settings ROUTE too,
+  // or the nav keeps Settings lit while the user is reading their history.
+  useEffect(() => {
+    if (tab !== "settings" && onSettingsRoute()) {
+      history.replaceState(null, "", `${location.pathname}${location.search}#/`);
+    }
+  }, [tab]);
   useEffect(() => {
     if (firstTab.current) {
       firstTab.current = false;

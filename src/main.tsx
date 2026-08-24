@@ -1,7 +1,7 @@
 import { Component, lazy, StrictMode, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Blocks, HardDrive, LayoutGrid, Pickaxe, Server, WalletCards } from "lucide-react";
+import { Blocks, HardDrive, LayoutGrid, Pickaxe, Server, Settings, WalletCards } from "lucide-react";
 import { LockScreen } from "./LockScreen";
 import { AppLockScreen } from "./AppLockScreen";
 import { installAutoLock, isLockEnabled, isUnlocked } from "./applock";
@@ -62,6 +62,9 @@ function Root({ locked, askNode, whatsNew }: { locked: boolean; askNode: boolean
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<WalletApp />} />
+            {/* Settings is a wallet tab, but the mobile nav needs a real location
+                so the bar can highlight it and Back behaves. */}
+            <Route path="/settings" element={<WalletApp />} />
             <Route path="/node" element={<NodeRunner />} />
             <Route path="/mine" element={<Mining />} />
             <Route path="/explore" element={<Explorer />} />
@@ -87,13 +90,23 @@ function AppShell() {
   const desktop = isDesktop();
   const android = isNative() && (globalThis as { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.() === "android";
   const servicesTheme = location.pathname.startsWith("/services");
+  // Mining is a desktop activity: the app supervises a node and a stratum bridge
+  // there. On a phone it was a tab nobody could use, taking a quarter of the bar
+  // from Settings — which every user needs. The mobile bar is therefore
+  // Wallet · Explore · Services · Settings.
   const pages = useMemo(() => [
     { path: "/", label: "Wallet", icon: WalletCards },
-    ...(desktop ? [{ path: "/node", label: "Node", icon: Server }] : []),
-    { path: "/mine", label: "Mine", icon: Pickaxe },
+    ...(desktop
+      ? [
+          { path: "/node", label: "Node", icon: Server },
+          { path: "/mine", label: "Mine", icon: Pickaxe },
+        ]
+      : []),
     { path: "/explore", label: "Explore", icon: Blocks },
     { path: "/services", label: "Services", icon: LayoutGrid },
-    ...(desktop ? [{ path: "/self-host", label: "Host", icon: HardDrive }] : []),
+    ...(desktop
+      ? [{ path: "/self-host", label: "Host", icon: HardDrive }]
+      : [{ path: "/settings", label: "Settings", icon: Settings }]),
   ], [android, desktop]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
