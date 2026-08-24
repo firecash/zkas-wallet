@@ -6660,34 +6660,74 @@ function NodeSourceSetting() {
 /// this screen: walletd serves cached wallet state while it reconnects. Keep an
 /// escape hatch here for local bind/config/runtime failures, but never claim the
 /// public node is guaranteed to repair an unrelated engine problem.
-function DesktopEngineDown({ requestError }: { requestError?: string | null }) {
+export function DesktopEngineDown({ requestError }: { requestError?: string | null }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(requestError ?? null);
   const [engineAlive, setEngineAlive] = useState<boolean | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [waited, setWaited] = useState(0);
   const [showLogs, setShowLogs] = useState(false);
+  // Keep watching instead of asking once. A cold wallet takes MINUTES to load
+  // its scan state, and this screen used to freeze the first refused connection
+  // into "the engine didn't start" — then every remedy on offer restarted the
+  // engine and lost the progress. Now it waits, and leaves by itself when the
+  // engine answers.
   useEffect(() => {
-    let alive = true;
-    desktopServices.walletdStatus()
-      .then((status) => {
-        if (!alive) return;
+    let live = true;
+    const tick = async () => {
+      try {
+        const status = await desktopServices.walletdStatus();
+        if (!live) return;
+        if (status.running) {
+          location.reload();
+          return;
+        }
         setEngineAlive(status.running);
-        if (status.error) setErr(status.error);
-      })
-      .catch(() => undefined);
-    return () => { alive = false; };
-  }, []);
+        setStarting(status.starting);
+        // While it is starting there is nothing wrong to report, and showing the
+        // last transport error next to "Starting" reads as a failure.
+        setErr(status.starting ? null : status.error ?? requestError ?? null);
+      } catch {
+        /* keep waiting */
+      }
+    };
+    void tick();
+    const poll = setInterval(tick, 2000);
+    const clock = setInterval(() => setWaited((n) => n + 1), 1000);
+    return () => { live = false; clearInterval(poll); clearInterval(clock); };
+  }, [requestError]);
+  if (starting) {
+    return (
+      <div className="card setup">
+        <h2>Starting the wallet on this computer</h2>
+        <div className="msg">
+          Loading your wallet and catching up to the chain. The first run takes a
+          few minutes; it keeps going if you close this.
+        </div>
+        <p className="muted small">Waiting {Math.floor(waited / 60)}m {waited % 60}s. This screen clears itself.</p>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <button className="btn ghost" onClick={() => setShowLogs(true)}>View wallet logs</button>
+        </div>
+        <ServiceLogsDialog open={showLogs} onClose={() => setShowLogs(false)} service="wallet-engine" title="Wallet engine logs" />
+      </div>
+    );
+  }
   return (
     <div className="card setup">
-      <h2>{engineAlive ? "Wallet display lost its engine connection" : "The wallet engine didn't start"}</h2>
+      <h2>{engineAlive ? "Lost the connection to the wallet on this computer" : "The wallet on this computer didn't start"}</h2>
       <div className="msg warn">
         {engineAlive
-          ? "The embedded wallet engine is running, but the display request failed. Retry reconnects the display to the engine's current internal port."
-          : "The wallet engine in this app isn't answering. Your funds are safe on-chain."}
+          ? "The wallet is running on this computer but stopped answering. Retry reconnects to it."
+          : "The wallet that runs on this computer isn't answering. Your coins are safe on the chain — this is only how the app is reading them."}
       </div>
       <p className="muted small">
-        Retry first. If it started after switching nodes, switch back to the public one.
-          </p>
+        You can use the public wallet service instead: it has already scanned the
+        chain, so nothing has to start or sync here.
+      </p>
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        {/* The remedy used to be "switch the node source", which RESTARTS the
+            engine — the one thing guaranteed to keep it from ever finishing.
+            Moving to the public service needs no local engine at all. */}
         <button
           className="btn"
           disabled={busy}
@@ -6695,7 +6735,10 @@ function DesktopEngineDown({ requestError }: { requestError?: string | null }) {
             setBusy(true);
             setErr(null);
             try {
-              await setNodeSource("remote");
+              const url = await findReachableDaemon(HOSTED_WALLETD_URL, "", 20_000);
+              setDesktopRemoteBase(url);
+              setBase(url);
+              setWalletdBearer("");
               location.reload();
             } catch (e) {
               setErr(String((e as Error)?.message ?? e));
@@ -6703,7 +6746,7 @@ function DesktopEngineDown({ requestError }: { requestError?: string | null }) {
             }
           }}
         >
-          {busy ? "Switching…" : "Use public history node"}
+          {busy ? "Connecting…" : "Use the public wallet service"}
         </button>
         {/* A plain retry first: the engine also fails for transient reasons, and
             the only remedy used to discard the user's custom-node config just to
@@ -6716,7 +6759,11 @@ function DesktopEngineDown({ requestError }: { requestError?: string | null }) {
         </button>
       </div>
       {err && <div className="msg warn">{err}</div>}
-      <p className="muted small">If it still fails after retrying, restart the app once and keep the error shown above.</p>
+      <p className="muted small">
+        If retrying does not help, the public wallet service above needs nothing
+        running on this computer. You can switch back to running it here later,
+        from Chain source.
+      </p>
       <ServiceLogsDialog
         open={showLogs}
         onClose={() => setShowLogs(false)}

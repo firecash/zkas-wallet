@@ -67,6 +67,10 @@ export interface NodeStatus {
 
 export interface WalletdStatus {
   running: boolean;
+  /// Up and loading its scan state, but not answering yet. Show progress for
+  /// this, never an error — and never offer to "fix" it by switching nodes,
+  /// which restarts the engine and throws away the load in progress.
+  starting: boolean;
   port: number;
   node_source: "remote" | "custom" | "local";
   node_rpc: string;

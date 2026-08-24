@@ -89,6 +89,15 @@ const DEFAULT_REMOTE_NODE: &str = "185.147.157.125:16110";
 /// would fail, and resolving it locally would also leak the lookup.
 const TOR_SOCKS_PROXY: &str = "socks5h://127.0.0.1:9050";
 
+/// How long the engine may take to answer before something is actually wrong.
+///
+/// It was 15 seconds. A cold wallet loads its scan state from disk and then
+/// catches up to the tip, which takes minutes — the wallet's own HTTP client
+/// allows 2-3 minutes for exactly this. So the shell declared a perfectly
+/// healthy engine dead, restarted it, and destroyed the load that was in
+/// progress; every retry started the clock again and it could never finish.
+const WALLETD_START_GRACE: std::time::Duration = std::time::Duration::from_secs(180);
+
 /// An HTTP client that reaches .onion services through the local Tor daemon.
 ///
 /// The WebView cannot do this itself — it has no SOCKS support — which is why a
@@ -717,6 +726,21 @@ impl Engine {
             "embedded walletd on 127.0.0.1:{port} -> node {}",
             node_rpc
         ));
+    }
+
+    /// The engine process is up and has a port, but has not answered yet.
+    ///
+    /// Loading a wallet's scan state from disk and catching up to the tip takes
+    /// MINUTES on a real wallet, so "has not answered yet" is the normal state
+    /// for a while after a start — it is not a failure, and must never be
+    /// treated as one by restarting, which throws the load away and guarantees
+    /// it never finishes.
+    fn walletd_alive(&self) -> bool {
+        self.port != 0
+            && self
+                .walletd_task
+                .as_ref()
+                .is_some_and(|t| !t.is_finished())
     }
 
     fn wait_walletd_ready(&self, timeout: std::time::Duration) -> Result<(), String> {
@@ -1635,13 +1659,22 @@ async fn set_node_source(
         e.settings.node_binary = if b.trim().is_empty() { None } else { Some(b) };
     }
     e.start_walletd();
-    if let Err(error) = e.wait_walletd_ready(std::time::Duration::from_secs(15)) {
+    if let Err(error) = e.wait_walletd_ready(WALLETD_START_GRACE) {
+        // Slow is not dead. If the engine is still up it is loading its scan
+        // state, and the source it was asked for IS the one it is loading with —
+        // rolling back here would kill that work and start the wait over, which
+        // is what turned a slow first sync into "THE WALLET ENGINE DIDN'T START"
+        // that no amount of retrying could clear.
+        if e.walletd_alive() {
+            e.save_settings();
+            return Ok(config_of(&mut e));
+        }
         if had_daemon {
             // Transactional rollback: never persist a source that leaves the app
             // dead, and restore the already-working daemon in the same command.
             e.settings = previous;
             e.start_walletd();
-            let _ = e.wait_walletd_ready(std::time::Duration::from_secs(15));
+            let _ = e.wait_walletd_ready(WALLETD_START_GRACE);
             return Err(format!("{error}; restored the previous wallet connection"));
         }
         return Err(error);
@@ -2064,6 +2097,10 @@ async fn node_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<NodeStatu
 #[derive(Clone, Serialize, Deserialize)]
 struct WalletdStatus {
     running: bool,
+    /// Up and loading, but not answering yet. The UI must show progress for
+    /// this, never an error — and must not offer to "fix" it by switching
+    /// nodes, which restarts the engine and loses the load.
+    starting: bool,
     port: u16,
     node_source: String,
     node_rpc: String,
@@ -2078,7 +2115,7 @@ struct WalletdStatus {
 
 #[tauri::command]
 async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<WalletdStatus, String> {
-    let (http, port, token, bearer, node_source, node_rpc, engine_error) = {
+    let (http, port, token, bearer, node_source, node_rpc, engine_error, alive) = {
         let e = engine(&state);
         let engine_error = e
             .walletd_error
@@ -2093,11 +2130,13 @@ async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<Wallet
             e.settings.mode.clone(),
             e.settings.rpc_addr(),
             engine_error,
+            e.walletd_alive(),
         )
     };
     if port == 0 {
         return Ok(WalletdStatus {
             running: false,
+            starting: false,
             port,
             node_source,
             node_rpc,
@@ -2133,6 +2172,7 @@ async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<Wallet
             let chain = value.get("chain_len").and_then(|v| v.as_u64()).unwrap_or(0);
             WalletdStatus {
                 running: true,
+                starting: false,
                 port,
                 node_source: node_source.clone(),
                 node_rpc: node_rpc.clone(),
@@ -2154,6 +2194,7 @@ async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<Wallet
         }
         Ok(response) => WalletdStatus {
             running: true,
+            starting: false,
             port,
             node_source: node_source.clone(),
             node_rpc: node_rpc.clone(),
@@ -2167,8 +2208,12 @@ async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<Wallet
                 .clone()
                 .or_else(|| Some(format!("wallet daemon returned {}", response.status()))),
         },
+        // Refused because it is not listening YET is the ordinary state during a
+        // cold start, and reporting it as a dead engine is what put people in
+        // front of "THE WALLET ENGINE DIDN'T START" while it was loading fine.
         Err(error) => WalletdStatus {
             running: false,
+            starting: alive,
             port,
             node_source,
             node_rpc,
@@ -2178,7 +2223,7 @@ async fn walletd_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<Wallet
             note_count: None,
             anchor_daa: None,
             balance: None,
-            error: engine_error.or_else(|| Some(error.to_string())),
+            error: if alive { None } else { engine_error.or_else(|| Some(error.to_string())) },
         },
     };
     Ok(status)
@@ -2234,10 +2279,10 @@ fn stop_node(app: tauri::AppHandle, state: tauri::State<'_, Mutex<Engine>>) -> R
     if e.settings.mode == "local" {
         e.settings.mode = "remote".into();
         e.start_walletd();
-        if let Err(error) = e.wait_walletd_ready(std::time::Duration::from_secs(15)) {
+        if let Err(error) = e.wait_walletd_ready(WALLETD_START_GRACE) {
             e.settings.mode = "local".into();
             e.start_walletd();
-            let _ = e.wait_walletd_ready(std::time::Duration::from_secs(15));
+            let _ = e.wait_walletd_ready(WALLETD_START_GRACE);
             return Err(format!(
                 "could not move the wallet to the public node: {error}; restored the local wallet connection"
             ));
@@ -3135,10 +3180,10 @@ fn set_host_access(
     // next unlock. An active engine is switched transactionally.
     if e.port != 0 {
         e.start_walletd();
-        if let Err(error) = e.wait_walletd_ready(std::time::Duration::from_secs(15)) {
+        if let Err(error) = e.wait_walletd_ready(WALLETD_START_GRACE) {
             e.settings = previous;
             e.start_walletd();
-            let _ = e.wait_walletd_ready(std::time::Duration::from_secs(15));
+            let _ = e.wait_walletd_ready(WALLETD_START_GRACE);
             return Err(format!("{error}; restored the previous Host settings"));
         }
     }
