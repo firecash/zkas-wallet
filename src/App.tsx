@@ -1881,6 +1881,11 @@ function ConsolidateDialog({
   // the wallet actually holds — a 5-note wallet can only be asked for one.
   const maxKeep = Math.max(1, Math.floor((status.note_count ?? 0) / MIN_NOTES_PER_ROUND));
   const [targetNotes, setTargetNotes] = useState(() => Math.min(3, maxKeep));
+  // note_count moves while the dialog is open (a round lands, a note matures).
+  // Without this the picker could keep showing a choice the wallet outgrew.
+  useEffect(() => {
+    setTargetNotes((n) => Math.min(n, maxKeep));
+  }, [maxKeep]);
   const [result, setResult] = useState<{ inputs: number; txid: string; fee: number; rounds: number; more: boolean } | null>(null);
   // Live count of merged notes. A fragmented wallet needs several transactions,
   // which takes minutes — without this the dialog looks hung.
@@ -2019,29 +2024,34 @@ function ConsolidateDialog({
               Merge small notes so one payment can spend your whole balance. Each pass costs a fee.
           </p>
             <div className="confirm-row"><span className="muted">Current notes</span><b>{status.note_count}</b></div>
-            {maxKeep > 1 && (
-              <>
-                <label style={{ marginTop: 12 }}>Notes to keep</label>
-                <div className="filterbar" style={{ marginBottom: 6 }}>
-                  {[1, 2, 3, 5].filter((n) => n <= maxKeep).map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      className={"chip" + (targetNotes === n ? " on" : "")}
-                      disabled={busy}
-                      onClick={() => setTargetNotes(n)}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+            <label style={{ marginTop: 12 }}>Notes to keep</label>
+            <div className="filterbar" style={{ marginBottom: 6 }}>
+              {[1, 2, 3, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={"chip" + (targetNotes === n ? " on" : "")}
+                  disabled={busy || n > maxKeep}
+                  title={n > maxKeep ? `Needs about ${n * MIN_NOTES_PER_ROUND} notes` : undefined}
+                  onClick={() => setTargetNotes(n)}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
             <p className="muted small" style={{ marginTop: 0 }}>
               {targetNotes === 1
                 ? "One note. After your next payment you wait ~10 min before paying again."
                 : `${targetNotes} notes, so you can pay ${targetNotes} times without waiting for change to mature.`}
             </p>
+            {maxKeep < 5 && (
+              // Say WHY the higher numbers are greyed out. Each note kept is merged
+              // from at least MIN_NOTES_PER_ROUND others; below that a round would
+              // pay a fee to move one note and leave the wallet more fragmented.
+              <p className="muted small" style={{ marginTop: -4 }}>
+                {status.note_count ?? 0} notes is enough to keep {maxKeep}. Each note kept is merged from {MIN_NOTES_PER_ROUND} or more.
+              </p>
+            )}
             {typeof status.note_count === "number" && status.note_count > MAX_NOTES_PER_TX && (
               <div className="confirm-row">
                 <span className="muted">Passes needed</span>
