@@ -21,3 +21,7 @@ export const PRIVATE_RELAY_URL: string =
 
 // Where to send a user who taps "Connect over Tor" without a Tor transport up.
 export const ORBOT_PLAY_URL = "https://play.google.com/store/apps/details?id=org.torproject.android";
+
+/// The public wallet service. It has already scanned the chain, so a wallet
+/// pointed at it shows its balance immediately instead of scanning locally.
+export const HOSTED_WALLETD_URL = "https://wallet.zkas.info/daemon";

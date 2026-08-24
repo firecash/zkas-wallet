@@ -202,7 +202,23 @@ async function boot() {
   // The daemon's port/token must be installed BEFORE the app mounts (api.ts reads
   // them at call time). Unlocking installs them too, so this is for the already-
   // unlocked / browser paths.
-  if (!locked) await initDesktop().catch(() => null);
+  // Retry once, and never swallow the reason. When this failed silently the SPA
+  // mounted with no daemon address at all and every call fell back to a port the
+  // engine may not even be on, surfacing as a raw transport error with nothing
+  // to act on.
+  if (!locked) {
+    try {
+      await initDesktop();
+    } catch (first) {
+      try {
+        await initDesktop();
+      } catch (second) {
+        const reason = (second as Error)?.message || String(second) || String(first);
+        console.error("desktop bootstrap failed:", reason);
+        try { localStorage.setItem("desktop_boot_error", reason); } catch { /* best effort */ }
+      }
+    }
+  }
 
   // First-run connection gate. It matters where the app bundle is LOCAL and its
   // first act would otherwise be to contact a server: native mobile (privacy-

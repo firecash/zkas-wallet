@@ -77,7 +77,7 @@ import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReco
 import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
-import { ONION_WALLETD_URL } from "./lib/relay";
+import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
 import { OrbotHelp } from "./OrbotHelp";
 import { desktopServices } from "./desktop-services";
 import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
@@ -1378,6 +1378,31 @@ function ConnectionButton() {
 
   // Connecting over Tor fails almost only because no Tor transport is up — so on
   // failure show the Orbot steps, not a bare connection error.
+  /// Desktop: use the PUBLIC WALLET SERVICE rather than the engine on this
+  /// computer.
+  ///
+  /// "Public node" only ever chose which node the LOCAL engine reads the chain
+  /// from — it still had to scan the whole chain here, which is why a freshly
+  /// installed desktop wallet sat on "Found 0 ZKAS so far" for a long time while
+  /// claiming it "works immediately". The hosted service has already scanned, so
+  /// the balance is there at once. Recorded as a remote choice so it survives a
+  /// restart, and so api.ts routes calls to it instead of the embedded engine.
+  const connectHosted = async () => {
+    setError("");
+    setBusy("hosted");
+    try {
+      const url = await findReachableDaemon(HOSTED_WALLETD_URL, "", 20_000);
+      setDesktopRemoteBase(url);
+      setBase(url);
+      setWalletdBearer("");
+      setOpen(false);
+      location.reload();
+    } catch (e) {
+      setError((e as Error).message || String(e));
+      setBusy(null);
+    }
+  };
+
   const connectTor = async () => {
     setTorFailed(false);
     setError("");
@@ -1412,13 +1437,15 @@ function ConnectionButton() {
 
   const currentBase = getBase();
   const onion = isOnionAddress(currentBase);
-  const hosted = !desktop && !onion && (currentBase.includes("wallet.zkas.info") || currentBase.endsWith("/daemon"));
+  // The hosted service is a real choice on desktop too now, so this can no
+  // longer be "anything that is not desktop".
+  const hosted = !onion && (currentBase.includes("wallet.zkas.info") || currentBase.endsWith("/daemon"));
   const currentProfile = profiles.find((profile) => {
     const current = desktop ? cfg?.node_addr : currentBase;
     return current?.replace(/\/$/, "").toLowerCase() === profile.address.replace(/\/$/, "").toLowerCase();
   });
   const label = desktop
-    ? onion ? "Tor" : cfg?.mode === "local" ? "My node" : cfg?.mode === "custom" ? currentProfile?.name ?? "My node" : "Public node"
+    ? onion ? "Tor" : hosted ? "Public service" : cfg?.mode === "local" ? "My node" : cfg?.mode === "custom" ? currentProfile?.name ?? "My node" : "This computer"
     : onion ? "Tor" : hosted ? "Web" : currentProfile?.name ?? "My walletd";
 
   const switchDesktop = async (mode: "remote" | "local" | "custom", profile?: EndpointProfile) => {
@@ -1507,19 +1534,28 @@ function ConnectionButton() {
             </div>
             <p className="muted small">
               {desktop
-                ? "This app runs its own wallet. Choose the ZKas node it reads the chain from — your keys never leave."
+                ? "Your keys stay on this device either way. Use the public service for a wallet that is ready at once, or run the wallet here and pick the node it reads the chain from."
                 : "Your keys stay on this device. Choose how it connects."}
             </p>
 
             <div className="connection-list">
-              <button className={`connection-option ${(desktop ? cfg?.mode === "remote" && !onion : hosted) ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void switchDesktop("remote") : void switchWalletd("", "hosted", "")}>
-                <span><b>{desktop ? "Public node" : "Web · public service"}</b><small>{desktop ? "Works immediately" : "Fastest. The service sees your IP."}</small></span><span>{busy === (desktop ? "remote" : "hosted") ? "Checking…" : (desktop ? cfg?.mode === "remote" && !onion : hosted) ? "Connected" : "Use"}</span>
+              <button className={`connection-option ${hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
+                <span><b>Public service</b><small>{desktop ? "Ready at once — already scanned. The service sees your IP." : "Fastest. The service sees your IP."}</small></span><span>{busy === "hosted" ? "Checking…" : hosted && !onion ? "Connected" : "Use"}</span>
               </button>
+              {desktop && (
+                /* The embedded engine. It has to scan the chain on THIS computer,
+                   which takes a long time on a fresh install — the old copy here
+                   said "Works immediately", which is what sent people to a wallet
+                   stuck on "Found 0 ZKAS so far". */
+                <button className={`connection-option ${cfg?.mode === "remote" && !onion && !hosted ? "active" : ""}`} disabled={busy !== null} onClick={() => void switchDesktop("remote")}>
+                  <span><b>This computer · public node</b><small>Runs the wallet here. First sync scans the chain and takes a while.</small></span><span>{busy === "remote" ? "Checking…" : cfg?.mode === "remote" && !onion && !hosted ? "Connected" : "Use"}</span>
+                </button>
+              )}
               <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectTor()}>
                 <span><b>Tor · over the onion</b><small>{desktop ? "Hides your IP. Needs Tor running on this computer." : "Hides your IP. Requires the Orbot app (Tor VPN)."}</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
               </button>
               {desktop && (
-                <button className={`connection-option ${cfg?.mode === "local" && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => {
+                <button className={`connection-option ${cfg?.mode === "local" && !onion && !hosted ? "active" : ""}`} disabled={busy !== null} onClick={() => {
                   if (!cfg?.node_running) {
                     setOpen(false);
                     location.hash = "#/node";
@@ -1527,7 +1563,7 @@ function ConnectionButton() {
                   }
                   void switchDesktop("local");
                 }}>
-                  <span><b>Your own node</b><small>Managed here · gRPC {MANAGED_ZKAS_RPC}</small></span><span>{busy === "local" ? "Checking…" : cfg?.mode === "local" && !onion ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
+                  <span><b>This computer · your own node</b><small>Managed here · gRPC {MANAGED_ZKAS_RPC}</small></span><span>{busy === "local" ? "Checking…" : cfg?.mode === "local" && !onion && !hosted ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
                 </button>
               )}
               {profiles.map((profile) => {

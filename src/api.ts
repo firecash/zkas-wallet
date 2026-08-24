@@ -10,6 +10,8 @@
 // machine.
 
 import { WALLET_SERVICE_PORT } from "./ports";
+// desktop.ts imports nothing from here, so this cannot cycle.
+import { desktopRemoteBase } from "./desktop";
 
 function defaultBase(): string {
   // Native mobile (Capacitor) loads the bundle from the device, so there is no
@@ -447,7 +449,13 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
   // different port and add a bearer gate, and Rust is the single authoritative
   // owner of both values. This removes stale-port/CORS/auth races while keeping
   // the exact same HTTP API boundary. Web/mobile still talk to walletd directly.
-  if ("__TAURI_INTERNALS__" in globalThis) {
+  // ...but ONLY for the embedded engine. `wallet_api_request` hardcodes
+  // `http://127.0.0.1:{port}` in Rust, so routing a deliberately chosen REMOTE
+  // wallet service through it sent every call to the local daemon instead: the
+  // desktop "connect to a wallet service" choice was inert, while the UI showed
+  // it as connected. A remote choice therefore takes the ordinary fetch path,
+  // which the desktop CSP allows (connect-src includes https:).
+  if ("__TAURI_INTERNALS__" in globalThis && !desktopRemoteBase()) {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const response = await invoke<{ status: number; body: string }>("wallet_api_request", {
