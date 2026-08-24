@@ -299,6 +299,15 @@ export const MAX_CONSOLIDATION_ROUNDS = 12;
 /// change note plus a fee is not progress.
 export const MIN_NOTES_PER_ROUND = 3;
 
+/// Why three and not two, which "merging" would suggest:
+///
+/// A round reserves the fee ceiling for a FULL 38-note transaction but only pays
+/// the relay fee for the notes it actually spends. The difference — up to ~0.23
+/// ZKAS — comes back as a CHANGE note. So a round spending k notes produces two
+/// (the merged note and that change), and only reduces the wallet's note count
+/// when k > 2. A two-note round is 2 in, 2 out: a fee for nothing.
+export const MIN_NOTES_PER_MERGE = MIN_NOTES_PER_ROUND;
+
 /** Merge matured notes back into this wallet without handing the seed to walletd.
  * Uses the same prepare/verify/sign/submit protocol as a payment, so it works
  * against both hosted and self-run wallet services.
@@ -348,11 +357,11 @@ export async function consolidateNonCustodial(
   // note, but this action is offered only when the note count exceeds the
   // standard transaction input cap.
   let available = spendableSompi;
-  // Never ask for more notes than the wallet can produce by MERGING. Consolidate
-  // is offered from 3 notes up, so a 4-note wallet asked to keep 3 would spend a
-  // fee per round to move one note at a time and end up MORE fragmented than it
-  // started — paying for the opposite of what the button promises.
-  let wantedNotes = Math.max(1, Math.min(targetNotes, Math.floor(noteCount / MIN_NOTES_PER_ROUND)));
+  // Never ask for more chunks than the wallet can produce by MERGING: each one
+  // has to come from at least MIN_NOTES_PER_MERGE notes. Asking for more would
+  // spend a fee per round without reducing the note count, and end up MORE
+  // fragmented — paying for the opposite of what the button promises.
+  let wantedNotes = Math.max(1, Math.min(targetNotes, Math.floor(noteCount / MIN_NOTES_PER_MERGE)));
 
   for (let round = 0; round < Math.max(1, maxRounds); round++) {
     // Reserve the relay minimum for a FULL transaction. The daemon picks the final note
@@ -373,10 +382,10 @@ export async function consolidateNonCustodial(
     onStage?.("proving");
     let prep = await api.prepare(fvk, ownAddress, requested, undefined, undefined, true);
     // A split round is only worth its fee if it actually merges notes. When the
-    // daemon covers a share from one or two big notes, splitting would move value
-    // for nothing — stop splitting and sweep the rest instead. Preparing does not
+    // daemon covers a whole share from ONE note, splitting would move value for
+    // nothing — stop splitting and sweep the rest instead. Preparing does not
     // broadcast, so the discarded attempt costs nothing.
-    if (requested !== sweepable && prep.spend_auth.length < MIN_NOTES_PER_ROUND) {
+    if (requested !== sweepable && prep.spend_auth.length < MIN_NOTES_PER_MERGE) {
       wantedNotes = 1;
       requested = sweepable;
       prep = await api.prepare(fvk, ownAddress, requested, undefined, undefined, true);
@@ -390,8 +399,8 @@ export async function consolidateNonCustodial(
       if (txids.length) break;
       throw new Error("The wallet service returned an unsafe consolidation.");
     }
-    // Applies to split rounds too: after the sweep fallback above, any round that
-    // still merges fewer than three notes is not worth its fee.
+    // One threshold for every round, split or sweep: below it the round cannot
+    // reduce the note count, because of the change note described above.
     if (prep.spend_auth.length < MIN_NOTES_PER_ROUND) {
       // Not a failure once work is already done — it is the natural end of the
       // loop, and reporting it as an error would hide rounds that succeeded.

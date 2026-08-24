@@ -55,17 +55,26 @@ function run(targetNotes: number, noteCount: number) {
 beforeEach(() => { preps = []; prepared = []; submitted = 0; });
 
 describe("consolidation rounds", () => {
-  it("refuses to split a wallet too small to merge into that many notes", async () => {
-    // 5 notes cannot become 3 notes each merged from 3 — it would move notes one
-    // at a time for a fee. Ask for the whole sweep instead.
-    preps = [{ spendAuth: 5, amount: BAL - RESERVE, fee: 500n, remaining: 0n }];
-    await run(3, 5);
+  it("does not split a four-note wallet, because a two-note pass reduces nothing", async () => {
+    // Each pass hands the unspent fee reserve back as a change note, so a pass
+    // that spends two notes produces two. Only a full sweep helps here.
+    preps = [{ spendAuth: 4, amount: BAL - RESERVE, fee: 500n, remaining: 0n }];
+    await run(3, 4);
     expect(prepared).toHaveLength(1);
-    expect(prepared[0]).toBe(BAL - RESERVE); // full sweep, not a third
+    expect(prepared[0]).toBe(BAL - RESERVE);
     expect(submitted).toBe(1);
   });
 
-  it("falls back to a full sweep when a split round would merge too few notes", async () => {
+  it("refuses to split a wallet too small to merge into that many notes", async () => {
+    // Three notes cannot become two AND have each come from two. Sweep instead.
+    preps = [{ spendAuth: 3, amount: BAL - RESERVE, fee: 500n, remaining: 0n }];
+    await run(2, 3);
+    expect(prepared).toHaveLength(1);
+    expect(prepared[0]).toBe(BAL - RESERVE); // full sweep, not a half
+    expect(submitted).toBe(1);
+  });
+
+  it("falls back to a full sweep when a split round would merge nothing", async () => {
     // 12 notes permits keeping 3, but the daemon covers the first share from a
     // single big note. Splitting there is pure fee, so it sweeps instead.
     preps = [
@@ -79,11 +88,13 @@ describe("consolidation rounds", () => {
     expect(submitted).toBe(1);                       // only the sweep was broadcast
   });
 
-  it("never broadcasts a round that merges fewer than three notes", async () => {
+  it("never broadcasts a round that merges nothing", async () => {
     // Real amounts, so it is the note count — not an unsafe amount — that stops it.
+    // The split attempt moves one note, so it falls back to a sweep; the sweep
+    // also only reaches one note, and a one-note round is never worth its fee.
     preps = [
-      { spendAuth: 2, amount: (BAL - RESERVE) / 3n, fee: 500n, remaining: 0n },
-      { spendAuth: 2, amount: BAL - RESERVE, fee: 500n, remaining: 0n },
+      { spendAuth: 1, amount: (BAL - RESERVE) / 3n, fee: 500n, remaining: 0n },
+      { spendAuth: 1, amount: BAL - RESERVE, fee: 500n, remaining: 0n },
     ];
     await expect(run(3, 30)).rejects.toThrow(/Fewer than three notes/);
     expect(submitted).toBe(0);

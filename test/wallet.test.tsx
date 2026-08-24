@@ -226,17 +226,17 @@ describe("the wallet a user actually touches", () => {
     expect(screen.getByLabelText("Switch wallet")).toHaveTextContent("Wallet 1");
   });
 
-  it("always offers the notes-to-keep choice, and says why some are out of reach", async () => {
+  it("always offers the payments choice, and says why some are out of reach", async () => {
     // A 4-note wallet can only merge down to one. Hiding the picker for that case
     // left the user clicking Consolidate and finding the option simply missing.
     statusOverride = { note_count: 4, spendable_sompi: "500000000" };
     await mountApp();
     await userEvent.click(await screen.findByRole("button", { name: "Consolidate wallet notes" }));
 
-    expect(await screen.findByText("Notes to keep")).toBeInTheDocument();
+    expect(await screen.findByText("Payments to prepare")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "1" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "3" })).toBeDisabled();
-    expect(screen.getByText(/4 notes is enough to keep 1/)).toBeInTheDocument();
+    expect(screen.getByText(/4 notes is enough for 1/)).toBeInTheDocument();
   });
 
   it("offers a real choice once the wallet holds enough notes", async () => {

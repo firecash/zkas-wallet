@@ -18,7 +18,7 @@ import {
   type LocalTx,
 } from "./localtx";
 import { ensureSigner, fvkHex, generateMnemonicWallet, accountSeedHex, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
-import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, MIN_NOTES_PER_ROUND, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
+import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, MIN_NOTES_PER_MERGE, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, walletCanSpend } from "./status";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
 import { useMaintenance } from "./useMaintenance";
@@ -1875,11 +1875,11 @@ function ConsolidateDialog({
   // How many notes to LEAVE. One tidy note is the worst result to live with: the
   // next payment's change is unmatured for ~10 minutes, so the wallet cannot pay
   // again until it matures. Three lets the user pay a few times back to back.
-  // Each note kept has to be MERGED from at least MIN_NOTES_PER_ROUND others,
-  // or the round pays a fee to move a single note and leaves the wallet more
-  // fragmented than it started. So what the user may ask for is capped by what
-  // the wallet actually holds — a 5-note wallet can only be asked for one.
-  const maxKeep = Math.max(1, Math.floor((status.note_count ?? 0) / MIN_NOTES_PER_ROUND));
+  // Each chunk has to be MERGED from at least MIN_NOTES_PER_MERGE notes, or the
+  // pass pays a fee without reducing the note count at all. So the choice is
+  // capped by what the wallet actually holds: nine notes can make three chunks,
+  // four notes can only make one.
+  const maxKeep = Math.max(1, Math.floor((status.note_count ?? 0) / MIN_NOTES_PER_MERGE));
   const [targetNotes, setTargetNotes] = useState(() => Math.min(3, maxKeep));
   // note_count moves while the dialog is open (a round lands, a note matures).
   // Without this the picker could keep showing a choice the wallet outgrew.
@@ -2024,7 +2024,10 @@ function ConsolidateDialog({
               Merge small notes so one payment can spend your whole balance. Each pass costs a fee.
           </p>
             <div className="confirm-row"><span className="muted">Current notes</span><b>{status.note_count}</b></div>
-            <label style={{ marginTop: 12 }}>Notes to keep</label>
+            {/* Not "notes to keep": each pass returns the unspent fee reserve as a
+                change note, so asking for 3 leaves 6 notes. What the user is really
+                choosing is how many spendable CHUNKS to end up with. */}
+            <label style={{ marginTop: 12 }}>Payments to prepare</label>
             <div className="filterbar" style={{ marginBottom: 6 }}>
               {[1, 2, 3, 5].map((n) => (
                 <button
@@ -2032,7 +2035,7 @@ function ConsolidateDialog({
                   type="button"
                   className={"chip" + (targetNotes === n ? " on" : "")}
                   disabled={busy || n > maxKeep}
-                  title={n > maxKeep ? `Needs about ${n * MIN_NOTES_PER_ROUND} notes` : undefined}
+                  title={n > maxKeep ? `Needs at least ${n * MIN_NOTES_PER_MERGE} notes` : undefined}
                   onClick={() => setTargetNotes(n)}
                 >
                   {n}
@@ -2041,15 +2044,15 @@ function ConsolidateDialog({
             </div>
             <p className="muted small" style={{ marginTop: 0 }}>
               {targetNotes === 1
-                ? "One note. After your next payment you wait ~10 min before paying again."
-                : `${targetNotes} notes, so you can pay ${targetNotes} times without waiting for change to mature.`}
+                ? "One note, one pass. Your next payment's change takes ~10 min to mature."
+                : `${targetNotes} chunks you can spend back to back · ${targetNotes} passes · ${targetNotes} fees.`}
             </p>
             {maxKeep < 5 && (
               // Say WHY the higher numbers are greyed out. Each note kept is merged
               // from at least MIN_NOTES_PER_ROUND others; below that a round would
               // pay a fee to move one note and leave the wallet more fragmented.
               <p className="muted small" style={{ marginTop: -4 }}>
-                {status.note_count ?? 0} notes is enough to keep {maxKeep}. Each note kept is merged from {MIN_NOTES_PER_ROUND} or more.
+                {status.note_count ?? 0} notes is enough for {maxKeep}. Each chunk is merged from {MIN_NOTES_PER_MERGE} or more.
               </p>
             )}
             {typeof status.note_count === "number" && status.note_count > MAX_NOTES_PER_TX && (
