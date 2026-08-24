@@ -76,12 +76,14 @@ vi.mock("../src/signer", () => ({
   ensureSigner: async () => {},
 }));
 
-async function mountApp() {
+async function mountApp(routeProps: {
+  routeTab?: string | null; routeSticky?: boolean; onClearRoute?: () => void;
+} = {}) {
   const { default: App } = await import("../src/App");
   const { ToastHost } = await import("../src/toast");
   return render(
     <ToastHost>
-      <App />
+      <App {...routeProps} />
     </ToastHost>,
   );
 }
@@ -317,5 +319,49 @@ describe("multi-wallet bookkeeping", () => {
     unregisterWallet(b);
     expect(listWallets()).toHaveLength(1);
     expect(localStorage.getItem("device_seed_walletA")).toBe("a".repeat(64));
+  });
+});
+
+// The mobile nav opens Settings by routing to /settings, which reaches the
+// wallet as a prop (see WalletRoute — a nav tap fires no hashchange). These
+// pin the wallet's half of that contract.
+describe("settings route props", () => {
+  it("opens the settings pane when the route asks for it", async () => {
+    await mountApp({ routeTab: "settings", routeSticky: true });
+    expect(await screen.findByText("Recovery seed")).toBeInTheDocument();
+    expect(screen.getByText("Accent color")).toBeInTheDocument();
+  });
+
+  it("keeps a sticky route in the URL, unlike a one-shot quick action", async () => {
+    const onClearRoute = vi.fn();
+    await mountApp({ routeTab: "settings", routeSticky: true, onClearRoute });
+    await screen.findByText("Recovery seed");
+    // /settings is a real location: clearing it would drop the nav highlight.
+    expect(onClearRoute).not.toHaveBeenCalled();
+  });
+
+  it("consumes a ?tab= quick action so Back cannot reopen it", async () => {
+    const onClearRoute = vi.fn();
+    await mountApp({ routeTab: "receive", routeSticky: false, onClearRoute });
+    await waitFor(() => expect(onClearRoute).toHaveBeenCalled());
+  });
+
+  it("leaves the /settings route when the user switches tab inside the wallet", async () => {
+    const onClearRoute = vi.fn();
+    await mountApp({ routeTab: "settings", routeSticky: true, onClearRoute });
+    await screen.findByText("Recovery seed");
+    await userEvent.click(screen.getByRole("tab", { name: "History" }));
+    // Otherwise the nav stays lit on Settings while History is on screen.
+    await waitFor(() => expect(onClearRoute).toHaveBeenCalled());
+  });
+
+  it("does not strand the user on Settings when the nav leaves the route", async () => {
+    const { rerender } = await mountApp({ routeTab: "settings", routeSticky: true });
+    await screen.findByText("Recovery seed");
+    const { default: App } = await import("../src/App");
+    const { ToastHost } = await import("../src/toast");
+    // Tapping "Wallet" in the nav: route goes back to "/" with no tab request.
+    rerender(<ToastHost><App routeTab={null} routeSticky={false} /></ToastHost>);
+    await waitFor(() => expect(screen.queryByText("Recovery seed")).not.toBeInTheDocument());
   });
 });

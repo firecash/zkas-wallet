@@ -188,22 +188,32 @@ function parseAmount(s: string): number {
 const EXPLORER = "https://explorer.zkas.info";
 type Tab = "receive" | "send" | "history" | "signatures" | "tools" | "settings";
 
+const TAB_NAMES: readonly string[] = ["receive", "send", "history", "signatures", "tools", "settings"];
+
+function asTab(value: string | null | undefined): Tab | null {
+  return value && TAB_NAMES.includes(value) ? value as Tab : null;
+}
+
+/// Seeds the initial tab when App is rendered without route props. Live route
+/// changes never come from here — they arrive as props (see WalletRoute), and
+/// AppShell keeps the router in step with any direct location.hash write.
 function walletTabFromHash(): Tab | null {
   if (typeof location === "undefined") return null;
   const query = location.hash.split("?", 2)[1];
-  const requested = query ? new URLSearchParams(query).get("tab") : null;
-  return requested && ["receive", "send", "history", "signatures", "tools", "settings"].includes(requested)
-    ? requested as Tab
-    : null;
+  return asTab(query ? new URLSearchParams(query).get("tab") : null);
 }
 
-/// True when the app is on the dedicated /settings route (the mobile nav item).
-/// Unlike a `?tab=` quick action this is a real location, so it must NOT be
-/// consumed — rewriting the URL would drop the route and unhighlight the tab.
-function onSettingsRoute(): boolean {
-  if (typeof location === "undefined") return false;
-  return location.hash.split("?", 2)[0].replace(/^#/, "").replace(/\/$/, "") === "/settings";
-}
+export type AppRouteProps = {
+  /// Tab the URL is asking for: "settings" on the /settings route, or the
+  /// ?tab= quick action on "/".
+  routeTab?: string | null;
+  /// True for /settings — a real location that stays in the URL, unlike a
+  /// one-shot ?tab= parameter which is consumed once applied.
+  routeSticky?: boolean;
+  /// Returns to "/" through the router. Must be used instead of replaceState:
+  /// the router cannot see a raw history write and would strand the nav.
+  onClearRoute?: () => void;
+};
 const TAB_LABEL: Record<Tab, string> = {
   receive: "Receive",
   send: "Send",
@@ -436,7 +446,7 @@ function scrollToPane(force = false) {
   });
 }
 
-export default function App() {
+export default function App({ routeTab = null, routeSticky = false, onClearRoute }: AppRouteProps = {}) {
   // Boot from the cached last-known status: the whole UI (balance, address, QR)
   // renders in the first frame instead of trickling in as network calls land —
   // the 1s poll then corrects anything stale within a second.
@@ -447,37 +457,34 @@ export default function App() {
   // Opens on History, not Receive. "Receive" is now a button, and landing inside it
   // meant every launch started with a QR code nobody asked for; what a person wants on
   // opening a wallet is to see that their money is there and what happened to it.
-  const [tab, setTab] = useState<Tab>(() => (onSettingsRoute() ? "settings" : walletTabFromHash() ?? "history"));
-  useEffect(() => {
-    const applyWalletRoute = () => {
-      // A real route, not a one-shot parameter: switch to it and leave the URL be.
-      if (onSettingsRoute()) {
-        setTab("settings");
-        return;
-      }
-      const routed = walletTabFromHash();
-      if (!routed) return;
-      setTab(routed);
-      // Consume the one-shot quick-action parameter. Normal tab changes remain
-      // local UI state and Back cannot unexpectedly reopen Receive later.
-      history.replaceState(null, "", `${location.pathname}${location.search}#/`);
-    };
-    applyWalletRoute();
-    window.addEventListener("hashchange", applyWalletRoute);
-    return () => window.removeEventListener("hashchange", applyWalletRoute);
-  }, []);
+  const [tab, setTab] = useState<Tab>(() => asTab(routeTab) ?? walletTabFromHash() ?? "history");
   // Switching tabs aligns the new pane under the tab bar so its form/content is
   // instantly usable — e.g. tapping Send lands you on the address field, not on
   // the balance hero with the form below the fold. Skipped on first render so
   // opening the wallet still starts at the top with the balance visible.
   const firstTab = useRef(true);
-  // Leaving Settings from inside the wallet must leave the /settings ROUTE too,
-  // or the nav keeps Settings lit while the user is reading their history.
+  // The URL drives the tab. A quick action (?tab=) is consumed once applied so
+  // Back cannot reopen it later; /settings is a real location and stays.
+  const wasSticky = useRef(routeSticky);
   useEffect(() => {
-    if (tab !== "settings" && onSettingsRoute()) {
-      history.replaceState(null, "", `${location.pathname}${location.search}#/`);
+    const routed = asTab(routeTab);
+    if (routed) {
+      setTab(routed);
+      if (!routeSticky) onClearRoute?.();
+    } else if (wasSticky.current) {
+      // Left /settings from the nav (e.g. tapped Wallet). Show the wallet —
+      // leaving the tab on Settings would contradict the highlighted nav item.
+      setTab("history");
     }
-  }, [tab]);
+    wasSticky.current = routeSticky;
+    // Deliberately not depending on onClearRoute: it is memoised per navigate,
+    // but a caller passing an inline arrow would loop this effect forever.
+  }, [routeTab, routeSticky]);
+  // ...and the tab drives the URL: switching away from Settings from inside the
+  // wallet must leave the /settings route, or the nav stays lit on Settings.
+  useEffect(() => {
+    if (routeSticky && tab !== "settings") onClearRoute?.();
+  }, [tab, routeSticky]);
   useEffect(() => {
     if (firstTab.current) {
       firstTab.current = false;

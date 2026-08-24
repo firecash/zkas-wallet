@@ -11,6 +11,8 @@ import { initDesktop, isDesktop, vaultStatus } from "./desktop";
 import { FirstRunNode, needsNodeChoice, markNodeChoiceMade } from "./FirstRunNode";
 import { FirstRunConnect } from "./FirstRunConnect";
 import { WhatsNew, shouldShowWhatsNew } from "./WhatsNew";
+import { WalletRoute } from "./WalletRoute";
+import { useHashRouterSync } from "./hashsync";
 import { BootLoader } from "./components/BootLoader";
 import { listWallets } from "./wallets";
 import { isNative, loadStatusCache } from "./api";
@@ -20,7 +22,7 @@ import "./styles.css";
 // Every tool page used to ship in the first JavaScript download, including QR,
 // explorer, service-directory and mining code a user may never open. Load a
 // route when it is selected so the wallet itself reaches first paint sooner.
-const WalletApp = lazy(() => import("./App"));
+
 const NodeRunner = lazy(() => import("./pages/NodeRunner").then((module) => ({ default: module.NodeRunner })));
 const Mining = lazy(() => import("./pages/Mining").then((module) => ({ default: module.Mining })));
 const Explorer = lazy(() => import("./pages/Explorer").then((module) => ({ default: module.Explorer })));
@@ -61,10 +63,10 @@ function Root({ locked, askNode, whatsNew }: { locked: boolean; askNode: boolean
       <Suspense fallback={<BootLoader label="Opening…" />}>
         <Routes>
           <Route element={<AppShell />}>
-            <Route path="/" element={<WalletApp />} />
+            <Route path="/" element={<WalletRoute />} />
             {/* Settings is a wallet tab, but the mobile nav needs a real location
                 so the bar can highlight it and Back behaves. */}
-            <Route path="/settings" element={<WalletApp />} />
+            <Route path="/settings" element={<WalletRoute />} />
             <Route path="/node" element={<NodeRunner />} />
             <Route path="/mine" element={<Mining />} />
             <Route path="/explore" element={<Explorer />} />
@@ -108,6 +110,7 @@ function AppShell() {
       ? [{ path: "/self-host", label: "Host", icon: HardDrive }]
       : [{ path: "/settings", label: "Settings", icon: Settings }]),
   ], [android, desktop]);
+  useHashRouterSync();
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
