@@ -17,33 +17,52 @@ let rounds: Round[] = [];
 
 // Notes produced by a round are UNMATURED: walletd will not select them again in
 // this run, which is what makes multi-round consolidation terminate.
-function makeDaemon(notes: bigint[], order: "asc" | "desc", cap: number) {
-  const spendable = [...notes].sort((a, b) => (order === "asc" ? (a < b ? -1 : 1) : a < b ? 1 : -1));
-  const pending: bigint[] = [];
-  let picked: bigint[] = [];
+function makeDaemon(notes: bigint[], cap: number) {
+  // walletd sorts candidates value-DESCENDING and takes the fewest notes that
+  // cover amount+fee (select_spend_count), capped at max_per_tx. Outputs are
+  // unmatured, so a later pass cannot select them — that is what makes a
+  // multi-pass run terminate.
+  const matured = [...notes].sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+  const fresh: bigint[] = [];
+  let picked = 0;
+  let pickedSum = 0n;
   return {
-    get noteCount() { return spendable.length + pending.length; },
-    get spendableTotal() { return spendable.reduce((a, b) => a + b, 0n); },
-    prepare(amount: bigint) {
-      picked = [];
+    get noteCount() { return matured.length + fresh.length; },
+    get maturedTotal() { return matured.reduce((a, b) => a + b, 0n); },
+    prepare(amount: bigint, allowPartial: boolean) {
+      const have = matured.reduce((a, b) => a + b, 0n);
+      let k = Math.min(matured.length, cap);
       let sum = 0n;
-      for (const n of spendable) {
-        if (picked.length >= cap) break;
-        picked.push(n);
-        sum += n;
-        if (sum >= amount + BigInt(minRelayFeeForSpends(picked.length))) break;
+      for (let i = 0; i < Math.min(matured.length, cap); i++) {
+        sum += matured[i];
+        const f = BigInt(minRelayFeeForSpends(i + 1));
+        if (sum >= amount + f) { k = i + 1; break; }
       }
-      const fee = BigInt(minRelayFeeForSpends(picked.length || 1));
-      const payable = sum - fee;
-      const amt = payable >= amount ? amount : payable;
-      const change = payable - amt;
-      const rest = spendable.slice(picked.length).reduce((a, b) => a + b, 0n);
-      return { spent: picked.length, amount: amt, fee, change, remaining: rest };
+      const fee = BigInt(minRelayFeeForSpends(k || 1));
+      const selected = matured.slice(0, k).reduce((a, b) => a + b, 0n);
+      const need = amount + fee;
+      let paid: bigint;
+      let change: bigint;
+      if (selected < need) {
+        // walletd: partial chunk pays every selected note less the fee, change zero.
+        const capacity = selected - fee;
+        if (!(allowPartial && have >= need && capacity > 0n)) throw new Error("insufficient matured funds");
+        paid = capacity;
+        change = 0n;
+      } else {
+        paid = amount;
+        change = selected - amount - fee;
+      }
+      picked = k;
+      pickedSum = selected;
+      const rest = matured.slice(k).reduce((a, b) => a + b, 0n);
+      return { spent: k, amount: paid, fee, change, remaining: rest };
     },
     commit(amount: bigint, change: bigint) {
-      spendable.splice(0, picked.length);
-      pending.push(amount);
-      if (change > 0n) pending.push(change);
+      matured.splice(0, picked);
+      fresh.push(amount);
+      if (change > 0n) fresh.push(change);
+      void pickedSum;
     },
   };
 }
@@ -56,7 +75,7 @@ vi.mock("../src/signer", () => ({
 vi.mock("../src/api", () => ({
   api: {
     prepare: async (_f: string, _t: string, amount: bigint) => {
-      const r = daemon.prepare(amount);
+      const r = daemon.prepare(amount, true);
       lastPrep = r;
       return {
         session: "s", bundle_hex: "00", disclosure: {},
@@ -77,14 +96,14 @@ vi.mock("../src/api", () => ({
 let lastPrep: ReturnType<ReturnType<typeof makeDaemon>["prepare"]>;
 const { consolidateNonCustodial, MAX_NOTES_PER_TX } = await import("../src/noncustodial");
 
-async function consolidate(notes: bigint[], target: number, order: "asc" | "desc" = "asc") {
-  daemon = makeDaemon(notes, order, MAX_NOTES_PER_TX);
+async function consolidate(notes: bigint[], target: number) {
+  daemon = makeDaemon(notes, MAX_NOTES_PER_TX);
   rounds = [];
   const before = daemon.noteCount;
   let error: string | null = null;
   try {
     await consolidateNonCustodial("00".repeat(32), "mainnet", "zkas:self",
-      daemon.spendableTotal, undefined, 12, undefined, target, before);
+      daemon.maturedTotal, undefined, 12, undefined, target, before);
   } catch (e) { error = (e as Error).message; }
   return { before, after: daemon.noteCount, rounds, error };
 }
@@ -105,9 +124,9 @@ describe("consolidation against a simulated daemon", () => {
 
   for (const [name, notes] of shapes) {
     for (const target of [1, 2, 3, 5]) {
-      for (const order of ["asc", "desc"] as const) {
-        it(`${name}, keep ${target} (${order}): never ends up more fragmented`, async () => {
-          const r = await consolidate(notes, target, order);
+      {
+        it(`${name}, keep ${target}: never ends up more fragmented`, async () => {
+          const r = await consolidate(notes, target);
           // The one promise the button makes.
           if (!r.error) expect(r.after).toBeLessThanOrEqual(r.before);
           // And never a fee for a round that cannot reduce the count: the fee
@@ -120,12 +139,21 @@ describe("consolidation against a simulated daemon", () => {
     }
   }
 
-  it("four notes become one merged note plus its change", async () => {
-    // The honest result: the unspent fee reserve comes back as a second note.
+  it("four notes really do become ONE note, in one pass", async () => {
+    // Only true since the fee reserve stopped being the 38-note ceiling. Before
+    // that the unspent reserve came back as a second, 0.227 ZKAS change note, so
+    // "merge everything into one" quietly left two.
     const r = await consolidate(Array(4).fill(U), 1);
     expect(r.error).toBeNull();
-    expect(r.after).toBe(2);
+    expect(r.after).toBe(1);
     expect(r.rounds).toHaveLength(1);
+  });
+
+  it("a sweep leaves no change note, whatever the wallet holds", async () => {
+    for (const n of [3, 4, 6, 9, 20]) {
+      const r = await consolidate(Array(n).fill(U), 1);
+      expect(r.after).toBe(1);
+    }
   });
 
   it("reports what each shape actually ends with", async () => {

@@ -226,17 +226,19 @@ describe("the wallet a user actually touches", () => {
     expect(screen.getByLabelText("Switch wallet")).toHaveTextContent("Wallet 1");
   });
 
-  it("always offers the payments choice, and says why some are out of reach", async () => {
-    // A 4-note wallet can only merge down to one. Hiding the picker for that case
-    // left the user clicking Consolidate and finding the option simply missing.
-    statusOverride = { note_count: 4, spendable_sompi: "500000000" };
+  it("offers every choice on a small wallet, and warns it may finish sooner", async () => {
+    // The cap this used to apply came from note_count, which walletd fills with
+    // every unspent note INCLUDING ones still maturing — so it greyed out choices
+    // on a guess. The run refuses passes that cannot reduce the count; the UI does
+    // not need to predict, it needs to be honest.
+    statusOverride = { note_count: 4, spendable_sompi: "500000000", maturing_sompi: "1" };
     await mountApp();
     await userEvent.click(await screen.findByRole("button", { name: "Consolidate wallet notes" }));
 
     expect(await screen.findByText("Payments to prepare")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "1" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "3" })).toBeDisabled();
-    expect(screen.getByText(/4 notes is enough for 1/)).toBeInTheDocument();
+    for (const n of ["1", "2", "3", "5"]) expect(screen.getByRole("button", { name: n })).toBeEnabled();
+    expect(screen.getByText(/still maturing/)).toBeInTheDocument();
+    expect(screen.getByText(/fewer passes/)).toBeInTheDocument();
   });
 
   it("offers a real choice once the wallet holds enough notes", async () => {

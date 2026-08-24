@@ -1875,17 +1875,15 @@ function ConsolidateDialog({
   // How many notes to LEAVE. One tidy note is the worst result to live with: the
   // next payment's change is unmatured for ~10 minutes, so the wallet cannot pay
   // again until it matures. Three lets the user pay a few times back to back.
-  // Each chunk has to be MERGED from at least MIN_NOTES_PER_MERGE notes, or the
-  // pass pays a fee without reducing the note count at all. So the choice is
-  // capped by what the wallet actually holds: nine notes can make three chunks,
-  // four notes can only make one.
-  const maxKeep = Math.max(1, Math.floor((status.note_count ?? 0) / MIN_NOTES_PER_MERGE));
-  const [targetNotes, setTargetNotes] = useState(() => Math.min(3, maxKeep));
-  // note_count moves while the dialog is open (a round lands, a note matures).
-  // Without this the picker could keep showing a choice the wallet outgrew.
-  useEffect(() => {
-    setTargetNotes((n) => Math.min(n, maxKeep));
-  }, [maxKeep]);
+  // Deliberately NOT capped from note_count. walletd fills that field from
+  // `db.notes().len()` — every unspent note, matured or not — and exposes no
+  // count of the spendable ones, so a cap derived from it is a guess: a wallet
+  // showing four notes may have only one that can actually be spent. The run
+  // itself knows: a pass that would merge too few notes falls back to a full
+  // sweep, and one that still cannot reduce the count is refused before it is
+  // broadcast. So offer the choice, and let the pass with the real numbers decide.
+  const [targetNotes, setTargetNotes] = useState(3);
+  const stillMaturing = BigInt(status.maturing_sompi ?? "0") > 0n;
   const [result, setResult] = useState<{ inputs: number; txid: string; fee: number; rounds: number; more: boolean } | null>(null);
   // Live count of merged notes. A fragmented wallet needs several transactions,
   // which takes minutes — without this the dialog looks hung.
@@ -2034,8 +2032,7 @@ function ConsolidateDialog({
                   key={n}
                   type="button"
                   className={"chip" + (targetNotes === n ? " on" : "")}
-                  disabled={busy || n > maxKeep}
-                  title={n > maxKeep ? `Needs at least ${n * MIN_NOTES_PER_MERGE} notes` : undefined}
+                  disabled={busy}
                   onClick={() => setTargetNotes(n)}
                 >
                   {n}
@@ -2044,15 +2041,14 @@ function ConsolidateDialog({
             </div>
             <p className="muted small" style={{ marginTop: 0 }}>
               {targetNotes === 1
-                ? "One note, one pass. Your next payment's change takes ~10 min to mature."
-                : `${targetNotes} chunks you can spend back to back · ${targetNotes} passes · ${targetNotes} fees.`}
+                ? "One note, one pass — the tidiest result."
+                : `${targetNotes} chunks to spend back to back · ${targetNotes} fees · merges fewer notes.`}
             </p>
-            {maxKeep < 5 && (
-              // Say WHY the higher numbers are greyed out. Each note kept is merged
-              // from at least MIN_NOTES_PER_ROUND others; below that a round would
-              // pay a fee to move one note and leave the wallet more fragmented.
+            {(stillMaturing || (status.note_count ?? 0) < targetNotes * MIN_NOTES_PER_MERGE) && (
+              // Never promise passes the wallet may not be able to run: the count
+              // above includes notes that are still maturing and cannot be spent.
               <p className="muted small" style={{ marginTop: -4 }}>
-                {status.note_count ?? 0} notes is enough for {maxKeep}. Each chunk is merged from {MIN_NOTES_PER_MERGE} or more.
+                {stillMaturing ? "Some notes are still maturing — " : ""}this may finish in fewer passes.
               </p>
             )}
             {typeof status.note_count === "number" && status.note_count > MAX_NOTES_PER_TX && (

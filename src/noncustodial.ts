@@ -357,6 +357,22 @@ export async function consolidateNonCustodial(
   // note, but this action is offered only when the note count exceeds the
   // standard transaction input cap.
   let available = spendableSompi;
+  // Reserve the fee for the notes this wallet could ACTUALLY spend, not always
+  // the 38-note ceiling.
+  //
+  // walletd derives change from the inputs (`change = selected - amount - fee`),
+  // so every sompi reserved beyond the real fee comes back as a CHANGE NOTE. At
+  // the 38-note ceiling that is 0.2458 ZKAS on a wallet whose four-note pass only
+  // costs 0.0312 — so "merge everything into one note" quietly produced two, and
+  // the wallet was never as consolidated as it claimed.
+  //
+  // Reserving by note count is safe in the only direction that matters: walletd
+  // can never select more notes than the wallet holds, and the fee is monotone in
+  // the count, so this always reserves ENOUGH. Callers that do not know the count
+  // pass 0 and keep the old ceiling.
+  const reserve = BigInt(feeReserveSompi(
+    noteCount > 0 ? Math.min(noteCount, MAX_NOTES_PER_TX) : MAX_NOTES_PER_TX,
+  ));
   // Never ask for more chunks than the wallet can produce by MERGING: each one
   // has to come from at least MIN_NOTES_PER_MERGE notes. Asking for more would
   // spend a fee per round without reducing the note count, and end up MORE
@@ -366,7 +382,7 @@ export async function consolidateNonCustodial(
   for (let round = 0; round < Math.max(1, maxRounds); round++) {
     // Reserve the relay minimum for a FULL transaction. The daemon picks the final note
     // count, and reserving for fewer than it picks is exactly the bug this replaced.
-    const sweepable = available - BigInt(feeReserveSompi(MAX_NOTES_PER_TX));
+    const sweepable = available - reserve;
     if (sweepable <= 0n) break;
     // Ask for a SHARE of what is left rather than all of it, so the wallet ends up
     // holding `targetNotes` notes instead of one. Each round still merges as many
@@ -376,7 +392,7 @@ export async function consolidateNonCustodial(
     const stillWanted = Math.max(1, wantedNotes - txids.length);
     const share = stillWanted > 1 ? sweepable / BigInt(stillWanted) : sweepable;
     // Never mint dust: a note worth less than a few fees is not usable change.
-    const floor = BigInt(feeReserveSompi(MAX_NOTES_PER_TX)) * 2n;
+    const floor = reserve * 2n;
     let requested = share < floor ? sweepable : share;
     try {
     onStage?.("proving");
@@ -427,11 +443,11 @@ export async function consolidateNonCustodial(
     onRound?.(txids.length, inputs);
 
     // Everything the wallet could offer went into this round.
-    if (remaining <= BigInt(feeReserveSompi(MAX_NOTES_PER_TX))) break;
+    if (remaining <= reserve) break;
     // When splitting, `remaining` is only the part of THIS round's share that did
     // not fit; the rest of the balance is still there for the next note.
     available = wantedNotes > 1 ? available - roundAmount - roundFee : remaining;
-    if (available <= BigInt(feeReserveSompi(MAX_NOTES_PER_TX))) break;
+    if (available <= reserve) break;
     if (round === Math.max(1, maxRounds) - 1) more = true;
     } catch (cause) {
       // Rounds already broadcast are real transactions. Throwing here would
