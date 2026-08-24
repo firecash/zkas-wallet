@@ -107,23 +107,34 @@ fn tor_client() -> Result<reqwest::Client, String> {
     .clone()
 }
 
-/// Build the URL for a remote wallet service, refusing anything that is not a
-/// plain-HTTP .onion.
+/// Where a chosen remote wallet service lives, and how to reach it.
+enum RemoteTarget {
+    /// A .onion, which only the Tor SOCKS proxy can resolve.
+    Tor(String),
+    /// An ordinary HTTPS service, reached directly.
+    Direct(String),
+}
+
+/// Resolve a remote wallet service address, refusing anything else.
 ///
-/// Deliberately narrow: this command is reachable from page script, so allowing
-/// an arbitrary base would turn it into a request forwarder pointed at anything
-/// the shell can see, loopback included. Tor's own encryption and authentication
-/// are what make plain http correct here.
-fn onion_target(base: &str, path: &str) -> Result<String, String> {
+/// Deliberately narrow, because this command is reachable from page script:
+/// allowing an arbitrary base would turn the shell into a request forwarder
+/// aimed at anything it can see, loopback and LAN included. HTTPS is allowed
+/// anywhere because TLS authenticates the far end; plain HTTP only for .onion,
+/// where Tor provides the same guarantee itself.
+fn remote_target(base: &str, path: &str) -> Result<RemoteTarget, String> {
     let base = base.trim().trim_end_matches('/');
-    let rest = base
-        .strip_prefix("http://")
-        .ok_or_else(|| "a Tor wallet service must be a plain http:// onion address".to_string())?;
-    let host = rest.split('/').next().unwrap_or("").split(':').next().unwrap_or("");
-    if !host.ends_with(".onion") {
-        return Err("that address is not a .onion service".into());
+    if let Some(rest) = base.strip_prefix("http://") {
+        let host = rest.split('/').next().unwrap_or("").split(':').next().unwrap_or("");
+        if !host.ends_with(".onion") {
+            return Err("a plain http:// wallet service is only allowed for .onion addresses".into());
+        }
+        return Ok(RemoteTarget::Tor(format!("{base}{path}")));
     }
-    Ok(format!("{base}{path}"))
+    if base.starts_with("https://") {
+        return Ok(RemoteTarget::Direct(format!("{base}{path}")));
+    }
+    Err("a wallet service must be an https:// address or a .onion service".into())
 }
 /// Our public P2P entry — handed to a spawned local node so it can join the
 /// network (release binaries ship with no DNS seeders).
@@ -1039,7 +1050,8 @@ struct WalletApiResponse {
 fn allowed_wallet_api_path(path: &str) -> bool {
     matches!(
         path,
-        "/api/status"
+        "/health"
+            | "/api/status"
             | "/api/wallet/balance"
             | "/api/wallet/create"
             | "/api/wallet/watch"
@@ -1100,12 +1112,19 @@ async fn wallet_api_request(
         return Err("invalid wallet token".into());
     }
 
-    // A Tor service is reached through the SOCKS proxy, not the embedded engine.
-    // This is the whole reason the command takes a base at all: without it every
-    // "connected over Tor" call was answered by the local daemon.
-    if let Some(onion) = base.as_deref().map(str::trim).filter(|b| !b.is_empty()) {
-        let url = onion_target(onion, &path)?;
-        let client = tor_client()?;
+    // A chosen remote service is reached here, in Rust, never from the WebView.
+    //
+    // This is the whole reason the command takes a base. Two separate failures
+    // came from not doing it: a Tor choice was answered by the LOCAL daemon, and
+    // the public service failed outright because the desktop origin
+    // (tauri://localhost) is not in the service's CORS allowlist — the browser
+    // blocked it before it left the machine. Rust is not subject to CORS, so
+    // routing through it removes that class entirely and needs no server change.
+    if let Some(remote) = base.as_deref().map(str::trim).filter(|b| !b.is_empty()) {
+        let (client, url) = match remote_target(remote, &path)? {
+            RemoteTarget::Tor(url) => (tor_client()?, url),
+            RemoteTarget::Direct(url) => (engine(&state).http.clone(), url),
+        };
         let mut request = match method.as_str() {
             "GET" => client.get(url),
             "POST" => client.post(url),
@@ -1119,7 +1138,11 @@ async fn wallet_api_request(
             request = request.json(&value);
         }
         let response = request.send().await.map_err(|error| {
-            format!("cannot reach the Tor wallet service (is Tor running on {TOR_SOCKS_PROXY}?): {error}")
+            if remote.contains(".onion") {
+                format!("cannot reach the Tor wallet service (is Tor running on {TOR_SOCKS_PROXY}?): {error}")
+            } else {
+                format!("cannot reach the wallet service at {remote}: {error}")
+            }
         })?;
         let status = response.status().as_u16();
         let body = response.text().await.unwrap_or_default();

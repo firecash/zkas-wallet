@@ -51,9 +51,22 @@ describe("desktop request routing", () => {
     localStorage.setItem("walletd_base", "https://wallet.zkas.info/daemon");
     const { api } = await import("../src/api");
     await api.status();
-    // The whole point: this must not be answered by 127.0.0.1.
-    expect(invoked).not.toContain("wallet_api_request");
-    expect(fetched[0]).toContain("https://wallet.zkas.info/daemon");
+    // Through Rust, which is not subject to CORS — a fetch from the WebView is
+    // blocked outright, because tauri://localhost is not in the service's
+    // allowlist while Android's https://localhost is. That asymmetry is the
+    // entire reason the public service worked on Android and not on desktop.
+    expect(invoked).toContain("wallet_api_request");
+    expect(invokeArgs[0].base).toBe("https://wallet.zkas.info/daemon");
+    expect(fetched).toHaveLength(0);
+  });
+
+  it("probes a service over the same transport it will actually use", async () => {
+    // Probing with fetch declared the public service unreachable ("Load failed")
+    // on CORS alone, while every real call to it would have succeeded.
+    const { findReachableDaemon } = await import("../src/api");
+    await findReachableDaemon("https://wallet.zkas.info/daemon").catch(() => undefined);
+    expect(fetched).toHaveLength(0);
+    expect(invoked.filter((c) => c === "wallet_api_request").length).toBeGreaterThan(0);
   });
 
   it("sends a Tor onion through Rust, which owns the SOCKS proxy", async () => {

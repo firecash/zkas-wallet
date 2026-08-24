@@ -178,6 +178,25 @@ export class WalletdUnauthorizedError extends Error {
 }
 
 async function probe(url: string, path: string, headers: Record<string, string>, timeoutMs: number): Promise<Response> {
+  // On desktop this has to travel the same road as the real calls. Probing with
+  // fetch reported the public service as unreachable ("Load failed") purely
+  // because the WebView origin is not in its CORS allowlist, even though every
+  // wallet call to it goes through Rust and works.
+  if ("__TAURI_INTERNALS__" in globalThis) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const response = await invoke<{ status: number; body: string }>("wallet_api_request", {
+      method: "GET",
+      path,
+      body: null,
+      walletToken: headers["X-Wallet-Token"] || getToken(),
+      timeoutMs,
+      base: url,
+    });
+    return new Response(response.body, {
+      status: response.status,
+      headers: { "content-type": "application/json" },
+    });
+  }
   const ctl = new AbortController();
   const timer = globalThis.setTimeout(() => ctl.abort(), timeoutMs);
   try {
@@ -449,19 +468,23 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
   // different port and add a bearer gate, and Rust is the single authoritative
   // owner of both values. This removes stale-port/CORS/auth races while keeping
   // the exact same HTTP API boundary. Web/mobile still talk to walletd directly.
-  // ...but only where Rust is the right transport.
+  // ...for EVERY desktop call, with `base` saying where it should land: the
+  // embedded engine when nothing else was chosen, otherwise the service the user
+  // picked (Rust proxies .onion through Tor).
   //
-  // `wallet_api_request` used to hardcode `http://127.0.0.1:{port}`, so routing a
-  // deliberately chosen REMOTE service through it sent every call to the local
-  // daemon while the UI showed the remote as connected. Now:
-  //   - no remote choice  -> Rust, to the embedded engine (as before);
-  //   - a .onion service  -> Rust, which proxies it through Tor (the WebView has
-  //     no SOCKS, so this cannot be done from here);
-  //   - anything else     -> ordinary fetch, allowed by the desktop CSP.
+  // Two separate failures came from not doing this. `wallet_api_request` used to
+  // hardcode `http://127.0.0.1:{port}`, so a Tor choice was silently answered by
+  // the LOCAL daemon while the UI showed Tor as connected. Sending remote calls
+  // from the WebView instead failed differently: the desktop origin is
+  // `tauri://localhost`, which the public service does not list in its CORS
+  // allowlist, so the browser blocked the request before it left the machine —
+  // "Load failed" — while the same call from Android (origin `https://localhost`,
+  // which IS allowed) worked. Rust is not subject to CORS, so this removes the
+  // whole class without touching the server.
   const desktopShell = "__TAURI_INTERNALS__" in globalThis;
   const remoteChoice = desktopShell ? desktopRemoteBase() : "";
   const viaTor = !!remoteChoice && isOnionAddress(remoteChoice);
-  if (desktopShell && (!remoteChoice || viaTor)) {
+  if (desktopShell) {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const response = await invoke<{ status: number; body: string }>("wallet_api_request", {
@@ -470,7 +493,8 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
         body: body ?? null,
         walletToken: getToken(),
         timeoutMs,
-        base: viaTor ? remoteChoice : null,
+        // Empty means the embedded engine; anything else is the chosen service.
+        base: remoteChoice || null,
       });
       status = response.status;
       text = response.body;
