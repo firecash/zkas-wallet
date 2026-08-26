@@ -977,7 +977,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
     <div className={`wrap wallet-wrap${status?.has_wallet ? " has-wallet" : ""}`}>
       <div className="wallet-topline">
         <WalletBar />
-        <ConnectionButton />
+        {/* Only once a wallet exists. Before that the connection is not a chip in
+            the corner to be noticed or missed — it is the thing being decided, and
+            it belongs in the disclosure on the screen that decides it. */}
+        {status?.has_wallet && <ConnectionButton />}
         <HostedNotice />
       </div>
       {/* First-ever open (nothing cached yet): a designed connecting state while the
@@ -2988,6 +2991,7 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
         (Safari does it after about a week without a visit), and the key was only
         ever here, never on the server.
       </div>
+      <SyncDestination />
       {cached?.address && (
         <>
           <label>This wallet's address</label>
@@ -3025,6 +3029,49 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
       <button className="linkbtn" onClick={onStartOver}>
         Not your wallet? Create or import a different one
       </button>
+    </div>
+  );
+}
+
+
+/// Where this wallet will sync, shown BEFORE a wallet exists.
+///
+/// Creating or importing a wallet registers its full viewing key with a wallet
+/// service. That is the moment a real disclosure happens: the service can see
+/// every amount and memo this wallet ever receives, forever. It cannot spend —
+/// the spending key stays on this device — but "cannot spend" is not "cannot
+/// see", and a person deserves to know which service that is before they press
+/// the button, not afterwards.
+///
+/// The first-run gate used to skip the web entirely, reasoning that the host had
+/// already served the page so contacting its daemon revealed nothing new. That is
+/// true of the IP address and false of the viewing key: loading a page does not
+/// imply handing over your financial history. So this is shown on EVERY platform,
+/// and it is shown here rather than as a boot gate, because here is where the
+/// disclosure actually occurs — someone merely opening the app, or following a
+/// watch link, is asked nothing.
+function SyncDestination() {
+  const base = getBase();
+  const onion = isOnionAddress(base);
+  const local = /127\.0\.0\.1|localhost/.test(base);
+  const where = onion
+    ? "Tor"
+    : local
+      ? "this computer"
+      : base.includes("wallet.zkas.info")
+        ? "the public service (wallet.zkas.info)"
+        : (() => {
+            try { return new URL(base).host; } catch { return "the service you chose"; }
+          })();
+  return (
+    <div className="msg" style={{ textAlign: "left" }}>
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span className="muted small">
+          Your wallet will sync through <b>{where}</b>. It sees your balance and
+          history — never your keys, and it cannot spend.
+        </span>
+        <ConnectionButton />
+      </div>
     </div>
   );
 }
@@ -3336,6 +3383,10 @@ function Onboard({
           Shows a wallet's balance and history on this device. It cannot send:
           there is no spending key here to sign with.
         </p>
+        {/* Watching registers the view key with a service too, so the same
+            disclosure applies — and here the key being registered is somebody
+            else's. */}
+        <SyncDestination />
         {error && <div className="msg err">{error}</div>}
         <label>View key or link</label>
         <textarea
@@ -3384,6 +3435,7 @@ function Onboard({
       <p className="muted" style={{ marginTop: 0 }}>
         Create a new wallet or restore yours. Every ZKAS payment is private.
       </p>
+      <SyncDestination />
       {error && <div className="msg err">{error}</div>}
       {/* Creating before the first status answer means birthday 0 — a brand-new
           wallet would then scan ALL 850k+ blocks for history it cannot have.
