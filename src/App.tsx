@@ -519,6 +519,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   const repairAttempts = useRef(0);
   const lastRepairAt = useRef(0);
   const repairNeeded = useRef(false);
+  /// Set once a repair attempt has looked everywhere and found no key. Retrying
+  /// and holding the wallet on screen after that is 20 seconds of false hope
+  /// before the same answer.
+  const noKeyHere = useRef(false);
   // A status poll can overlap the previous one while a cold wallet is loading.
   // Keep one repair operation in flight; otherwise several polls can all call
   // `/watch` and start duplicate reloads for the same wallet.
@@ -626,6 +630,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         if (s.has_wallet) {
           missingPolls.current = 0;
           repairAttempts.current = 0;
+          noKeyHere.current = false;
         } else missingPolls.current += 1;
         const transient = missingPolls.current <= MISSING_TOLERANCE;
         const denied = !!prev?.has_wallet && !s.has_wallet;
@@ -666,6 +671,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         const holdForRepair =
           (denied || missingKnownWallet) &&
           hasLocalKey &&
+          !noKeyHere.current &&
           (repairInFlight.current || (repairAttempts.current > 0 && now - lastRepairAt.current < 20_000));
         // The hold is ending and no repair can run (this device holds no key for
         // the wallet under ANY token): do NOT drop to "create a new wallet" —
@@ -710,6 +716,14 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               if (addr) seed = await findOrphanedSeed(addr);
             }
             if (seed) await api.watch(await fvkHex(seed), walletBirthday());
+            else {
+              // No key here and none orphaned under another token. Retrying cannot
+              // change that — localStorage does not refill itself — so two more
+              // rounds would only hold a wallet on screen for another 40 seconds
+              // before admitting the same thing. Give up now and say so.
+              repairAttempts.current = 3;
+              noKeyHere.current = true;
+            }
           } catch {
             /* a later poll re-arms while attempts remain */
           } finally {
@@ -2864,9 +2878,11 @@ function networkOf(status: Status | null): Network {
 /// auto-repair with. The worst possible answer is a bare "create a new wallet"
 /// — the user panic-creates over their existing wallet. Show the cached address,
 /// take the seed, VERIFY it matches the address, re-register, rebuild.
-function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; onStartOver: () => void }) {
+export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; onStartOver: () => void }) {
   const cached = loadStatusCache();
   const [seed, setSeed] = useState("");
+  const [watching, setWatching] = useState(false);
+  const [viewKey, setViewKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const recover = async () => {
@@ -2910,12 +2926,68 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
       setBusy(false);
     }
   };
+  if (watching) {
+    return (
+      <div className="card">
+        <h2>Watch this wallet</h2>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Shows the balance and history without a recovery phrase. It cannot send:
+          a view key carries no spending authority.
+        </p>
+        {err && <div className="msg err">{err}</div>}
+        <label>View key or link</label>
+        <textarea
+          value={viewKey}
+          onChange={(e) => setViewKey(e.target.value)}
+          placeholder="paste the view key, or the whole link"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+        <div className="row" style={{ gap: 8, marginTop: 10 }}>
+          <button className="btn ghost" onClick={() => { setWatching(false); setErr(""); }}>Back</button>
+          <button
+            className="btn"
+            disabled={busy || !viewKey.trim()}
+            onClick={async () => {
+              setBusy(true);
+              setErr("");
+              try {
+                const raw = viewKey.trim();
+                const k = raw.includes("key=") ? (raw.split("key=")[1] ?? "").split("&")[0].trim() : raw;
+                if (!isViewKey(k)) { setErr("That is not a view key."); return; }
+                const b = raw.includes("b=") ? Number((raw.split("b=")[1] ?? "").split("&")[0]) || 0 : 0;
+                await adoptViewKey(k, b);
+                location.reload();
+              } catch (e) {
+                setErr((e as Error)?.message ?? String(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? "Connecting…" : "Watch it"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="card">
       <h2>Reconnect your wallet</h2>
+      {/* The old wording blamed the service — "the service forgot this wallet".
+          It is usually the opposite: the coins and the registration are fine, and
+          THIS BROWSER lost the key it had stored. Safari clears a site's storage
+          after 7 days without a visit, which is precisely the case where a person
+          returns to find a wallet asking for a phrase and concludes the wallet ate
+          their money. Say what happened, and how to stop it happening again. */}
       <div className="msg ok">
-        <b>Nothing is lost.</b> Your coins are safe on-chain. The service forgot this wallet — reconnecting restores it.
-          </div>
+        <b>Nothing is lost.</b> Your coins are safe on the chain. This browser no
+        longer holds the key for this wallet — browsers clear stored site data
+        (Safari does it after about a week without a visit), and the key was only
+        ever here, never on the server.
+      </div>
       {cached?.address && (
         <>
           <label>This wallet's address</label>
@@ -2939,7 +3011,17 @@ function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; 
       </button>
       <p className="muted small">
         Checked on this device against the address above, and never sent anywhere.
-          </p>
+      </p>
+      {/* Not everyone in this state wants to type their phrase into a browser —
+          often they only want to see the balance. A view key does that and cannot
+          spend, so it is the safer answer to "did my money arrive?". */}
+      <button className="linkbtn" onClick={() => setWatching(true)}>
+        Just watch this wallet instead (no phrase needed)
+      </button>
+      <p className="muted small">
+        To stop this happening again, add the wallet to your Home Screen — an
+        installed app keeps its storage, a browser tab may not.
+      </p>
       <button className="linkbtn" onClick={onStartOver}>
         Not your wallet? Create or import a different one
       </button>
