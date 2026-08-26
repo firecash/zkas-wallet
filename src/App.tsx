@@ -78,7 +78,8 @@ import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
-import { isWatchOnly, clearWatchKey, watchLink } from "./lib/watchonly";
+import { isWatchOnly, clearWatchKey, watchLink, isViewKey } from "./lib/watchonly";
+import { adoptViewKey } from "./lib/watchadopt";
 import { OrbotHelp } from "./OrbotHelp";
 import { desktopServices } from "./desktop-services";
 import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
@@ -2954,7 +2955,9 @@ function Onboard({
   onCreated: (seed: string, address: string) => void;
   onImported: () => void;
 }) {
-  const [mode, setMode] = useState<"choose" | "import" | "backup" | "restorefile">("choose");
+  const [mode, setMode] = useState<"choose" | "import" | "backup" | "restorefile" | "watch">("choose");
+  const [watchInput, setWatchInput] = useState("");
+  const [scanningKey, setScanningKey] = useState(false);
   const [importHex, setImportHex] = useState("");
   const [restoreJson, setRestoreJson] = useState("");
   const [restoreName, setRestoreName] = useState("");
@@ -3219,6 +3222,79 @@ function Onboard({
     );
   }
 
+  /// Adopt a view key: this device will SEE the wallet and can never spend from
+  /// it, because no spending key is stored. Accepts the key on its own or the
+  /// whole sharing link, since that is what a person actually has to hand.
+  const doWatch = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const raw = watchInput.trim();
+      const fromLink = raw.includes("key=") ? (raw.split("key=")[1] ?? "").split("&")[0].trim() : raw;
+      if (!isViewKey(fromLink)) {
+        setError("That is not a view key. Paste the key, or the whole link you were sent.");
+        return;
+      }
+      const b = raw.includes("b=") ? Number((raw.split("b=")[1] ?? "").split("&")[0]) || 0 : 0;
+      await adoptViewKey(fromLink, b);
+      location.reload();
+    } catch (e) {
+      setError((e as Error)?.message ?? String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (mode === "watch") {
+    return (
+      <div className="card">
+        <h2>Watch a wallet</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Shows a wallet's balance and history on this device. It cannot send:
+          there is no spending key here to sign with.
+        </p>
+        {error && <div className="msg err">{error}</div>}
+        <label>View key or link</label>
+        <textarea
+          value={watchInput}
+          onChange={(e) => setWatchInput(e.target.value)}
+          placeholder="paste the view key, or the whole link"
+          rows={3}
+          style={{ fontFamily: "var(--mono, monospace)", fontSize: 12 }}
+        />
+        <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+          <button className="btn ghost small" onClick={() => setScanningKey(true)}>Scan QR</button>
+          <button
+            className="btn ghost small"
+            onClick={async () => {
+              const r = await pasteText();
+              if (r.ok) { setWatchInput(r.text); setError(""); }
+              else setError("Couldn't read the clipboard — paste it into the box instead.");
+            }}
+          >
+            Paste
+          </button>
+        </div>
+        <div className="msg warn" style={{ marginTop: 10 }}>
+          A view key reveals every amount and memo that wallet has ever received
+          or sent. Only use one you were given for a wallet you are meant to see.
+        </div>
+        <div className="row" style={{ gap: 8, marginTop: 12 }}>
+          <button className="btn ghost" onClick={() => setMode("choose")}>Back</button>
+          <button className="btn" disabled={busy || !watchInput.trim()} onClick={() => void doWatch()}>
+            {busy ? <span className="spin" /> : "Watch this wallet"}
+          </button>
+        </div>
+        {scanningKey && (
+          <QrScanner
+            onResult={(text) => { setWatchInput(text); setScanningKey(false); }}
+            onClose={() => setScanningKey(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="card center">
       <h2>Welcome</h2>
@@ -3246,6 +3322,11 @@ function Onboard({
       )}
       <button className="btn ghost" onClick={() => setMode("import")}>
         Import from seed
+      </button>
+      {/* Watching needs no key of your own, so it is the one option here that
+          never creates something to lose. */}
+      <button className="btn ghost" onClick={() => setMode("watch")}>
+        Watch a wallet (view only)
       </button>
     </div>
   );
@@ -3596,7 +3677,8 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
     setError("");
     try {
       const seed = await resolveDeviceSeed(status.address ?? undefined);
-      const url = watchLink(await fvkHex(seed));
+      // Its own birthday, so the other device does not replay the chain from genesis.
+      const url = watchLink(await fvkHex(seed), walletBirthday());
       setLink(url);
       setQr(await QRCode.toDataURL(url, { margin: 1, width: 440 }));
     } catch (e) {

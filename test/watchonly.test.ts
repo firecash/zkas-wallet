@@ -68,6 +68,16 @@ describe("the sharing link", () => {
     expect(fragment).toContain(FVK);
   });
 
+  it("carries the wallet birthday so the viewer does not rescan from genesis", async () => {
+    const { birthdayFromUrl } = await import("../src/lib/watchonly");
+    expect(watchLink(FVK, 987654)).toContain("&b=987654");
+    expect(watchLink(FVK, 0)).not.toContain("&b=");
+    location.hash = `#/watch?key=${FVK}&b=987654`;
+    expect(birthdayFromUrl()).toBe(987654);
+    location.hash = `#/watch?key=${FVK}`;
+    expect(birthdayFromUrl()).toBe(0);
+  });
+
   it("refuses to build a link around anything but a view key", () => {
     expect(() => watchLink(SEED)).toThrow();
   });
