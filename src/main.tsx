@@ -13,6 +13,7 @@ import { FirstRunConnect } from "./FirstRunConnect";
 import { WhatsNew, shouldShowWhatsNew } from "./WhatsNew";
 import { WalletRoute } from "./WalletRoute";
 import { useHashRouterSync } from "./hashsync";
+import { adoptViewKeyFromUrl } from "./lib/watchadopt";
 import { BootLoader } from "./components/BootLoader";
 import { listWallets } from "./wallets";
 import { isNative, loadStatusCache } from "./api";
@@ -218,6 +219,19 @@ async function boot() {
         try { localStorage.setItem("desktop_boot_error", reason); } catch { /* best effort */ }
       }
     }
+  }
+
+  // A view-key link turns this browser into a read-only window on a wallet. Do
+  // it before the first-run gate: the link IS the user's choice of service, and
+  // asking them to pick one first would be asking a question they already
+  // answered by opening the link.
+  try {
+    if (await adoptViewKeyFromUrl()) {
+      location.reload();
+      return;
+    }
+  } catch (e) {
+    console.error("could not adopt the view key:", (e as Error)?.message ?? e);
   }
 
   // First-run connection gate. It matters where the app bundle is LOCAL and its

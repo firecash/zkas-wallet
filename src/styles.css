@@ -2484,3 +2484,15 @@ input.mono, .host-token { font-size: 16px; }
 .detail-row .k, .notegrid .k { white-space: nowrap; }
 .detail-row.stacked { display: block; }
 .detail-row.stacked .v { display: block; text-align: left; margin-top: 4px; overflow-wrap: anywhere; }
+
+/* A viewer's balance card: the slot Send and Consolidate occupy on a wallet that
+   can spend, saying plainly why nothing is offered there. Not a disabled button —
+   there is no action to enable. */
+.qa-viewonly {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  cursor: default;
+  opacity: 0.85;
+}
+.qa-viewonly .qa-detail { font-size: 12px; }

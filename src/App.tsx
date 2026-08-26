@@ -78,6 +78,7 @@ import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
+import { isWatchOnly, clearWatchKey, watchLink } from "./lib/watchonly";
 import { OrbotHelp } from "./OrbotHelp";
 import { desktopServices } from "./desktop-services";
 import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
@@ -458,6 +459,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // meant every launch started with a QR code nobody asked for; what a person wants on
   // opening a wallet is to see that their money is there and what happened to it.
   const [tab, setTab] = useState<Tab>(() => (routeSticky ? null : asTab(routeTab)) ?? walletTabFromHash() ?? "history");
+  // This device holds a viewing key and no seed. It cannot sign a spend at all —
+  // the UI simply must not offer what would fail, and must not imply the balance
+  // is spendable from here.
+  const viewOnly = isWatchOnly();
   // Switching tabs aligns the new pane under the tab bar so its form/content is
   // instantly usable — e.g. tapping Send lands you on the address field, not on
   // the balance hero with the form below the fold. Skipped on first render so
@@ -1036,6 +1041,9 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               balance, and leaves the tabs for browsing.
               Send explains itself rather than failing: while the wallet cannot spend yet
               it is disabled and says why, instead of accepting a tap and erroring. */}
+            {/* A viewer gets Receive and nothing else. Receive is safe and useful —
+                the address is public — while Send and Consolidate both end in a
+                signature this device cannot produce. */}
             <div className="quick-actions">
               <button
                 className="qa qa-receive"
@@ -1045,7 +1053,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 <ArrowDownLeft className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
                 <span className="qa-label">Receive</span>
               </button>
-              <button
+              {!viewOnly && <button
                 className="qa qa-send"
                 onClick={() => setTab("send")}
                 // The single spend predicate — see `walletCanSpend`. A synced wallet
@@ -1056,8 +1064,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               >
                 <ArrowUpRight className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
                 <span className="qa-label">Send</span>
-              </button>
-              <button
+              </button>}
+              {!viewOnly && <button
                 className="qa qa-consolidate"
                 onClick={() => setShowConsolidate(true)}
                 disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready }) || (status.note_count ?? 0) < 3}
@@ -1065,7 +1073,13 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               >
                 <span className="qa-label">Consolidate</span>
                 <span className="qa-detail">{status.note_count ?? 0} notes</span>
-              </button>
+              </button>}
+              {viewOnly && (
+                <div className="qa qa-viewonly" aria-live="polite">
+                  <span className="qa-label">View only</span>
+                  <span className="qa-detail">This device cannot send</span>
+                </div>
+              )}
             </div>
             {showConsolidate && (
               <ConsolidateDialog
@@ -1080,7 +1094,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           </section>
           <section className="wallet-workspace" aria-label="Wallet activity">
             <div className="tabs" role="tablist" aria-label="Wallet sections">
-            {TABS.map((t) => (
+            {(viewOnly ? TABS.filter((t) => t !== "send" && t !== "signatures" && t !== "tools") : TABS).map((t) => (
               <button
                 key={t}
                 role="tab"
@@ -1111,7 +1125,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           {/* key remounts the pane on tab switch so the entrance transition plays. */}
             <div className="pane appear" key={tab}>
             {tab === "receive" && <Receive status={status} />}
-            {tab === "send" && (
+            {tab === "send" && !viewOnly && (
               <Send
                 status={status}
                 onSent={onSent}
@@ -1134,8 +1148,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 }}
               />
             )}
-            {tab === "signatures" && <Signatures status={status} />}
-            {tab === "tools" && (
+            {tab === "signatures" && !viewOnly && <Signatures status={status} />}
+            {tab === "tools" && !viewOnly && (
               <Suspense fallback={<div className="card"><div className="muted small">Loading…</div></div>}>
                 <WalletTools />
               </Suspense>
@@ -2326,10 +2340,14 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // `status.ts`. The booleans above still drive WHICH card renders (they encode
   // hard-won detail about partial counts); `view` supplies every word the user
   // reads, so the wording cannot drift between branches again.
+  // A viewer must never be told the balance is "ready to spend". The daemon
+  // answers spend-readiness for the WALLET, and a watch-only wallet is perfectly
+  // spend-ready — from the device that holds the seed. This one does not, so the
+  // card would offer a figure that Send is not even there to accept.
   const view = walletStatus({
     online: true, // this card only renders once a poll has produced a status
     synced: status.synced,
-    spendReady: status.spend_ready,
+    spendReady: isWatchOnly() ? false : status.spend_ready,
     scannedBlocks: status.scanned_blocks,
     chainLen: status.chain_len,
     warming: !!status.warming,
@@ -3555,16 +3573,148 @@ function SettingsSection({ label }: { label: string }) {
   return <div className="settings-section">{label}</div>;
 }
 
+
+/// Hand another device the ability to WATCH this wallet.
+///
+/// The viewing key lets a phone browser show the balance and history with no way
+/// to spend — there is no spending key on it, so a signature is not merely
+/// refused, it is impossible. That is the right shape for "I want to check my
+/// balance on my phone" without carrying a spendable wallet around.
+///
+/// The disclosure has to be stated plainly, because it is permanent: the key
+/// reveals every amount and memo this wallet has ever seen and ever will, and it
+/// cannot be revoked without moving the coins to a new wallet.
+function WatchOnAnotherDevice({ status }: { status: Status }) {
+  const [link, setLink] = useState("");
+  const [qr, setQr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const reveal = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const seed = await resolveDeviceSeed(status.address ?? undefined);
+      const url = watchLink(await fvkHex(seed));
+      setLink(url);
+      setQr(await QRCode.toDataURL(url, { margin: 1, width: 440 }));
+    } catch (e) {
+      setError((e as Error)?.message === SEED_REQUIRED
+        ? "This device does not hold the key for this wallet."
+        : String((e as Error)?.message ?? e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="stack">
+      <p className="muted small">
+        Opens a read-only view on another device — balance and history, no way to
+        send.
+      </p>
+      <div className="msg warn">
+        Anyone with this link can see every amount and memo this wallet has ever
+        received or sent, and everything it receives from now on. You cannot take
+        that back without moving your coins to a new wallet.
+      </div>
+      {!link && (
+        <button className="btn" disabled={busy} onClick={() => void reveal()}>
+          {busy ? "Preparing…" : "Show the link"}
+        </button>
+      )}
+      {error && <div className="msg warn">{error}</div>}
+      {link && (
+        <>
+          {qr && <img className="qr" src={qr} alt="View-only link" style={{ width: "100%", maxWidth: 280 }} />}
+          <button
+            className="btn ghost"
+            onClick={async () => {
+              await copyText(link);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+          >
+            {copied ? "Copied" : "Copy link"}
+          </button>
+          <p className="muted small">
+            Open it in Safari on the other device. The key travels in the part of
+            the link a server never sees.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+
+/// The way out of view-only mode on this device.
+///
+/// Removing the key is local: it stops THIS browser watching. It does not and
+/// cannot un-disclose the key to anyone else who has the link — only moving the
+/// coins to a new wallet does that, which is why the wording does not pretend
+/// otherwise.
+function StopWatching() {
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <div className="stack">
+      <p className="muted small">
+        This device holds a view key and no spending key, so it can show the
+        balance and history and cannot send. Nothing here can move coins.
+      </p>
+      {!confirming ? (
+        <button className="btn ghost" onClick={() => setConfirming(true)}>Stop watching</button>
+      ) : (
+        <>
+          <div className="msg warn">
+            Removes the view key from this browser. Anyone else holding the link
+            keeps their view — that can only be ended by moving the coins.
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <button
+              className="btn"
+              onClick={() => {
+                clearWatchKey();
+                const token = localStorage.getItem("wallet_token");
+                if (token) unregisterWallet(token);
+                location.reload();
+              }}
+            >
+              Remove it
+            </button>
+            <button className="btn ghost" onClick={() => setConfirming(false)}>Cancel</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function SettingsPane({ status }: { status: Status }) {
+  // A viewer has no seed, so everything that reveals or shares one is not merely
+  // hidden here — there is nothing behind it to reveal.
+  const viewOnly = isWatchOnly();
   return (
     <>
       <SettingsSection label="Security" />
       <Collapsible title="App lock" summary={isLockEnabled() ? (isBiometricConfigured() ? "Fingerprint" : "On") : "Off"}>
         <AppLockSetting />
       </Collapsible>
-      <Collapsible title="Recovery seed" summary="Back up">
-        <RevealSeedCard expectedAddress={status.address ?? undefined} />
-      </Collapsible>
+      {viewOnly ? (
+        <Collapsible title="View-only wallet" summary="No spending key" defaultOpen>
+          <StopWatching />
+        </Collapsible>
+      ) : (
+        <>
+          <Collapsible title="Recovery seed" summary="Back up">
+            <RevealSeedCard expectedAddress={status.address ?? undefined} />
+          </Collapsible>
+          <Collapsible title="Watch on another device" summary="Read-only">
+            <WatchOnAnotherDevice status={status} />
+          </Collapsible>
+        </>
+      )}
 
       <SettingsSection label="Wallet" />
       <Collapsible title="Wallets" summary={walletCountLabel()}>
