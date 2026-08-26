@@ -3667,6 +3667,12 @@ function SettingsSection({ label }: { label: string }) {
 /// cannot be revoked without moving the coins to a new wallet.
 function WatchOnAnotherDevice({ status }: { status: Status }) {
   const [link, setLink] = useState("");
+  // The bare key as well as the link. A link is what you send to a phone; the key
+  // itself is what another tool wants — a third-party watcher, a bookkeeping
+  // script, `shielded-pay` — and there was no way to get it out of here.
+  const [key, setKey] = useState("");
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [showKey, setShowKey] = useState(false);
   const [qr, setQr] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -3677,8 +3683,10 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
     setError("");
     try {
       const seed = await resolveDeviceSeed(status.address ?? undefined);
+      const fvk = await fvkHex(seed);
+      setKey(fvk);
       // Its own birthday, so the other device does not replay the chain from genesis.
-      const url = watchLink(await fvkHex(seed), walletBirthday());
+      const url = watchLink(fvk, walletBirthday());
       setLink(url);
       setQr(await QRCode.toDataURL(url, { margin: 1, width: 440 }));
     } catch (e) {
@@ -3724,6 +3732,30 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
             Open it in Safari on the other device. The key travels in the part of
             the link a server never sees.
           </p>
+          <div className="row" style={{ gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <button className="btn ghost small" onClick={() => setShowKey((v) => !v)}>
+              {showKey ? "Hide view key" : "Show view key"}
+            </button>
+            <button
+              className="btn ghost small"
+              onClick={async () => {
+                await copyText(key);
+                setCopiedKey(true);
+                setTimeout(() => setCopiedKey(false), 1500);
+              }}
+            >
+              {copiedKey ? "Copied" : "Copy view key"}
+            </button>
+          </div>
+          {showKey && (
+            <>
+              <p className="mono small" style={{ wordBreak: "break-all", marginTop: 6 }}>{key}</p>
+              <p className="muted small">
+                The key on its own, for another wallet or tool. It grants the same
+                view as the link — treat it the same way.
+              </p>
+            </>
+          )}
         </>
       )}
     </div>

@@ -159,6 +159,19 @@ describe("a device that holds the seed", () => {
     expect(screen.queryByText("View only")).not.toBeInTheDocument();
   });
 
+  it("exports the view key itself, not only a link", async () => {
+    asOwner();
+    await mountApp();
+    await screen.findByText(/Shielded balance/, {}, { timeout: 8000 });
+    await userEvent.click(screen.getByRole("tab", { name: "Settings" }));
+    await userEvent.click(await screen.findByText("Watch on another device"));
+    await userEvent.click(await screen.findByRole("button", { name: /Show the link/i }));
+    // A link is for a phone; the bare key is what another tool needs.
+    expect(await screen.findByRole("button", { name: /Copy view key/i }, { timeout: 8000 })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Show view key/i }));
+    expect(await screen.findByText(/^[0-9a-f]{192}$/i)).toBeInTheDocument();
+  });
+
   it("can share a view of itself", async () => {
     asOwner();
     await mountApp();
