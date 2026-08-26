@@ -35,9 +35,19 @@ export function OrbotHelp() {
     return (
       <div className="orbot-help">
         <b>Tor isn't running on this computer</b>
+        {/* This used to say the app had no Tor client and needed the SYSTEM to
+            route through Tor — which is a far bigger ask than it needs to be, and
+            wrong since the shell started speaking SOCKS itself. Running Tor
+            Browser is enough, and is how most people on Windows and macOS have
+            Tor at all. */}
         <p className="muted small" style={{ margin: "4px 0 8px" }}>
-          This app has no Tor client of its own, so an <code>.onion</code> address is only reachable when your system
-          routes through Tor. Start Tor (or the Tor Browser bundle) and try again.
+          The wallet connects through Tor's own SOCKS port, so nothing has to be
+          routed system-wide — Tor just has to be running. Start the Tor service,
+          or simply open Tor Browser and leave it open, then try again.
+        </p>
+        <p className="muted small" style={{ margin: "0 0 8px" }}>
+          It looks on <code>127.0.0.1:9050</code> (Tor service) and{" "}
+          <code>127.0.0.1:9150</code> (Tor Browser).
         </p>
         <p className="muted small" style={{ margin: 0 }}>
           For privacy without Tor, run your own node from the <b>Node</b> page — then nobody else sees what you ask.

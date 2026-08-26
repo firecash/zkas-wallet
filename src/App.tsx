@@ -1582,7 +1582,7 @@ function ConnectionButton() {
                 </button>
               )}
               <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectTor()}>
-                <span><b>Tor · over the onion</b><small>{desktop ? "Hides your IP. Needs Tor running on this computer." : "Hides your IP. Requires the Orbot app (Tor VPN)."}</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
+                <span><b>Tor · over the onion</b><small>{desktop ? "Hides your IP. Needs Tor or Tor Browser running here." : "Hides your IP. Requires the Orbot app (Tor VPN)."}</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
               </button>
               {desktop && (
                 <button className={`connection-option ${cfg?.mode === "local" && !onion && !hosted ? "active" : ""}`} disabled={busy !== null} onClick={() => {
