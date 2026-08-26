@@ -149,6 +149,23 @@ describe("a view-only device", () => {
   });
 });
 
+describe("the version, where a user can find it", () => {
+  it("appears in Settings with the platform, copyable", async () => {
+    asOwner();
+    await mountApp();
+    await screen.findByText(/Shielded balance/, {}, { timeout: 8000 });
+    await userEvent.click(screen.getByRole("tab", { name: "Settings" }));
+    await userEvent.click(await screen.findByText("About ZKas"));
+    const pkg = (await import("../package.json")).default as { version: string };
+    const badge = await screen.findByText(`v${pkg.version}`);
+    expect(badge).toBeInTheDocument();
+    // "Web" appears elsewhere on the page too; assert the one beside the badge.
+    expect(badge.parentElement?.textContent).toContain("Web");
+    expect(screen.getByRole("button", { name: /Copy version/i })).toBeInTheDocument();
+    expect(screen.getByText(/^Built \d{4}-\d{2}-\d{2}/)).toBeInTheDocument();
+  });
+});
+
 describe("a device that holds the seed", () => {
   it("keeps every spending feature", async () => {
     asOwner();

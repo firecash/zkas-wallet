@@ -13,6 +13,7 @@ import { FirstRunConnect } from "./FirstRunConnect";
 import { WhatsNew, shouldShowWhatsNew } from "./WhatsNew";
 import { WalletRoute } from "./WalletRoute";
 import { useHashRouterSync } from "./hashsync";
+import { versionLine, versionTag } from "./version";
 import { adoptViewKeyFromUrl } from "./lib/watchadopt";
 import { BootLoader } from "./components/BootLoader";
 import { listWallets } from "./wallets";
@@ -131,6 +132,15 @@ function AppShell() {
           <button className="app-wordmark" onClick={() => navigate("/")} aria-label="ZKAS wallet home">
             <span>Z</span>KAS
           </button>
+          {/* Desktop has the room, so the version lives in the chrome where it is
+              always visible — no digging through Settings to answer "what are you
+              running?". The full line, including the build stamp, is the tooltip.
+              Phones do not get this: the bar is four tabs and a thumb. */}
+          {desktop && (
+            <span className="version-badge" title={versionLine()} aria-label={versionLine()}>
+              {versionTag()}
+            </span>
+          )}
           <div className="app-page-links">
             {pages.map((page, index) => {
               const active = location.pathname === page.path || (page.path === "/explore" && location.pathname.startsWith("/explore/"));

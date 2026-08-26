@@ -80,6 +80,7 @@ import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./con
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
 import { isWatchOnly, clearWatchKey, watchLink, isViewKey } from "./lib/watchonly";
 import { adoptViewKey } from "./lib/watchadopt";
+import { APP_BUILT, platformName, versionLine, versionTag } from "./version";
 import { OrbotHelp } from "./OrbotHelp";
 import { desktopServices } from "./desktop-services";
 import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
@@ -3942,9 +3943,29 @@ function Signatures({ status }: { status: Status | null }) {
 /// Message signing and verification: real capabilities, but ones a person needs
 /// a handful of times ever. They used to occupy two of five primary tabs.
 function AboutCard() {
+  const [copied, setCopied] = useState(false);
   return (
     <div className="card">
       <h2>About</h2>
+      {/* Version and platform, copyable in one tap. This is the first thing any
+          bug report needs, and it was the one thing the app never told anyone —
+          the build stamp is there because the web can be redeployed ahead of a
+          tagged release, so "1.0.22" alone does not identify what is running. */}
+      <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <span className="version-badge">{versionTag()}</span>
+        <span className="muted small">{platformName()}</span>
+        <button
+          className="btn ghost small"
+          onClick={async () => {
+            await copyText(versionLine());
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          }}
+        >
+          {copied ? "Copied" : "Copy version"}
+        </button>
+      </div>
+      {APP_BUILT && <p className="muted small" style={{ marginTop: -4 }}>Built {APP_BUILT} UTC</p>}
       <p className="muted small" style={{ marginTop: 0 }}>
         ZKas Wallet — every balance and payment shielded by Orchard zero-knowledge proofs. Your spending key is held on
         this device and never sent anywhere.
