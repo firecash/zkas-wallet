@@ -5,12 +5,35 @@
 The SDK ships **TypeScript bindings only** (`sdk/bindings/typescript`). There is no
 Swift, no Kotlin, no UniFFI definition, no JNI.
 
-But nothing about the core is web-shaped. `sdk/core`, `sdk/signer` and
-`sdk/wallet-engine` are plain Rust crates with **zero WASM dependencies**; they
-already compile for `aarch64-apple-ios` and `aarch64-linux-android`.
-`firecash-signer` even builds a `cdylib`. The only thing missing is an FFI layer:
-its public API is `#[wasm_bindgen]`, so there is no C ABI for Swift or Kotlin to
-call.
+The core is Rust and is the right core — but the claim that it "already compiles
+for mobile" is false, and was checked rather than assumed. `cargo check -p
+zkas-signer --target aarch64-linux-android` **fails**:
+
+    error occurred in cc-rs: failed to find tool "aarch64-linux-android-clang"
+    error: failed to run custom build command for `blake3 v1.8.3`
+
+Three facts came out of that check, and they shape the work:
+
+**1. `blake3` is the only true C dependency.** It reaches the signer through
+`zkas-signer → kaspa-shielded-core → kaspa-seq-commit → kaspa-merkle →
+kaspa-hashes → blake3`, and compiles C/SIMD by default. The other `*-sys` crates
+in the tree (`dirs-sys`, `linux-raw-sys`, `js-sys`, `web-sys`) are pure Rust.
+Two ways out: the Android NDK and Xcode toolchains, which are needed for linking a
+`cdylib` anyway, or blake3's `pure` feature, which drops the C path entirely.
+
+**2. `wasm-bindgen` is an unconditional dependency of `kaspa-hashes`** — not
+target-gated, which is what drags `js-sys` and `web-sys` into a native build. It
+compiles on mobile and does nothing there. Worth gating before shipping a library
+whose whole selling point is that it is not a WebView.
+
+**3. The signer pulls 217 crates.** For a signing library that is heavy — binary
+size, build time, and audit surface, on a dependency chain that reaches consensus
+crates. The good news is that the weight is not proving: `shielded-core` has
+`default = []` with `circuit` opt-in, so Halo 2 is already out of the tree. The
+weight is hashing and serialization plumbing arriving via `kaspa-hashes`.
+
+So the gap is an FFI layer **plus a dependency diet** — still not a rewrite, but
+more than wrapping what is there.
 
 Our own Android app is not a counter-example — it is a WebView running the same
 React app with the signer compiled to WASM. Mobile support today means *an app*,
@@ -85,8 +108,14 @@ The native API should instead:
 
 ## Phases
 
-**1 — Test vectors (do this first).** Generate from the current signer; wire into
-the existing Rust and WASM test runs. Nothing else can be trusted without them.
+**0 — Make it build at all.** Install the NDK and Xcode toolchains, and decide
+blake3 `pure` versus the C path. Gate `wasm-bindgen` in `kaspa-hashes` behind a
+target or feature so a native build stops carrying browser plumbing. Success
+criterion is a green `cargo check` for `aarch64-linux-android` and
+`aarch64-apple-ios` — the thing that currently fails.
+
+**1 — Test vectors.** Generate from the current signer; wire into the existing
+Rust and WASM test runs. Nothing else can be trusted without them.
 
 **2 — `zkas-mobile` crate.** A thin UniFFI wrapper over `zkas-signer` plus the
 derivation helpers from `firecash-signer`. No new cryptography — it re-exports what
