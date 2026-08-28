@@ -12,28 +12,35 @@ zkas-signer --target aarch64-linux-android` **fails**:
     error occurred in cc-rs: failed to find tool "aarch64-linux-android-clang"
     error: failed to run custom build command for `blake3 v1.8.3`
 
-Three facts came out of that check, and they shape the work:
+Three facts came out of that check, and the blocker is now fixed.
 
-**1. `blake3` is the only true C dependency.** It reaches the signer through
-`zkas-signer → kaspa-shielded-core → kaspa-seq-commit → kaspa-merkle →
-kaspa-hashes → blake3`, and compiles C/SIMD by default. The other `*-sys` crates
-in the tree (`dirs-sys`, `linux-raw-sys`, `js-sys`, `web-sys`) are pure Rust.
-Two ways out: the Android NDK and Xcode toolchains, which are needed for linking a
-`cdylib` anyway, or blake3's `pure` feature, which drops the C path entirely.
+**1. `blake3` was the only thing standing in the way — and it is one line.** It
+reached the signer through `zkas-signer → kaspa-shielded-core → kaspa-seq-commit →
+kaspa-merkle → kaspa-hashes → blake3`, and compiles C/SIMD by default. blake3
+ships a `pure` feature (pure Rust, no C). Declaring it in `sdk/signer/Cargo.toml`
+turns it on across the graph, because cargo features are additive:
 
-**2. `wasm-bindgen` is an unconditional dependency of `kaspa-hashes`** — not
-target-gated, which is what drags `js-sys` and `web-sys` into a native build. It
-compiles on mobile and does nothing there. Worth gating before shipping a library
-whose whole selling point is that it is not a WebView.
+    [target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+    blake3 = { version = "1", default-features = false, features = ["pure", "std"] }
 
-**3. The signer pulls 217 crates.** For a signing library that is heavy — binary
-size, build time, and audit surface, on a dependency chain that reaches consensus
-crates. The good news is that the weight is not proving: `shielded-core` has
-`default = []` with `circuit` opt-in, so Halo 2 is already out of the tree. The
-weight is hashing and serialization plumbing arriving via `kaspa-hashes`.
+Scoped to mobile deliberately: `pure` trades assembly for portable Rust, which is
+the right trade on a phone doing a few hashes per signature and the WRONG trade on
+a node, where blake3 throughput matters. With that in place, **`cargo check`
+passes for `aarch64-linux-android` and `aarch64-apple-ios`, and the host build is
+unchanged** — all three verified. No NDK is needed to compile; the toolchains are
+still needed later to LINK a `cdylib`.
 
-So the gap is an FFI layer **plus a dependency diet** — still not a rewrite, but
-more than wrapping what is there.
+**2. `wasm-bindgen` is an unconditional dependency of `kaspa-hashes`,** and it is
+not trivially removable: `kaspa-hashes/src/lib.rs` uses `use
+wasm_bindgen::prelude::*` and `#[wasm_bindgen]` attributes without any
+`cfg(target_arch = "wasm32")` guard. Gating the dependency means gating those
+attributes in a crate the whole node depends on, and re-running the node suite. It
+costs 9 crates of browser plumbing in a native build — dead weight that compiles
+fine. An optimization, not a blocker, and not one to slip into a mobile branch.
+
+**3. The tree is 221 crates for Android.** Heavy for a signing library, but not
+because of proving: `shielded-core` keeps `circuit` opt-in, so Halo 2 is already
+out. The weight is hashing and serialization arriving via `kaspa-hashes`.
 
 Our own Android app is not a counter-example — it is a WebView running the same
 React app with the signer compiled to WASM. Mobile support today means *an app*,
@@ -108,11 +115,11 @@ The native API should instead:
 
 ## Phases
 
-**0 — Make it build at all.** Install the NDK and Xcode toolchains, and decide
-blake3 `pure` versus the C path. Gate `wasm-bindgen` in `kaspa-hashes` behind a
-target or feature so a native build stops carrying browser plumbing. Success
-criterion is a green `cargo check` for `aarch64-linux-android` and
-`aarch64-apple-ios` — the thing that currently fails.
+**0 — Make it build at all. DONE.** blake3 `pure`, scoped to mobile targets;
+`cargo check` verified green for `aarch64-linux-android` and `aarch64-apple-ios`,
+host build unchanged. Still outstanding from this phase: the NDK and Xcode
+toolchains for LINKING a `cdylib`, and optionally gating `wasm-bindgen` out of
+`kaspa-hashes` (9 crates of dead weight, needs code changes plus the node suite).
 
 **1 — Test vectors.** Generate from the current signer; wire into the existing
 Rust and WASM test runs. Nothing else can be trusted without them.
