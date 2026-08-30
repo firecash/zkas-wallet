@@ -169,5 +169,5 @@ jobs:
           TAG="${{ github.event.inputs.tag }}"
           [ -n "$TAG" ] || TAG="${GITHUB_REF_NAME}"
           gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1 ||
-            gh release create "$TAG" --repo "${GITHUB_REPOSITORY}" --title "$TAG" --notes "Desktop builds."
+            gh release create "$TAG" --repo "${GITHUB_REPOSITORY}" --title "$TAG" --notes "Desktop builds." || true  # 5 targets race to create the tag's release; a 422 "already exists" is fine
           gh release upload "$TAG" out/* --repo "${GITHUB_REPOSITORY}" --clobber
