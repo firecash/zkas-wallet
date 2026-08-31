@@ -152,7 +152,15 @@ is where the API's rough edges surface.
 learns (the viewing key: every amount and memo, forever), what it cannot do
 (spend), and why the device verifies before signing.
 
-## Open decisions
+## Open decisions (annotated with what actually happened)
+
+- *HTTP client*: **not included** — the library is signing/verification only; the
+  `verify_and_sign_payment` API forces the verify step no matter who writes the HTTP calls.
+- *First target*: **both shipped at once** (`mobile-v0.1.x`: AAR + XCFramework from one CI run).
+- *Published where*: **GitHub Packages (Maven) + SwiftPM pin**, released by `mobile.yml`;
+  Maven Central still needs a Sonatype account.
+
+The original questions, for the record:
 
 - **Does the library include the HTTP client, or only signing?** Including it makes
   the example trivial and the dependency heavier; excluding it means every
