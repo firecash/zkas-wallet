@@ -1,3 +1,11 @@
+> **STATUS 2026-08-31 — shipped.** This document was the plan; the libraries exist.
+> `firecash/zkas-signer` `mobile/` publishes `mobile-v0.1.3` (Zakura stack): signed AAR,
+> `ZkasMobile.xcframework.zip`, Maven on GitHub Packages (`info.zkas:zkas-mobile`), SwiftPM
+> pin in the root `Package.swift`; CI gates every release on test + android + ios + a real
+> emulator run. Consumption instructions: `mobile/README.md` in that repo.
+> Still open from the list below: Maven Central (needs a Sonatype account — user's call),
+> and the worked example apps (§5).
+
 # Native mobile libraries for ZKas — a plan
 
 ## What exists today, and what does not
