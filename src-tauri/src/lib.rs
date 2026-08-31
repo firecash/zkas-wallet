@@ -756,6 +756,35 @@ impl Engine {
                 .is_some_and(|t| !t.is_finished())
     }
 
+    /// Bring the embedded engine back if it is not actually serving. `self.port`
+    /// stays set after a spawn, but the async `serve` task can DIE — a lost
+    /// re-bind race on the loopback port, a node RPC failure, a panic in the
+    /// prove path — leaving a non-zero port nothing is listening on. Every
+    /// request then failed with "cannot reach embedded wallet engine on port N:
+    /// error sending request" (the /api/wallet/prepare report). Restart a dead
+    /// task in place and wait briefly for it to answer; a genuinely healthy
+    /// engine returns instantly. Not for the pre-start `port == 0` case, which
+    /// its own callers (unlock/create) drive.
+    fn ensure_walletd_running(&mut self) -> Result<(), String> {
+        let dead = self.port == 0
+            || self
+                .walletd_task
+                .as_ref()
+                .is_none_or(tokio::task::JoinHandle::is_finished);
+        if !dead {
+            return Ok(());
+        }
+        // Only auto-restart a device (loopback) engine here: a LAN/WAN engine the
+        // user configured with a fixed port carries a bearer gate and access
+        // policy, and silently relaunching it could rebind a port they meant to
+        // free. The plain "not running" error is right there.
+        if self.settings.wallet_access != "device" {
+            return Err("wallet engine is not running".into());
+        }
+        self.start_walletd();
+        self.wait_walletd_ready(std::time::Duration::from_secs(20))
+    }
+
     fn wait_walletd_ready(&self, timeout: std::time::Duration) -> Result<(), String> {
         if self.port == 0 {
             return Err(self
@@ -1204,16 +1233,12 @@ async fn wallet_api_request(
 
     // Never hold the Engine mutex across network I/O. In particular, walletd's
     // status call can race a Host/node restart that needs this same lock.
+    // Heal a dead engine before the call rather than surfacing a raw transport
+    // error. A device engine whose serve task died is restarted here; a fixed-port
+    // one still reports plainly (see ensure_walletd_running).
     let (http, port, bearer) = {
-        let e = engine(&state);
-        if e.port == 0 {
-            return Err(e
-                .walletd_error
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner())
-                .clone()
-                .unwrap_or_else(|| "wallet engine is not running".into()));
-        }
+        let mut e = engine(&state);
+        e.ensure_walletd_running()?;
         (
             e.http.clone(),
             e.port,
@@ -1238,10 +1263,28 @@ async fn wallet_api_request(
         request = request.json(&value);
     }
 
-    let response = request
-        .send()
-        .await
-        .map_err(|error| format!("cannot reach embedded wallet engine on port {port}: {error}"))?;
+    // Keep a clone for one retry: a transport failure can mean the engine died
+    // between the liveness check above and this send (node drop, panic in the
+    // prove path). A json body clones fine; if it somehow can't, we simply don't
+    // retry. On failure we restart the engine once and resend, else report the
+    // original error rather than a dead port.
+    let retry_copy = request.try_clone();
+    let response = match request.send().await {
+        Ok(r) => r,
+        Err(first) => {
+            let alive = {
+                let mut e = engine(&state);
+                e.ensure_walletd_running().is_ok() && e.port == port
+            };
+            match retry_copy {
+                Some(req) if alive => req
+                    .send()
+                    .await
+                    .map_err(|_| format!("cannot reach embedded wallet engine on port {port}: {first}"))?,
+                _ => return Err(format!("cannot reach embedded wallet engine on port {port}: {first}")),
+            }
+        }
+    };
     let status = response.status().as_u16();
     let body = response
         .text()

@@ -1,7 +1,7 @@
 {
   "name": "zkas-wallet",
   "private": true,
-  "version": "1.0.26",
+  "version": "1.0.27",
   "description": "Private ZKas wallet for web, mobile and desktop, with desktop node and mining controls.",
   "license": "ISC",
   "homepage": "https://wallet.zkas.info",
@@ -12,7 +12,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/check-signer-inline.mjs && tsc -b && vite build",
     "preview": "vite preview",
     "mobile:add:android": "cap add android",
     "mobile:add:ios": "cap add ios",
@@ -21,7 +21,8 @@
     "mobile:ios": "npm run build && cap sync ios && npm run check:signer && cap open ios",
     "lint": "eslint src",
     "test": "eslint src && vitest run",
-    "check:signer": "node scripts/check-signer-genesis.mjs ${ZKAS_GENESIS:-b63f7fe8e50402af34790265e299bb1ba63e943b91a59a670e5971b7a9e84e6f}"
+    "check:signer": "node scripts/check-signer-genesis.mjs ${ZKAS_GENESIS:-b63f7fe8e50402af34790265e299bb1ba63e943b91a59a670e5971b7a9e84e6f}",
+    "verify:signer": "node scripts/check-signer-inline.mjs && node scripts/check-signer-genesis.mjs ${ZKAS_GENESIS:-b63f7fe8e50402af34790265e299bb1ba63e943b91a59a670e5971b7a9e84e6f}"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",

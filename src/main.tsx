@@ -331,6 +331,20 @@ async function boot() {
   // retain an obsolete frontend after an app update, so only enable the PWA
   // cache in an actual web browser.
   if (!isDesktop() && !isNative() && "serviceWorker" in navigator && location.protocol === "https:") {
+    // Rescue a device pinned to a stale cache. When an UPDATED worker takes
+    // control (its cache name now carries the new version, so it purged the old
+    // one on activate), reload ONCE to drop any poisoned chunks the dead page
+    // was holding — this is what unsticks the "__wbindgen_is_object requires a
+    // callable" reports after a bad release. Guarded so a first-ever install
+    // (no prior controller) never triggers a reload.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hadController && !reloaded) {
+        reloaded = true;
+        location.reload();
+      }
+    });
     void navigator.serviceWorker.register("/sw.js").catch(() => {});
   }
 }

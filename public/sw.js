@@ -3,7 +3,13 @@
  * Only static same-origin UI files are cached. Wallet daemon, chain, explorer,
  * pool and gateway requests are always network-only: replaying a cached balance
  * or invoice in a finance app would be worse than an honest offline error. */
-const CACHE = "zkas-wallet-shell-v2";
+// Cache name carries the build version (stamped by the vite plugin in
+// vite.config.ts). A new release => a new cache name => `activate` DELETES the
+// previous cache wholesale. Without this the cache was pinned at "…-v2" across
+// releases, so a device that cached the broken 1.0.25 bundle kept being served
+// its poisoned assets forever (the "__wbindgen_is_object requires a callable"
+// reports on "latest version"). Never hardcode a fixed version here again.
+const CACHE = "zkas-wallet-shell-__SW_BUILD_VERSION__";
 const SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/icon-512-maskable.png", "/apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
