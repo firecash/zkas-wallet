@@ -131,6 +131,13 @@ export async function fvkHex(seedHex: string): Promise<string> {
  * the payment `sighash` (both hex, from `/prepare`), returning the 64-byte RedPallas
  * spend-auth signature (hex). The seed never leaves the device.
  */
+/**
+ * UNSAFE — blind spend-authorization: signs whatever sighash it is handed, with
+ * no bundle verification. The whole point of `verifyAndSignPayment` is to NEVER
+ * do this on real funds. There is deliberately no caller in the app. Kept only
+ * for signer-parity tests; a production call site must use `verifyAndSignPayment`.
+ * @internal test-only — do not call from app code (OB-ZKW-05).
+ */
 export async function signSpendAuth(seedHex: string, alphaHex: string, sighashHex: string): Promise<string> {
   await ensureSigner();
   return _sign_spend_auth(seedHex.trim(), alphaHex.trim(), sighashHex.trim());

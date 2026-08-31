@@ -33,10 +33,24 @@ interface LockRecord {
   kind: "pin" | "passphrase";
   /** wallet token → that wallet's sealed seed. */
   wallets: Record<string, Sealed>;
+  /** The device master recovery phrase (ZIP-32), sealed under the same secret.
+   * Derives EVERY account, so it must be sealed exactly like a per-wallet seed;
+   * leaving it in plaintext (its original home, `device_mnemonic`) let a locked
+   * device still yield every account's spend key. Optional: absent on records
+   * written before this field existed and on devices with no phrase. */
+  mnemonic?: Sealed;
 }
 
 /** Unsealed seeds by token, in memory only — never written back to storage. */
 let unlocked: Record<string, string> | null = null;
+/** The master recovery phrase, in memory only for this session (null while
+ * locked). Mirrors `unlocked`: sealed at rest, cleartext only between unlock
+ * and lock. `accounts.ts` reads it through `unlockedMnemonic()`. */
+let sessionMnemonic: string | null = null;
+/** Where the phrase lives in the clear when there is no lock. Kept in sync with
+ * `accounts.ts`'s own `MASTER_KEY`. */
+const MNEMONIC_KEY = "device_mnemonic";
+const MNEMONIC_UNSEALED_FLAG = "mnemonic_unsealed";
 /**
  * The passphrase for this session, in memory only.
  *
@@ -112,6 +126,13 @@ export function unlockedDeviceSeed(): string | null {
   return unlocked?.[activeToken()] ?? null;
 }
 
+/** The master recovery phrase held for this session, or null while locked /
+ * none set. `accounts.ts` prefers this over the plaintext key whenever a lock
+ * exists, so a locked device exposes no phrase. */
+export function unlockedMnemonic(): string | null {
+  return sessionMnemonic;
+}
+
 /** Every unsealed seed this session, by token (null while locked). Lets the
  * wallet recover a seed orphaned under a stale token — see findOrphanedSeed. */
 export function allUnlockedSeeds(): Record<string, string> | null {
@@ -134,17 +155,74 @@ export async function sealNewSeed(token: string, seedHex: string, secret?: strin
   return true;
 }
 
+/** Seal a phrase that arrived (or changed) while the device is unlocked. Mirrors
+ * `sealNewSeed`. Returns false when locked, so the caller keeps the plaintext
+ * fallback rather than dropping the phrase (a dropped phrase loses every account). */
+export async function sealNewMnemonic(phrase: string, secret?: string): Promise<boolean> {
+  const rec = record();
+  const key = secret ?? sessionSecret;
+  if (!rec || unlocked === null || !key) return false;
+  rec.mnemonic = await seal(phrase, key);
+  write(rec);
+  sessionMnemonic = phrase;
+  return true;
+}
+
+/** Re-seal any plaintext-fallback seed/phrase (written when a seal raced an
+ * auto-lock, flagged `seed_unsealed_*` / `mnemonic_unsealed`) now that the
+ * secret is verified and held, and remove the cleartext. Best-effort and
+ * idempotent — a wallet with no fallback is untouched. */
+async function resealFallbacks(secret: string): Promise<void> {
+  const rec = record();
+  if (!rec) return;
+  let changed = false;
+  const flags: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k?.startsWith("seed_unsealed_")) flags.push(k);
+  }
+  for (const flag of flags) {
+    const token = flag.slice("seed_unsealed_".length);
+    const seedHex = localStorage.getItem(`device_seed_${token}`);
+    if (seedHex) {
+      rec.wallets[token] = await seal(seedHex, secret);
+      if (unlocked) unlocked[token] = seedHex;
+      localStorage.removeItem(`device_seed_${token}`);
+      changed = true;
+    }
+    localStorage.removeItem(flag);
+  }
+  if (localStorage.getItem(MNEMONIC_UNSEALED_FLAG)) {
+    const phrase = localStorage.getItem(MNEMONIC_KEY);
+    if (phrase) {
+      rec.mnemonic = await seal(phrase, secret);
+      sessionMnemonic = phrase;
+      localStorage.removeItem(MNEMONIC_KEY);
+      changed = true;
+    }
+    localStorage.removeItem(MNEMONIC_UNSEALED_FLAG);
+  }
+  if (changed) write(rec);
+}
+
 /** Turn the lock on: seal every wallet's seed and drop the cleartext copies. */
 export async function enableLock(secret: string, kind: "pin" | "passphrase"): Promise<void> {
   const seeds = { ...plaintextSeeds(), ...(unlocked ?? {}) };
   const wallets: Record<string, Sealed> = {};
   for (const [token, seedHex] of Object.entries(seeds)) wallets[token] = await seal(seedHex, secret);
-  write({ version: 2, kind, wallets });
+  const phrase = sessionMnemonic ?? localStorage.getItem(MNEMONIC_KEY) ?? "";
+  const rec: LockRecord = { version: 2, kind, wallets };
+  if (phrase) rec.mnemonic = await seal(phrase, secret);
+  write(rec);
   for (const token of Object.keys(seeds)) {
     localStorage.removeItem(`device_seed_${token}`);
     localStorage.removeItem(`seed_unsealed_${token}`); // sealed properly now — the fallback flag must not outlive it
   }
+  // The phrase is now sealed in the record; its plaintext home must not remain.
+  localStorage.removeItem(MNEMONIC_KEY);
+  localStorage.removeItem(MNEMONIC_UNSEALED_FLAG);
   unlocked = seeds; // stay usable for the rest of this session
+  sessionMnemonic = phrase || null;
   sessionSecret = secret;
 }
 
@@ -158,8 +236,29 @@ export async function unlock(secret: string): Promise<boolean> {
       if (seed === null) return false; // one failure means the wrong passphrase
       out[token] = seed;
     }
+    if (rec.mnemonic) {
+      const phrase = await unseal(rec.mnemonic, secret);
+      if (phrase === null) return false;
+      sessionMnemonic = phrase;
+    } else {
+      // Migration: a phrase set before this field existed still sits in the
+      // clear. Seal it under the now-verified secret and remove the plaintext.
+      const legacyPhrase = localStorage.getItem(MNEMONIC_KEY);
+      if (legacyPhrase) {
+        rec.mnemonic = await seal(legacyPhrase, secret);
+        write(rec);
+        localStorage.removeItem(MNEMONIC_KEY);
+        localStorage.removeItem(MNEMONIC_UNSEALED_FLAG);
+        sessionMnemonic = legacyPhrase;
+      }
+    }
     unlocked = out;
     sessionSecret = secret;
+    // OB-ZKW-02: heal any plaintext fallback written when a seal raced an
+    // auto-lock. Now that the secret is verified and held, re-seal those seeds
+    // and the phrase and drop their cleartext, so a flagged-but-unsealed key
+    // does not linger in storage indefinitely.
+    await resealFallbacks(secret);
     return true;
   }
   // Migrate a legacy per-wallet lock: same passphrase, now device-wide.
@@ -183,6 +282,7 @@ export async function unlock(secret: string): Promise<boolean> {
 /** Forget the in-memory seeds. The sealed copies on disk are untouched. */
 export function lock(): void {
   unlocked = null;
+  sessionMnemonic = null;
   sessionSecret = null;
 }
 
@@ -195,6 +295,7 @@ export async function disableLock(secret: string): Promise<boolean> {
   for (const [token, seedHex] of Object.entries(unlocked ?? {})) {
     localStorage.setItem(`device_seed_${token}`, seedHex);
   }
+  if (sessionMnemonic) localStorage.setItem(MNEMONIC_KEY, sessionMnemonic);
   localStorage.removeItem(LOCK_KEY);
   sessionSecret = null;
   return true;

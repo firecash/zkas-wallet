@@ -463,12 +463,25 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
           // flag glyph at 12px is unreadable on a dense phone screen.
           (labelsCompact ? "font-size:15px;" : "font-size:12px;") +
           "color:#f6f6f8;text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 10px rgba(0,0,0,.7);will-change:transform,opacity";
-        el.innerHTML = labelsCompact
-          ? `<span>${flagOf(c.code)}</span>` +
-            `<span style="color:#17d6be;margin-left:4px;font-size:12px;font-weight:600">${c.count}</span>`
-          : `<span style="opacity:.95">${flagOf(c.code)}</span> ` +
-            `<span>${c.name}</span>` +
-            `<span style="color:#17d6be;margin-left:6px">${c.count}</span>`;
+        // Build with textContent, not innerHTML: `c.name`/`c.code` originate in
+        // node-geolocation data, not a transaction counterparty, but a decorative
+        // label is no reason to hand any network-sourced string to the HTML parser
+        // (OB-ZKW-11). Style comes from element props; text is inserted as text.
+        const mkSpan = (text: string, css?: string): HTMLSpanElement => {
+          const sp = document.createElement("span");
+          if (css) sp.style.cssText = css;
+          sp.textContent = text;
+          return sp;
+        };
+        if (labelsCompact) {
+          el.appendChild(mkSpan(flagOf(c.code)));
+          el.appendChild(mkSpan(String(c.count), "color:#17d6be;margin-left:4px;font-size:12px;font-weight:600"));
+        } else {
+          el.appendChild(mkSpan(flagOf(c.code), "opacity:.95"));
+          el.appendChild(document.createTextNode(" "));
+          el.appendChild(mkSpan(c.name));
+          el.appendChild(mkSpan(String(c.count), "color:#17d6be;margin-left:6px"));
+        }
         el.title = `${c.name} · ${c.count}`;
         labelLayer.appendChild(el);
         // Anchor a little above the surface so the text clears its markers.

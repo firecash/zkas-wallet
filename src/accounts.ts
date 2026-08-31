@@ -23,6 +23,7 @@
 import { accountSeedHex, accountAddress, isValidMnemonic } from "./signer";
 import type { Network } from "./signer";
 import { listWallets, type WalletRef } from "./wallets";
+import { unlockedMnemonic, isLockEnabled, sealNewMnemonic } from "./applock";
 
 /// The device's master recovery phrase. Stored once, NOT per wallet — that is the
 /// whole point. Per-wallet legacy seeds continue to live under `device_seed_<token>`.
@@ -31,7 +32,17 @@ const MASTER_KEY = "device_mnemonic";
 const ACCOUNT_KEY = "wallet_account_";
 
 export function masterMnemonic(): string {
+  // With a lock present the phrase lives sealed; the only cleartext copy is the
+  // in-memory one held for this session (null while locked). Mirrors
+  // `getDeviceSeed`, so a locked device yields no phrase — and thus no account
+  // spend key. The `mnemonic_unsealed` flag is the same fail-open the seed path
+  // uses: a phrase whose seal raced an auto-lock stays readable so it is not lost.
+  const held = unlockedMnemonic();
+  if (held) return held;
   try {
+    if (isLockEnabled()) {
+      return localStorage.getItem("mnemonic_unsealed") ? (localStorage.getItem(MASTER_KEY) ?? "") : "";
+    }
     return localStorage.getItem(MASTER_KEY) ?? "";
   } catch {
     return "";
@@ -39,8 +50,27 @@ export function masterMnemonic(): string {
 }
 
 export function setMasterMnemonic(phrase: string): void {
+  const clean = phrase.trim();
+  if (!clean) return;
+  // Lock on → seal it, never write the phrase in the clear. If sealing fails
+  // (an auto-lock raced this write) fall back to plaintext AND flag it, so the
+  // phrase survives and the state is discoverable — losing every account is a
+  // worse outcome than a flagged plaintext copy. Same principle as setDeviceSeed.
+  if (isLockEnabled()) {
+    void sealNewMnemonic(clean).then((ok) => {
+      if (!ok) {
+        try {
+          localStorage.setItem(MASTER_KEY, clean);
+          localStorage.setItem("mnemonic_unsealed", "1");
+        } catch {
+          /* storage full/private — caller still holds the phrase */
+        }
+      }
+    });
+    return;
+  }
   try {
-    localStorage.setItem(MASTER_KEY, phrase.trim());
+    localStorage.setItem(MASTER_KEY, clean);
   } catch {
     /* storage full/private — the caller still holds the phrase to show the user */
   }

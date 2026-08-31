@@ -155,11 +155,14 @@ Requests carry `X-Wallet-Token`. See `src/api.ts` for the typed client.
   So a compromised daemon **cannot move funds or trick you into signing** — the worst it
   can do is stop serving or watch your balance. (Legacy wallets created under the old
   hosted model still have their seed on the daemon until they are restored to a device.)
-- The page enforces a strict **Content-Security-Policy** (`script-src 'self'` + the WASM
-  and one hashed inline bootstrap; `connect-src` same-origin + localhost only), so an
-  injected script can neither run nor exfiltrate the seed to another host. The one risk a
-  website can't fully remove is the server serving tampered code — for that, prefer the
-  desktop/mobile app (fixed, signed builds) or self-host.
+- The page is served under a strict **Content-Security-Policy** (`default-src 'none'`;
+  `script-src 'self' 'wasm-unsafe-eval'` + one hashed inline bootstrap; `connect-src`
+  same-origin + the services host + localhost), so an injected script can neither run nor
+  exfiltrate the seed to another host. The policy is enforced at the web host (nginx) and
+  its canonical copy lives in this repo at [`deploy/wallet-sec.conf`](deploy/wallet-sec.conf)
+  so it can be reviewed and diffed here. The one risk a website can't fully remove is the
+  server serving tampered code — for that, prefer the desktop/mobile app (fixed, signed
+  builds) or self-host.
 - `zkas-walletd` is hardened: CORS is locked to `--allow-origin`, the wallet token is
   required, and any seed it does hold (self-host / legacy) can be encrypted at rest with
   `--wallet-secret`. Always launch it with the exact origin you serve this app from.
