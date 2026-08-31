@@ -8,10 +8,11 @@
 
 # Native mobile libraries for ZKas — a plan
 
-## What exists today, and what does not
+## What existed when this plan was written (since shipped — see the header)
 
-The SDK ships **TypeScript bindings only** (`sdk/bindings/typescript`). There is no
-Swift, no Kotlin, no UniFFI definition, no JNI.
+Back then the SDK shipped **TypeScript bindings only** (`sdk/bindings/typescript`):
+no Swift, no Kotlin, no UniFFI definition, no JNI. All four exist now in
+`zkas-signer/mobile/`.
 
 The core is Rust and is the right core — but the claim that it "already compiles
 for mobile" is false, and was checked rather than assumed. `cargo check -p
