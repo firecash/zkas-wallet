@@ -69,3 +69,39 @@ export function receiptIsOnChain(receipt: { amountFc: number; ts: number }, chai
       receipt.ts - row.timestamp <= windowMs,
   );
 }
+
+/// Consolidation detection. A consolidation is a payment the wallet makes to
+/// ITSELF to merge notes (the ConsolidateDialog sends to `status.address`), so in
+/// history it must read "Consolidation", not "Sent" to a stranger — for both the
+/// hosted daemon's OVK-recovered rows and a device's own send list.
+///
+/// Two independent signals, so it catches the case even when one is missing:
+///   - a "sent" row whose recipient is the wallet's own address; and
+///   - a txid that appears as BOTH a sent and a received chain row — the wallet
+///     spent notes and received the merged note back in the same transaction,
+///     which is exactly a self-payment (robust to address re-encoding / a
+///     diversified change address, and works when `recipient` is absent).
+export function selfPaymentTxids(
+  rows: { txid: string; kind: string; recipient?: string | null }[],
+  ownAddr: string | null | undefined,
+): Set<string> {
+  const sent = new Set<string>();
+  const recv = new Set<string>();
+  const self = new Set<string>();
+  for (const r of rows) {
+    if (r.kind === "sent") {
+      sent.add(r.txid);
+      if (ownAddr && r.recipient && r.recipient === ownAddr) self.add(r.txid);
+    } else if (r.kind === "received") {
+      recv.add(r.txid);
+    }
+  }
+  for (const txid of sent) if (recv.has(txid)) self.add(txid);
+  return self;
+}
+
+/// Is this single recipient the wallet's own address? Used for a device-recorded
+/// send (localtx) where no chain pairing is available.
+export function isOwnAddress(recipient: string | null | undefined, ownAddr: string | null | undefined): boolean {
+  return !!recipient && !!ownAddr && recipient === ownAddr;
+}
