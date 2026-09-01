@@ -25,7 +25,7 @@ import { useMaintenance } from "./useMaintenance";
 import { isMaintenanceEnabled, setMaintenanceEnabled } from "./maintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline, type Receipt } from "./receipts";
-import { byNewest, receiptIsOnChain, selfPaymentTxids, isOwnAddress } from "./history";
+import { byNewest, receiptIsOnChain, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
 import { isSecretShaped } from "./lib/deviceseed";
@@ -1160,7 +1160,6 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 justSent={justSent}
                 synced={!!status?.synced}
                 daaScore={status?.daa_score}
-                ownAddr={status?.address ?? undefined}
                 onSendAnother={(prefill) => {
                   setJustSent(null);
                   setSendPrefill(prefill ?? null);
@@ -3595,7 +3594,6 @@ function localTxToRow(t: LocalTx): ChainHistoryRow & { confs?: number } {
 
 function TxDetail({
   row,
-  ownAddr,
   onClose,
   onSendAgain,
   onLabelSaved,
@@ -3604,14 +3602,13 @@ function TxDetail({
   onClose: () => void;
   onSendAgain?: (addr: string) => void;
   onLabelSaved?: () => void;
-  ownAddr?: string;
 }) {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState("");
   const [label, setLabel] = useState(() => getTxLabel(row.txid));
   const [labelState, setLabelState] = useState("");
   const contact = findContact(row.recipient);
-  const isConsolidation = row.kind === "sent" && isOwnAddress(row.recipient, ownAddr);
+  const isConsolidation = isConsolidationRow(row);
   const kind = isConsolidation ? "Consolidation" : row.kind === "coinbase" ? "Mined" : row.kind === "received" ? "Received" : "Sent";
   const sign = row.kind === "sent" ? "−" : "+";
   const copy = async (what: string, value: string) => {
@@ -5476,7 +5473,6 @@ function History({
   onSendAnother,
   synced,
   daaScore,
-  ownAddr,
 }: {
   txs: LocalTx[];
   /// Arrivals this device noticed, shown only in the on-device scope: with full
@@ -5488,8 +5484,6 @@ function History({
   /// Current chain DAA height, so the rescan dialog can turn a calendar date into
   /// a birthday. Optional — without it, exact-height entry still works.
   daaScore?: number;
-  /// The active wallet's own address, used to recognise consolidations (self-payments).
-  ownAddr?: string;
 }) {
   // Chain-derived history (mints, receives, and OVK-recovered sends): fetched
   // from the daemon, so it survives a seed restore and shows on every device.
@@ -5590,14 +5584,6 @@ function History({
       r.txid.toLowerCase().includes(needle)
     );
   });
-  // Consolidations (self-payments) read as "Consolidation", not "Sent": the merge
-  // sends notes to the wallet's own address, so it must not look like money leaving
-  // to someone else. `selfTxids` also lets us hide the RETURN leg — the merged note
-  // the IVK scan records as "received" for the same txid — so a consolidation is one
-  // row, not a −X send beside a +X receive.
-  const selfTxids = selfPaymentTxids(allRows, ownAddr);
-  const chainRowsDeduped = chainRows.filter((r) => !(r.kind === "received" && selfTxids.has(r.txid)));
-
   // Device-local sends the chain scan hasn't caught up to yet stay on top as
   // 0-conf rows; once the chain reports the same transaction AS A SEND, the chain
   // row is authoritative and the device row steps aside. See `visibleDeviceRows`
@@ -5657,7 +5643,7 @@ function History({
           .filter((r) => !receiptIsOnChain(r, allRows))
           .map((r) => ({ t: "receipt" as const, ts: r.ts, r })),
         ...(historyOff ? deviceRows : pending).map((tx) => ({ t: "device" as const, ts: tx.ts, tx })),
-        ...chainRowsDeduped.map((row) => ({ t: "chain" as const, ts: row.timestamp, daaScore: row.daaScore, row })),
+        ...chainRows.map((row) => ({ t: "chain" as const, ts: row.timestamp, daaScore: row.daaScore, row })),
       ]),
     [shownReceipts, allRows, historyOff, deviceRows, pending, chainRows],
   );
@@ -5781,11 +5767,11 @@ function History({
                   onClick={() => setDetail(localTxToRow(t))}
                 >
                   <div className="txrow-main">
-                    <span className="txrow-amt">− {trimFc((isOwnAddress(t.to, ownAddr) ? t.feeFc : t.amountFc).toFixed(8))} ZKAS</span>
-                    <span className={"txrow-badge " + ((t.confs ?? 0) >= 1 ? "done" : "pending")}>{isOwnAddress(t.to, ownAddr) ? "consolidated" : confBadge(t)}</span>
+                    <span className="txrow-amt">− {trimFc(t.amountFc.toFixed(8))} ZKAS</span>
+                    <span className={"txrow-badge " + ((t.confs ?? 0) >= 1 ? "done" : "pending")}>{confBadge(t)}</span>
                   </div>
                   <div className="txrow-sub">
-                    <span className={isOwnAddress(t.to, ownAddr) ? "" : "mono"}>{isOwnAddress(t.to, ownAddr) ? "merged notes in your wallet" : `to ${shortAddr(t.to)}`}</span>
+                    <span className="mono">to {shortAddr(t.to)}</span>
                     <span>{fmtTime(t.ts)}</span>
                   </div>
                   {getTxLabel(t.txid) && <div className="txrow-label">{getTxLabel(t.txid)}</div>}
@@ -5808,14 +5794,15 @@ function History({
                 <div className="txrow-main">
                   <span className="txrow-amt">
                     {r.kind === "sent" ? "− " : "+ "}
-                    {/* A consolidation moves value to yourself, so the amount that
-                        actually LEFT the wallet is the fee, not the merged total. */}
-                    {trimFc((selfTxids.has(r.txid) ? r.feeSompi / 1e8 : r.amountZkas).toFixed(8))} ZKAS
+                    {/* A consolidation moves value to yourself, so what actually LEFT
+                        the wallet is the fee, not the merged total. A normal send shows
+                        the amount sent, unchanged. */}
+                    {trimFc((isConsolidationRow(r) ? r.feeSompi / 1e8 : r.amountZkas).toFixed(8))} ZKAS
                   </span>
                   <span className={"txrow-badge " + (r.kind === "sent" ? "done" : "recv")}>
                     {r.kind === "coinbase"
                       ? "mined"
-                      : selfTxids.has(r.txid)
+                      : isConsolidationRow(r)
                         ? "consolidated"
                         : r.kind === "received"
                           ? "received"
@@ -5823,7 +5810,7 @@ function History({
                   </span>
                 </div>
                 <div className="txrow-sub">
-                  {selfTxids.has(r.txid) ? (
+                  {isConsolidationRow(r) ? (
                     <span>merged notes in your wallet</span>
                   ) : r.kind === "sent" && r.recipient ? (
                     <span className={findContact(r.recipient) ? "" : "mono"}>
@@ -5905,7 +5892,6 @@ function History({
       {detail && (
         <TxDetail
           row={detail}
-          ownAddr={ownAddr}
           onClose={() => setDetail(null)}
           onLabelSaved={() => setLabelRevision((value) => value + 1)}
           onSendAgain={(addr) => {
