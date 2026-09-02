@@ -13,6 +13,8 @@ public class MainActivity extends BridgeActivity {
     // periodic wake that keeps the daemon-side scan warm and announces incoming
     // payments while the app is closed.
     registerPlugin(BackgroundSyncPlugin.class);
+    // The on-device wallet engine (Settings → Wallet service → Run on this phone).
+    registerPlugin(EmbeddedEnginePlugin.class);
     super.onCreate(savedInstanceState);
   }
 

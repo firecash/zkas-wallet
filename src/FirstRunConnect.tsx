@@ -17,9 +17,10 @@ import { walletdProfiles } from "./connection-profiles";
 import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
 import { ONION_WALLETD_URL } from "./lib/relay";
 import { OrbotHelp } from "./OrbotHelp";
+import { embeddedAvailable, setEmbeddedChosen, ensureEmbedded } from "./embedded";
 
 export function FirstRunConnect({ onDone }: { onDone: () => void }) {
-  const [busy, setBusy] = useState<null | "public" | "tor" | "custom">(null);
+  const [busy, setBusy] = useState<null | "public" | "tor" | "custom" | "phone">(null);
   const [showCustom, setShowCustom] = useState(false);
   const [addr, setAddr] = useState("");
   const [bearer, setBearer] = useState("");
@@ -39,6 +40,20 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
     setBase(""); setWalletdBearer(""); finish();
   };
 
+  const connectPhone = async () => {
+    if (busy) return;
+    setErr(""); setBusy("phone");
+    try {
+      const url = await ensureEmbedded();
+      setEmbeddedChosen(true);
+      setBase(url); setWalletdBearer("");
+      finish();
+    } catch (e) {
+      setEmbeddedChosen(false);
+      setErr((e as Error).message || "The on-device engine could not start on this phone.");
+      setBusy(null);
+    }
+  };
   const connectTor = async () => {
     if (busy) return;
     setErr(""); setNeedTor(false); setBusy("tor");
@@ -79,6 +94,12 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
 
         <span className="eyebrow">Connect</span>
         <div className="connection-list firstrun-conn">
+          {embeddedAvailable() && (
+            <button className="connection-option" disabled={!!busy} onClick={() => void connectPhone()}>
+              <span><b>Run on this phone</b><small>Most private. Your wallet runs here — no server ever sees your viewing key. Uses a bit more battery.</small></span>
+              <span>{busy === "phone" ? "Starting…" : "Use"}</span>
+            </button>
+          )}
           <button className="connection-option" disabled={!!busy} onClick={connectPublic}>
             <span><b>Public wallet service</b><small>Fastest. Works instantly, nothing to install.</small></span>
             <span>{busy === "public" ? "…" : "Use"}</span>

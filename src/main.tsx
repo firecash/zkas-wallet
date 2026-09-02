@@ -17,7 +17,8 @@ import { versionLine, versionTag } from "./version";
 import { adoptViewKeyFromUrl } from "./lib/watchadopt";
 import { BootLoader } from "./components/BootLoader";
 import { listWallets } from "./wallets";
-import { isNative, loadStatusCache } from "./api";
+import { isNative, loadStatusCache, setBase } from "./api";
+import { embeddedChosen, ensureEmbedded } from "./embedded";
 import { internalRouteFromLink, queuePaymentLink } from "./paymentlinks";
 import "./styles.css";
 
@@ -228,6 +229,21 @@ async function boot() {
         console.error("desktop bootstrap failed:", reason);
         try { localStorage.setItem("desktop_boot_error", reason); } catch { /* best effort */ }
       }
+    }
+  }
+
+  // On-device engine: if the user chose "Run on this phone", start it now and
+  // point the app at its fresh loopback port BEFORE anything polls a server —
+  // the whole point is that no viewing key ever leaves the device. The port is
+  // new on each launch, so this must run every boot, not just first-run. Falls
+  // back to whatever base was set if it cannot start, so the wallet is never
+  // bricked by an engine hiccup.
+  if (embeddedChosen()) {
+    try {
+      const url = await ensureEmbedded();
+      setBase(url);
+    } catch (e) {
+      console.error("on-device engine did not start:", (e as Error)?.message ?? e);
     }
   }
 

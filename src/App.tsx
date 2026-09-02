@@ -78,6 +78,7 @@ import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
+import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded } from "./embedded";
 import { isWatchOnly, clearWatchKey, watchLink, isViewKey } from "./lib/watchonly";
 import { adoptViewKey } from "./lib/watchadopt";
 import { APP_BUILT, platformName, versionLine, versionTag } from "./version";
@@ -1420,7 +1421,23 @@ function ConnectionButton() {
   /// claiming it "works immediately". The hosted service has already scanned, so
   /// the balance is there at once. Recorded as a remote choice so it survives a
   /// restart, and so api.ts routes calls to it instead of the embedded engine.
+  const connectEmbedded = async () => {
+    setBusy("phone");
+    try {
+      const url = await ensureEmbedded();
+      setEmbeddedChosen(true);
+      setBase(url); setWalletdBearer("");
+      setOpen(false); void refresh();
+    } catch (e) {
+      setError((e as Error).message || "The on-device engine could not start.");
+    } finally { setBusy(null); }
+  };
+  // Leaving the on-device engine for a server: forget the choice and stop it so
+  // the next boot doesn't relaunch it.
+  const leaveEmbedded = () => { if (embeddedChosen()) { setEmbeddedChosen(false); void stopEmbedded(); } };
+
   const connectHosted = async () => {
+    leaveEmbedded();
     setError("");
     setBusy("hosted");
     try {
@@ -1437,6 +1454,7 @@ function ConnectionButton() {
   };
 
   const connectTor = async () => {
+    leaveEmbedded();
     setTorFailed(false);
     setError("");
     setBusy("tor");
@@ -1952,7 +1970,7 @@ function ConsolidateDialog({
   // sweep, and one that still cannot reduce the count is refused before it is
   // broadcast. So offer the choice, and let the pass with the real numbers decide.
   const notesNow = status.note_count ?? 0;
-  const [targetNotes, setTargetNotes] = useState(notesNow <= 2 ? 3 : 1);
+  const [targetNotes, setTargetNotes] = useState(3);
   // Direction is inferred, not asked: more than you hold now = split, fewer = combine.
   const grow = targetNotes > notesNow;
   const stillMaturing = BigInt(status.maturing_sompi ?? "0") > 0n;
