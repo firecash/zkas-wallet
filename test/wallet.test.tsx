@@ -233,18 +233,18 @@ describe("the wallet a user actually touches", () => {
     // not need to predict, it needs to be honest.
     statusOverride = { note_count: 4, spendable_sompi: "500000000", maturing_sompi: "1" };
     await mountApp();
-    await userEvent.click(await screen.findByRole("button", { name: "Consolidate wallet notes" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Manage wallet notes" }));
 
-    expect(await screen.findByText("Payments to prepare")).toBeInTheDocument();
+    expect(await screen.findByText("End with about")).toBeInTheDocument();
     for (const n of ["1", "2", "3", "5"]) expect(screen.getByRole("button", { name: n })).toBeEnabled();
-    expect(screen.getByText(/still maturing/)).toBeInTheDocument();
+    expect(screen.getByText(/still settling/)).toBeInTheDocument();
     expect(screen.getByText(/fewer passes/)).toBeInTheDocument();
   });
 
   it("offers a real choice once the wallet holds enough notes", async () => {
     statusOverride = { note_count: 120, spendable_sompi: "500000000" };
     await mountApp();
-    await userEvent.click(await screen.findByRole("button", { name: "Consolidate wallet notes" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Manage wallet notes" }));
     for (const n of ["1", "2", "3", "5"]) {
       expect(await screen.findByRole("button", { name: n })).toBeEnabled();
     }
@@ -253,9 +253,9 @@ describe("the wallet a user actually touches", () => {
   it("keeps consolidation on the main wallet screen", async () => {
     statusOverride = { note_count: 120, spendable_sompi: "500000000" };
     await mountApp();
-    const action = await screen.findByRole("button", { name: "Consolidate wallet notes" });
+    const action = await screen.findByRole("button", { name: "Manage wallet notes" });
     expect(action).toBeEnabled();
-    expect(action).toHaveTextContent("120 notes");
+    expect(action).toHaveTextContent("120");
   });
 });
 

@@ -1087,11 +1087,11 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               {!viewOnly && <button
                 className="qa qa-consolidate"
                 onClick={() => setShowConsolidate(true)}
-                disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready }) || (status.note_count ?? 0) < 3}
-                aria-label="Consolidate wallet notes"
+                disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready })}
+                aria-label="Manage wallet notes"
               >
-                <span className="qa-label">Consolidate</span>
-                <span className="qa-detail">{status.note_count ?? 0} notes</span>
+                <span className="qa-label">Notes</span>
+                <span className="qa-detail">{status.note_count ?? 0} · manage</span>
               </button>}
               {viewOnly && (
                 <div className="qa qa-viewonly" aria-live="polite">
@@ -1952,6 +1952,10 @@ function ConsolidateDialog({
   // sweep, and one that still cannot reduce the count is refused before it is
   // broadcast. So offer the choice, and let the pass with the real numbers decide.
   const [targetNotes, setTargetNotes] = useState(3);
+  // Fewer notes (merge, the classic consolidation) or more notes (split, so the
+  // wallet can pay several times back to back). Default to whichever is useful:
+  // a wallet with too few notes to merge starts on "more".
+  const [mode, setMode] = useState<"merge" | "grow">((status.note_count ?? 0) < 3 ? "grow" : "merge");
   const stillMaturing = BigInt(status.maturing_sompi ?? "0") > 0n;
   const [result, setResult] = useState<{ inputs: number; txid: string; fee: number; rounds: number; more: boolean } | null>(null);
   // Live count of merged notes. A fragmented wallet needs several transactions,
@@ -2032,6 +2036,7 @@ function ConsolidateDialog({
         },
         targetNotes,
         status.note_count ?? 0,
+        mode === "grow",
       );
       // Each pass is one proof of a known shape (~38 notes), so a single completed
       // run predicts the next one well. Divide by rounds: what we want to learn is
@@ -2064,22 +2069,25 @@ function ConsolidateDialog({
   return createPortal(
     <div className="modalwrap" onClick={() => !busy && onClose()}>
       <div className="card modalcard consolidate-dialog" onClick={(event) => event.stopPropagation()}>
-        <h2 style={{ marginTop: 0 }}>{result ? "Notes consolidated" : "Consolidate notes"}</h2>
+        <h2 style={{ marginTop: 0 }}>{result ? "Notes updated" : "Manage notes"}</h2>
         {result ? (
           <>
             <div className="msg ok">
-              Combined {result.inputs} spendable notes in {result.rounds === 1 ? "one device-signed transaction" : `${result.rounds} device-signed transactions`}.
+              {mode === "grow"
+                ? `Split into ${result.rounds} more spendable ${result.rounds === 1 ? "note" : "notes"} — you can now make that many payments back to back.`
+                : `Combined ${result.inputs} notes into ${result.rounds === 1 ? "one note" : "fewer notes"}, in ${result.rounds === 1 ? "one" : result.rounds} device-signed ${result.rounds === 1 ? "transaction" : "transactions"}.`}
             </div>
             <p className="muted small">
-              The merged value becomes spendable after normal maturity (about 10 minutes). Total fee:{" "}
+              Ready to spend after the usual settle time (about 10 minutes). Total fee:{" "}
               {trimFc(result.fee.toFixed(8))} ZKAS.
             </p>
             {/* Saying "done" while the wallet is still too fragmented to pay is how
                 a user ends up repeating this by hand and never being told why. */}
             {result.more && (
               <div className="msg warn small">
-                This wallet held more small notes than one pass can merge. Run Consolidate again once the merged note
-                matures to reduce it further.
+                {mode === "grow"
+                  ? "There were only so many notes to split right now. Once these settle (about 10 minutes) you can split further."
+                  : "This wallet held more small notes than one pass can merge. Open this again once the new note settles to reduce it further."}
               </div>
             )}
             <div className="addr">{result.txid}</div>
@@ -2088,13 +2096,24 @@ function ConsolidateDialog({
         ) : (
           <>
             <p className="muted small">
-              Merge small notes so one payment can spend your whole balance. Each pass costs a fee.
-          </p>
-            <div className="confirm-row"><span className="muted">Current notes</span><b>{status.note_count}</b></div>
-            {/* Not "notes to keep": each pass returns the unspent fee reserve as a
-                change note, so asking for 3 leaves 6 notes. What the user is really
-                choosing is how many spendable CHUNKS to end up with. */}
-            <label style={{ marginTop: 12 }}>Payments to prepare</label>
+              Your balance is made of private <b>notes</b> — think of them as separate coins that add up to your
+              total. This only re-shapes them: nothing leaves your wallet and the amount is unchanged, apart from a
+              small network fee.
+            </p>
+            <div className="confirm-row"><span className="muted">You have</span><b>{status.note_count ?? 0} note{(status.note_count ?? 0) === 1 ? "" : "s"}</b></div>
+
+            <label style={{ marginTop: 12 }}>What do you want?</label>
+            <div className="filterbar" style={{ marginBottom: 8 }}>
+              <button type="button" className={"chip" + (mode === "merge" ? " on" : "")} disabled={busy} onClick={() => setMode("merge")}>Fewer notes</button>
+              <button type="button" className={"chip" + (mode === "grow" ? " on" : "")} disabled={busy} onClick={() => setMode("grow")}>More notes</button>
+            </div>
+            <p className="muted small" style={{ marginTop: 0 }}>
+              {mode === "merge"
+                ? "Combine many small notes into fewer. Sending is cheaper and faster when your balance sits in one note. Needs a few notes to combine."
+                : "Split your balance into more notes. Each note can be spent once before its change needs about 10 minutes to settle — so more notes means more payments back to back."}
+            </p>
+
+            <label style={{ marginTop: 8 }}>{mode === "merge" ? "End with about" : "Have up to"}</label>
             <div className="filterbar" style={{ marginBottom: 6 }}>
               {[1, 2, 3, 5].map((n) => (
                 <button
@@ -2107,25 +2126,13 @@ function ConsolidateDialog({
                   {n}
                 </button>
               ))}
+              <span className="muted small" style={{ alignSelf: "center", marginLeft: 6 }}>note{targetNotes === 1 ? "" : "s"}</span>
             </div>
             <p className="muted small" style={{ marginTop: 0 }}>
-              {targetNotes === 1
-                ? "One note, one pass — the tidiest result."
-                : `${targetNotes} chunks to spend back to back · ${targetNotes} fees · merges fewer notes.`}
+              {mode === "grow"
+                ? "Adds notes one at a time, each for a small fee — about one per note you can spend right now; the rest become available after they settle."
+                : `${stillMaturing ? "Some notes are still settling — " : ""}this may finish in fewer passes; each pass costs a fee.`}
             </p>
-            {(stillMaturing || (status.note_count ?? 0) < targetNotes * MIN_NOTES_PER_MERGE) && (
-              // Never promise passes the wallet may not be able to run: the count
-              // above includes notes that are still maturing and cannot be spent.
-              <p className="muted small" style={{ marginTop: -4 }}>
-                {stillMaturing ? "Some notes are still maturing — " : ""}this may finish in fewer passes.
-              </p>
-            )}
-            {typeof status.note_count === "number" && status.note_count > MAX_NOTES_PER_TX && (
-              <div className="confirm-row">
-                <span className="muted">Passes needed</span>
-                <b>about {Math.min(MAX_CONSOLIDATION_ROUNDS, Math.ceil(status.note_count / MAX_NOTES_PER_TX))}</b>
-              </div>
-            )}
             {needSeed && (
               <>
                 <label>Recovery phrase · stays on this device</label>
@@ -2153,7 +2160,7 @@ function ConsolidateDialog({
             <div className="row">
               <button className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
               <button className="btn" disabled={busy} onClick={() => void run()}>
-                {busy ? stage === "signing" ? "Signing…" : stage === "broadcasting" ? "Broadcasting…" : "Building proof…" : "Consolidate"}
+                {busy ? stage === "signing" ? "Signing…" : stage === "broadcasting" ? "Broadcasting…" : "Building proof…" : mode === "grow" ? "Add notes" : "Combine"}
               </button>
             </div>
           </>

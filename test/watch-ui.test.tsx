@@ -110,7 +110,7 @@ describe("a view-only device", () => {
     await mountApp();
     await screen.findByText(/Shielded balance/, {}, { timeout: 8000 });
     expect(screen.queryByRole("button", { name: "Send ZKAS" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Consolidate wallet notes" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manage wallet notes" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Send" })).not.toBeInTheDocument();
   });
 
@@ -172,7 +172,7 @@ describe("a device that holds the seed", () => {
     await mountApp();
     await screen.findByText(/Shielded balance/, {}, { timeout: 8000 });
     expect(screen.getByRole("button", { name: "Send ZKAS" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Consolidate wallet notes" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manage wallet notes" })).toBeInTheDocument();
     expect(screen.queryByText("View only")).not.toBeInTheDocument();
   });
 
