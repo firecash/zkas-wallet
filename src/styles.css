@@ -2512,21 +2512,33 @@ input.mono, .host-token { font-size: 16px; }
 }
 .app-nav-bar .version-badge { opacity: 0.75; margin-left: 8px; }
 
-/* Shielded Pool · Live (embedded explorer visualisation) */
-.explorer-live-teaser {
-  display: flex; align-items: center; justify-content: space-between; gap: 14px;
-  width: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit;
+/* Shielded pool — live animation embedded straight into the Explore tab. Uses the
+   explorer's own ?embed canvas (no clashing HUD) as the visual hero. */
+.explorer-live-hero {
+  position: relative;
+  margin: 14px 0 18px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #0b0b0f;
+  border: 1px solid var(--border, #2a2a35);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .35);
 }
-.explorer-live-teaser:hover { border-color: var(--teal, #17d6be); }
-.explorer-live-teaser h2 { margin: 0 0 2px; }
-.explorer-live-teaser p { margin: 0; color: var(--muted, #9090a0); font-size: 13px; }
-.explorer-live-card { position: relative; padding: 0; overflow: hidden; }
 .explorer-live-frame {
-  display: block; width: 100%; height: min(72vh, 620px); min-height: 360px;
-  border: 0; border-radius: inherit; background: #0b0b0f;
+  display: block;
+  width: 100%;
+  height: clamp(300px, 46vh, 520px);
+  border: 0;
+  background: #0b0b0f;
 }
-.explorer-live-loading {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  gap: 10px; color: var(--muted, #9090a0); background: #0b0b0f; z-index: 1;
+.explorer-live-full {
+  position: absolute;
+  right: 12px; bottom: 12px;
+  font-size: 12px; font-weight: 600;
+  color: var(--ink, #f6f6f8);
+  background: rgba(11, 11, 15, .72);
+  border: 1px solid var(--border, #2a2a35);
+  padding: 6px 11px; border-radius: 999px;
+  text-decoration: none; backdrop-filter: blur(6px);
 }
-.explorer-live-note { margin-top: 10px; }
+.explorer-live-full:hover { border-color: var(--teal, #17d6be); color: var(--teal, #17d6be); }
+@media (max-width: 560px) { .explorer-live-frame { height: clamp(260px, 40vh, 380px); } }

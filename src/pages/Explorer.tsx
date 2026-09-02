@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   explorerApi,
   type BlockdagInfo,
@@ -221,6 +221,18 @@ function DashboardView() {
         </div>
         <span className={`status-pill ${data ? "good" : "warm"}`}>{refreshing ? "Updating" : data ? "Live" : "Offline"}</span>
       </div>
+
+      <section className="explorer-live-hero" aria-label="Shielded pool, live">
+        <iframe
+          className="explorer-live-frame"
+          src="https://explorer.zkas.info/live?embed=1"
+          title="Shielded pool — live"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          sandbox="allow-scripts allow-same-origin"
+        />
+        <a className="explorer-live-full" href="https://explorer.zkas.info/live" target="_blank" rel="noreferrer">Full view ↗</a>
+      </section>
       {error && <div className="control-error">{error}</div>}
       {!data ? (
         <div className="control-card empty-state"><span className="spin" /> Connecting to the explorer…</div>
@@ -232,14 +244,6 @@ function DashboardView() {
             <div className="metric"><span>Est. hashrate</span><strong>{hashrate(data.dag.difficulty * 2)}</strong></div>
             <div className="metric"><span>Connected peers</span><strong>{integer(data.network.connectedPeers)}</strong></div>
           </div>
-
-          <button type="button" className="control-card explorer-live-teaser" onClick={() => navigate("/explore/live")}>
-            <div>
-              <h2>Shielded Pool · Live</h2>
-              <p>Watch private coins drop into the shielded pool in real time — amounts stay hidden.</p>
-            </div>
-            <span className="text-button">Open live view →</span>
-          </button>
 
           <section className="control-card explorer-map-card">
             <div className="card-title-row">
@@ -410,61 +414,8 @@ function DetailShell({ title, id, error, children }: { title: string; id: string
   );
 }
 
-/// The live shielded-pool visualisation. It is maintained in the explorer (a canvas
-/// animation of private coins dropping into the pool), so the wallet EMBEDS it rather
-/// than duplicating ~600 lines — one source of truth, always in sync. The explorer page
-/// talks to its own public API and sets no framing restriction; the wallet only needs to
-/// allow it in `frame-src` (web nginx CSP + the desktop tauri CSP). Needs a connection;
-/// offline it simply shows nothing but its own frame, and "Full screen" opens it directly.
-const LIVE_URL = "https://explorer.zkas.info/live";
-
-function LivePoolView() {
-  const navigate = useNavigate();
-  const [loaded, setLoaded] = useState(false);
-  return (
-    <>
-      <button className="pane-back" onClick={() => navigate("/explore")}>← Network</button>
-      <div className="control-heading">
-        <div>
-          <span className="eyebrow">BlockDAG explorer</span>
-          <h1>Shielded Pool · Live</h1>
-          <p>Private coins dropping into the shielded pool, in real time. Amounts stay hidden.</p>
-        </div>
-        <a className="text-button" href={LIVE_URL} target="_blank" rel="noreferrer">Full screen ↗</a>
-      </div>
-      <section className="control-card explorer-live-card">
-        {!loaded && (
-          <div className="explorer-live-loading">
-            <span className="spin" /> Connecting to the live pool…
-          </div>
-        )}
-        <iframe
-          className="explorer-live-frame"
-          src={LIVE_URL}
-          title="Shielded Pool Live"
-          loading="lazy"
-          onLoad={() => setLoaded(true)}
-          referrerPolicy="no-referrer"
-          sandbox="allow-scripts allow-same-origin allow-popups"
-        />
-      </section>
-      <p className="muted small explorer-live-note">
-        Live from explorer.zkas.info — needs a connection. It shows only that shielded activity is happening, never any amounts or who paid whom.
-      </p>
-    </>
-  );
-}
-
 export function Explorer() {
   const { kind, id } = useParams();
-  const location = useLocation();
-  if (location.pathname === "/explore/live") {
-    return (
-      <main className="control-page explorer-page">
-        <LivePoolView />
-      </main>
-    );
-  }
   return (
     <main className="control-page explorer-page">
       {!kind || !id ? <DashboardView /> : kind === "block" ? <BlockView id={id} /> : kind === "tx" ? <TransactionView id={id} /> : kind === "address" ? <AddressView id={decodeURIComponent(id)} /> : <DashboardView />}

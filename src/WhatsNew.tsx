@@ -7,13 +7,15 @@
 
 const SEEN_KEY = "whatsnew_seen_v1_0_17";
 
-/** Whether to show the update notice: an existing wallet that hasn't seen it. */
-export function shouldShowWhatsNew(hasWalletHistory: boolean): boolean {
-  try {
-    return hasWalletHistory && !localStorage.getItem(SEEN_KEY);
-  } catch {
-    return false;
-  }
+/** Whether to show the update notice: an existing wallet that hasn't seen it.
+ *
+ * RETIRED. The notice below is frozen at the 1.0.17 feature set (phrases / accounts
+ * / Tor), which is now many releases old — so it read to users as a stale "new
+ * version" popup that kept appearing on a current build. Returning false disables it.
+ * To bring it back for a real release, refresh the content AND the SEEN_KEY, then
+ * restore the `hasWalletHistory && !localStorage.getItem(SEEN_KEY)` gate. */
+export function shouldShowWhatsNew(_hasWalletHistory: boolean): boolean {
+  return false;
 }
 
 export function WhatsNew({ onClose }: { onClose: () => void }) {

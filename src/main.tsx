@@ -72,7 +72,6 @@ function Root({ locked, askNode, whatsNew }: { locked: boolean; askNode: boolean
             <Route path="/node" element={<NodeRunner />} />
             <Route path="/mine" element={<Mining />} />
             <Route path="/explore" element={<Explorer />} />
-            <Route path="/explore/live" element={<Explorer />} />
             <Route path="/explore/:kind/:id" element={<Explorer />} />
             <Route path="/services" element={<Services />} />
             {/* Pay moved into the wallet's own sections. The route stays so
