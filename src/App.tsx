@@ -79,6 +79,7 @@ import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
 import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded } from "./embedded";
+import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { isWatchOnly, clearWatchKey, watchLink, isViewKey } from "./lib/watchonly";
 import { adoptViewKey } from "./lib/watchadopt";
 import { APP_BUILT, platformName, versionLine, versionTag } from "./version";
@@ -1421,10 +1422,10 @@ function ConnectionButton() {
   /// claiming it "works immediately". The hosted service has already scanned, so
   /// the balance is there at once. Recorded as a remote choice so it survives a
   /// restart, and so api.ts routes calls to it instead of the embedded engine.
-  const connectEmbedded = async () => {
+  const connectEmbedded = async (node?: string) => {
     setBusy("phone");
     try {
-      const url = await ensureEmbedded();
+      const url = await ensureEmbedded(node);
       setEmbeddedChosen(true);
       setBase(url); setWalletdBearer("");
       setOpen(false); void refresh();
@@ -1591,10 +1592,7 @@ function ConnectionButton() {
 
             <div className="connection-list">
               {embeddedAvailable() && (
-                <button className={`connection-option ${embeddedChosen() ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectEmbedded()}>
-                  <span><b>Run on this phone</b><small>Most private — no server sees your viewing key. Runs the wallet here; uses a bit more battery.</small></span>
-                  <span>{busy === "phone" ? "Starting…" : embeddedChosen() ? "On" : "Use"}</span>
-                </button>
+                <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? "Starting…" : embeddedChosen() ? "On" : "Use"} onStart={(n) => connectEmbedded(n)} />
               )}
               <button className={`connection-option ${!embeddedChosen() && hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
                 <span><b>Public service</b><small>{desktop ? "Ready at once — already scanned. The service sees your IP." : "Fastest. The service sees your IP."}</small></span><span>{busy === "hosted" ? "Checking…" : hosted && !onion ? "Connected" : "Use"}</span>
@@ -6203,7 +6201,7 @@ function NetworkPrivacyCard() {
         setBusy(null);
       });
   };
-  const usePhone = () => run("phone", async () => { const u = await ensureEmbedded(); setEmbeddedChosen(true); setBase(u); setWalletdBearer(""); });
+  const usePhone = (node?: string) => run("phone", async () => { const u = await ensureEmbedded(node); setEmbeddedChosen(true); setBase(u); setWalletdBearer(""); });
   const leaveEngine = () => { if (embeddedChosen()) { setEmbeddedChosen(false); void stopEmbedded(); } };
   const usePublic = () => run("public", async () => { leaveEngine(); setBase(""); setWalletdBearer(""); });
   const useTor = () => run("tor", async () => { leaveEngine(); const u = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000); setBase(u); setWalletdBearer(""); });
@@ -6225,9 +6223,7 @@ function NetworkPrivacyCard() {
       <p className="muted small" style={{ marginTop: 0 }}>What your wallet connects to. Tap to switch.</p>
       <div className="connection-list">
         {embeddedAvailable() && (
-          <button className={"connection-option" + (current === "phone" ? " active" : "")} disabled={!!busy} onClick={usePhone}>
-            <span><b>Run on this phone</b><small>Most private. No server sees your viewing key. Uses a bit more battery.</small></span><span>{tag("phone")}</span>
-          </button>
+          <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n) => usePhone(n)} />
         )}
         <button className={"connection-option" + (current === "public" ? " active" : "")} disabled={!!busy} onClick={usePublic}>
           <span><b>Public service</b><small>Fastest. Sees your IP.</small></span><span>{tag("public")}</span>

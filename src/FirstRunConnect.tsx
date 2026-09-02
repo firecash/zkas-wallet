@@ -18,6 +18,7 @@ import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
 import { ONION_WALLETD_URL } from "./lib/relay";
 import { OrbotHelp } from "./OrbotHelp";
 import { embeddedAvailable, setEmbeddedChosen, ensureEmbedded } from "./embedded";
+import { RunOnPhoneOption } from "./RunOnPhoneOption";
 
 export function FirstRunConnect({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState<null | "public" | "tor" | "custom" | "phone">(null);
@@ -40,11 +41,11 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
     setBase(""); setWalletdBearer(""); finish();
   };
 
-  const connectPhone = async () => {
+  const connectPhone = async (node?: string) => {
     if (busy) return;
     setErr(""); setBusy("phone");
     try {
-      const url = await ensureEmbedded();
+      const url = await ensureEmbedded(node);
       setEmbeddedChosen(true);
       setBase(url); setWalletdBearer("");
       finish();
@@ -95,10 +96,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
         <span className="eyebrow">Connect</span>
         <div className="connection-list firstrun-conn">
           {embeddedAvailable() && (
-            <button className="connection-option" disabled={!!busy} onClick={() => void connectPhone()}>
-              <span><b>Run on this phone</b><small>Most private. Your wallet runs here — no server ever sees your viewing key. Uses a bit more battery.</small></span>
-              <span>{busy === "phone" ? "Starting…" : "Use"}</span>
-            </button>
+            <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} onStart={(n) => connectPhone(n)} />
           )}
           <button className="connection-option" disabled={!!busy} onClick={connectPublic}>
             <span><b>Public wallet service</b><small>Fastest. Works instantly, nothing to install.</small></span>

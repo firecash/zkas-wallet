@@ -21,6 +21,32 @@ interface EmbeddedEnginePlugin {
 const Native = registerPlugin<EmbeddedEnginePlugin>("EmbeddedEngine");
 
 const CHOICE_KEY = "wallet_service_embedded";
+const NODE_KEY = "wallet_embedded_node";
+
+/** The public ZKas node the on-device engine syncs from unless the user picks
+ * their own. gRPC host:port. */
+export const DEFAULT_EMBEDDED_NODE = "185.147.157.125:16110";
+
+/** The node the on-device engine should sync from (the user's choice, or the
+ * public default). */
+export function embeddedNode(): string {
+  try {
+    return localStorage.getItem(NODE_KEY) || DEFAULT_EMBEDDED_NODE;
+  } catch {
+    return DEFAULT_EMBEDDED_NODE;
+  }
+}
+
+/** Remember the node to sync from; clearing back to the default forgets it. */
+export function setEmbeddedNode(v: string): void {
+  const a = (v || "").trim();
+  try {
+    if (a && a !== DEFAULT_EMBEDDED_NODE) localStorage.setItem(NODE_KEY, a);
+    else localStorage.removeItem(NODE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 /** Only the native Android shell carries the engine plugin. `isPluginAvailable`
  * returns FALSE for plugins registered in MainActivity (which is how this one and
@@ -56,8 +82,11 @@ export async function ensureEmbedded(nodeAddr?: string): Promise<string> {
   if (!embeddedAvailable()) throw new Error("The on-device engine is not available on this device.");
   const already = await Native.status().catch(() => ({ port: 0, running: false }));
   if (already.running && already.port > 0) return `http://127.0.0.1:${already.port}`;
+  // Sync from the node the user chose (persisted), or the public default.
+  const node = (nodeAddr && nodeAddr.trim()) || embeddedNode();
+  setEmbeddedNode(node);
   if (!startPromise) {
-    startPromise = Native.start({ nodeAddr }).then((r) => r.port);
+    startPromise = Native.start({ nodeAddr: node }).then((r) => r.port);
   }
   try {
     const port = await startPromise;
