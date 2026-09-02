@@ -735,7 +735,9 @@ select { appearance: none; cursor: pointer; }
 .connection-option.active { border-color: var(--ember); background: var(--ember-soft); }
 .connection-option > span:first-child,
 .connection-option.saved > button:first-child > span:first-child { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
-.connection-option small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.connection-option small { display: block; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.run-on-phone { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.run-on-phone > button { width: 100%; }
 .connection-option > span:last-child,
 .connection-option.saved > button:first-child > span:last-child { color: var(--ember); font-size: 11px; font-weight: 700; }
 .connection-option.saved { padding: 0; }

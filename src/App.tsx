@@ -1435,10 +1435,10 @@ function ConnectionButton() {
   };
   // Leaving the on-device engine for a server: forget the choice and stop it so
   // the next boot doesn't relaunch it.
-  const leaveEmbedded = () => { if (embeddedChosen()) { setEmbeddedChosen(false); void stopEmbedded(); } };
+  const leaveEmbedded = async () => { if (embeddedChosen()) { setEmbeddedChosen(false); await stopEmbedded(); } };
 
   const connectHosted = async () => {
-    leaveEmbedded();
+    await leaveEmbedded();
     setError("");
     setBusy("hosted");
     try {
@@ -1455,7 +1455,7 @@ function ConnectionButton() {
   };
 
   const connectTor = async () => {
-    leaveEmbedded();
+    await leaveEmbedded();
     setTorFailed(false);
     setError("");
     setBusy("tor");
@@ -1524,6 +1524,9 @@ function ConnectionButton() {
     setBusy(busyKey);
     setError("");
     try {
+      // Leaving the on-device engine for a server: without this the embedded
+      // flag survives and the next boot re-points the app back at 127.0.0.1.
+      await leaveEmbedded();
       // A pairing string carries the address AND both secrets, so scanning or pasting
       // one connects to the right wallet with nothing typed. Typing them by hand means
       // transcribing two long hex strings on a phone; getting the second one wrong does
@@ -6202,14 +6205,14 @@ function NetworkPrivacyCard() {
       });
   };
   const usePhone = (node?: string) => run("phone", async () => { const u = await ensureEmbedded(node); setEmbeddedChosen(true); setBase(u); setWalletdBearer(""); });
-  const leaveEngine = () => { if (embeddedChosen()) { setEmbeddedChosen(false); void stopEmbedded(); } };
-  const usePublic = () => run("public", async () => { leaveEngine(); setBase(""); setWalletdBearer(""); });
-  const useTor = () => run("tor", async () => { leaveEngine(); const u = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000); setBase(u); setWalletdBearer(""); });
+  const leaveEngine = async () => { if (embeddedChosen()) { setEmbeddedChosen(false); await stopEmbedded(); } };
+  const usePublic = () => run("public", async () => { await leaveEngine(); setBase(""); setWalletdBearer(""); });
+  const useTor = () => run("tor", async () => { await leaveEngine(); const u = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000); setBase(u); setWalletdBearer(""); });
   const useCustom = () => {
     const entered = addr.trim();
     if (!entered) return setErr("Enter a wallet-service address (host:port or an .onion).");
     run("custom", async () => {
-      leaveEngine();
+      await leaveEngine();
       const u = await findReachableDaemon(entered, bearer);
       setBase(u); setWalletdBearer(bearer.trim());
       walletdProfiles.save(entered.replace(/^https?:\/\//, "").split("/")[0], u, bearer.trim() || undefined);

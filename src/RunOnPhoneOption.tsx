@@ -37,7 +37,7 @@ export function RunOnPhoneOption({
       >
         <span>
           <b>Run on this phone</b>
-          <small>Most private — no server ever sees your viewing key. Runs the wallet here; uses a bit more battery.</small>
+          <small>Most private. Runs here; a bit more battery.</small>
         </span>
         {tag != null && <span>{tag}</span>}
       </button>
