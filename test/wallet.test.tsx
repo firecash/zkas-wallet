@@ -226,7 +226,7 @@ describe("the wallet a user actually touches", () => {
     expect(screen.getByLabelText("Switch wallet")).toHaveTextContent("Wallet 1");
   });
 
-  it("offers every choice on a small wallet, and warns it may finish sooner", async () => {
+  it("offers every note-count choice on a small wallet", async () => {
     // The cap this used to apply came from note_count, which walletd fills with
     // every unspent note INCLUDING ones still maturing — so it greyed out choices
     // on a guess. The run refuses passes that cannot reduce the count; the UI does
@@ -235,10 +235,8 @@ describe("the wallet a user actually touches", () => {
     await mountApp();
     await userEvent.click(await screen.findByRole("button", { name: "Manage wallet notes" }));
 
-    expect(await screen.findByText("End with about")).toBeInTheDocument();
+    expect(await screen.findByText("Hold this many")).toBeInTheDocument();
     for (const n of ["1", "2", "3", "5"]) expect(screen.getByRole("button", { name: n })).toBeEnabled();
-    expect(screen.getByText(/still settling/)).toBeInTheDocument();
-    expect(screen.getByText(/fewer passes/)).toBeInTheDocument();
   });
 
   it("offers a real choice once the wallet holds enough notes", async () => {
