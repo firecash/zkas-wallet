@@ -1590,7 +1590,13 @@ function ConnectionButton() {
             </p>
 
             <div className="connection-list">
-              <button className={`connection-option ${hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
+              {embeddedAvailable() && (
+                <button className={`connection-option ${embeddedChosen() ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectEmbedded()}>
+                  <span><b>Run on this phone</b><small>Most private — no server sees your viewing key. Runs the wallet here; uses a bit more battery.</small></span>
+                  <span>{busy === "phone" ? "Starting…" : embeddedChosen() ? "On" : "Use"}</span>
+                </button>
+              )}
+              <button className={`connection-option ${!embeddedChosen() && hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
                 <span><b>Public service</b><small>{desktop ? "Ready at once — already scanned. The service sees your IP." : "Fastest. The service sees your IP."}</small></span><span>{busy === "hosted" ? "Checking…" : hosted && !onion ? "Connected" : "Use"}</span>
               </button>
               {desktop && (
@@ -6160,10 +6166,11 @@ function networkPrivacyLabel(): string {
 function NetworkPrivacyCard() {
   const base = getBase();
   const onion = isOnionAddress(base);
-  const current: "public" | "tor" | "custom" =
-    onion ? "tor" : !base || /wallet\.zkas\.info/i.test(base) || base.endsWith("/daemon") ? "public" : "custom";
+  const current: "phone" | "public" | "tor" | "custom" =
+    embeddedChosen() ? "phone"
+    : onion ? "tor" : !base || /wallet\.zkas\.info/i.test(base) || base.endsWith("/daemon") ? "public" : "custom";
 
-  const [busy, setBusy] = useState<null | "public" | "tor" | "custom">(null);
+  const [busy, setBusy] = useState<null | "phone" | "public" | "tor" | "custom">(null);
   const [showCustom, setShowCustom] = useState(false);
   const [addr, setAddr] = useState("");
   const [bearer, setBearer] = useState("");
@@ -6185,7 +6192,7 @@ function NetworkPrivacyCard() {
     );
   }
 
-  const run = (which: "public" | "tor" | "custom", fn: () => Promise<void>) => {
+  const run = (which: "phone" | "public" | "tor" | "custom", fn: () => Promise<void>) => {
     if (busy) return;
     setErr(""); setNeedTor(false); setBusy(which);
     void fn()
@@ -6196,12 +6203,15 @@ function NetworkPrivacyCard() {
         setBusy(null);
       });
   };
-  const usePublic = () => run("public", async () => { setBase(""); setWalletdBearer(""); });
-  const useTor = () => run("tor", async () => { const u = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000); setBase(u); setWalletdBearer(""); });
+  const usePhone = () => run("phone", async () => { const u = await ensureEmbedded(); setEmbeddedChosen(true); setBase(u); setWalletdBearer(""); });
+  const leaveEngine = () => { if (embeddedChosen()) { setEmbeddedChosen(false); void stopEmbedded(); } };
+  const usePublic = () => run("public", async () => { leaveEngine(); setBase(""); setWalletdBearer(""); });
+  const useTor = () => run("tor", async () => { leaveEngine(); const u = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000); setBase(u); setWalletdBearer(""); });
   const useCustom = () => {
     const entered = addr.trim();
     if (!entered) return setErr("Enter a wallet-service address (host:port or an .onion).");
     run("custom", async () => {
+      leaveEngine();
       const u = await findReachableDaemon(entered, bearer);
       setBase(u); setWalletdBearer(bearer.trim());
       walletdProfiles.save(entered.replace(/^https?:\/\//, "").split("/")[0], u, bearer.trim() || undefined);
@@ -6214,6 +6224,11 @@ function NetworkPrivacyCard() {
       <h2>Network privacy</h2>
       <p className="muted small" style={{ marginTop: 0 }}>What your wallet connects to. Tap to switch.</p>
       <div className="connection-list">
+        {embeddedAvailable() && (
+          <button className={"connection-option" + (current === "phone" ? " active" : "")} disabled={!!busy} onClick={usePhone}>
+            <span><b>Run on this phone</b><small>Most private. No server sees your viewing key. Uses a bit more battery.</small></span><span>{tag("phone")}</span>
+          </button>
+        )}
         <button className={"connection-option" + (current === "public" ? " active" : "")} disabled={!!busy} onClick={usePublic}>
           <span><b>Public service</b><small>Fastest. Sees your IP.</small></span><span>{tag("public")}</span>
         </button>
