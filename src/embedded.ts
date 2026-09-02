@@ -22,10 +22,12 @@ const Native = registerPlugin<EmbeddedEnginePlugin>("EmbeddedEngine");
 
 const CHOICE_KEY = "wallet_service_embedded";
 
-/** Only the native Android shell carries the engine plugin. */
+/** Only the native Android shell carries the engine plugin. `isPluginAvailable`
+ * returns FALSE for plugins registered in MainActivity (which is how this one and
+ * BackgroundSync are wired), so gate on the platform exactly as bgSyncAvailable does. */
 export function embeddedAvailable(): boolean {
-  const cap = (globalThis as { Capacitor?: { getPlatform?: () => string; isPluginAvailable?: (n: string) => boolean } }).Capacitor;
-  return isNative() && cap?.getPlatform?.() === "android" && !!cap?.isPluginAvailable?.("EmbeddedEngine");
+  const cap = (globalThis as { Capacitor?: { getPlatform?: () => string } }).Capacitor;
+  return isNative() && cap?.getPlatform?.() === "android";
 }
 
 /** Has the user chosen to run the wallet on this phone? */
