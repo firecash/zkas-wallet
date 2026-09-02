@@ -26,6 +26,10 @@ export ANDROID_SDK_ROOT="$ANDROID_HOME"
 MODE="${1:-debug}"
 
 npm run build
+# Build the on-device wallet engine into jniLibs (best-effort: a build host
+# without the NDK/engine crate still produces a working hosted-only app).
+"$(dirname "$0")/build-engine.sh" || echo "warn: engine build skipped — APK will be hosted-only"
+
 npx cap sync android
 
 cd android
