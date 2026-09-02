@@ -2511,3 +2511,22 @@ input.mono, .host-token { font-size: 16px; }
   white-space: nowrap;
 }
 .app-nav-bar .version-badge { opacity: 0.75; margin-left: 8px; }
+
+/* Shielded Pool · Live (embedded explorer visualisation) */
+.explorer-live-teaser {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  width: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit;
+}
+.explorer-live-teaser:hover { border-color: var(--teal, #17d6be); }
+.explorer-live-teaser h2 { margin: 0 0 2px; }
+.explorer-live-teaser p { margin: 0; color: var(--muted, #9090a0); font-size: 13px; }
+.explorer-live-card { position: relative; padding: 0; overflow: hidden; }
+.explorer-live-frame {
+  display: block; width: 100%; height: min(72vh, 620px); min-height: 360px;
+  border: 0; border-radius: inherit; background: #0b0b0f;
+}
+.explorer-live-loading {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  gap: 10px; color: var(--muted, #9090a0); background: #0b0b0f; z-index: 1;
+}
+.explorer-live-note { margin-top: 10px; }
