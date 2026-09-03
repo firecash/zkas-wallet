@@ -18,6 +18,7 @@ import {
 } from "./maintenance";
 import type { Status } from "./api";
 import type { Network } from "./signer";
+import { embeddedChosen } from "./embedded";
 
 /// How often the policy is consulted. Cheap — it is a pure function over state
 /// already in hand — and the real rate limit is `MAINTENANCE_MIN_INTERVAL_MS`.
@@ -55,7 +56,7 @@ export function useMaintenance(options: MaintenanceOptions): void {
       const decision = shouldRunMaintenance({
         status,
         busy,
-        enabled: isMaintenanceEnabled(),
+        enabled: isMaintenanceEnabled() && !embeddedChosen(),
         lastRunAt: lastMaintenanceRun(token),
         now: Date.now(),
       });
