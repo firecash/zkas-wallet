@@ -37,6 +37,8 @@ public class BackgroundSyncPlugin extends Plugin {
         String base = call.getString("baseUrl", "").replaceAll("/+$", "");
         String token = call.getString("token", "");
         String bearer = call.getString("bearer", "").trim();
+        boolean embedded = Boolean.TRUE.equals(call.getBoolean("embedded", false));
+        String node = call.getString("node", "");
         // Until when the worker must not announce a balance increase as a payment.
         //
         // The worker compares balances against its own stored baseline and cannot read
@@ -48,6 +50,8 @@ public class BackgroundSyncPlugin extends Plugin {
             .putString("baseUrl", base)
             .putString("token", token)
             .putString("bearer", bearer)
+            .putBoolean("embedded", embedded)
+            .putString("node", node)
             .putLong("quietUntil", quiet)
             .apply();
         call.resolve();

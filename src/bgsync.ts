@@ -16,9 +16,10 @@ import { registerPlugin } from "@capacitor/core";
 import { getBase, getToken, getWalletdBearer, isNative } from "./api";
 import { quietUntil } from "./arrivals";
 import { loadTxs } from "./localtx";
+import { embeddedChosen, embeddedNode } from "./embedded";
 
 interface BackgroundSyncPlugin {
-  configure(opts: { baseUrl: string; token: string; bearer: string; quietUntil: number }): Promise<void>;
+  configure(opts: { baseUrl: string; token: string; bearer: string; quietUntil: number; embedded?: boolean; node?: string }): Promise<void>;
   enable(): Promise<void>;
   disable(): Promise<void>;
   isEnabled(): Promise<{ enabled: boolean }>;
@@ -44,7 +45,7 @@ export function bgSyncEnabled(): boolean {
 
 export async function bgSyncEnable(): Promise<void> {
   // Configure BEFORE enabling so the worker never wakes to stale credentials.
-  await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer(), quietUntil: quietUntil(loadTxs()) });
+  await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer(), quietUntil: quietUntil(loadTxs()), embedded: embeddedChosen(), node: embeddedNode() });
   await Native.enable();
   localStorage.setItem(FLAG, "1");
 }
@@ -63,7 +64,7 @@ export async function bgSyncDisable(): Promise<void> {
 export async function bgSyncReconfigure(): Promise<void> {
   if (!bgSyncEnabled()) return;
   try {
-    await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer(), quietUntil: quietUntil(loadTxs()) });
+    await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer(), quietUntil: quietUntil(loadTxs()), embedded: embeddedChosen(), node: embeddedNode() });
   } catch {
     /* best-effort — the next boot re-tries */
   }

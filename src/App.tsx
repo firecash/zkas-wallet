@@ -81,6 +81,7 @@ import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
 import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { isWatchOnly, clearWatchKey, watchLink, isViewKey } from "./lib/watchonly";
+import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
 import { adoptViewKey } from "./lib/watchadopt";
 import { APP_BUILT, platformName, versionLine, versionTag } from "./version";
 import { OrbotHelp } from "./OrbotHelp";
@@ -1156,6 +1157,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               />
             )}
             {tab === "history" && (
+              <>
               <History
                 txs={txs}
                 receipts={receipts}
@@ -1168,6 +1170,12 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                   setTab("send");
                 }}
               />
+              {!viewOnly && (
+                <Collapsible title="Wallet view key" summary="Watch on another device">
+                  <WatchOnAnotherDevice status={status} />
+                </Collapsible>
+              )}
+              </>
             )}
             {tab === "signatures" && !viewOnly && <Signatures status={status} />}
             {tab === "tools" && !viewOnly && (
@@ -1428,7 +1436,9 @@ function ConnectionButton() {
       const url = await ensureEmbedded(node);
       setEmbeddedChosen(true);
       setBase(url); setWalletdBearer("");
-      setOpen(false); void refresh();
+      setOpen(false);
+      void bgSyncReconfigure(); // tell the bg worker to talk to the on-device engine
+      void refresh();
     } catch (e) {
       setError((e as Error).message || "The on-device engine could not start.");
     } finally { setBusy(null); }
@@ -1659,7 +1669,7 @@ function ConnectionButton() {
               <div className={`connection-add-grid ${desktop ? "" : "walletd"}`}>
                 <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name · Home node" />
                 <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={desktop ? STANDALONE_ZKAS_RPC_EXAMPLE : isNative() ? `192.168.1.20:${DEFAULT_WALLETD_PORT}` : "https://wallet.example.com"} />
-                {!desktop && <input type="password" className="mono" value={bearer} onChange={(event) => setBearer(event.target.value)} placeholder="Access token" autoCapitalize="none" autoCorrect="off" spellCheck={false} />}
+                {!desktop && showAccessTokenField() && <input type="password" className="mono" value={bearer} onChange={(event) => setBearer(event.target.value)} placeholder="Access token" autoCapitalize="none" autoCorrect="off" spellCheck={false} />}
                 <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? "Checking…" : "Save & connect"}</button>
               </div>
             </div>
@@ -3791,6 +3801,16 @@ function SettingsSection({ label }: { label: string }) {
 }
 
 
+function AccessTokenSetting() {
+  const [on, setOn] = useState(showAccessTokenField());
+  return (
+    <label className="row" style={{ gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+      <input type="checkbox" checked={on} style={{ marginTop: 3 }} onChange={(e) => { setShowAccessTokenField(e.target.checked); setOn(e.target.checked); }} />
+      <span><b>Show access-token field</b><br /><span className="muted small">Adds a token box to wallet-service setup. Only needed for a token-protected walletd.</span></span>
+    </label>
+  );
+}
+
 /// Hand another device the ability to WATCH this wallet.
 ///
 /// The viewing key lets a phone browser show the balance and history with no way
@@ -3825,6 +3845,9 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
       const url = watchLink(fvk, walletBirthday());
       setLink(url);
       setQr(await QRCode.toDataURL(url, { margin: 1, width: 440 }));
+      // Copy straight away: the point of the button is to hand the link off, not
+      // to display a wall of text the user then has to copy themselves.
+      try { await copyText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* clipboard may be blocked */ }
     } catch (e) {
       setError((e as Error)?.message === SEED_REQUIRED
         ? "This device does not hold the key for this wallet."
@@ -3847,7 +3870,7 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
       </div>
       {!link && (
         <button className="btn" disabled={busy} onClick={() => void reveal()}>
-          {busy ? "Preparing…" : "Show the link"}
+          {busy ? "Preparing…" : "Copy link"}
         </button>
       )}
       {error && <div className="msg warn">{error}</div>}
@@ -3960,9 +3983,6 @@ function SettingsPane({ status }: { status: Status }) {
           <Collapsible title="Recovery seed" summary="Back up">
             <RevealSeedCard expectedAddress={status.address ?? undefined} />
           </Collapsible>
-          <Collapsible title="Watch on another device" summary="Read-only">
-            <WatchOnAnotherDevice status={status} />
-          </Collapsible>
         </>
       )}
 
@@ -4000,6 +4020,9 @@ function SettingsPane({ status }: { status: Status }) {
       </Collapsible>
       <Collapsible title="Network privacy" summary={networkPrivacyLabel()}>
         <NetworkPrivacyCard />
+        <Collapsible title="Access-token field" summary={showAccessTokenField() ? "Shown" : "Hidden"}>
+          <AccessTokenSetting />
+        </Collapsible>
       </Collapsible>
       {!ROOMY() && (
         <Collapsible title="Signatures">
@@ -6008,17 +6031,21 @@ function DaemonSetting() {
               {busy ? <span className="spin" /> : "Connect"}
             </button>
           </div>
-          <label style={{ marginTop: 10 }}>Access token <span className="muted">(if required)</span></label>
-          <input
-            type="password"
-            value={bearer}
-            onChange={(e) => setBearer(e.target.value)}
-            className="mono"
-            placeholder="Access token"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-          />
+          {showAccessTokenField() && (
+            <>
+              <label style={{ marginTop: 10 }}>Access token <span className="muted">(if required)</span></label>
+              <input
+                type="password"
+                value={bearer}
+                onChange={(e) => setBearer(e.target.value)}
+                className="mono"
+                placeholder="Access token"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </>
+          )}
           <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
             Uses port {DEFAULT_WALLETD_PORT} by default — add <span className="mono">:port</span> only if you changed it.
           </p>
@@ -6240,7 +6267,7 @@ function NetworkPrivacyCard() {
         {showCustom && (
           <div className="connection-add firstrun-custom">
             <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="host:port, http://<lan-ip>:8501, or .onion" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />
-            <input value={bearer} onChange={(e) => setBearer(e.target.value)} placeholder="Access token" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />
+            {showAccessTokenField() && <input value={bearer} onChange={(e) => setBearer(e.target.value)} placeholder="Access token" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />}
             <button className="btn small" disabled={busy === "custom"} onClick={useCustom}>{busy === "custom" ? "Connecting…" : "Connect"}</button>
           </div>
         )}

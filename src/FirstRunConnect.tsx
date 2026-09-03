@@ -19,6 +19,7 @@ import { ONION_WALLETD_URL } from "./lib/relay";
 import { OrbotHelp } from "./OrbotHelp";
 import { embeddedAvailable, setEmbeddedChosen, ensureEmbedded } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
+import { showAccessTokenField } from "./lib/accesstoken";
 
 export function FirstRunConnect({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState<null | "public" | "tor" | "custom" | "phone">(null);
@@ -122,13 +123,15 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
                 disabled={busy === "custom"}
                 autoCapitalize="none" autoCorrect="off" spellCheck={false}
               />
-              <input
-                value={bearer}
-                onChange={(e) => setBearer(e.target.value)}
-                placeholder="Access token"
-                disabled={busy === "custom"}
-                autoCapitalize="none" autoCorrect="off" spellCheck={false}
-              />
+              {showAccessTokenField() && (
+                <input
+                  value={bearer}
+                  onChange={(e) => setBearer(e.target.value)}
+                  placeholder="Access token"
+                  disabled={busy === "custom"}
+                  autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                />
+              )}
               <button className="btn small" disabled={busy === "custom"} onClick={() => void connectCustom()}>
                 {busy === "custom" ? "Connecting…" : "Connect"}
               </button>
