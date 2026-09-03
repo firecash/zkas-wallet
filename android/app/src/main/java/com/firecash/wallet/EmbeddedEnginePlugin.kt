@@ -30,9 +30,10 @@ class EmbeddedEnginePlugin : Plugin() {
     fun start(call: PluginCall) {
         val node = call.getString("nodeAddr") ?: DEFAULT_NODE
         val secret = call.getString("secret")
+        val socks = call.getString("socks")
         Thread {
             val port = try {
-                uniffi.zkas_walletd_mobile.start(node, walletDir(), secret).toInt()
+                uniffi.zkas_walletd_mobile.start(node, walletDir(), secret, socks).toInt()
             } catch (e: Throwable) {
                 0
             }

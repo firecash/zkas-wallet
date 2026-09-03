@@ -44,9 +44,9 @@ done
 # Refresh the vendored UniFFI Kotlin bindings from the just-built library.
 BIND="$ROOT/android/app/src/main/java/uniffi/zkas_walletd_mobile"
 mkdir -p "$BIND"
-cargo run --manifest-path "$ENGINE/Cargo.toml" --bin uniffi-bindgen -- generate \
+(cd "$ENGINE" && cargo run --bin uniffi-bindgen -- generate \
   --library "$ENGINE/target/aarch64-linux-android/release/libzkas_walletd_mobile.so" \
-  --language kotlin --out-dir "$ROOT/.engine-bindings" >/dev/null 2>&1 || true
+  --language kotlin --out-dir "$ROOT/.engine-bindings" >/dev/null 2>&1) || true
 [ -f "$ROOT/.engine-bindings/uniffi/zkas_walletd_mobile/zkas_walletd_mobile.kt" ] && \
   cp "$ROOT/.engine-bindings/uniffi/zkas_walletd_mobile/zkas_walletd_mobile.kt" "$BIND/"
 

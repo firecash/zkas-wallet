@@ -13,7 +13,7 @@ import { registerPlugin } from "@capacitor/core";
 import { isNative } from "./api";
 
 interface EmbeddedEnginePlugin {
-  start(opts: { nodeAddr?: string; secret?: string }): Promise<{ port: number }>;
+  start(opts: { nodeAddr?: string; secret?: string; socks?: string }): Promise<{ port: number }>;
   stop(): Promise<void>;
   status(): Promise<{ port: number; running: boolean }>;
 }
@@ -38,6 +38,19 @@ export function embeddedNode(): string {
 }
 
 /** Remember the node to sync from; clearing back to the default forgets it. */
+/** Orbot's local SOCKS5 proxy — Tor on Android. */
+export const ORBOT_SOCKS = "127.0.0.1:9050";
+const TOR_KEY = "wallet_embedded_tor";
+
+/** Should the on-device engine reach its node over Tor (Orbot)? */
+export function embeddedTor(): boolean {
+  try { return localStorage.getItem(TOR_KEY) === "1"; } catch { return false; }
+}
+
+export function setEmbeddedTor(on: boolean): void {
+  try { if (on) localStorage.setItem(TOR_KEY, "1"); else localStorage.removeItem(TOR_KEY); } catch { /* ignore */ }
+}
+
 export function setEmbeddedNode(v: string): void {
   const a = (v || "").trim();
   try {
@@ -78,15 +91,17 @@ let startPromise: Promise<number> | null = null;
 
 /** Start the engine (idempotent) and return its loopback base URL, e.g.
  * http://127.0.0.1:54123. Throws if the engine cannot start. */
-export async function ensureEmbedded(nodeAddr?: string): Promise<string> {
+export async function ensureEmbedded(nodeAddr?: string, tor?: boolean): Promise<string> {
   if (!embeddedAvailable()) throw new Error("The on-device engine is not available on this device.");
   const already = await Native.status().catch(() => ({ port: 0, running: false }));
   if (already.running && already.port > 0) return `http://127.0.0.1:${already.port}`;
   // Sync from the node the user chose (persisted), or the public default.
   const node = (nodeAddr && nodeAddr.trim()) || embeddedNode();
   setEmbeddedNode(node);
+  const useTor = tor ?? embeddedTor();
+  setEmbeddedTor(useTor);
   if (!startPromise) {
-    startPromise = Native.start({ nodeAddr: node }).then((r) => r.port);
+    startPromise = Native.start({ nodeAddr: node, socks: useTor ? ORBOT_SOCKS : undefined }).then((r) => r.port);
   }
   try {
     const port = await startPromise;

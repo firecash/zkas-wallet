@@ -18,8 +18,8 @@ object EngineControl {
 
     /** Start the engine (idempotent — returns the existing port if already running). 0 on failure. */
     @JvmStatic
-    fun startEngine(node: String, walletDir: String): Int = try {
-        uniffi.zkas_walletd_mobile.start(node, walletDir, null).toInt()
+    fun startEngine(node: String, walletDir: String, socks: String?): Int = try {
+        uniffi.zkas_walletd_mobile.start(node, walletDir, null, socks).toInt()
     } catch (e: Throwable) {
         0
     }

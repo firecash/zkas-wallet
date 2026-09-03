@@ -65,8 +65,9 @@ public class SyncWorker extends Worker {
             int port = EngineControl.port();
             if (port == 0) {
                 String node = p.getString("node", "185.147.157.125:16110");
+                String socks = p.getString("socks", "");
                 String dir = new File(getApplicationContext().getFilesDir(), "wallets").getAbsolutePath();
-                port = EngineControl.startEngine(node, dir);
+                port = EngineControl.startEngine(node, dir, socks.isEmpty() ? null : socks);
                 startedHere = true;
             }
             if (port == 0) return Result.retry(); // engine could not start; back off and retry

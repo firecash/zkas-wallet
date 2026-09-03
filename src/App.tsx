@@ -1430,10 +1430,10 @@ function ConnectionButton() {
   /// claiming it "works immediately". The hosted service has already scanned, so
   /// the balance is there at once. Recorded as a remote choice so it survives a
   /// restart, and so api.ts routes calls to it instead of the embedded engine.
-  const connectEmbedded = async (node?: string) => {
+  const connectEmbedded = async (node?: string, tor?: boolean) => {
     setBusy("phone");
     try {
-      const url = await ensureEmbedded(node);
+      const url = await ensureEmbedded(node, tor);
       setEmbeddedChosen(true);
       setBase(url); setWalletdBearer("");
       setOpen(false);
@@ -1605,7 +1605,7 @@ function ConnectionButton() {
 
             <div className="connection-list">
               {embeddedAvailable() && (
-                <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? "Starting…" : embeddedChosen() ? "On" : "Use"} onStart={(n) => connectEmbedded(n)} />
+                <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? "Starting…" : embeddedChosen() ? "On" : "Use"} onStart={(n, t) => connectEmbedded(n, t)} />
               )}
               <button className={`connection-option ${!embeddedChosen() && hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
                 <span><b>Public service</b><small>{desktop ? "Ready at once — already scanned. The service sees your IP." : "Fastest. The service sees your IP."}</small></span><span>{busy === "hosted" ? "Checking…" : hosted && !onion ? "Connected" : "Use"}</span>
@@ -6231,7 +6231,7 @@ function NetworkPrivacyCard() {
         setBusy(null);
       });
   };
-  const usePhone = (node?: string) => run("phone", async () => { const u = await ensureEmbedded(node); setEmbeddedChosen(true); setBase(u); setWalletdBearer(""); });
+  const usePhone = (node?: string, tor?: boolean) => run("phone", async () => { const u = await ensureEmbedded(node, tor); setEmbeddedChosen(true); setBase(u); setWalletdBearer(""); });
   const leaveEngine = async () => { if (embeddedChosen()) { setEmbeddedChosen(false); await stopEmbedded(); } };
   const usePublic = () => run("public", async () => { await leaveEngine(); setBase(""); setWalletdBearer(""); });
   const useTor = () => run("tor", async () => { await leaveEngine(); const u = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000); setBase(u); setWalletdBearer(""); });
@@ -6253,7 +6253,7 @@ function NetworkPrivacyCard() {
       <p className="muted small" style={{ marginTop: 0 }}>What your wallet connects to. Tap to switch.</p>
       <div className="connection-list">
         {embeddedAvailable() && (
-          <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n) => usePhone(n)} />
+          <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n, t) => usePhone(n, t)} />
         )}
         <button className={"connection-option" + (current === "public" ? " active" : "")} disabled={!!busy} onClick={usePublic}>
           <span><b>Public service</b><small>Fastest. Sees your IP.</small></span><span>{tag("public")}</span>

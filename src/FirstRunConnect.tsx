@@ -42,11 +42,11 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
     setBase(""); setWalletdBearer(""); finish();
   };
 
-  const connectPhone = async (node?: string) => {
+  const connectPhone = async (node?: string, tor?: boolean) => {
     if (busy) return;
     setErr(""); setBusy("phone");
     try {
-      const url = await ensureEmbedded(node);
+      const url = await ensureEmbedded(node, tor);
       setEmbeddedChosen(true);
       setBase(url); setWalletdBearer("");
       finish();
@@ -97,7 +97,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
         <span className="eyebrow">Connect</span>
         <div className="connection-list firstrun-conn">
           {embeddedAvailable() && (
-            <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} onStart={(n) => connectPhone(n)} />
+            <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} onStart={(n, t) => connectPhone(n, t)} />
           )}
           <button className="connection-option" disabled={!!busy} onClick={connectPublic}>
             <span><b>Public wallet service</b><small>Fastest. Works instantly, nothing to install.</small></span>

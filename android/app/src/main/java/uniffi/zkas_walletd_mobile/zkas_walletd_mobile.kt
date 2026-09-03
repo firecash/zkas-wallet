@@ -734,7 +734,7 @@ internal interface UniffiLib : Library {
 
     fun uniffi_zkas_walletd_mobile_fn_func_port(uniffi_out_err: UniffiRustCallStatus, 
     ): Short
-    fun uniffi_zkas_walletd_mobile_fn_func_start(`nodeAddr`: RustBuffer.ByValue,`walletDir`: RustBuffer.ByValue,`secret`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    fun uniffi_zkas_walletd_mobile_fn_func_start(`nodeAddr`: RustBuffer.ByValue,`walletDir`: RustBuffer.ByValue,`secret`: RustBuffer.ByValue,`socks`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Short
     fun uniffi_zkas_walletd_mobile_fn_func_stop(uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -876,7 +876,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_zkas_walletd_mobile_checksum_func_port() != 13306.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_zkas_walletd_mobile_checksum_func_start() != 41669.toShort()) {
+    if (lib.uniffi_zkas_walletd_mobile_checksum_func_start() != 52322.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_zkas_walletd_mobile_checksum_func_stop() != 6143.toShort()) {
@@ -1056,11 +1056,11 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
          * Start the engine against `node_addr` (host:port gRPC), storing wallet data under
          * `wallet_dir`, optionally unlocked with `secret`. Returns the bound loopback port,
          * or 0 on failure. Idempotent: a second call while running returns the live port.
-         */ fun `start`(`nodeAddr`: kotlin.String, `walletDir`: kotlin.String, `secret`: kotlin.String?): kotlin.UShort {
+         */ fun `start`(`nodeAddr`: kotlin.String, `walletDir`: kotlin.String, `secret`: kotlin.String?, `socks`: kotlin.String?): kotlin.UShort {
             return FfiConverterUShort.lift(
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_zkas_walletd_mobile_fn_func_start(
-        FfiConverterString.lower(`nodeAddr`),FfiConverterString.lower(`walletDir`),FfiConverterOptionalString.lower(`secret`),_status)
+        FfiConverterString.lower(`nodeAddr`),FfiConverterString.lower(`walletDir`),FfiConverterOptionalString.lower(`secret`),FfiConverterOptionalString.lower(`socks`),_status)
 }
     )
     }
