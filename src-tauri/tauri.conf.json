@@ -33,7 +33,8 @@
     ],
     "category": "Finance",
     "macOS": {
-      "minimumSystemVersion": "10.15"
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": "-"
     },
     "shortDescription": "ZKas wallet, node and mining",
     "longDescription": "Non-custodial ZKas desktop wallet with a managed local node, direct ZKAS mining, and KAS + ZKAS merged mining."
