@@ -712,6 +712,12 @@ impl Engine {
             // consolidates them. `None` would disable that silently.
             auto_consolidate: Some(zkas_walletd::AUTO_CONSOLIDATE_DEFAULT),
             resources: zkas_walletd::ResourceLimits::default(),
+            // Single-wallet on-device engine: nobody borrows a daemon-wide shared tree, so
+            // building it from genesis only delays the first send. Serve from the wallet's
+            // own near-tip frontier tree instead.
+            build_shared_tree: false,
+            // The desktop reaches its node directly; Tor for the embedded engine is not wired here.
+            node_socks_proxy: None,
             // The wallet UI IS this daemon's client, and it is the process hosting it.
             // An idle bound belongs to a daemon somebody exposed and walked away from,
             // not to one whose window is open in front of them — here it would stop
