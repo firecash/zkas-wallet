@@ -189,12 +189,23 @@ function browserStorage(): Storage | null {
   }
 }
 
+/// Bundled services are a FLOOR, not just a fallback: the remote directory can
+/// UPDATE or ADD entries (matched by id) but must never make a bundled one — such as
+/// the "use" apps — silently vanish when the remote list drops it.
+export function mergeWithBundled(remote: DirectoryService[]): DirectoryService[] {
+  const byId = new Map<string, DirectoryService>();
+  for (const svc of BUNDLED_SERVICES) byId.set(svc.id, svc);
+  for (const svc of remote) byId.set(svc.id, svc);
+  return [...byId.values()];
+}
+
 export function readCachedServices(storage: Storage | null = browserStorage()): DirectoryService[] | null {
   if (!storage) return null;
   try {
     const raw = storage.getItem(CACHE_KEY);
     if (!raw || raw.length > MAX_DOCUMENT_BYTES) return null;
-    return parseServicesDocument(JSON.parse(raw))?.services ?? null;
+    const svc = parseServicesDocument(JSON.parse(raw))?.services;
+    return svc ? mergeWithBundled(svc) : null;
   } catch {
     return null;
   }
@@ -232,7 +243,7 @@ export async function refreshServicesDirectory(
     const document = parseServicesDocument(JSON.parse(body));
     if (!document) throw new Error("services directory failed validation");
     cacheDocument(document, storage);
-    return document.services;
+    return mergeWithBundled(document.services);
   } finally {
     window.clearTimeout(timer);
   }
