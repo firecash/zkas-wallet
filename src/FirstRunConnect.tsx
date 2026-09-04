@@ -100,7 +100,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
             <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} onStart={(n, t) => connectPhone(n, t)} />
           )}
           <button className="connection-option" disabled={!!busy} onClick={connectPublic}>
-            <span><b>Public wallet service</b><small>Fastest. Works instantly, nothing to install.</small></span>
+            <span><b>Public wallet service</b><small>Fastest, nothing to install. Shielded on-chain, but this service sees your viewing key and IP.</small></span>
             <span>{busy === "public" ? "…" : "Use"}</span>
           </button>
 

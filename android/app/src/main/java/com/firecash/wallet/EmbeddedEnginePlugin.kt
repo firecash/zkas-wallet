@@ -59,6 +59,19 @@ class EmbeddedEnginePlugin : Plugin() {
         call.resolve(JSObject().put("port", port).put("running", port != 0))
     }
 
+    @PluginMethod
+    fun logs(call: PluginCall) {
+        val text = try { uniffi.zkas_walletd_mobile.logs() } catch (e: Throwable) { "" }
+        call.resolve(JSObject().put("text", text))
+    }
+
+    @PluginMethod
+    fun setDebugLogs(call: PluginCall) {
+        val on = call.getBoolean("on", false) ?: false
+        try { uniffi.zkas_walletd_mobile.setDebugLogs(on) } catch (_: Throwable) {}
+        call.resolve()
+    }
+
     companion object {
         // The public node's gRPC — same default the desktop shell uses.
         const val DEFAULT_NODE = "185.147.157.125:16110"

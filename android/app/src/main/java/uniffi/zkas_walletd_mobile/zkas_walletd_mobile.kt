@@ -717,6 +717,10 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -732,8 +736,12 @@ internal interface UniffiLib : Library {
         
     }
 
+    fun uniffi_zkas_walletd_mobile_fn_func_logs(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_zkas_walletd_mobile_fn_func_port(uniffi_out_err: UniffiRustCallStatus, 
     ): Short
+    fun uniffi_zkas_walletd_mobile_fn_func_set_debug_logs(`on`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     fun uniffi_zkas_walletd_mobile_fn_func_start(`nodeAddr`: RustBuffer.ByValue,`walletDir`: RustBuffer.ByValue,`secret`: RustBuffer.ByValue,`socks`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Short
     fun uniffi_zkas_walletd_mobile_fn_func_stop(uniffi_out_err: UniffiRustCallStatus, 
@@ -850,7 +858,11 @@ internal interface UniffiLib : Library {
     ): Unit
     fun ffi_zkas_walletd_mobile_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_zkas_walletd_mobile_checksum_func_logs(
+    ): Short
     fun uniffi_zkas_walletd_mobile_checksum_func_port(
+    ): Short
+    fun uniffi_zkas_walletd_mobile_checksum_func_set_debug_logs(
     ): Short
     fun uniffi_zkas_walletd_mobile_checksum_func_start(
     ): Short
@@ -873,7 +885,13 @@ private fun uniffiCheckContractApiVersion(lib: UniffiLib) {
 
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: UniffiLib) {
+    if (lib.uniffi_zkas_walletd_mobile_checksum_func_logs() != 16052.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_zkas_walletd_mobile_checksum_func_port() != 13306.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_zkas_walletd_mobile_checksum_func_set_debug_logs() != 32757.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_zkas_walletd_mobile_checksum_func_start() != 52322.toShort()) {
@@ -949,6 +967,29 @@ public object FfiConverterUShort: FfiConverter<UShort, Short> {
 
     override fun write(value: UShort, buf: ByteBuffer) {
         buf.putShort(value.toShort())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
+    override fun lift(value: Byte): Boolean {
+        return value.toInt() != 0
+    }
+
+    override fun read(buf: ByteBuffer): Boolean {
+        return lift(buf.get())
+    }
+
+    override fun lower(value: Boolean): Byte {
+        return if (value) 1.toByte() else 0.toByte()
+    }
+
+    override fun allocationSize(value: Boolean) = 1UL
+
+    override fun write(value: Boolean, buf: ByteBuffer) {
+        buf.put(lower(value))
     }
 }
 
@@ -1041,6 +1082,18 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
     }
 }
         /**
+         * Recent engine log lines (oldest first), for the app's debug view.
+         */ fun `logs`(): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_zkas_walletd_mobile_fn_func_logs(
+        _status)
+}
+    )
+    }
+    
+
+        /**
          * The engine's current loopback port, or 0 if not running.
          */ fun `port`(): kotlin.UShort {
             return FfiConverterUShort.lift(
@@ -1050,6 +1103,17 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
 }
     )
     }
+    
+
+        /**
+         * Turn debug-level logging on or off at runtime (default info).
+         */ fun `setDebugLogs`(`on`: kotlin.Boolean)
+        = 
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_zkas_walletd_mobile_fn_func_set_debug_logs(
+        FfiConverterBoolean.lower(`on`),_status)
+}
+    
     
 
         /**

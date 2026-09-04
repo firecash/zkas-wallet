@@ -78,7 +78,7 @@ import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
-import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded } from "./embedded";
+import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { isWatchOnly, clearWatchKey, watchLink, isViewKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
@@ -1508,7 +1508,7 @@ function ConnectionButton() {
   });
   const label = desktop
     ? onion ? "Tor" : hosted ? "Public service" : cfg?.mode === "local" ? "My node" : cfg?.mode === "custom" ? currentProfile?.name ?? "My node" : "This computer"
-    : onion ? "Tor" : hosted ? "Web" : currentProfile?.name ?? "My walletd";
+    : embeddedChosen() ? "On this phone" : onion ? "Tor" : hosted ? "Web" : currentProfile?.name ?? "My walletd";
 
   const switchDesktop = async (mode: "remote" | "local" | "custom", profile?: EndpointProfile) => {
     setBusy(profile?.id ?? mode);
@@ -1608,7 +1608,7 @@ function ConnectionButton() {
                 <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? "Starting…" : embeddedChosen() ? "On" : "Use"} onStart={(n, t) => connectEmbedded(n, t)} />
               )}
               <button className={`connection-option ${!embeddedChosen() && hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
-                <span><b>Public service</b><small>{desktop ? "Ready at once — already scanned. The service sees your IP." : "Fastest. The service sees your IP."}</small></span><span>{busy === "hosted" ? "Checking…" : hosted && !onion ? "Connected" : "Use"}</span>
+                <span><b>Public service</b><small>{desktop ? "Ready at once. Shielded on-chain, but the service sees your viewing key + IP." : "Fastest. Shielded on-chain, but the service sees your viewing key + IP."}</small></span><span>{busy === "hosted" ? "Checking…" : hosted && !onion ? "Connected" : "Use"}</span>
               </button>
               {desktop && (
                 /* The embedded engine. It has to scan the chain on THIS computer,
@@ -1620,7 +1620,7 @@ function ConnectionButton() {
                 </button>
               )}
               <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectTor()}>
-                <span><b>Tor · over the onion</b><small>{desktop ? "Hides your IP. Needs Tor or Tor Browser running here." : "Hides your IP. Requires the Orbot app (Tor VPN)."}</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
+                <span><b>Tor · over the onion</b><small>{desktop ? "Tor hides your IP; the service still sees your viewing key. Needs Tor running here." : "Tor hides your IP; the service still sees your viewing key. Needs Orbot."}</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
               </button>
               {desktop && (
                 <button className={`connection-option ${cfg?.mode === "local" && !onion && !hosted ? "active" : ""}`} disabled={busy !== null} onClick={() => {
@@ -4014,6 +4014,7 @@ function SettingsPane({ status }: { status: Status }) {
       </Collapsible>
       <Collapsible title="Background sync">
         <BackgroundSyncCard />
+        <DebugLogsCard />
       </Collapsible>
       <Collapsible title="Automatic consolidation" summary={isMaintenanceEnabled() ? "On" : "Off"}>
         <AutoConsolidationCard />
@@ -6181,6 +6182,7 @@ function AutoConsolidationCard() {
 
 /// Short state for the Network privacy row's collapsed summary.
 function networkPrivacyLabel(): string {
+  if (embeddedChosen()) return "On this phone";
   const base = getBase();
   if (isOnionAddress(base)) return "Tor (.onion)";
   if (!base || /wallet\.zkas\.info/i.test(base) || base.endsWith("/daemon")) return "Public";
@@ -6191,6 +6193,32 @@ function networkPrivacyLabel(): string {
 /// chain your amounts and payments are already hidden on-chain; what a wallet
 /// service can still learn is that SOME IP is asking about a given viewing key. The
 /// choice of service is what controls that, so it belongs in plain sight.
+function DebugLogsCard() {
+  const [on, setOn] = useState(embeddedDebugChosen());
+  const [text, setText] = useState("");
+  const [shown, setShown] = useState(false);
+  if (!embeddedAvailable()) return null;
+  const toggle = async (v: boolean) => { setOn(v); setEmbeddedDebug(v); await setEngineDebugLogs(v); };
+  const show = async () => { setText(await engineLogs()); setShown(true); };
+  return (
+    <Collapsible title="Debug logs" summary={on ? "Verbose" : "Normal"}>
+      <div className="stack">
+        <label className="row" style={{ gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+          <input type="checkbox" checked={on} style={{ marginTop: 3 }} onChange={(e) => void toggle(e.target.checked)} />
+          <span><b>Verbose engine logs</b><br /><span className="muted small">More detail from the on-device engine. Turn on when a wallet is stuck opening or a send fails, then Show logs.</span></span>
+        </label>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <button className="btn small" onClick={() => void show()}>Show engine logs</button>
+          {text && <button className="btn ghost small" onClick={() => void copyText(text)}>Copy</button>}
+        </div>
+        {shown && (
+          <pre className="mono small" style={{ maxHeight: 320, overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", padding: 8, borderRadius: 8, border: "1px solid var(--border)" }}>{text || "No logs yet — the engine may not be running."}</pre>
+        )}
+      </div>
+    </Collapsible>
+  );
+}
+
 function NetworkPrivacyCard() {
   const base = getBase();
   const onion = isOnionAddress(base);
@@ -6256,13 +6284,13 @@ function NetworkPrivacyCard() {
           <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n, t) => usePhone(n, t)} />
         )}
         <button className={"connection-option" + (current === "public" ? " active" : "")} disabled={!!busy} onClick={usePublic}>
-          <span><b>Public service</b><small>Fastest. Sees your IP.</small></span><span>{tag("public")}</span>
+          <span><b>Public service</b><small>Fastest. Shielded on-chain, but sees your viewing key + IP.</small></span><span>{tag("public")}</span>
         </button>
         <button className={"connection-option" + (current === "tor" ? " active" : "")} disabled={!!busy} onClick={useTor}>
-          <span><b>Connect over Tor</b><small>Hides your IP. Needs Orbot.</small></span><span>{tag("tor")}</span>
+          <span><b>Connect over Tor</b><small>Tor hides your IP; the service still sees your viewing key. Needs Orbot.</small></span><span>{tag("tor")}</span>
         </button>
         <button className={"connection-option" + (current === "custom" ? " active" : "")} disabled={!!busy} onClick={() => { setShowCustom((v) => !v); setErr(""); }}>
-          <span><b>My own service</b><small>Most private. Run your own.</small></span><span>{current === "custom" ? "On" : showCustom ? "▲" : "▾"}</span>
+          <span><b>My own service</b><small>A wallet service you run yourself — it sees your viewing key, but it is yours.</small></span><span>{current === "custom" ? "On" : showCustom ? "▲" : "▾"}</span>
         </button>
         {showCustom && (
           <div className="connection-add firstrun-custom">

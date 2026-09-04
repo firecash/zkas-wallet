@@ -16,6 +16,8 @@ interface EmbeddedEnginePlugin {
   start(opts: { nodeAddr?: string; secret?: string; socks?: string }): Promise<{ port: number }>;
   stop(): Promise<void>;
   status(): Promise<{ port: number; running: boolean }>;
+  logs(): Promise<{ text: string }>;
+  setDebugLogs(opts: { on: boolean }): Promise<void>;
 }
 
 const Native = registerPlugin<EmbeddedEnginePlugin>("EmbeddedEngine");
@@ -49,6 +51,15 @@ export function embeddedTor(): boolean {
 
 export function setEmbeddedTor(on: boolean): void {
   try { if (on) localStorage.setItem(TOR_KEY, "1"); else localStorage.removeItem(TOR_KEY); } catch { /* ignore */ }
+}
+
+const DEBUG_KEY = "wallet_embedded_debug";
+/** Verbose engine logging chosen in Settings. */
+export function embeddedDebugChosen(): boolean {
+  try { return localStorage.getItem(DEBUG_KEY) === "1"; } catch { return false; }
+}
+export function setEmbeddedDebug(on: boolean): void {
+  try { if (on) localStorage.setItem(DEBUG_KEY, "1"); else localStorage.removeItem(DEBUG_KEY); } catch { /* ignore */ }
 }
 
 export function setEmbeddedNode(v: string): void {
@@ -93,12 +104,20 @@ let startPromise: Promise<number> | null = null;
  * http://127.0.0.1:54123. Throws if the engine cannot start. */
 export async function ensureEmbedded(nodeAddr?: string, tor?: boolean): Promise<string> {
   if (!embeddedAvailable()) throw new Error("The on-device engine is not available on this device.");
-  const already = await Native.status().catch(() => ({ port: 0, running: false }));
-  if (already.running && already.port > 0) return `http://127.0.0.1:${already.port}`;
   // Sync from the node the user chose (persisted), or the public default.
   const node = (nodeAddr && nodeAddr.trim()) || embeddedNode();
-  setEmbeddedNode(node);
   const useTor = tor ?? embeddedTor();
+  // Did the user change the node or the Tor toggle? start() is idempotent and would
+  // otherwise keep the OLD transport, leaving e.g. a Tor-off switch stuck on a dead
+  // SOCKS proxy (permanent "opening"). If so, stop the running engine and restart it.
+  const changed = node !== embeddedNode() || useTor !== embeddedTor();
+  const already = await Native.status().catch(() => ({ port: 0, running: false }));
+  if (already.running && already.port > 0 && !changed) return `http://127.0.0.1:${already.port}`;
+  if (already.running && changed) {
+    await stopEmbedded().catch(() => {});
+    startPromise = null;
+  }
+  setEmbeddedNode(node);
   setEmbeddedTor(useTor);
   if (!startPromise) {
     startPromise = Native.start({ nodeAddr: node, socks: useTor ? ORBOT_SOCKS : undefined }).then((r) => r.port);
@@ -106,6 +125,7 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean): Promise<
   try {
     const port = await startPromise;
     if (!port) throw new Error("engine returned no port");
+    void setEngineDebugLogs(embeddedDebugChosen());
     return `http://127.0.0.1:${port}`;
   } finally {
     startPromise = null;
@@ -121,4 +141,17 @@ export async function embeddedBase(): Promise<string | null> {
   if (!embeddedChosen()) return null;
   const s = await Native.status().catch(() => ({ port: 0, running: false }));
   return s.running && s.port > 0 ? `http://127.0.0.1:${s.port}` : null;
+}
+
+/** Recent on-device engine log lines (for the debug view in Settings). */
+export async function engineLogs(): Promise<string> {
+  if (!embeddedAvailable()) return "";
+  const r = await Native.logs().catch(() => ({ text: "" }));
+  return r.text || "";
+}
+
+/** Turn engine debug-level logging on or off. */
+export async function setEngineDebugLogs(on: boolean): Promise<void> {
+  if (!embeddedAvailable()) return;
+  await Native.setDebugLogs({ on }).catch(() => {});
 }
