@@ -1194,26 +1194,11 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               </button>
             ))}
             </div>
-          {/* Receive and Send are reached by the buttons above, so no tab is lit while
-              one is open. That needs its own way out — without it the only escape is a
-              tab that changes the subject. */}
-          {(tab === "receive" || tab === "send") && (
-            <button className="pane-back" onClick={() => setTab("history")} aria-label="Close">
-              ← Back
-            </button>
-          )}
-          {/* key remounts the pane on tab switch so the entrance transition plays. */}
+          {/* key remounts the pane on tab switch so the entrance transition plays.
+              Send & Receive are NOT rendered here — they open as a full-screen sheet
+              (see the portal below) so the form is never something you have to scroll
+              the balance and tabs away to reach. */}
             <div className="pane appear" key={tab}>
-            {tab === "receive" && <Receive status={status} />}
-            {tab === "send" && !viewOnly && (
-              <Send
-                status={status}
-                onSent={onSent}
-                prefillTo={sendPrefill}
-                onPrefillConsumed={() => setSendPrefill(null)}
-                outflow={pendingTotal(txs)}
-              />
-            )}
             {tab === "history" && (
               <>
               <History
@@ -1245,6 +1230,38 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             </div>
           </section>
         </div>
+      )}
+      {/* Send & Receive open as a full-screen sheet OVER the wallet — everything for
+          the action happens inside it, with its own scroll, so nothing pushes the
+          balance/tabs around and there is nothing to scroll past to reach the form.
+          Guarded: it will not close while a send is broadcasting (engineBusy), so an
+          in-flight payment can never be interrupted by a stray backdrop tap. */}
+      {(tab === "send" || tab === "receive") && reachable && !freshSeed && status?.has_wallet && createPortal(
+        <div className="action-sheet-wrap" onClick={() => { if (!engineBusy()) setTab("history"); }}>
+          <div className="action-sheet" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="action-sheet-close"
+              onClick={() => { if (!engineBusy()) setTab("history"); }}
+              aria-label="Close"
+              title="Close"
+            >
+              ✕
+            </button>
+            <div className="action-sheet-body">
+              {tab === "receive" && <Receive status={status} />}
+              {tab === "send" && !viewOnly && (
+                <Send
+                  status={status}
+                  onSent={onSent}
+                  prefillTo={sendPrefill}
+                  onPrefillConsumed={() => setSendPrefill(null)}
+                  outflow={pendingTotal(txs)}
+                />
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

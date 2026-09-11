@@ -451,6 +451,72 @@ a { color: var(--ember-text); }
   .qr-corner { opacity: 1; }
 }
 
+/* ── Action sheet: Send & Receive open OVER the wallet ─────────────────────────
+   A full-screen sheet (mobile: slides up from the bottom; desktop: centered card)
+   with its own scroll, so the form is never something you scroll the balance and
+   tabs away to reach. */
+.action-sheet-wrap {
+  position: fixed; inset: 0; z-index: 150;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  animation: sheet-fade 0.18s ease both;
+}
+.action-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  max-height: 94vh; max-height: 94dvh;
+  background: var(--bg);
+  border: 1px solid var(--border); border-bottom: 0;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -14px 44px rgba(0, 0, 0, 0.45);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 10px 16px calc(22px + env(safe-area-inset-bottom));
+  animation: sheet-up 0.24s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+/* A grab-handle hint at the very top of the sheet (mobile affordance). */
+.action-sheet::before {
+  content: "";
+  position: sticky; top: 0; z-index: 1;
+  display: block; width: 40px; height: 4px; margin: 2px auto 6px;
+  border-radius: 999px; background: var(--border);
+}
+.action-sheet-close {
+  position: sticky; top: 4px; z-index: 3; float: right;
+  display: grid; place-items: center;
+  width: 36px; height: 36px; margin: -30px 0 0;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); color: var(--muted);
+  font-size: 15px; line-height: 1; cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.action-sheet-close:hover { color: var(--ink); border-color: var(--ember); }
+/* The Send/Receive card inside the sheet has no card chrome of its own — the sheet
+   IS the surface. Flatten it so it fills the sheet cleanly. */
+.action-sheet-body > .card {
+  background: transparent; border: 0; box-shadow: none;
+  border-radius: 0; padding: 0; margin: 6px 0 0;
+}
+@keyframes sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheet-up { from { transform: translateY(26px); } to { transform: none; } }
+@media (min-width: 640px) {
+  .action-sheet-wrap { align-items: center; padding: 20px; }
+  .action-sheet {
+    border-radius: 20px; border-bottom: 1px solid var(--border);
+    max-height: 90vh; max-height: 90dvh;
+    box-shadow: var(--shadow);
+    animation-name: sheet-fade;
+  }
+  .action-sheet::before { display: none; }
+  .action-sheet-close { margin-top: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .action-sheet-wrap, .action-sheet { animation: none; }
+}
+
 .copybtn { transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease; }
 .copybtn.copied { color: var(--good); border-color: var(--good); }
 
