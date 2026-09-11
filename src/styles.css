@@ -918,33 +918,42 @@ select { appearance: none; cursor: pointer; }
 
 .wallet-topline {
   display: flex;
-  align-items: stretch;
-  gap: 10px;
+  flex-wrap: wrap;           /* wallet chip + service chip share one line; a hosted warning wraps below */
+  align-items: center;
+  gap: 8px;
   margin-bottom: 14px;
 }
 .wallet-topline:empty { display: none; }
-.wallet-topline .warnbar { flex: 1; min-width: 0; }
+/* The hosted warning takes its own full-width line under the two chips. */
+.wallet-topline .warnbar { flex: 1 1 100%; min-width: 0; }
+/* Wallet name = quiet, compact; wallet service = prominent, takes the rest of the row. */
+.walletbar { flex: 0 1 auto; }
+.wallet-topline .connection-button { flex: 1 1 auto; }
 
+/* The wallet service is the thing people most need to SEE (it's who can see your
+   transactions), so it wears the accent: tinted fill, accent border, accent icon
+   and label. It's the loud chip on the topline; the wallet name beside it is quiet. */
 .connection-button {
   display: flex;
-  min-width: 142px;
+  min-width: 0;
   min-height: 44px;
   align-items: center;
   gap: 9px;
   padding: 7px 11px;
-  border: 1px solid var(--border);
+  border: 1px solid rgb(var(--ember-rgb) / 0.5);
   border-radius: 14px;
-  background: var(--surface);
+  background: var(--ember-soft);
   color: var(--ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
   transition: border-color .15s ease, background .15s ease;
 }
-.connection-button:hover { border-color: var(--ember); background: var(--surface-2); }
+.connection-button:hover { border-color: var(--ember); background: rgb(var(--ember-rgb) / 0.16); }
 .connection-button > span { display: flex; min-width: 0; flex: 1; flex-direction: column; line-height: 1.1; }
-.connection-button small { margin-bottom: 3px; color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.connection-button b { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.connection-button small { margin-bottom: 3px; color: var(--ember-text); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.connection-button b { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.connection-button > svg:first-child { color: var(--ember); flex: none; }
 .connection-button > svg:last-child { color: var(--muted); }
 .modalcard.connection-modal {
   width: min(600px, calc(100vw - 24px));
@@ -2466,8 +2475,12 @@ select { appearance: none; cursor: pointer; }
 .host-mode-list .choice-button { min-height: 92px; }
 
 @media (max-width: 620px) {
-  .wallet-topline { flex-direction: column; gap: 8px; }
-  .walletbar, .connection-button { width: 100%; }
+  /* Keep the wallet chip + the prominent service chip on ONE line on phones (they
+     used to stack); the wallet name shrinks so the service gets the room. A hosted
+     warning still drops to its own line via the warnbar's flex-basis:100%. */
+  .walletbar { min-width: 0; font-size: 13px; padding: 8px 10px; gap: 7px; }
+  .walletbar-name { max-width: 32vw; }
+  .connection-button { padding: 6px 10px; }
   .connection-add-grid { grid-template-columns: 1fr; }
   .host-mode-list.choice-row.three { grid-template-columns: 1fr; }
   .history-heading { align-items: stretch; flex-direction: column; gap: 9px; }
