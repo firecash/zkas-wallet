@@ -23,7 +23,7 @@ const HEALTHY_RUN: Duration = Duration::from_secs(60);
 const MAX_RESTART_DELAY: u64 = 30;
 const MAX_RESTART_ATTEMPTS: u32 = 5;
 pub const ZKAS_RELEASE: &str = "zkas-v1.0.8";
-pub const BRIDGE_RELEASE: &str = "v1.0.8";
+pub const BRIDGE_RELEASE: &str = "v1.0.9";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ServiceLog {
@@ -1232,34 +1232,34 @@ fn zkas_archive() -> Result<ArchiveSpec, String> {
 fn bridge_archive_for(os: &str, arch: &str) -> Result<ArchiveSpec, String> {
     let (component, url, sha256) = match (os, arch) {
         ("linux", "x86_64") => (
-            "solo-dual-bridge-v1.0.8-linux-x64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.8/solo-dual-mode-linux-x64.zip",
-            "014757d2413ff5ba0cda54d0efaab1fe78725d54e58cfcbfd6ea24200fa6f741",
+            "solo-dual-bridge-v1.0.9-linux-x64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.9/solo-dual-mode-linux-x64.zip",
+            "134d76e31dfd58c7465c86e50a1c02fce3bf4fe914f71473a9776261afe3b414",
         ),
         ("linux", "aarch64") => (
-            "solo-dual-bridge-v1.0.8-linux-arm64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.8/solo-dual-mode-linux-arm64.zip",
-            "df2d05d0075b289ecc7efbaa7f3b6519fad44227b81b258d32d645dd9ed29438",
+            "solo-dual-bridge-v1.0.9-linux-arm64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.9/solo-dual-mode-linux-arm64.zip",
+            "f5891c273beed3844f6a344cd2d063ecf5a7f5b2b43e610f77123878d46a56d8",
         ),
         ("macos", "x86_64") => (
-            "solo-dual-bridge-v1.0.8-macos-x64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.8/solo-dual-mode-macos-x64.zip",
-            "fc38ce46bf661fb74ae15ca19d882f9475ca43e6099d9da563242f9a0c2d88d1",
+            "solo-dual-bridge-v1.0.9-macos-x64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.9/solo-dual-mode-macos-x64.zip",
+            "3ad4034cf9893da3ee3e55b58e67f82eca4048bc47a53587026a6c3562116a7b",
         ),
         ("macos", "aarch64") => (
-            "solo-dual-bridge-v1.0.8-macos-arm64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.8/solo-dual-mode-macos-arm64.zip",
-            "979c135eefa785b54c57b1c3ec8819afae9685a761f346b4a4d5a65b36bc259f",
+            "solo-dual-bridge-v1.0.9-macos-arm64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.9/solo-dual-mode-macos-arm64.zip",
+            "b4d3dc1dd5fdc7a9aca4d8da66946c0c12be349329173e7d15b9e3c24bce9613",
         ),
         ("windows", "x86_64") => (
-            "solo-dual-bridge-v1.0.8-windows-x64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.8/solo-dual-mode-windows-x64.zip",
-            "150f3ec9f4275fb8bea192f3901210c5771eeba6e277b98e8338335f9a83089b",
+            "solo-dual-bridge-v1.0.9-windows-x64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.9/solo-dual-mode-windows-x64.zip",
+            "dc38c67804da349c652bc5831e3c306df775110d557184aebbb053d69a618d66",
         ),
         ("windows", "aarch64") => (
-            "solo-dual-bridge-v1.0.8-windows-arm64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.8/solo-dual-mode-windows-arm64.zip",
-            "cab1b86711877635093c68be732150dd1a39da444779bcde6338bc4013f118ff",
+            "solo-dual-bridge-v1.0.9-windows-arm64",
+            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.9/solo-dual-mode-windows-arm64.zip",
+            "b3d4dadb450739b8374067e42bcfcd3986ddf94c50a3843cb44629468a69e78b",
         ),
         _ => {
             return Err(format!(
