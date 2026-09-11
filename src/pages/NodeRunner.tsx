@@ -173,6 +173,13 @@ export function NodeRunner() {
     };
   }, [desktop, refresh]);
 
+  // Default the run-mode dialog to the node's LAST-USED mode, not a hardcoded
+  // "Mining" (which keeps no wallet notes). A wallet user who ran the node in
+  // "Shielded history" was made to re-pick it on every launch (#3).
+  useEffect(() => {
+    if (showStart && config?.settings.node_preset) setPreset(config.settings.node_preset);
+  }, [showStart, config?.settings.node_preset]);
+
   useEffect(() => {
     if (!desktop) return;
     let alive = true;
