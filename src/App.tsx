@@ -79,7 +79,7 @@ import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
-import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug } from "./embedded";
+import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug, engineBusy, setEngineBusy } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { isWatchOnly, clearWatchKey, watchLink, isViewKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
@@ -539,6 +539,9 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // the "can't reach the wallet service" screen — that unmounts the whole wallet
   // (a half-filled Send form included) and oscillates on a flaky connection.
   const failedPolls = useRef(0);
+  // Guards a single in-flight self-heal restart of the on-device engine, so a
+  // failure streak triggers at most one restart at a time (not one per second).
+  const engineHealing = useRef(false);
   // Notification permission is requested only once a wallet actually exists —
   // a prompt before that is noise users refuse, and a refusal is sticky.
   const notifAsked = useRef(false);
@@ -869,10 +872,32 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // INSTANTLY — unmounting the wallet (and a half-filled Send form) and
       // oscillating every second on a bad connection. Ride out a few failures;
       // the last-known UI stays up meanwhile, and a real outage still surfaces.
-      failedPolls.current += 1;
-      if (failedPolls.current >= 5) {
-        setReachError((error as Error)?.message || String(error));
-        setReachable(false);
+      // A failure while the app is BACKGROUNDED (screen off, task-switched) is not
+      // evidence the engine is down: the webview throttles timers and the OS may
+      // pause the on-device engine. Counting those flipped a just-resumed wallet
+      // straight to "can't reach the wallet service". Only count while visible; the
+      // resume handler clears the counter and re-ensures the engine on foreground.
+      if (typeof document === "undefined" || !document.hidden) {
+        failedPolls.current += 1;
+        // A heavy on-device send/consolidation blocks the single-process engine, so
+        // the 1s status poll times out for the whole ~50s it runs. That is the engine
+        // WORKING, not down: don't self-heal (a restart would kill the send in flight)
+        // and don't flip to "can't reach" until far longer (2 min) than any send takes.
+        const busy = embeddedChosen() && engineBusy();
+        if (embeddedChosen() && !busy && failedPolls.current === 3 && !engineHealing.current) {
+          // Not mid-send: the engine may have died — try once to revive it.
+          // ensureEmbedded is a no-op if running, and restarts it (new port) if not.
+          engineHealing.current = true;
+          void ensureEmbedded()
+            .then((url) => { if (url) setBase(url); })
+            .catch(() => {})
+            .finally(() => { engineHealing.current = false; });
+        }
+        const flipAt = busy ? 120 : 5;
+        if (failedPolls.current >= flipAt) {
+          setReachError((error as Error)?.message || String(error));
+          setReachable(false);
+        }
       }
     } finally {
       refreshInFlight.current = false;
@@ -979,6 +1004,34 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
     // feel sluggish. The call is a cheap read of in-memory state.
     const t = setInterval(refresh, 1000);
     return () => clearInterval(t);
+  }, [refresh]);
+
+  // Resume: when the app returns to the foreground (screen on, task switch), the
+  // on-device engine may have been paused or killed by the OS while the webview's
+  // timers were throttled — the wallet would then flash "can't reach the wallet
+  // service" for a few seconds until the poll caught up, and a first tap was eaten
+  // while the webview woke. On foreground: clear stale background failures,
+  // re-ensure the engine (revives it and adopts a possibly-new loopback port), and
+  // poll at once so the recovery is instant instead of tap-triggered.
+  useEffect(() => {
+    const onResume = () => {
+      failedPolls.current = 0;
+      if (embeddedChosen()) {
+        void ensureEmbedded()
+          .then((url) => { if (url) setBase(url); })
+          .catch(() => {})
+          .finally(() => void refresh());
+      } else {
+        void refresh();
+      }
+    };
+    const onVis = () => { if (typeof document !== "undefined" && !document.hidden) onResume(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onResume);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onResume);
+    };
   }, [refresh]);
 
   return (
@@ -2037,6 +2090,7 @@ function ConsolidateDialog({
   const run = async () => {
     const runStartedAt = Date.now();
     setBusy(true);
+    setEngineBusy(true); // on-device engine is now busy — don't let the status poll flip to "unreachable" mid-consolidation
     setError("");
     setStartedAt(Date.now());
     setPassEndedAt([]);
@@ -2100,6 +2154,7 @@ function ConsolidateDialog({
       setError((cause as Error).message || String(cause));
     } finally {
       setBusy(false);
+      setEngineBusy(false);
       setStage(null);
       setMerged(null);
     }
@@ -5058,6 +5113,7 @@ function Send({
       });
     };
     setBusy(true);
+    setEngineBusy(true); // on-device engine is now busy proving/broadcasting — keep the status poll from crying "unreachable"
     setError("");
     try {
       // Signed on-device; the seed resolves silently from this device's storage.
@@ -5165,6 +5221,7 @@ function Send({
       }
     } finally {
       setBusy(false);
+      setEngineBusy(false);
       setStage(null);
       setSendProgress(null);
     }

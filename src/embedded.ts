@@ -100,6 +100,19 @@ export function setEmbeddedChosen(on: boolean): void {
 
 let startPromise: Promise<number> | null = null;
 
+// True while a heavy on-device operation (proving/signing/broadcasting a send, or a
+// consolidation) is running. The engine is single-process, so it cannot answer the
+// 1-second status poll while it is busy — those poll timeouts are NOT evidence it is
+// down, and must not flip the app to "can't reach the wallet service" mid-send, nor
+// trigger a self-heal restart that would kill the very send in flight.
+let busy = false;
+export function engineBusy(): boolean {
+  return busy;
+}
+export function setEngineBusy(v: boolean): void {
+  busy = v;
+}
+
 /** Start the engine (idempotent) and return its loopback base URL, e.g.
  * http://127.0.0.1:54123. Throws if the engine cannot start. */
 export async function ensureEmbedded(nodeAddr?: string, tor?: boolean): Promise<string> {
