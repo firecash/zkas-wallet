@@ -3435,6 +3435,32 @@ pub fn run() {
             // showed "the wallet engine didn't start" with no way to reach
             // onboarding and create one. A device with no wallet has no secret to
             // protect and is exactly when the engine is needed most.
+            // (C) When the wallet is pointed at the user's OWN node, wait a
+            // bounded moment for that node's RPC to accept connections before the
+            // engine dials it. `start_local_node` above only spawns the process; a
+            // freshly launched node takes seconds to open its gRPC port, so without
+            // this the engine's first connection races a port nothing is listening
+            // on yet. Deferring here keeps the engine aimed at 127.0.0.1 and never
+            // lets it fall to the public node while mode == "local".
+            //
+            // Strictly best-effort: on timeout (a slow, wedged, or crashed node) we
+            // start the engine anyway — it retries the node on its own — so a local
+            // node that never comes up degrades to a usable wallet rather than
+            // blocking the app from ever opening. Only when a passphrase is still
+            // owed does the engine not start at boot, so skip the wait then too.
+            if app_engine.settings.mode == "local"
+                && app_engine.services.zkas_node.running()
+                && app_engine.vault() != zkas_walletd::VaultState::Encrypted
+            {
+                let node_rpc = app_engine.settings.rpc_addr();
+                if let Err(error) =
+                    wait_for_node_listener(&node_rpc, std::time::Duration::from_secs(20))
+                {
+                    log_crash(&format!(
+                        "local node RPC not ready at launch ({error}); starting the wallet anyway"
+                    ));
+                }
+            }
             if app_engine.vault() != zkas_walletd::VaultState::Encrypted {
                 app_engine.start_walletd();
             }
