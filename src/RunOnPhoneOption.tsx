@@ -38,7 +38,7 @@ export function RunOnPhoneOption({
       >
         <span>
           <b>Run on this phone</b>
-          <small>Complete privacy — the wallet runs here and trusts no server; no wallet service ever sees your viewing key. A bit more battery.</small>
+          <small>Most private. No daemon ever sees your transactions. A bit more battery.</small>
         </span>
         {tag != null && <span>{tag}</span>}
       </button>

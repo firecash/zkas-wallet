@@ -1486,6 +1486,9 @@ function ConnectionButton() {
   const [error, setError] = useState("");
   const [scanning, setScanning] = useState(false);
   const [torFailed, setTorFailed] = useState(false);
+  // The "add your own walletd" fields stay behind one button until asked for —
+  // most people use a listed option and never type an address.
+  const [showAdd, setShowAdd] = useState(false);
 
   // Connecting over Tor fails almost only because no Tor transport is up — so on
   // failure show the Orbot steps, not a bare connection error.
@@ -1648,7 +1651,7 @@ function ConnectionButton() {
       }
       return;
     }
-    await switchWalletd(address, "add", bearer, (connected) => walletdProfiles.save(name, connected, bearer));
+    await switchWalletd(address, "add", bearer, (connected) => walletdProfiles.save(name.trim() || address.replace(/^https?:\/\//, "").split(/[/?]/)[0] || "My walletd", connected, bearer));
   };
 
   return (
@@ -1676,7 +1679,7 @@ function ConnectionButton() {
                 <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? "Starting…" : embeddedChosen() ? "On" : "Use"} onStart={(n, t) => connectEmbedded(n, t)} />
               )}
               <button className={`connection-option ${!embeddedChosen() && hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
-                <span><b>Public service</b><small>{desktop ? "Ready at once. Shielded on-chain, but the service sees your viewing key + IP." : "Fastest. Shielded on-chain, but the service sees your viewing key + IP."}</small></span><span>{busy === "hosted" ? "Checking…" : hosted && !onion ? "Connected" : "Use"}</span>
+                <span><b>Public service</b><small>{desktop ? "Ready at once. The wallet daemon can see your transactions." : "Fast. The wallet daemon can see your transactions."}</small></span><span>{busy === "hosted" ? "Checking…" : hosted && !onion ? "Connected" : "Use"}</span>
               </button>
               {desktop && (
                 /* The embedded engine. It has to scan the chain on THIS computer,
@@ -1688,7 +1691,7 @@ function ConnectionButton() {
                 </button>
               )}
               <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectTor()}>
-                <span><b>Tor · over the onion</b><small>{desktop ? "Tor hides your IP; the service still sees your viewing key. Needs Tor running here." : "Tor hides your IP; the service still sees your viewing key. Needs Orbot."}</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
+                <span><b>Over Tor</b><small>{desktop ? "Hides your IP. The daemon still sees your transactions. Needs Tor." : "Hides your IP. The daemon still sees your transactions. Needs Orbot."}</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
               </button>
               {desktop && (
                 <button className={`connection-option ${cfg?.mode === "local" && !onion && !hosted ? "active" : ""}`} disabled={busy !== null} onClick={() => {
@@ -1718,29 +1721,32 @@ function ConnectionButton() {
               })}
             </div>
 
-            <div className="connection-add">
-              <h3>Add {desktop ? "a node" : "walletd"}</h3>
-              {/* The pairing path, first and by itself. Scanning fills in the address and
-                  BOTH secrets at once; typing them means transcribing two long hex strings,
-                  and getting the wallet one wrong opens a different, empty wallet rather
-                  than failing. The manual fields stay below for anyone who needs them. */}
-              {!desktop && (
-                <div className="connection-pair">
-                  <button className="btn small" disabled={busy !== null} onClick={() => setScanning(true)}>
-                    Scan pairing code
-                  </button>
-                  <span className="muted small">
-                    From the computer running the wallet service: <b>Host → Network access → Pair a phone</b>.
-                  </span>
+            {desktop ? (
+              <div className="connection-add">
+                <h3>Add a node</h3>
+                <div className="connection-add-grid">
+                  <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name · Home node" />
+                  <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={STANDALONE_ZKAS_RPC_EXAMPLE} />
+                  <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? "Checking…" : "Save & connect"}</button>
                 </div>
-              )}
-              <div className={`connection-add-grid ${desktop ? "" : "walletd"}`}>
-                <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name · Home node" />
-                <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={desktop ? STANDALONE_ZKAS_RPC_EXAMPLE : isNative() ? `192.168.1.20:${DEFAULT_WALLETD_PORT}` : "https://wallet.example.com"} />
-                {!desktop && showAccessTokenField() && <input type="password" className="mono" value={bearer} onChange={(event) => setBearer(event.target.value)} placeholder="Access token" autoCapitalize="none" autoCorrect="off" spellCheck={false} />}
-                <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? "Checking…" : "Save & connect"}</button>
               </div>
-            </div>
+            ) : (
+              <div className="connection-add-own">
+                {/* One button holds the whole "run your own daemon" path — most people
+                    never open it. Inside: scan a pairing QR, or type the address. */}
+                <button className={"connection-option" + (showAdd ? " active" : "")} disabled={busy !== null} onClick={() => setShowAdd((v) => !v)}>
+                  <span><b>Add own walletd</b><small>A wallet daemon you run yourself.</small></span><span>{showAdd ? "▲" : "▾"}</span>
+                </button>
+                {showAdd && (
+                  <div className="connection-add firstrun-custom">
+                    <button className="btn small ghost" disabled={busy !== null} onClick={() => setScanning(true)}>Scan pairing QR</button>
+                    <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={isNative() ? `192.168.1.20:${DEFAULT_WALLETD_PORT}` : "https://wallet.example.com"} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+                    {showAccessTokenField() && <input type="password" className="mono" value={bearer} onChange={(event) => setBearer(event.target.value)} placeholder="Access token" autoCapitalize="none" autoCorrect="off" spellCheck={false} />}
+                    <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? "Checking…" : "Save & connect"}</button>
+                  </div>
+                )}
+              </div>
+            )}
             {scanning && (
               <QrScanner
                 onClose={() => setScanning(false)}
@@ -6457,13 +6463,13 @@ function NetworkPrivacyCard() {
           <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n, t) => usePhone(n, t)} />
         )}
         <button className={"connection-option" + (current === "public" ? " active" : "")} disabled={!!busy} onClick={usePublic}>
-          <span><b>Public service</b><small>Fastest. Shielded on-chain, but sees your viewing key + IP.</small></span><span>{tag("public")}</span>
+          <span><b>Public service</b><small>Fast. The wallet daemon can see your transactions.</small></span><span>{tag("public")}</span>
         </button>
         <button className={"connection-option" + (current === "tor" ? " active" : "")} disabled={!!busy} onClick={useTor}>
-          <span><b>Connect over Tor</b><small>Tor hides your IP; the service still sees your viewing key. Needs Orbot.</small></span><span>{tag("tor")}</span>
+          <span><b>Over Tor</b><small>Hides your IP. The daemon still sees your transactions. Needs Orbot.</small></span><span>{tag("tor")}</span>
         </button>
         <button className={"connection-option" + (current === "custom" ? " active" : "")} disabled={!!busy} onClick={() => { setShowCustom((v) => !v); setErr(""); }}>
-          <span><b>My own service</b><small>A wallet service you run yourself — it sees your viewing key, but it is yours.</small></span><span>{current === "custom" ? "On" : showCustom ? "▲" : "▾"}</span>
+          <span><b>My own walletd</b><small>A wallet daemon you run yourself.</small></span><span>{current === "custom" ? "On" : showCustom ? "▲" : "▾"}</span>
         </button>
         {showCustom && (
           <div className="connection-add firstrun-custom">

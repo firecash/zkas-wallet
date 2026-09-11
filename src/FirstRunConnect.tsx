@@ -100,17 +100,17 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
             <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} onStart={(n, t) => connectPhone(n, t)} />
           )}
           <button className="connection-option" disabled={!!busy} onClick={connectPublic}>
-            <span><b>Public wallet service</b><small>Fastest, nothing to install. Shielded on-chain, but this service sees your viewing key and IP.</small></span>
+            <span><b>Public service</b><small>Fast, nothing to install. The wallet daemon can see your transactions.</small></span>
             <span>{busy === "public" ? "…" : "Use"}</span>
           </button>
 
           <button className="connection-option" disabled={!!busy} onClick={() => void connectTor()}>
-            <span><b>Connect over Tor</b><small>Hides your IP from the service. Needs Orbot (VPN) on Android.</small></span>
+            <span><b>Over Tor</b><small>Hides your IP. The daemon still sees your transactions. Needs Orbot.</small></span>
             <span>{busy === "tor" ? "Connecting…" : "Use"}</span>
           </button>
 
           <button className="connection-option" disabled={!!busy} onClick={() => { setShowCustom((v) => !v); setErr(""); }}>
-            <span><b>My own wallet service</b><small>Most private. A <code>zkas-walletd</code> you run yourself.</small></span>
+            <span><b>My own walletd</b><small>A wallet daemon you run yourself.</small></span>
             <span>{showCustom ? "▲" : "▾"}</span>
           </button>
 
