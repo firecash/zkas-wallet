@@ -81,7 +81,7 @@ import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./con
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
 import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug, engineBusy, setEngineBusy } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
-import { isWatchOnly, clearWatchKey, watchLink, isViewKey } from "./lib/watchonly";
+import { isWatchOnly, clearWatchKey, isViewKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
 import { adoptViewKey } from "./lib/watchadopt";
 import { APP_BUILT, platformName, versionLine, versionTag } from "./version";
@@ -1200,7 +1200,6 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               the balance and tabs away to reach. */}
             <div className="pane appear" key={tab}>
             {tab === "history" && (
-              <>
               <History
                 txs={txs}
                 receipts={receipts}
@@ -1213,12 +1212,6 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                   setTab("send");
                 }}
               />
-              {!viewOnly && (
-                <Collapsible title="Wallet view key" summary="Watch on another device">
-                  <WatchOnAnotherDevice status={status} />
-                </Collapsible>
-              )}
-              </>
             )}
             {tab === "signatures" && !viewOnly && <Signatures status={status} />}
             {tab === "tools" && !viewOnly && (
@@ -3912,13 +3905,10 @@ function AccessTokenSetting() {
 /// reveals every amount and memo this wallet has ever seen and ever will, and it
 /// cannot be revoked without moving the coins to a new wallet.
 function WatchOnAnotherDevice({ status }: { status: Status }) {
-  const [link, setLink] = useState("");
-  // The bare key as well as the link. A link is what you send to a phone; the key
-  // itself is what another tool wants — a third-party watcher, a bookkeeping
-  // script, `shielded-pay` — and there was no way to get it out of here.
+  // Key-first: the view key ITSELF is what another wallet or tool wants — paste it
+  // into "Watch a wallet", or scan its QR. (A "watch link" was worse: it needed a
+  // specific browser and hid the key inside a URL fragment.)
   const [key, setKey] = useState("");
-  const [copiedKey, setCopiedKey] = useState(false);
-  const [showKey, setShowKey] = useState(false);
   const [qr, setQr] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -3931,13 +3921,7 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
       const seed = await resolveDeviceSeed(status.address ?? undefined);
       const fvk = await fvkHex(seed);
       setKey(fvk);
-      // Its own birthday, so the other device does not replay the chain from genesis.
-      const url = watchLink(fvk, walletBirthday());
-      setLink(url);
-      setQr(await QRCode.toDataURL(url, { margin: 1, width: 440 }));
-      // Copy straight away: the point of the button is to hand the link off, not
-      // to display a wall of text the user then has to copy themselves.
-      try { await copyText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* clipboard may be blocked */ }
+      setQr(await QRCode.toDataURL(fvk, { margin: 1, width: 440 }));
     } catch (e) {
       setError((e as Error)?.message === SEED_REQUIRED
         ? "This device does not hold the key for this wallet."
@@ -3946,65 +3930,36 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
       setBusy(false);
     }
   };
+  const copy = async () => {
+    await copyText(key);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <div className="stack">
       <p className="muted small">
-        Opens a read-only view on another device — balance and history, no way to
-        send.
+        Your view key lets another device or tool watch this wallet — balance and history, read-only. It can never send.
       </p>
       <div className="msg warn">
-        Anyone with this link can see every amount and memo this wallet has ever
-        received or sent, and everything it receives from now on. You cannot take
-        that back without moving your coins to a new wallet.
+        Anyone with this key sees every amount and memo this wallet has ever had, and everything it receives from now on — you can't undo that without moving your coins.
       </div>
-      {!link && (
+      {!key && (
         <button className="btn" disabled={busy} onClick={() => void reveal()}>
-          {busy ? "Preparing…" : "Copy link"}
+          {busy ? "Preparing…" : "Show view key"}
         </button>
       )}
       {error && <div className="msg warn">{error}</div>}
-      {link && (
+      {key && (
         <>
-          {qr && <img className="qr" src={qr} alt="View-only link" style={{ width: "100%", maxWidth: 280 }} />}
-          <button
-            className="btn ghost"
-            onClick={async () => {
-              await copyText(link);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            }}
-          >
-            {copied ? "Copied" : "Copy link"}
+          {qr && <img className="qr" src={qr} alt="View key QR" style={{ width: "100%", maxWidth: 240 }} />}
+          <div className="addr mono" style={{ wordBreak: "break-all" }}>{key}</div>
+          <button className={"btn copybtn" + (copied ? " copied" : "")} style={{ marginTop: 10 }} onClick={copy}>
+            {copied ? "Copied ✓" : "Copy view key"}
           </button>
           <p className="muted small">
-            Open it in Safari on the other device. The key travels in the part of
-            the link a server never sees.
+            On the other device: open the wallet → <b>Watch a wallet</b>, then paste this key (or scan the QR).
           </p>
-          <div className="row" style={{ gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-            <button className="btn ghost small" onClick={() => setShowKey((v) => !v)}>
-              {showKey ? "Hide view key" : "Show view key"}
-            </button>
-            <button
-              className="btn ghost small"
-              onClick={async () => {
-                await copyText(key);
-                setCopiedKey(true);
-                setTimeout(() => setCopiedKey(false), 1500);
-              }}
-            >
-              {copiedKey ? "Copied" : "Copy view key"}
-            </button>
-          </div>
-          {showKey && (
-            <>
-              <p className="mono small" style={{ wordBreak: "break-all", marginTop: 6 }}>{key}</p>
-              <p className="muted small">
-                The key on its own, for another wallet or tool. It grants the same
-                view as the link — treat it the same way.
-              </p>
-            </>
-          )}
         </>
       )}
     </div>
@@ -4691,7 +4646,11 @@ function Receive({ status }: { status: Status }) {
         <RequestAmount address={addr} />
       )}
 
-      <RescanButton label="Payment not showing up?" hint="Re-read the chain for this wallet — recovers anything the local view is missing." daaScore={status?.daa_score} />
+      {!isWatchOnly() && (
+        <Collapsible title="Wallet view key" summary="Watch this wallet read-only">
+          <WatchOnAnotherDevice status={status} />
+        </Collapsible>
+      )}
 
       <p className="muted small" style={{ marginTop: 18 }}>
         Looking for your recovery seed? It moved to <b>Settings → Recovery seed</b>, behind your app lock.
