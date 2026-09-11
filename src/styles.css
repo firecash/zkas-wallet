@@ -224,6 +224,19 @@ a { color: var(--ember-text); }
    ZKAS amount is the truth, this is the estimate. */
 .balance-fiat { color: var(--muted); font-size: 15px; font-weight: 600; margin-top: 3px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .fiat-sub { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+/* The eye: hide every amount (balance, fiat, spendable, history) for shoulder
+   surfers. Sits in the balance card's top corner. */
+.balance-eye {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  display: grid; place-items: center;
+  width: 34px; height: 34px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  color: var(--muted); cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.balance-eye:hover { color: var(--ink); border-color: var(--ember); background: var(--ember-soft); }
+.amt-hidden { letter-spacing: 0.12em; }
 
 /* The wallet's state line, at a FIXED height.
    Its text changes as the wallet works — "Ready", then "Setting up 44% · about 5

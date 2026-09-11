@@ -88,7 +88,8 @@ import { APP_BUILT, platformName, versionLine, versionTag } from "./version";
 import { OrbotHelp } from "./OrbotHelp";
 import { desktopServices } from "./desktop-services";
 import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
-import { ArrowDownLeft, ArrowUpRight, ChevronDown, Server, Settings, ShieldAlert, Trash2, WalletCards } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ChevronDown, Eye, EyeOff, Server, Settings, ShieldAlert, Trash2, WalletCards } from "lucide-react";
+import { useHideBalances, toggleBalancesHidden, MASK } from "./hidebal";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
 // hidden textarea so "copy" never dies with an unhandled rejection on a phone.
@@ -2401,6 +2402,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // #310 (more hooks than the previous render) and takes the whole UI down.
   const animBal = useCountUp(shownBal);
   const price = useZkasPrice();
+  const hide = useHideBalances();
   if (rebuilding) {
     return (
       <div className="card balance">
@@ -2461,15 +2463,24 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   return (
     <div className="card balance">
       <div className="balance-glow" aria-hidden="true" />
+      <button
+        className="balance-eye"
+        onClick={() => toggleBalancesHidden()}
+        aria-label={hide ? "Show balance" : "Hide balance"}
+        aria-pressed={hide}
+        title={hide ? "Show balance" : "Hide balance"}
+      >
+        {hide ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+      </button>
       <div className="balance-label">
         <span className="shield-badge" aria-hidden="true" />
         Shielded balance
       </div>
       <div className="amt">
-        {trimFc(animBal.toFixed(8))}
+        {hide ? <span className="amt-hidden">{MASK}</span> : trimFc(animBal.toFixed(8))}
         <span className="unit"> ZKAS</span>
       </div>
-      {fmtFiat(shownBal, price) && <div className="balance-fiat">≈ {fmtFiat(shownBal, price)}</div>}
+      {!hide && fmtFiat(shownBal, price) && <div className="balance-fiat">≈ {fmtFiat(shownBal, price)}</div>}
       {/* Fixed height, deliberately. This line's content changes as the wallet
           works — "Ready" one second, "Setting up 44% · about 5 minutes left" the
           next — and with height driven by content the whole card grew and shrank
@@ -4889,6 +4900,7 @@ function Send({
 }) {
   const toast = useToast();
   const price = useZkasPrice();
+  const hide = useHideBalances();
   const initialRequest = prefillTo ? parsePaymentUri(prefillTo) : null;
   const [to, setTo] = useState(initialRequest?.address ?? "");
   const [amount, setAmount] = useState(initialRequest?.amount ?? "");
@@ -5167,7 +5179,7 @@ function Send({
         <h2>Confirm</h2>
         <div className="confirm-row">
           <span className="muted">Amount</span>
-          <span className="mono">{trimFc(amount)} ZKAS</span>
+          <span className="mono">{trimFc(amount)} ZKAS{fmtFiat(amt, price) ? ` · ${fmtFiat(amt, price)}` : ""}</span>
         </div>
         <div className="confirm-row">
           <span className="muted">Network fee</span>
@@ -5287,7 +5299,7 @@ function Send({
     <div className="card">
       <div className="sendhead">
         <h2 style={{ margin: 0 }}>Send</h2>
-        <span className="muted small">{trimFc(spendable.toFixed(8))} spendable{fmtFiat(spendable, price) ? ` · ${fmtFiat(spendable, price)}` : ""}</span>
+        <span className="muted small">{hide ? MASK : trimFc(spendable.toFixed(8))} spendable{!hide && fmtFiat(spendable, price) ? ` · ${fmtFiat(spendable, price)}` : ""}</span>
       </div>
 
       <label>Recipient shielded address</label>
@@ -5389,6 +5401,9 @@ function Send({
         inputMode="decimal"
         style={overspend ? { borderColor: "var(--bad)" } : undefined}
       />
+      {amtValid && fmtFiat(amt, price) && (
+        <div className="fieldhint muted" style={{ textAlign: "center", marginTop: 5, fontSize: 13 }}>≈ {fmtFiat(amt, price)}</div>
+      )}
 
       {/* The fee control used to be a bare gear glyph in a 13px zero-padding link
           button: no label, a tap target a third of the 44px minimum, and clicking it
@@ -5631,6 +5646,7 @@ function History({
   // from the daemon, so it survives a seed restore and shows on every device.
   const toast = useToast();
   const price = useZkasPrice();
+  const hide = useHideBalances();
   const [chain, setChain] = useState<ChainHistory | null>(null);
   const [busy, setBusy] = useState(false);
   // True from the moment history is enabled until the recovery scan finishes —
@@ -5889,7 +5905,7 @@ function History({
               return (
                 <div key={`rcpt-${r.ts}-${ri}`} className="txrow" aria-label="Received">
                   <div className="txrow-main">
-                    <span className="txrow-amt pos">+ {trimFc(r.amountFc.toFixed(8))} ZKAS{fmtFiat(r.amountFc, price) ? <span className="fiat-sub small"> · {fmtFiat(r.amountFc, price)}</span> : null}</span>
+                    <span className="txrow-amt pos">{hide ? MASK : <>+ {trimFc(r.amountFc.toFixed(8))} ZKAS{fmtFiat(r.amountFc, price) ? <span className="fiat-sub small"> · {fmtFiat(r.amountFc, price)}</span> : null}</>}</span>
                     <span className="txrow-badge recv">received</span>
                   </div>
                   <div className="txrow-sub">
@@ -5910,7 +5926,7 @@ function History({
                   onClick={() => setDetail(localTxToRow(t))}
                 >
                   <div className="txrow-main">
-                    <span className="txrow-amt neg">− {trimFc(t.amountFc.toFixed(8))} ZKAS{fmtFiat(t.amountFc, price) ? <span className="fiat-sub small"> · {fmtFiat(t.amountFc, price)}</span> : null}</span>
+                    <span className="txrow-amt neg">{hide ? MASK : <>− {trimFc(t.amountFc.toFixed(8))} ZKAS{fmtFiat(t.amountFc, price) ? <span className="fiat-sub small"> · {fmtFiat(t.amountFc, price)}</span> : null}</>}</span>
                     <span className={"txrow-badge " + ((t.confs ?? 0) >= 1 ? "done" : "pending")}>{confBadge(t)}</span>
                   </div>
                   <div className="txrow-sub">
@@ -5936,6 +5952,7 @@ function History({
               >
                 <div className="txrow-main">
                   <span className={"txrow-amt " + (r.kind === "sent" ? "neg" : "pos")}>
+                    {hide ? MASK : <>
                     {r.kind === "sent" ? "− " : "+ "}
                     {/* A consolidation moves value to yourself, so what actually LEFT
                         the wallet is the fee, not the merged total. A normal send shows
@@ -5944,6 +5961,7 @@ function History({
                     {fmtFiat(isConsolidationRow(r) ? r.feeSompi / 1e8 : r.amountZkas, price) ? (
                       <span className="fiat-sub small"> · {fmtFiat(isConsolidationRow(r) ? r.feeSompi / 1e8 : r.amountZkas, price)}</span>
                     ) : null}
+                    </>}
                   </span>
                   <span className={"txrow-badge " + (r.kind === "sent" ? "done" : "recv")}>
                     {r.kind === "coinbase"
