@@ -5,9 +5,20 @@ import type { Status } from "../api";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
 // hidden textarea so "copy" never dies with an unhandled rejection on a phone.
+//
+// After writing through the async API, read the clipboard back and compare:
+// clipboard hijackers swap what was written, and a silent mismatch here is how
+// a pasted address ends up belonging to someone else.
 export async function copyText(text: string) {
   try {
     await navigator.clipboard.writeText(text);
+    try {
+      const back = await navigator.clipboard.readText();
+      if (back !== text) return false;
+    } catch {
+      // Read-back needs extra permission on some platforms; the write itself
+      // succeeding is the best signal available there.
+    }
     return true;
   } catch {
     /* fall through */
@@ -25,6 +36,22 @@ export async function copyText(text: string) {
   } catch {
     return false;
   }
+}
+
+/**
+ * Copy a secret (seed, viewing key): verifies the write like copyText, then
+ * clears the clipboard after 30 seconds so the secret does not sit in a
+ * system-wide paste buffer indefinitely. Use plain copyText for addresses and
+ * other non-secrets, which the user may legitimately paste much later.
+ */
+export async function copySensitiveText(text: string): Promise<boolean> {
+  const ok = await copyText(text);
+  if (ok) {
+    window.setTimeout(() => {
+      void navigator.clipboard?.writeText("").catch(() => undefined);
+    }, 30_000);
+  }
+  return ok;
 }
 
 // A zkas: shielded address is bech32 with an "orchard" version byte; a full
