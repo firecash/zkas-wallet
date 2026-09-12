@@ -3392,18 +3392,20 @@ pub fn run() {
             if app_engine.settings.node_auto_start {
                 if let Err(error) = app_engine.start_local_node(app.handle()) {
                     log_crash(&format!("managed ZKas node did not start: {error}"));
-                    app_engine.settings.node_auto_start = false;
-                    if app_engine.settings.mode == "local" {
-                        app_engine.settings.mode = "remote".into();
-                    }
-                    app_engine.save_settings();
+                    // Leave the saved choice alone: a slow disk, a held port, or
+                    // a node that simply needs longer can fail one boot and work
+                    // the next. Rewriting mode to "remote" here turned one
+                    // transient failure into the wallet permanently pointing at
+                    // the public node without the user ever choosing it. The
+                    // engine below starts aimed at the saved source and retries
+                    // the node on its own; the next launch tries starting it
+                    // again because node_auto_start is untouched.
                 }
-            } else if app_engine.settings.mode == "local" {
-                // Never leave walletd aimed at a local port with no process.
-                // Running a node and selecting a wallet source are independent.
-                app_engine.settings.mode = "remote".into();
-                app_engine.save_settings();
             }
+            // Note: when mode is "local" but no managed node runs, the saved
+            // choice is intentionally kept. Reverting it to "remote" at boot
+            // discarded "your own node" every launch for users whose node had
+            // simply not finished starting yet.
             // Resume mining if that is what the machine was doing when it went down.
             //
             // Reported by an operator running two ASICs: after a power cut the wallet

@@ -27,6 +27,11 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   // for one screen while we ask). Holds the just-verified secret to bind without re-entry.
   const [showOffer, setShowOffer] = useState(false);
   const verifiedSecret = useRef<string | null>(null);
+  // Failed attempts in a row, kept in memory only (never persisted: a saved
+  // counter would let anyone passing by lock the real owner out). Each failure
+  // waits a little longer before the next try is checked, which slows automated
+  // guessing in the page without ever refusing the owner entry.
+  const failures = useRef(0);
   const kind = lockKind();
   const label = kind === "pin" ? "PIN" : "Passphrase";
 
@@ -73,7 +78,15 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
     setError("");
     setBusy(true);
     try {
+      // Pace repeated guesses: 1s after the first failure, doubling to a 10s
+      // cap. The 600k-round seal already costs real time per try; this keeps
+      // rapid in-page guessing from running at full speed.
+      if (failures.current > 0) {
+        const waitMs = Math.min(1_000 * 2 ** (failures.current - 1), 10_000);
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+      }
       if (await unlock(secret)) {
+        failures.current = 0;
         // Existing user, fingerprint-capable but not set up: offer it in one tap using
         // the secret they JUST proved, so upgrading costs no Settings trip and no
         // re-typing. Otherwise go straight in.
@@ -88,6 +101,7 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
       } else {
         // Deliberately not "wrong PIN, 3 tries left": there is no lockout to
         // count down to. The seal is the protection, and it does not weaken.
+        failures.current += 1;
         setError(`That ${label.toLowerCase()} does not unlock this wallet.`);
       }
     } finally {
