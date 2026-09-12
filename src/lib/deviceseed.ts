@@ -27,16 +27,16 @@ export function getDeviceSeed(): string {
   return localStorage.getItem(deviceSeedKey()) || "";
 }
 
-export function setDeviceSeed(seed: string) {
+export async function setDeviceSeed(seed: string): Promise<void> {
   if (!seed) return;
   if (isLockEnabled()) {
     const token = localStorage.getItem("wallet_token") || "default";
-    void sealNewSeed(token, seed).then((ok) => {
-      if (!ok) {
-        localStorage.setItem(deviceSeedKey(), seed);
-        localStorage.setItem(`seed_unsealed_${token}`, "1");
-      }
-    });
+    const ok = await sealNewSeed(token, seed);
+    if (!ok) {
+      // Sealing failed (device is locked). Do not write the key in plain text.
+      // The caller must ask the user to unlock first and then retry.
+      throw new Error(SEED_REQUIRED);
+    }
     return;
   }
   localStorage.setItem(deviceSeedKey(), seed);
@@ -94,7 +94,7 @@ export async function resolveDeviceSeed(expectedAddress?: string): Promise<strin
   if (expectedAddress) {
     const orphan = await findOrphanedSeed(expectedAddress);
     if (orphan) {
-      setDeviceSeed(orphan);
+      await setDeviceSeed(orphan);
       return orphan;
     }
   }

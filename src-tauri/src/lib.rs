@@ -1379,8 +1379,28 @@ fn lock_wallet(state: tauri::State<'_, Mutex<Engine>>) {
 
 /// Open a folder in the OS file manager, so "your backup is at …" can be a
 /// button rather than a path the user has to go hunting for.
+///
+/// Only folders inside this app's own backup, data or config directories can
+/// be opened. Anything else is refused so page script cannot use this command
+/// to open arbitrary paths on the machine.
 #[tauri::command]
-fn reveal_path(path: String) -> Result<(), String> {
+fn reveal_path(state: tauri::State<'_, Mutex<Engine>>, path: String) -> Result<(), String> {
+    let requested = std::path::Path::new(&path);
+    let canonical = std::fs::canonicalize(requested)
+        .map_err(|e| format!("cannot open {path}: {e}"))?;
+    let allowed: Vec<PathBuf> = {
+        let e = engine(&state);
+        vec![e.backup_dir(), e.data_dir.clone(), e.config_dir.clone()]
+    };
+    let ok = allowed.iter().any(|root| {
+        std::fs::canonicalize(root)
+            .map(|c| canonical.starts_with(c))
+            .unwrap_or(false)
+            || canonical.starts_with(root)
+    });
+    if !ok {
+        return Err("that folder is not part of this wallet's data".into());
+    }
     let cmd = if cfg!(target_os = "macos") {
         "open"
     } else if cfg!(target_os = "windows") {
@@ -1389,7 +1409,7 @@ fn reveal_path(path: String) -> Result<(), String> {
         "xdg-open"
     };
     std::process::Command::new(cmd)
-        .arg(&path)
+        .arg(&canonical)
         .spawn()
         .map_err(|e| format!("cannot open {path}: {e}"))?;
     Ok(())

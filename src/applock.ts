@@ -315,24 +315,35 @@ export function forgetWalletLock(token: string): void {
  * is intentionally disabled; explicit lock still works.
  */
 export function installAutoLock(onLocked: () => void): void {
-  // Re-lock after the app has been in the BACKGROUND past a grace period — the
-  // behaviour a locked wallet is expected to have (like a banking app), and what
-  // issue #4 flagged as missing. Deliberately not an idle/mousemove timer: that
-  // was the thing the old no-op avoided, because it relocked people mid-use. This
-  // only fires on return-to-foreground when the app was away long enough that
-  // someone else could have picked up the phone — a quick tab switch or glance at
-  // a notification (under the grace) never relocks.
   if (typeof document === "undefined") return;
   const GRACE_MS = 90_000;
+  const IDLE_MS = 5 * 60 * 1000;
   let hiddenAt = 0;
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const doLock = () => {
+    if (!isLockEnabled()) return;
+    lock();
+    onLocked();
+  };
+
+  const resetIdle = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    if (!isLockEnabled()) return;
+    idleTimer = setTimeout(doLock, IDLE_MS);
+  };
+
   document.addEventListener("visibilitychange", () => {
     if (!isLockEnabled()) return;
     if (document.hidden) {
       hiddenAt = Date.now();
     } else if (hiddenAt && Date.now() - hiddenAt >= GRACE_MS) {
       hiddenAt = 0;
-      lock();
-      onLocked();
+      doLock();
     }
   });
+  document.addEventListener("mousemove", resetIdle, { passive: true });
+  document.addEventListener("keydown", resetIdle, { passive: true });
+  document.addEventListener("pointerdown", resetIdle, { passive: true });
+  resetIdle();
 }

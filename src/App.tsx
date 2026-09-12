@@ -1283,25 +1283,17 @@ export function getDeviceSeed(): string {
   }
   return localStorage.getItem(deviceSeedKey()) || "";
 }
-export function setDeviceSeed(seed: string) {
+export async function setDeviceSeed(seed: string): Promise<void> {
   if (!seed) return;
   // With the lock on, keep the seed SEALED rather than in the clear — and
-  // never simply drop it. This used to `return` early, so creating, importing
-  // or restoring a wallet while locked stored nothing at all: a wallet that
-  // could not spend and whose key was gone on reload. Losing a key is a worse
-  // outcome than any it was protecting against.
+  // never write it in plain text if sealing fails. The caller must make sure
+  // the device is unlocked first; otherwise this throws SEED_REQUIRED.
   if (isLockEnabled()) {
     const token = localStorage.getItem("wallet_token") || "default";
-    void sealNewSeed(token, seed).then((ok) => {
-      if (!ok) {
-        // Sealing failed (an auto-lock raced this creation/import). NEVER drop a
-        // key silently again: fall back to plaintext storage and flag it, so the
-        // key survives and the state is discoverable. Losing the key is worse
-        // than storing it unsealed — that is the principle this path exists on.
-        localStorage.setItem(deviceSeedKey(), seed);
-        localStorage.setItem(`seed_unsealed_${token}`, "1");
-      }
-    });
+    const ok = await sealNewSeed(token, seed);
+    if (!ok) {
+      throw new Error(SEED_REQUIRED);
+    }
     return;
   }
   localStorage.setItem(deviceSeedKey(), seed);
@@ -2705,9 +2697,7 @@ async function persistDeviceSeed(seed: string): Promise<boolean> {
       const token = localStorage.getItem("wallet_token") || "default";
       const ok = await sealNewSeed(token, seed);
       if (!ok) {
-        // Same principle as setDeviceSeed: never drop a key silently.
-        localStorage.setItem(deviceSeedKey(), seed);
-        localStorage.setItem(`seed_unsealed_${token}`, "1");
+        return false;
       }
     } else {
       localStorage.setItem(deviceSeedKey(), seed);
