@@ -50,7 +50,10 @@ export function getWalletdBearer(): string {
 
 export function setWalletdBearer(token: string) {
   const clean = token.trim();
-  if (clean) localStorage.setItem("walletd_bearer", clean);
+  // Accept printable tokens of sane length only. Anything with whitespace or
+  // control characters (or absurdly long) is a paste mistake, and storing it
+  // would send a broken Authorization header with every request.
+  if (clean && /^[\x21-\x7e]{1,256}$/.test(clean)) localStorage.setItem("walletd_bearer", clean);
   else localStorage.removeItem("walletd_bearer");
 }
 
