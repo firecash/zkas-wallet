@@ -1290,6 +1290,15 @@ export function setDeviceSeed(seed: string) {
   // or restoring a wallet while locked stored nothing at all: a wallet that
   // could not spend and whose key was gone on reload. Losing a key is a worse
   // outcome than any it was protecting against.
+  //
+  // DO NOT "harden" the failed-seal branch below into throwing/dropping instead
+  // of writing the plaintext fallback. A REAL USER LOST FUNDS from exactly that:
+  // the old drop-the-key behaviour left a freshly created wallet with no
+  // spendable key after reload, and the coins already sent to it were
+  // unrecoverable. The plaintext-with-flag copy is the deliberate lesser evil —
+  // it is self-healing: `resealFallbacks()` (applock.ts) re-seals it and deletes
+  // the cleartext on the very next unlock. See GitHub issue #4 and PR #8, whose
+  // "write nothing / throw SEED_REQUIRED" proposal would reintroduce the loss.
   if (isLockEnabled()) {
     const token = localStorage.getItem("wallet_token") || "default";
     void sealNewSeed(token, seed).then((ok) => {

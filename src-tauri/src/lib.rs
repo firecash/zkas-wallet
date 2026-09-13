@@ -377,6 +377,18 @@ fn dirs_documents() -> Option<PathBuf> {
     }
 }
 
+/// The user's home directory — the confinement root for `reveal_path`.
+fn dirs_home() -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    {
+        std::env::var_os("USERPROFILE").map(PathBuf::from)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::env::var_os("HOME").map(PathBuf::from)
+    }
+}
+
 /// Render the bridge configuration without Rust's `\` line-continuation
 /// whitespace stripping. The indentation below is part of the YAML schema:
 /// every mining parameter after `- stratum_port` belongs to that instance.
@@ -1381,6 +1393,22 @@ fn lock_wallet(state: tauri::State<'_, Mutex<Engine>>) {
 /// button rather than a path the user has to go hunting for.
 #[tauri::command]
 fn reveal_path(path: String) -> Result<(), String> {
+    // #5: this command is reachable from page script, so a compromised or malicious
+    // page could otherwise ask the OS to open ANY path. Confine it to the user's home
+    // tree — where the backup/data/config folders this button actually targets all
+    // live — and require the target to exist. `canonicalize` resolves symlinks and
+    // `..`, so neither side can be tricked past the prefix check. Anything outside
+    // home, or unresolvable, is refused. (An earlier commit message claimed this was
+    // done; it was not — the command shipped unconfined. Verified against the code.)
+    let home = dirs_home()
+        .and_then(|h| h.canonicalize().ok())
+        .ok_or_else(|| "cannot resolve home directory".to_string())?;
+    let target = std::path::Path::new(&path)
+        .canonicalize()
+        .map_err(|e| format!("cannot open {path}: {e}"))?;
+    if !target.starts_with(&home) {
+        return Err("refusing to open a path outside your home folder".into());
+    }
     let cmd = if cfg!(target_os = "macos") {
         "open"
     } else if cfg!(target_os = "windows") {
@@ -1389,9 +1417,9 @@ fn reveal_path(path: String) -> Result<(), String> {
         "xdg-open"
     };
     std::process::Command::new(cmd)
-        .arg(&path)
+        .arg(&target)
         .spawn()
-        .map_err(|e| format!("cannot open {path}: {e}"))?;
+        .map_err(|e| format!("cannot open {}: {e}", target.display()))?;
     Ok(())
 }
 
