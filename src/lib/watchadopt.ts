@@ -1,6 +1,7 @@
 import { api } from "../api";
 import { addWallet, ensureRegistered } from "../wallets";
 import { birthdayFromUrl, isViewKey, setWatchKey, viewKeyFromUrl } from "./watchonly";
+import { rememberBirthday } from "./deviceseed";
 
 /// Turn this browser into a viewer of someone's wallet, from a link.
 ///
@@ -23,6 +24,9 @@ export async function adoptViewKey(key: string, birthday = 0): Promise<string> {
   // no exposure; the viewer imported it precisely to see.
   const { address } = await api.watch(key.trim().toLowerCase(), birthday, { recoverableHistory: true });
   setWatchKey(key);
+  // Keep the birthday the link carried: a later history recovery scans from here
+  // instead of replaying the chain from genesis for a wallet born last week.
+  rememberBirthday(birthday);
   ensureRegistered(token, address);
   return address;
 }

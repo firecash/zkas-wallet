@@ -5830,6 +5830,26 @@ function History({
     }
   };
 
+  // A VIEW-ONLY wallet exists to be looked at. If its history is off — every viewer
+  // registered before the daemon learned to turn it on at import, and any viewer
+  // whose daemon ignored the request — turn it on once and recover, automatically,
+  // instead of leaving the tab at "confirmed on-chain" with no destination until
+  // someone finds the button. Sent rows (recipient, amount, memo) are recoverable
+  // through the viewing key's OVK, so this adds no disclosure the key does not
+  // already carry. One attempt per wallet, remembered on this device.
+  useEffect(() => {
+    if (!isWatchOnly() || !chain || chain.recoverableHistory || busy || recovering) return;
+    const flag = `history_autoon_${activeToken() ?? "default"}`;
+    try {
+      if (localStorage.getItem(flag)) return;
+      localStorage.setItem(flag, "1");
+    } catch {
+      return;
+    }
+    void setHistory(true, walletBirthday() || undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chain]);
+
   const fresh = justSent ? txs.find((t) => t.txid === justSent) : undefined;
   const allRows = chain?.rows ?? [];
   // Search covers what a person actually remembers about a payment: who, what it
