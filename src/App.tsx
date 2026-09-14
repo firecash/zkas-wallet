@@ -2415,8 +2415,20 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
     pendingOut > 0 || txs.some((t) => t.pending && (t.confs ?? 0) >= 1),
     !outNotice.shown,
   );
-  const pct =
-    status.chain_len > 0 ? Math.min(100, Math.round((status.scanned_blocks / status.chain_len) * 100)) : 0;
+  // While the daemon is still LOADING a wallet it reports scanned_blocks 0 — it has
+  // not rebuilt the entry yet, it is not starting over. Painting that as 0% was read
+  // as "my sync restarted from zero" every time the app was reopened (a phone's
+  // engine reloads from its checkpoint on every cold start, and the load can take a
+  // while). Show the last progress we actually saw, labelled as resuming, until the
+  // daemon reports real numbers again.
+  const resumeFrom = (() => {
+    if (!(status.loading && status.scanned_blocks === 0)) return null;
+    const c = loadStatusCache();
+    return c && c.scanned_blocks > 0 && c.chain_len > 0 ? c : null;
+  })();
+  const shownScanned = resumeFrom ? resumeFrom.scanned_blocks : status.scanned_blocks;
+  const shownChainLen = resumeFrom ? resumeFrom.chain_len : status.chain_len;
+  const pct = shownChainLen > 0 ? Math.min(100, Math.round((shownScanned / shownChainLen) * 100)) : 0;
   // The daemon has not rebuilt this wallet's state yet — it reports zeros because it
   // does not KNOW the balance, not because the balance is zero. Never render those
   // zeros as a balance; fall back to the last figure it gave us.
@@ -2461,8 +2473,8 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
     online: true, // this card only renders once a poll has produced a status
     synced: status.synced,
     spendReady: isWatchOnly() ? false : status.spend_ready,
-    scannedBlocks: status.scanned_blocks,
-    chainLen: status.chain_len,
+    scannedBlocks: shownScanned,
+    chainLen: shownChainLen,
     warming: !!status.warming,
     loading: !!status.loading,
     blocksBehind: status.blocks_behind,
@@ -2513,8 +2525,10 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           <div className="syncbar-fill" style={{ width: `${Math.max(2, pct)}%` }} />
         </div>
         <div className="sub" style={{ marginTop: 8, fontSize: 12 }}>
-          Found {trimFc(partialFc.toFixed(8))} ZKAS so far
-          {view.eta ? ` · ${view.eta}` : ""}
+          {resumeFrom
+            ? `Opening — resuming from block ${resumeFrom.scanned_blocks.toLocaleString()}, nothing is lost`
+            : `Found ${trimFc(partialFc.toFixed(8))} ZKAS so far`}
+          {!resumeFrom && view.eta ? ` · ${view.eta}` : ""}
           {/* A block count that moves on EVERY poll. Even at one decimal the percent
               can hold still for seconds on a million-block chain, and a figure that
               does not move is read as a hang no matter what the words say. */}
