@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo} from
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, chainTx, findReachableDaemon, getBase, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, isOnionAddress, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
+import { api, chainTx, findReachableDaemon, getBase, getToken, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, isOnionAddress, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { parsePairingUri } from "./pairing";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
@@ -1026,7 +1026,29 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         void refresh();
       }
     };
-    const onVis = () => { if (typeof document !== "undefined" && !document.hidden) onResume(); };
+    // Going to the BACKGROUND (screen off, app switched away): ask the on-device
+    // engine to write its scan checkpoint right now. Android may freeze or kill this
+    // process at any moment after this and there is no foreground service keeping it
+    // alive — and a killed process never runs the graceful-shutdown flush, so every
+    // block scanned since the last periodic checkpoint (every 1000 blocks) was redone
+    // on the next open, which read as "progress went back to 0". keepalive lets the
+    // request complete even as the page is being backgrounded. Best-effort.
+    const onHidden = () => {
+      if (!embeddedChosen()) return;
+      const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
+      const bearer = getWalletdBearer();
+      if (bearer) headers.Authorization = `Bearer ${bearer}`;
+      try {
+        void fetch(`${getBase()}/api/checkpoint`, { method: "POST", headers, keepalive: true }).catch(() => {});
+      } catch {
+        /* nothing to do — the periodic checkpoint still applies */
+      }
+    };
+    const onVis = () => {
+      if (typeof document === "undefined") return;
+      if (document.hidden) onHidden();
+      else onResume();
+    };
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("focus", onResume);
     return () => {
