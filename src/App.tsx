@@ -2734,9 +2734,14 @@ async function addAccountWallet(): Promise<void> {
   const phrase = masterMnemonic();
   if (!phrase) {
     // No phrase on this device (only a legacy hex wallet): a new account cannot
-    // be derived, so make an independent wallet instead of pretending otherwise.
-    addSeparateWallet();
-    return;
+    // be derived. This used to silently fall back to `addSeparateWallet()`, which
+    // minted a NEW wallet with a NEW recovery phrase under an "Add account" label —
+    // the user believed their one existing seed covered it, so the new phrase went
+    // un-backed-up. Refuse loudly instead; the honest path is "Add separate wallet",
+    // which makes clear the new wallet has its own phrase to back up.
+    throw new Error(
+      "This wallet has no recovery phrase, so an account cannot be derived from it. Use “Add separate wallet” — it gets its own recovery phrase, which you must back up.",
+    );
   }
   // Everything that can fail is done BEFORE the active wallet is touched, so a
   // failure leaves the user exactly where they were.
@@ -6894,17 +6899,25 @@ function SwitchWallet() {
       {err && <div className="msg err">{err}</div>}
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-        <button
-          className="btn"
-          onClick={() => {
-            // An ACCOUNT of the device's phrase: independent and unlinkable
-            // on-chain, but covered by the backup already made.
-            void addAccountWallet();
-          }}
-        >
-          Add account
-        </button>
-        <button className="btn ghost" onClick={() => void addSeparateWallet()}>
+        {/* Only offer an ACCOUNT when this device actually has a recovery phrase to
+            derive it from. Without that gate (it existed on the other switcher but
+            not here) a hex-seed device showed "Add account", which silently created a
+            SEPARATE wallet with a brand-new phrase — reported as "I added an account
+            with one seed and now I see a different seed". The user was told it was
+            covered by their existing backup; it was not. */}
+        {hasMaster() && (
+          <button
+            className="btn"
+            onClick={() => {
+              // An ACCOUNT of the device's phrase: independent and unlinkable
+              // on-chain, but covered by the backup already made.
+              addAccountWallet().catch((e) => setErr((e as Error).message));
+            }}
+          >
+            Add account
+          </button>
+        )}
+        <button className={hasMaster() ? "btn ghost" : "btn"} onClick={() => void addSeparateWallet()}>
           Add separate wallet
         </button>
         {wallets.length > 0 && (

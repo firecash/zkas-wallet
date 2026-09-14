@@ -22,6 +22,11 @@ const PER_WALLET_PREFIXES = [
   "birthday_", // scan birthday remembered for backup files
   "seed_unsealed_", // flag for the plaintext fallback written when lock-sealing failed
   "app_lock_v1_", // legacy per-wallet lock record (superseded by the device lock)
+  // Which account of the master phrase this token was derived at. Left behind, a
+  // stale mapping on a reused token makes RevealSeedCard/DeviceSeedBackup show the
+  // MASTER PHRASE as that wallet's backup even when its key is unrelated — the
+  // user then backs up the wrong secret.
+  "wallet_account_",
 ];
 
 /**
