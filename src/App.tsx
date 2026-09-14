@@ -82,7 +82,7 @@ import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./con
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
 import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug, engineBusy, setEngineBusy } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
-import { isWatchOnly, clearWatchKey, isViewKey } from "./lib/watchonly";
+import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
 import { adoptViewKey } from "./lib/watchadopt";
 import { APP_BUILT, platformName, versionLine, versionTag } from "./version";
@@ -3973,8 +3973,18 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
     setBusy(true);
     setError("");
     try {
-      const seed = await resolveDeviceSeed(status.address ?? undefined);
-      const fvk = await fvkHex(seed);
+      // A view-only wallet holds no seed but DOES hold the view key itself — that is
+      // the thing to show. Deriving from the seed first keeps the seed-backed case
+      // unchanged; only when there is none do we fall back to the stored key. Before
+      // this a viewer was told "this device does not hold the key" for a key that was
+      // right there in its storage, and could not share or re-scan it.
+      let fvk: string;
+      try {
+        fvk = await fvkHex(await resolveDeviceSeed(status.address ?? undefined));
+      } catch (e) {
+        if ((e as Error)?.message !== SEED_REQUIRED || !watchKey()) throw e;
+        fvk = watchKey();
+      }
       setKey(fvk);
       setQr(await QRCode.toDataURL(fvk, { margin: 1, width: 440 }));
     } catch (e) {

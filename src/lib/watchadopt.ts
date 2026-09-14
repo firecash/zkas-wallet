@@ -14,7 +14,14 @@ export async function adoptViewKey(key: string, birthday = 0): Promise<string> {
   // has a spending wallet that would quietly replace what the user can spend
   // with something they only watch.
   const token = addWallet();
-  const { address } = await api.watch(key.trim().toLowerCase(), birthday);
+  // History ON from the first scan. A full viewing key can recover this wallet's own
+  // sends — recipient, amount, memo — through its outgoing viewing key, but the daemon
+  // only records those rows while history is enabled, and it used to start every watch
+  // OFF. A viewer then saw no sent transactions and no destinations at all until they
+  // found "Recover full history" (reported: "if I import an FVK I can't see tx
+  // destinations"). The key already discloses everything to the daemon, so this adds
+  // no exposure; the viewer imported it precisely to see.
+  const { address } = await api.watch(key.trim().toLowerCase(), birthday, { recoverableHistory: true });
   setWatchKey(key);
   ensureRegistered(token, address);
   return address;

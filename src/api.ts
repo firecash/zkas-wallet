@@ -553,8 +553,18 @@ export const api = {
   // seed stays on this device. This is how the wallet is created/restored now;
   // `create`/`import` (which put the seed on the server) remain only for a
   // self-hosted daemon you run yourself.
-  watch: (fvk_hex: string, birthday?: number) =>
-    req<{ address: string }>("POST", "/api/wallet/watch", { fvk_hex, birthday: birthday ?? 0 }, 180_000),
+  // `recoverableHistory: true` asks the daemon to record chain history (own sends'
+  // recipient/amount/memo via the OVK) from the very first scan. Used for VIEW-KEY
+  // imports: someone importing a full viewing key is doing it to SEE the wallet, and
+  // the key already lets the daemon decrypt everything, so recording rows adds no
+  // disclosure. Seed-backed registrations leave it unset (history stays opt-in).
+  watch: (fvk_hex: string, birthday?: number, opts?: { recoverableHistory?: boolean }) =>
+    req<{ address: string }>(
+      "POST",
+      "/api/wallet/watch",
+      { fvk_hex, birthday: birthday ?? 0, ...(opts?.recoverableHistory !== undefined ? { recoverable_history: opts.recoverableHistory } : {}) },
+      180_000,
+    ),
   // `memo` rides inside the recipient's encrypted note — readable by them, and by
   // this wallet only if recoverable history is on. The daemon has always accepted
   // it; the UI simply never offered it. Custodial send proves in-daemon — allow
