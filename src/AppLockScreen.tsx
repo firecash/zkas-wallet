@@ -183,6 +183,12 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
                   // The sealed record is unrecoverable without the secret — that is
                   // the point of the lock — so the way out is erasing it too.
                   localStorage.removeItem("app_lock_v2");
+                  // The master phrase, its plaintext-fallback flag, the wallet
+                  // registry and the account counter are device-wide, not per
+                  // wallet, so the per-wallet sweep above leaves them behind —
+                  // and "erase this device" that keeps the recovery phrase is not
+                  // an erase.
+                  for (const k of ["device_mnemonic", "mnemonic_unsealed", "wallets_v1", "account_high_water"]) localStorage.removeItem(k);
                   location.reload();
                 }}
               >

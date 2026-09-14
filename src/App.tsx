@@ -17,7 +17,7 @@ import {
   loadSnapshot,
   type LocalTx,
 } from "./localtx";
-import { ensureSigner, fvkHex, generateMnemonicWallet, accountSeedHex, signLocal, verifyLocal, addressFromSeed, type Network } from "./signer";
+import { ensureSigner, fvkHex, generateMnemonicWallet, accountSeedHex, signLocal, verifyLocal, type Network } from "./signer";
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, MIN_NOTES_PER_MERGE, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, walletCanSpend } from "./status";
 import { useZkasPrice, fmtFiat } from "./price";
@@ -29,7 +29,7 @@ import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline
 import { byNewest, receiptIsOnChain, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
-import { isSecretShaped } from "./lib/deviceseed";
+import { isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, networkOfAddress } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
@@ -50,6 +50,7 @@ import {
   type DesktopConfig,
 } from "./desktop";
 import { makeBackup, readBackup } from "./backup";
+import { listWallets as listAllWallets } from "./wallets";
 import { MANAGED_ZKAS_RPC, STANDALONE_ZKAS_RPC_EXAMPLE } from "./ports";
 import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
 import { wipeWalletState } from "./walletstate";
@@ -72,7 +73,7 @@ import {
   updateContact,
   type Contact,
 } from "./contacts";
-import { disableLock, enableLock, forgetWalletLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed, allUnlockedSeeds } from "./applock";
+import { disableLock, enableLock, forgetWalletLock, forgetMnemonicLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed } from "./applock";
 import { disableBiometricUnlock, enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured } from "./biometric";
 import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReconfigure } from "./bgsync";
 import { getTxLabel, setTxLabel } from "./txlabels";
@@ -1336,36 +1337,7 @@ function walletBirthday(): number {
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
 }
 
-/// A seed stored under a STALE token. Token rotations and the registry/switcher
-/// era could orphan `device_seed_<oldToken>` while the active token holds
-/// nothing — the wallet then claims "this device doesn't hold the key" while
-/// the key is RIGHT HERE under another key name, and without this scan the
-/// coins are stuck forever. Match every on-device seed by derived address and
-/// reattach the match to the active token.
-async function findOrphanedSeed(expectedAddress: string): Promise<string> {
-  const candidates = new Set<string>();
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k?.startsWith("device_seed_")) {
-      const v = localStorage.getItem(k);
-      // Legacy 64-hex seed OR a recovery phrase — both are valid secrets, and
-      // the address check below is what actually confirms which wallet it opens.
-      if (v && isSecretShaped(v)) candidates.add(v.trim());
-    }
-  }
-  // Unsealed lock-record seeds too (a locked device's seeds live only in memory).
-  for (const v of Object.values(allUnlockedSeeds() ?? {})) candidates.add(v.trim());
-  if (candidates.size === 0) return "";
-  const net: Network = expectedAddress.startsWith("zkastest:") ? "testnet" : "mainnet";
-  for (const seed of candidates) {
-    try {
-      if ((await addressFromSeed(seed, net)) === expectedAddress) return seed;
-    } catch {
-      /* not a usable seed — keep looking */
-    }
-  }
-  return "";
-}
+// findOrphanedSeed lives in ./lib/deviceseed (one account-aware implementation, no drift).
 
 /// Thrown when this device has no key for the wallet and the daemon has none to
 /// give (a watch-only wallet opened on a new device) — the caller then asks the
@@ -2129,9 +2101,14 @@ function ConsolidateDialog({
           setNeedSeed(true);
           throw new Error("Enter this wallet's 64-character recovery seed to sign on this device.");
         }
-        seed = seedInput.trim();
-        if (status.address && await addressFromSeed(seed, networkOf(status)) !== status.address) {
-          throw new Error("That seed belongs to a different wallet.");
+        const entered = seedInput.trim();
+        seed = entered;
+        if (status.address) {
+          const r = await keyForWallet(entered, status.address);
+          if (!r) throw new Error("That seed belongs to a different wallet.");
+          seed = r.keyHex;
+          const tk = activeToken();
+          if (tk) await bindResolvedKey(tk, entered, r);
         }
         setDeviceSeed(seed);
         setNeedSeed(false);
@@ -2730,6 +2707,36 @@ async function persistDeviceSeed(seed: string): Promise<boolean> {
   return getDeviceSeed().trim() === seed.trim();
 }
 
+/// After restoring a PHRASE backup, bring back the accounts it covered (1..highest).
+///
+/// The backup records how many accounts the device had; each is re-derived and
+/// re-registered under a fresh token exactly as "Add account" does, then the
+/// active wallet is put back to the one that was restored. Before this a phrase
+/// restore re-established only account 0 and every other account — and its
+/// balance — simply did not appear, which reads as "my money is gone".
+async function recreatePhraseAccounts(phrase: string, highest: number, birthday: number): Promise<void> {
+  if (!(highest > 0) || !isPhraseSecret(phrase)) return;
+  const home = activeToken();
+  for (let account = 1; account <= highest; account++) {
+    try {
+      const secret = await accountSeedHex(phrase, account);
+      const fvk = await fvkHex(secret);
+      const token = addWallet(); // mints AND activates, so persistDeviceSeed lands on it
+      setAccountOf(token, account);
+      if (!(await persistDeviceSeed(secret))) {
+        clearAccountOf(token);
+        unregisterWallet(token);
+        continue;
+      }
+      await api.watch(fvk, birthday);
+      rememberBirthday(birthday);
+    } catch {
+      /* best-effort: a missing account can still be added by hand, in order */
+    }
+  }
+  if (home) switchWallet(home);
+}
+
 async function addAccountWallet(): Promise<void> {
   const phrase = masterMnemonic();
   if (!phrase) {
@@ -3006,33 +3013,38 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
     if (!isSecretShaped(s)) return setErr("That doesn't look like a recovery phrase (12 words) or a recovery seed (64 hex characters).");
     setBusy(true);
     try {
-      // Never re-register the WRONG wallet over this token: the seed must derive
-      // the address this device was showing.
+      // Never re-register the WRONG wallet over this token: the secret must derive
+      // the address this device was showing. For a phrase that means ANY account
+      // of it (a user recovering account 2 pastes the same twelve words); the key
+      // kept for a non-zero account is that account's derived key.
+      let keyHex = s;
+      let resolved: { keyHex: string; account: number | null } | null = null;
       if (cached?.address) {
-        const net: Network = cached.address.startsWith("zkastest:") ? "testnet" : "mainnet";
-        const addr = await addressFromSeed(s, net);
-        if (addr !== cached.address) {
-          setErr(`That seed belongs to a different wallet (${shortAddr(addr)}). Check it and try again.`);
+        resolved = await keyForWallet(s, cached.address);
+        if (!resolved) {
+          setErr("That seed belongs to a different wallet. Check it and try again.");
           return;
         }
+        keyHex = resolved.keyHex;
       }
       // Key first and verified, then register — a wallet registered without its
       // key can receive coins it can never spend.
-      if (!(await persistDeviceSeed(s))) {
+      if (!(await persistDeviceSeed(keyHex))) {
         setErr("This device could not store the wallet key — free up space and try again.");
         return;
       }
-      await api.watch(await fvkHex(s), walletBirthday());
+      await api.watch(await fvkHex(keyHex), walletBirthday());
       const restoredToken = activeToken();
       if (restoredToken) {
-        // This token now holds a DIFFERENT secret, so any "Account N" mapping it
-        // carried is stale: leaving it would label this wallet as backed by the
-        // master phrase when it is not, which is exactly the kind of false promise
-        // that loses coins.
-        clearAccountOf(restoredToken);
-        // Restoring from a phrase makes it this device's master (if there isn't
-        // one), so "add account" derives under it instead of orphan wallets.
-        await adoptExistingPhrase(restoredToken, s).catch(() => undefined);
+        if (resolved) {
+          await bindResolvedKey(restoredToken, s, resolved);
+        } else {
+          // No address to check against: this token now holds whatever was typed,
+          // so any inherited "Account N" mapping is stale. A phrase becomes the
+          // device's master (if there isn't one) so "add account" derives under it.
+          clearAccountOf(restoredToken);
+          await adoptExistingPhrase(restoredToken, s).catch(() => undefined);
+        }
       }
       onRecovered();
     } catch (e) {
@@ -3327,7 +3339,7 @@ function Onboard({
     setError("");
     try {
       if (!restoreJson.trim()) throw new Error("Choose your backup .json file, or paste the backup text.");
-      const { seedHex, birthday } = await readBackup(restoreJson, restorePass);
+      const { seedHex, birthday, accounts } = await readBackup(restoreJson, restorePass);
       // Key first and verified: never register a wallet this device cannot sign for.
       if (!(await persistDeviceSeed(seedHex))) {
         throw new Error("This device could not store the wallet key — free up space and try again.");
@@ -3342,6 +3354,7 @@ function Onboard({
         // siblings back and the backup would silently be worth less than it is.
         await adoptExistingPhrase(tk, seedHex).catch(() => undefined);
       }
+      await recreatePhraseAccounts(seedHex, accounts, birthday);
       onImported();
     } catch (e) {
       setError((e as Error).message);
@@ -5125,21 +5138,27 @@ function Send({
             setError("This device doesn't hold this wallet's key yet. Enter your recovery phrase once to unlock sending here.");
             return;
           }
-          seed = unlock.trim();
-          // Verify the seed actually belongs to THIS wallet before keeping it.
+          const entered = unlock.trim();
+          seed = entered;
+          // Verify the secret actually belongs to THIS wallet before keeping it.
           // A user with several wallets WILL paste the wrong one eventually —
           // and without this check the payment below is driven by the pasted
           // seed's FVK, i.e. it would spend FROM THAT OTHER WALLET while the UI
-          // showed this one. The on-device address derivation costs nothing.
+          // showed this one. keyForWallet also resolves a PHRASE to whichever
+          // account of it owns this address (not just account 0), and hands back
+          // the derived key to sign with.
           if (status?.address) {
-            const seedAddr = await addressFromSeed(seed, networkOf(status));
-            if (seedAddr !== status.address) {
+            const r = await keyForWallet(entered, status.address);
+            if (!r) {
               setConfirming(false);
               setError(
                 "That seed belongs to a different wallet — it does not unlock this one. Check which wallet you are restoring, or switch to the wallet that seed belongs to.",
               );
               return;
             }
+            seed = r.keyHex;
+            const tk = activeToken();
+            if (tk) await bindResolvedKey(tk, entered, r);
           }
           setDeviceSeed(seed);
           setUnlock("");
@@ -6962,6 +6981,16 @@ function SwitchWallet() {
               // recycled token must not inherit another wallet's income.
               forgetReceipts(w.token);
               unregisterWallet(w.token);
+              // The master phrase IS the key of every account derived from it. It
+              // must survive while sibling accounts remain — but once the last
+              // phrase-derived wallet is removed, keeping it means "Remove wallet"
+              // left the recovery phrase on the device while telling the user the
+              // key was erased. Erase it (plaintext, fallback flag, and sealed).
+              if (!listAllWallets().some((x) => accountOf(x.token) !== null)) {
+                localStorage.removeItem("device_mnemonic");
+                localStorage.removeItem("mnemonic_unsealed");
+                forgetMnemonicLock();
+              }
               // Fall back to another wallet if one exists, rather than dumping the
               // user into onboarding when they still have wallets left.
               if (rest.length > 0) switchWallet(rest[0].token);
@@ -7025,6 +7054,24 @@ function DeviceSeedBackup() {
   // restores every account, not just this one. See walletBackupSecret.
   const derivedAccount = accountOf(activeToken() ?? "");
   const seed = derivedAccount !== null && masterMnemonic() ? masterMnemonic() : getDeviceSeed();
+  const isPhraseBackup = derivedAccount !== null && !!masterMnemonic();
+  // A phrase backup restores EVERY account, so it must carry (a) the EARLIEST
+  // birthday among them — the active account's own birthday could be later than
+  // account 0's first funds, and a restore scanning from there would silently
+  // miss those notes — and (b) how many accounts existed, so the restore can
+  // bring them all back instead of only account 0.
+  const phraseTokens = isPhraseBackup ? listAllWallets().filter((w) => accountOf(w.token) !== null) : [];
+  const backupBirthday = isPhraseBackup
+    ? phraseTokens.reduce((min, w) => {
+        const b = birthdayOfToken(w.token);
+        return b > 0 && (min === 0 || b < min) ? b : min;
+      }, 0)
+    : walletBirthday();
+  const backupAccounts = isPhraseBackup ? phraseTokens.reduce((m, w) => Math.max(m, accountOf(w.token) ?? 0), 0) : 0;
+  const backupNetwork = (() => {
+    const a = loadStatusCache()?.address;
+    return a ? networkOfAddress(a) : "mainnet";
+  })();
 
   if (!seed) {
     return (
@@ -7044,7 +7091,7 @@ function DeviceSeedBackup() {
       // Carry the wallet's real scan birthday (remembered at watch/restore time):
       // a backup saying 0 makes every restore rescan from GENESIS — minutes to an
       // hour — even for a wallet born yesterday.
-      const doc = await makeBackup(seed, pass, "mainnet", walletBirthday());
+      const doc = await makeBackup(seed, pass, backupNetwork, backupBirthday, backupAccounts);
       setLastDoc(doc);
       if (isDesktop()) {
         setDone(await writeBackupFile(doc));
@@ -7172,20 +7219,42 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
     setBusy(true);
     try {
       const json = await readBackupFile(path.trim());
-      const { seedHex, birthday } = await readBackup(json, pass);
+      const { seedHex, birthday, accounts } = await readBackup(json, pass);
+      // This restores INTO the active wallet's slot. That slot already holds a
+      // key (this screen is only offered when it does), so a backup of a
+      // DIFFERENT wallet would silently overwrite the key of the one on screen —
+      // its coins unreachable from this device unless it was backed up elsewhere.
+      // Refuse unless the backup's secret derives this wallet's address (for a
+      // phrase: any account of it).
+      const expected = loadStatusCache()?.address;
+      let keyHex = seedHex;
+      let resolved: { keyHex: string; account: number | null } | null = null;
+      if (expected) {
+        resolved = await keyForWallet(seedHex, expected);
+        if (!resolved) {
+          throw new Error(
+            "That backup belongs to a different wallet than the one open now, so it was not applied — restoring it here would overwrite this wallet's key. Use “Add separate wallet”, then restore the backup there.",
+          );
+        }
+        keyHex = resolved.keyHex;
+      }
       // Keep the seed on-device FIRST (and prove it landed), then register the
       // viewing key — the same shape as a freshly created wallet, so spending
       // works after this and no wallet is ever registered without its key.
-      if (!(await persistDeviceSeed(seedHex))) {
+      if (!(await persistDeviceSeed(keyHex))) {
         throw new Error("This device could not store the wallet key — free up space and try again.");
       }
-      await api.watch(await fvkHex(seedHex), birthday);
+      await api.watch(await fvkHex(keyHex), birthday);
       rememberBirthday(birthday);
       const tk = activeToken();
       if (tk) {
-        clearAccountOf(tk);
-        await adoptExistingPhrase(tk, seedHex).catch(() => undefined);
+        if (resolved) await bindResolvedKey(tk, seedHex, resolved);
+        else {
+          clearAccountOf(tk);
+          await adoptExistingPhrase(tk, seedHex).catch(() => undefined);
+        }
       }
+      await recreatePhraseAccounts(seedHex, accounts, birthday);
       setOk(true);
     } catch (e) {
       setErr((e as Error).message);

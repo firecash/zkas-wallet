@@ -231,16 +231,36 @@ export async function unlock(secret: string): Promise<boolean> {
   const rec = record();
   if (rec) {
     const out: Record<string, string> = {};
+    // A wrong passphrase fails EVERY entry (they were all sealed under the same
+    // secret). One entry failing while others open is not a wrong passphrase —
+    // it is a corrupt blob (a torn write), and it used to lock the user out of
+    // ALL their wallets with the right passphrase. Now: all fail ⇒ wrong
+    // passphrase; some open ⇒ correct passphrase, and only the corrupt wallet
+    // is left without a key (it hits SEED_REQUIRED and asks to be restored).
+    let anyOk = false;
+    let anyFail = false;
     for (const [token, sealed] of Object.entries(rec.wallets)) {
       const seed = await unseal(sealed, secret);
-      if (seed === null) return false; // one failure means the wrong passphrase
+      if (seed === null) {
+        anyFail = true;
+        continue;
+      }
       out[token] = seed;
+      anyOk = true;
     }
     if (rec.mnemonic) {
       const phrase = await unseal(rec.mnemonic, secret);
-      if (phrase === null) return false;
-      sessionMnemonic = phrase;
-    } else {
+      if (phrase === null) {
+        anyFail = true;
+      } else {
+        sessionMnemonic = phrase;
+        anyOk = true;
+      }
+    }
+    const nothingToVerify = Object.keys(rec.wallets).length === 0 && !rec.mnemonic;
+    if (!anyOk && !nothingToVerify) return false; // every entry refused ⇒ wrong passphrase
+    if (anyFail) console.warn("app lock: a sealed entry did not open under the verified passphrase — that wallet needs restoring");
+    if (!rec.mnemonic) {
       // Migration: a phrase set before this field existed still sits in the
       // clear. Seal it under the now-verified secret and remove the plaintext.
       const legacyPhrase = localStorage.getItem(MNEMONIC_KEY);
@@ -299,6 +319,17 @@ export async function disableLock(secret: string): Promise<boolean> {
   localStorage.removeItem(LOCK_KEY);
   sessionSecret = null;
   return true;
+}
+
+/** Forget the sealed master phrase (used when the last phrase-derived wallet is
+ * removed, so "Remove wallet" really does erase that wallet's key). */
+export function forgetMnemonicLock(): void {
+  const rec = record();
+  if (rec?.mnemonic) {
+    delete rec.mnemonic;
+    write(rec);
+  }
+  sessionMnemonic = null;
 }
 
 /** Forget one wallet's sealed seed (used when that wallet is removed). */

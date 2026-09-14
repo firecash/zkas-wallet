@@ -13,7 +13,7 @@
 // than silently yielding garbage that would restore an empty wallet.
 
 const MAGIC = "zkas-wallet-backup";
-const VERSION = 2;
+const VERSION = 3;
 const PBKDF2_ITERATIONS = 600_000;
 
 export interface SeedBackup {
@@ -21,8 +21,13 @@ export interface SeedBackup {
   version: number;
   kind: "device-seed";
   network: string;
-  /** Wallet birthday so a restore syncs from there, not genesis. */
+  /** Wallet birthday so a restore syncs from there, not genesis. For a PHRASE
+   * backup this is the EARLIEST birthday of any account it covers. */
   birthday: number;
+  /** Highest account index this phrase had on the device (v3+). A restore
+   * re-creates accounts 1..accounts, so they do not look lost. Absent/0 for a
+   * legacy hex seed. */
+  accounts?: number;
   saltB64: string;
   ivB64: string;
   ciphertextB64: string;
@@ -53,6 +58,7 @@ export async function makeBackup(
   passphrase: string,
   network: string,
   birthday: number,
+  accounts = 0,
 ): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -68,6 +74,7 @@ export async function makeBackup(
     kind: "device-seed",
     network,
     birthday,
+    accounts: accounts > 0 ? Math.floor(accounts) : 0,
     saltB64: b64(salt),
     ivB64: b64(iv),
     ciphertextB64: b64(ct),
@@ -77,7 +84,10 @@ export async function makeBackup(
 }
 
 /** Recover the seed hex from a backup document. Throws a readable message. */
-export async function readBackup(json: string, passphrase: string): Promise<{ seedHex: string; birthday: number }> {
+export async function readBackup(
+  json: string,
+  passphrase: string,
+): Promise<{ seedHex: string; birthday: number; accounts: number; network: string }> {
   let doc: SeedBackup;
   try {
     doc = JSON.parse(json);
@@ -105,7 +115,8 @@ export async function readBackup(json: string, passphrase: string): Promise<{ se
   const words = seedHex.split(/\s+/);
   const isPhrase = words.length >= 12 && words.length <= 24 && words.every((w) => /^[a-z]+$/i.test(w));
   if (!isHex && !isPhrase) throw new Error("Backup decrypted but does not contain a valid seed.");
-  return { seedHex, birthday: doc.birthday ?? 0 };
+  const accounts = Number(doc.accounts ?? 0);
+  return { seedHex, birthday: doc.birthday ?? 0, accounts: Number.isFinite(accounts) && accounts > 0 ? Math.floor(accounts) : 0, network: doc.network ?? "mainnet" };
 }
 
 // --- Generic string encryption, shared with the app lock ------------------
