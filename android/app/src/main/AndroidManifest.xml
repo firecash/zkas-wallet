@@ -50,6 +50,14 @@
 
         </activity>
 
+        <!-- Holds the on-device wallet engine alive while it syncs (Run on this phone).
+             Started by EmbeddedEnginePlugin when the engine starts, dropped as soon as the
+             wallet reports synced. -->
+        <service
+            android:name=".EngineForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <receiver android:name=".WalletWidget" android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -71,6 +79,10 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Keep the on-device wallet engine running while a sync is in progress, even
+         with the screen off. Only held while syncing; released once synced. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <!-- Scan a recipient's address QR when sending. The camera feed is decoded
          in-page (jsQR) and never leaves the device; the feature degrades to
          paste/manual entry if the permission is denied. -->

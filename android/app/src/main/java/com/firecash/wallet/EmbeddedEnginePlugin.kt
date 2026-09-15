@@ -40,6 +40,9 @@ class EmbeddedEnginePlugin : Plugin() {
             if (port == 0) {
                 call.reject("The on-device wallet engine could not start.")
             } else {
+                // A freshly started engine is about to sync: hold the process until the app
+                // says the wallet is synced (see keepAlive).
+                EngineForegroundService.start(context)
                 call.resolve(JSObject().put("port", port))
             }
         }.start()
@@ -47,10 +50,21 @@ class EmbeddedEnginePlugin : Plugin() {
 
     @PluginMethod
     fun stop(call: PluginCall) {
+        EngineForegroundService.stop(context)
         Thread {
             try { uniffi.zkas_walletd_mobile.stop() } catch (_: Throwable) {}
             call.resolve()
         }.start()
+    }
+
+    /** Hold (or release) the foreground service that keeps the engine alive in the
+     * background. The app calls this from its status poll: on while the wallet is
+     * still syncing, off once it is synced — so a synced wallet costs no battery. */
+    @PluginMethod
+    fun keepAlive(call: PluginCall) {
+        val on = call.getBoolean("on", true) ?: true
+        if (on) EngineForegroundService.start(context) else EngineForegroundService.stop(context)
+        call.resolve()
     }
 
     @PluginMethod

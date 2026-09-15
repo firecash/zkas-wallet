@@ -18,6 +18,7 @@ interface EmbeddedEnginePlugin {
   status(): Promise<{ port: number; running: boolean }>;
   logs(): Promise<{ text: string }>;
   setDebugLogs(opts: { on: boolean }): Promise<void>;
+  keepAlive(opts: { on: boolean }): Promise<void>;
 }
 
 const Native = registerPlugin<EmbeddedEnginePlugin>("EmbeddedEngine");
@@ -167,4 +168,14 @@ export async function engineLogs(): Promise<string> {
 export async function setEngineDebugLogs(on: boolean): Promise<void> {
   if (!embeddedAvailable()) return;
   await Native.setDebugLogs({ on }).catch(() => {});
+}
+
+let keptAlive: boolean | null = null;
+/** Hold the engine's foreground service while a sync is in progress, release it once
+ * synced. Idempotent and cheap: only crosses the bridge when the state changes. */
+export async function engineKeepAlive(on: boolean): Promise<void> {
+  if (!embeddedAvailable() || !embeddedChosen()) return;
+  if (keptAlive === on) return;
+  keptAlive = on;
+  await Native.keepAlive({ on }).catch(() => { keptAlive = null; });
 }

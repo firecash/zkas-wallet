@@ -80,7 +80,7 @@ import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
-import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug, engineBusy, setEngineBusy } from "./embedded";
+import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug, engineBusy, setEngineBusy, engineKeepAlive } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
@@ -858,6 +858,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // fraction of it — the safety net eating itself. A pool wallet rescanning at
       // 5% saved "29,703" over the true "423,997", and from then on even the
       // fallback was wrong.
+      // On-device engine: hold the foreground service while the wallet is still
+      // syncing so Android does not freeze/kill the process when the screen goes
+      // dark; release it the moment the wallet is synced.
+      if (embeddedChosen()) void engineKeepAlive(!s.synced);
       if (s.has_wallet && s.synced && s.scanned_blocks > 0 && snapshotDirty(s)) {
         saveSnapshot({
           balanceFc: parseFloat(s.balance_fc || "0"),
