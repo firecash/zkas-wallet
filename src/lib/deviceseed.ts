@@ -1,7 +1,8 @@
-import { type Status } from "../api";
+import { loadStatusCache, type Status } from "../api";
 import { addressFromSeed, accountAddress, accountSeedHex, type Network } from "../signer";
 import { unlockedDeviceSeed, isLockEnabled, sealNewSeed, allUnlockedSeeds } from "../applock";
 import { masterMnemonic, setAccountOf, clearAccountOf, adoptExistingPhrase } from "../accounts";
+import { listWallets } from "../wallets";
 
 /// Cheap shape test for a stored wallet secret: a legacy 64-hex seed, or a
 /// recovery phrase (BIP-39 words are lowercase letters separated by spaces).
@@ -46,19 +47,69 @@ export function setDeviceSeed(seed: string) {
 function birthdayKey(): string {
   return `birthday_${localStorage.getItem("wallet_token") || "default"}`;
 }
+/// The birthday is ALSO kept per address (`birthday_addr_<address>`). The per-token
+/// copy is written only by the create/import/restore paths, for the token active at
+/// that moment — so it is simply absent when the wallet reached this device by any
+/// other route (a paired desktop token, a shell-restored backup, a seed under a
+/// stale token, a wallet from before birthdays were tracked). Every re-registration
+/// read that copy alone and sent 0 when it was missing, and the daemon then scanned
+/// a fully synced wallet from genesis (a user's hosted FVK ended up registered at
+/// birthday 0 seven times out of eight). The address names the wallet itself and
+/// survives every token change, service switch and re-pairing on this device.
+function birthdayAddrKey(address: string): string {
+  return `birthday_addr_${address}`;
+}
+function positive(v: string | number | null | undefined): number {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
 
-export function rememberBirthday(daa: number): void {
+export function rememberBirthday(daa: number, address?: string | null): void {
   if (!(daa > 0)) return;
+  const v = String(Math.floor(daa));
   try {
-    localStorage.setItem(birthdayKey(), String(Math.floor(daa)));
+    localStorage.setItem(birthdayKey(), v);
+    if (address) {
+      // Per address keep the EARLIEST value ever recorded: starting a scan too
+      // early costs seconds, starting it too late costs notes.
+      const prev = addressBirthday(address);
+      if (!prev || daa < prev) localStorage.setItem(birthdayAddrKey(address), v);
+    }
   } catch {
     /* best-effort */
   }
 }
 
+/// The active token's remembered birthday only; 0 when this token has none.
+/// Prefer `knownBirthday` wherever the number is about to be SENT somewhere.
 export function walletBirthday(): number {
-  const v = Number(localStorage.getItem(birthdayKey()) || "0");
-  return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+  return positive(localStorage.getItem(birthdayKey()));
+}
+
+/// The per-address copy (see `birthdayAddrKey`); 0 when none.
+export function addressBirthday(address: string): number {
+  try {
+    return positive(localStorage.getItem(birthdayAddrKey(address)));
+  } catch {
+    return 0;
+  }
+}
+
+/// The earliest birthday ANY source on this device knows for the wallet: the
+/// active token's copy, the per-address copy, the copy of every other registered
+/// token that holds the same address (the paired/orphan cases), and the daemon's
+/// own record when the cached status carries one. 0 only when nothing knows —
+/// and 0 is what makes a re-registration scan from genesis, so callers that are
+/// about to `api.watch` must use this, never `walletBirthday()` alone.
+export function knownBirthday(address?: string | null): number {
+  const cached = loadStatusCache();
+  const addr = address || cached?.address || "";
+  const candidates = [walletBirthday(), positive(cached?.birthday)];
+  if (addr) {
+    candidates.push(addressBirthday(addr));
+    for (const w of listWallets()) if (w.address === addr) candidates.push(birthdayOfToken(w.token));
+  }
+  return candidates.reduce((min, b) => (b > 0 && (min === 0 || b < min) ? b : min), 0);
 }
 
 /// True for a recovery phrase (anything that is not a legacy 64-hex seed).
@@ -153,7 +204,9 @@ export function birthdayOfToken(token: string): number {
 /// derived address, then derive the master phrase's accounts, and reattach the
 /// match to the active token.
 export async function findOrphanedSeed(expectedAddress: string): Promise<string> {
-  const candidates = new Set<string>();
+  // Seed → the token it was stored under (first one wins), so a match can bring
+  // that token's remembered birthday along with it.
+  const candidates = new Map<string, string>();
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
     if (k?.startsWith("device_seed_")) {
@@ -161,14 +214,22 @@ export async function findOrphanedSeed(expectedAddress: string): Promise<string>
       // A stored secret is either a legacy 64-hex seed or a recovery phrase.
       // Accept both shapes here: this is only a cheap pre-filter, and the
       // address-derivation check below is what actually decides.
-      if (v && isSecretShaped(v)) candidates.add(v.trim());
+      if (v && isSecretShaped(v) && !candidates.has(v.trim())) candidates.set(v.trim(), k.slice("device_seed_".length));
     }
   }
-  for (const v of Object.values(allUnlockedSeeds() ?? {})) candidates.add(v.trim());
+  for (const [token, v] of Object.entries(allUnlockedSeeds() ?? {})) if (!candidates.has(v.trim())) candidates.set(v.trim(), token);
   const net = networkOfAddress(expectedAddress);
-  for (const seed of candidates) {
+  for (const [seed, token] of candidates) {
     try {
-      if ((await addressFromSeed(seed, net)) === expectedAddress) return seed;
+      if ((await addressFromSeed(seed, net)) === expectedAddress) {
+        // The key was misfiled under another token — so was its birthday. Reattach
+        // both, or the re-registration that follows starts the scan at genesis.
+        // (Never later than what the active token already knows.)
+        const donor = birthdayOfToken(token);
+        const own = walletBirthday();
+        if (donor > 0) rememberBirthday(own > 0 ? Math.min(own, donor) : donor, expectedAddress);
+        return seed;
+      }
     } catch {
       /* not a usable seed — keep looking */
     }

@@ -39,6 +39,31 @@ const PER_WALLET_PREFIXES = [
  */
 const NEVER_TOUCH = ["app_lock_v2"];
 
+/** The removed wallet's address, from its cached status or the registry (`wallets_v1`). */
+function addressOf(token: string): string {
+  try {
+    const raw = localStorage.getItem(`status_cache_${token}`);
+    const cached = raw ? (JSON.parse(raw) as { address?: string | null }).address : null;
+    if (cached) return cached;
+    return registry().find((w) => w.token === token)?.address ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function registeredElsewhere(token: string, address: string): boolean {
+  return registry().some((w) => w.token !== token && w.address === address);
+}
+
+function registry(): { token: string; address?: string }[] {
+  try {
+    const list = JSON.parse(localStorage.getItem("wallets_v1") || "[]") as { token: string; address?: string }[];
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Erase every trace of the wallet identified by `token` from this device's
  * storage. Deliberately does NOT touch preferences that are about the app rather
@@ -50,7 +75,13 @@ const NEVER_TOUCH = ["app_lock_v2"];
  */
 export function wipeWalletState(token: string | null): void {
   const t = token || localStorage.getItem("wallet_token") || "default";
+  // The birthday is also kept per ADDRESS (`birthday_addr_<address>`, see
+  // rememberBirthday in lib/deviceseed). Find the address before the status cache
+  // that names it is gone, and leave the copy alone when another registered wallet
+  // on this device still holds the same address.
+  const address = addressOf(t);
   for (const p of PER_WALLET_PREFIXES) localStorage.removeItem(p + t);
+  if (address && !registeredElsewhere(t, address)) localStorage.removeItem(`birthday_addr_${address}`);
   void NEVER_TOUCH; // documentation of intent; see the comment above
 
   // QR images are cached per ADDRESS, and the address of a wallet being removed

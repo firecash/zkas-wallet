@@ -1112,6 +1112,11 @@ struct WalletConfig {
     node_addr: String,
     node_binary: Option<String>,
     node_running: bool,
+    /// The scan birthday walletd keeps for `token` (see `wallet_birthday_of`), so the
+    /// UI can recover it when its own copy is missing — a wallet re-registered with
+    /// birthday 0 on another service is scanned from genesis. `None` when there is no
+    /// wallet file yet.
+    birthday: Option<u64>,
 }
 
 /// Response from the narrow desktop-only wallet API bridge.
@@ -1165,7 +1170,18 @@ fn config_of(e: &mut Engine) -> WalletConfig {
         node_addr: e.settings.node_addr.clone(),
         node_binary: e.settings.node_binary.clone(),
         node_running: e.services.zkas_node.running(),
+        birthday: wallet_birthday_of(&e.wallet_dir(), &e.token),
     }
+}
+
+/// The birthday walletd recorded for ONE wallet: the plaintext `birthday` field of
+/// `<wallet_dir>/<token>.json`, kept even when the seed is encrypted (the same file
+/// `min_wallet_birthday` folds over). `None` when the file is missing or unreadable.
+fn wallet_birthday_of(wallet_dir: &str, token: &str) -> Option<u64> {
+    let path = std::path::Path::new(wallet_dir).join(format!("{token}.json"));
+    let raw = std::fs::read_to_string(path).ok()?;
+    let v = serde_json::from_str::<serde_json::Value>(&raw).ok()?;
+    v.get("birthday").and_then(|b| b.as_u64())
 }
 
 #[tauri::command]

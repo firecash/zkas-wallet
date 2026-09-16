@@ -14,6 +14,8 @@ export interface DesktopConfig {
   node_addr: string;
   node_binary: string | null;
   node_running: boolean;
+  /** The embedded daemon's recorded scan birthday for `token`; absent on older shells. */
+  birthday?: number | null;
 }
 
 /** True when running inside the Tauri desktop shell. */
@@ -67,6 +69,26 @@ function applyDaemonBase(cfg: DesktopConfig): void {
   localStorage.setItem("walletd_base", remote || cfg.base);
   if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
   else localStorage.removeItem("walletd_bearer");
+  adoptShellBirthday(cfg);
+}
+
+/// The embedded daemon's wallet file is the one durable copy of the birthday a
+/// desktop wallet has when the app's own record is missing (a wallet restored from
+/// a backup through the shell, or created before birthdays were tracked). Without
+/// it, switching to the public service or Tor re-registered the wallet there with
+/// birthday 0 — a genesis scan of a wallet the desktop had fully synced. Written
+/// under the SHELL's token (the first wallet, not necessarily the active one),
+/// only when nothing is recorded yet, and never as 0. Kept out of lib/deviceseed
+/// on purpose: api.ts imports this module, and deviceseed imports api.
+function adoptShellBirthday(cfg: DesktopConfig): void {
+  const birthday = Number(cfg.birthday ?? 0);
+  if (!(Number.isFinite(birthday) && birthday > 0) || !cfg.token) return;
+  try {
+    const key = `birthday_${cfg.token}`;
+    if (!localStorage.getItem(key)) localStorage.setItem(key, String(Math.floor(birthday)));
+  } catch {
+    /* best effort */
+  }
 }
 
 export async function initDesktop(): Promise<DesktopConfig | null> {

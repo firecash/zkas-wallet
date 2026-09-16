@@ -29,7 +29,7 @@ import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline
 import { byNewest, receiptIsOnChain, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
-import { isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, networkOfAddress, secretOwnsAddress, phraseAccountFor } from "./lib/deviceseed";
+import { isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
@@ -544,6 +544,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // Keep one repair operation in flight; otherwise several polls can all call
   // `/watch` and start duplicate reloads for the same wallet.
   const repairInFlight = useRef(false);
+  // The address whose birthday copies were reconciled this session (see refresh).
+  const birthdayBackfilledFor = useRef("");
   // Consecutive FAILED status calls. One network blip must not flip the app to
   // the "can't reach the wallet service" screen — that unmounts the whole wallet
   // (a half-filled Send form included) and oscillates on a flaky connection.
@@ -730,12 +732,15 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         repairInFlight.current = true;
         void (async () => {
           try {
+            const addr = loadStatusCache()?.address;
             let seed = getDeviceSeed();
-            if (!seed) {
-              const addr = loadStatusCache()?.address;
-              if (addr) seed = await findOrphanedSeed(addr);
-            }
-            if (seed) await api.watch(await fvkHex(seed), walletBirthday());
+            if (!seed && addr) seed = await findOrphanedSeed(addr);
+            // knownBirthday, not the token's copy alone: this path fires on every
+            // switch to a service that has not seen this token (desktop → public
+            // service/Tor, phone → on-phone engine), and the token copy is exactly
+            // what a paired/restored/orphaned wallet lacks. Sending 0 here is what
+            // re-registered fully synced wallets at genesis.
+            if (seed) await api.watch(await fvkHex(seed), knownBirthday(addr));
             else {
               // No key here and none orphaned under another token. Retrying cannot
               // change that — localStorage does not refill itself — so two more
@@ -760,6 +765,16 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         setWalletLost(true);
       }
       saveStatusCache(s);
+      // Once per wallet per session: make the birthday travel with the wallet.
+      // Wallets from before the per-address copy existed have it only under their
+      // token; paired/restored ones may have it only under another token, under
+      // the address, or in the daemon's own status. Whatever is known, write it to
+      // both places, so the next re-registration anywhere starts at the real birth.
+      if (s.has_wallet && s.address && birthdayBackfilledFor.current !== s.address) {
+        birthdayBackfilledFor.current = s.address;
+        const known = knownBirthday(s.address);
+        if (known > 0 && (walletBirthday() !== known || addressBirthday(s.address) !== known)) rememberBirthday(known, s.address);
+      }
       failedPolls.current = 0;
       setReachError(null);
       setReachable(true);
@@ -1371,27 +1386,12 @@ export function setDeviceSeed(seed: string) {
   localStorage.setItem(deviceSeedKey(), seed);
 }
 
-/// The wallet's scan birthday (DAA height) remembered per token. Backup files
-/// must carry it — a backup written with birthday 0 makes every restore rescan
-/// from genesis (minutes to an hour) even for a wallet born yesterday. Written
-/// at watch/restore time, swept with the rest of the wallet's state.
-function birthdayKey(): string {
-  return `birthday_${localStorage.getItem("wallet_token") || "default"}`;
-}
-function rememberBirthday(daa: number): void {
-  if (!(daa > 0)) return;
-  try {
-    localStorage.setItem(birthdayKey(), String(Math.floor(daa)));
-  } catch {
-    /* best-effort — a missing birthday just means a longer rescan on restore */
-  }
-}
-function walletBirthday(): number {
-  const v = Number(localStorage.getItem(birthdayKey()) || "0");
-  return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
-}
-
-// findOrphanedSeed lives in ./lib/deviceseed (one account-aware implementation, no drift).
+// The wallet's scan birthday (DAA height) — rememberBirthday / walletBirthday /
+// knownBirthday — lives in ./lib/deviceseed (one implementation, no drift). It is
+// kept per token AND per address: a copy that exists only under the token is
+// missing for every wallet that arrived here by pairing, shell restore or a stale
+// token, and re-registering such a wallet with 0 scans it from genesis.
+// findOrphanedSeed lives there too (one account-aware implementation, no drift).
 
 /// Thrown when this device has no key for the wallet and the daemon has none to
 /// give (a watch-only wallet opened on a new device) — the caller then asks the
@@ -1564,6 +1564,12 @@ function ConnectionButton() {
   // the next boot doesn't relaunch it.
   const leaveEmbedded = async () => { if (embeddedChosen()) { setEmbeddedChosen(false); await stopEmbedded(); } };
 
+  // None of the switches below registers the wallet itself. The token is kept, and a
+  // daemon that already holds it answers `has_wallet: true` and resumes from its
+  // checkpoint; only a daemon that has never seen the token makes the status poll
+  // re-register the viewing key (after MISSING_TOLERANCE polls), from
+  // `knownBirthday` — never from a birthday-0 default. Switching back and forth must
+  // therefore never lower a daemon's recorded birthday or start a rescan.
   const connectHosted = async () => {
     await leaveEmbedded();
     setError("");
@@ -2022,19 +2028,27 @@ function formatElapsed(secs: number): string {
 /// costs seconds, starting too late costs notes.
 function RecoverHistoryDialog({
   daaScore,
+  known = 0,
   onConfirm,
   onCancel,
 }: {
   daaScore: number;
+  /// The wallet's birthday as this device knows it (knownBirthday). Pre-fills the
+  /// height: the old default, "Not sure", sent no birthday, and the daemon then
+  /// wrote 0 into the wallet file for good — the next rebuild of a wallet born
+  /// last month replayed the chain from genesis. Genesis stays an explicit choice.
+  known?: number;
   onConfirm: (birthday?: number) => void;
   onCancel: () => void;
 }) {
-  const [when, setWhen] = useState<"unknown" | "date">("unknown");
+  const [when, setWhen] = useState<"unknown" | "date">(known > 0 ? "date" : "unknown");
   const [createdDate, setCreatedDate] = useState("");
-  const [height, setHeight] = useState("");
+  const [height, setHeight] = useState(known > 0 ? String(known) : "");
 
   const birthday = (): number | undefined => {
-    if (height.trim()) return Math.max(0, Math.floor(Number(height.trim()))) || undefined;
+    // Only while "I know roughly when" is selected: the height is pre-filled from
+    // `known`, so "Not sure" must not silently send it as the start of the scan.
+    if (when === "date" && height.trim()) return Math.max(0, Math.floor(Number(height.trim()))) || undefined;
     if (when === "date" && createdDate && daaScore) {
       const ageSec = Math.floor((Date.now() - new Date(createdDate + "T00:00:00").getTime()) / 1000);
       if (ageSec > 0) return Math.max(0, Math.floor(daaScore - ageSec - 2 * 86400));
@@ -2065,8 +2079,8 @@ function RecoverHistoryDialog({
           <>
             <label>Wallet created around</label>
             <input type="date" className="control-input" value={createdDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setCreatedDate(event.target.value)} />
-            <details style={{ marginTop: 8 }}>
-              <summary className="muted small">Know the exact block height?</summary>
+            <details style={{ marginTop: 8 }} open={known > 0 || undefined}>
+              <summary className="muted small">{known > 0 ? "Block height this wallet started at" : "Know the exact block height?"}</summary>
               <input className="control-input mono" value={height} onChange={(event) => setHeight(event.target.value.replace(/[^0-9]/g, ""))} placeholder="DAA height" inputMode="numeric" />
             </details>
           </>
@@ -2836,8 +2850,8 @@ async function recreatePhraseAccounts(phrase: string, highest: number, birthday:
         unregisterWallet(token);
         continue;
       }
-      await api.watch(fvk, birthday);
-      rememberBirthday(birthday);
+      const { address } = await api.watch(fvk, birthday);
+      rememberBirthday(birthday, address);
     } catch {
       /* best-effort: a missing account can still be added by hand, in order */
     }
@@ -2886,8 +2900,8 @@ async function addAccountWallet(): Promise<void> {
     // has no wallet under this token, `has_wallet` comes back false, and the app
     // greets the user with onboarding asking them to import a phrase — for an
     // account it just created. Register first, then reload into a ready wallet.
-    await api.watch(fvk, birthday);
-    rememberBirthday(birthday);
+    const { address } = await api.watch(fvk, birthday);
+    rememberBirthday(birthday, address);
   } catch {
     // Roll the half-made account back rather than stranding the user on an
     // onboarding screen for a wallet they did not ask to create.
@@ -3119,6 +3133,23 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
   const [viewKey, setViewKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // The birthday to re-register with. This screen is exactly the paired/second-
+  // device case, where the token's own copy is usually missing — so ask every
+  // source on the device (knownBirthday), and only when none knows offer the same
+  // "created around" question the importer asks instead of silently scanning
+  // from genesis.
+  const known = knownBirthday(cached?.address);
+  const [createdDate, setCreatedDate] = useState("");
+  const [height, setHeight] = useState("");
+  const birthdayToUse = (): number => {
+    if (known > 0) return known;
+    if (height.trim()) return Math.max(0, Math.floor(Number(height.trim()))) || 0;
+    if (createdDate && cached?.daa_score) {
+      const ageSec = Math.floor((Date.now() - new Date(createdDate + "T00:00:00").getTime()) / 1000);
+      if (ageSec > 0) return Math.max(0, Math.floor(cached.daa_score - ageSec - 2 * 86400));
+    }
+    return 0;
+  };
   const recover = async () => {
     setErr("");
     const s = seed.trim();
@@ -3145,7 +3176,9 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
         setErr("This device could not store the wallet key — free up space and try again.");
         return;
       }
-      await api.watch(await fvkHex(keyHex), walletBirthday());
+      const birthday = birthdayToUse();
+      const { address } = await api.watch(await fvkHex(keyHex), birthday);
+      rememberBirthday(birthday, address);
       const restoredToken = activeToken();
       if (restoredToken) {
         if (resolved) {
@@ -3245,6 +3278,16 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
         autoCorrect="off"
         spellCheck={false}
       />
+      {!known && (
+        <details style={{ marginTop: 8 }}>
+          <summary className="muted small">Know roughly when this wallet was created? (much faster)</summary>
+          <label>Wallet created around</label>
+          <input type="date" className="control-input" value={createdDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setCreatedDate(e.target.value)} />
+          <label>Or the exact block height</label>
+          <input className="control-input mono" value={height} onChange={(e) => setHeight(e.target.value.replace(/[^0-9]/g, ""))} placeholder="DAA height" inputMode="numeric" />
+          <p className="subtle">Without this the whole chain is scanned. That finds everything, and takes the longest.</p>
+        </details>
+      )}
       {err && <div className="msg err">{err}</div>}
       <button className="btn" disabled={busy || !seed.trim()} onClick={recover}>
         {busy ? "Reconnecting…" : "Reconnect wallet"}
@@ -3384,8 +3427,8 @@ function Onboard({
       if (!(await persistDeviceSeed(secret))) {
         throw new Error("This device could not store the wallet key — free up space and try again.");
       }
-      await api.watch(await fvkHex(secret), birthday);
-      rememberBirthday(birthday);
+      const { address } = await api.watch(await fvkHex(secret), birthday);
+      rememberBirthday(birthday, address);
       // The backup screen shows the PHRASE — that is what restores everything.
       onCreated(w.mnemonic, w.address);
     } catch (e) {
@@ -3423,8 +3466,8 @@ function Onboard({
       if (!(await persistDeviceSeed(seed))) {
         throw new Error("This device could not store the wallet key — free up space and try again.");
       }
-      await api.watch(await fvkHex(seed), b);
-      rememberBirthday(b);
+      const { address } = await api.watch(await fvkHex(seed), b);
+      rememberBirthday(b, address);
       const importedToken = activeToken();
       if (importedToken) {
         // The token now holds an imported secret, so any inherited "Account N"
@@ -3456,8 +3499,8 @@ function Onboard({
       if (!(await persistDeviceSeed(seedHex))) {
         throw new Error("This device could not store the wallet key — free up space and try again.");
       }
-      await api.watch(await fvkHex(seedHex), birthday);
-      rememberBirthday(birthday);
+      const { address } = await api.watch(await fvkHex(seedHex), birthday);
+      rememberBirthday(birthday, address);
       const tk = activeToken();
       if (tk) {
         clearAccountOf(tk);
@@ -4658,6 +4701,7 @@ function RescanButton({ label, hint, daaScore }: { label: string; hint: string; 
       {ask !== null && (
         <RecoverHistoryDialog
           daaScore={daaScore ?? 0}
+          known={knownBirthday()}
           onConfirm={(birthday) => run(ask, birthday)}
           onCancel={() => setAsk(null)}
         />
@@ -5952,7 +5996,7 @@ function History({
     } catch {
       return;
     }
-    void setHistory(true, walletBirthday() || undefined);
+    void setHistory(true, knownBirthday() || undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chain]);
 
@@ -6298,6 +6342,7 @@ function History({
       {askRecover && (
         <RecoverHistoryDialog
           daaScore={loadStatusCache()?.daa_score ?? 0}
+          known={knownBirthday()}
           onCancel={() => setAskRecover(false)}
           onConfirm={(birthday) => {
             setAskRecover(false);
@@ -7218,13 +7263,17 @@ function DeviceSeedBackup() {
   // account 0's first funds, and a restore scanning from there would silently
   // miss those notes — and (b) how many accounts existed, so the restore can
   // bring them all back instead of only account 0.
+  // Each account's birthday from BOTH its copies (token and address): a copy that
+  // is missing under the token would otherwise write a permanent 0 into the file.
   const phraseTokens = isPhraseBackup ? listAllWallets().filter((w) => accountOf(w.token) !== null) : [];
   const backupBirthday = isPhraseBackup
     ? phraseTokens.reduce((min, w) => {
-        const b = birthdayOfToken(w.token);
-        return b > 0 && (min === 0 || b < min) ? b : min;
+        for (const b of [birthdayOfToken(w.token), w.address ? addressBirthday(w.address) : 0]) {
+          if (b > 0 && (min === 0 || b < min)) min = b;
+        }
+        return min;
       }, 0)
-    : walletBirthday();
+    : knownBirthday(loadStatusCache()?.address);
   const backupAccounts = isPhraseBackup ? phraseTokens.reduce((m, w) => Math.max(m, accountOf(w.token) ?? 0), 0) : 0;
   const backupNetwork = (() => {
     const a = loadStatusCache()?.address;
@@ -7402,8 +7451,8 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
       if (!(await persistDeviceSeed(keyHex))) {
         throw new Error("This device could not store the wallet key — free up space and try again.");
       }
-      await api.watch(await fvkHex(keyHex), birthday);
-      rememberBirthday(birthday);
+      const { address } = await api.watch(await fvkHex(keyHex), birthday);
+      rememberBirthday(birthday, address);
       const tk = activeToken();
       if (tk) {
         if (resolved) await bindResolvedKey(tk, seedHex, resolved);

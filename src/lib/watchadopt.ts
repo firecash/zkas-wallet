@@ -26,7 +26,7 @@ export async function adoptViewKey(key: string, birthday = 0): Promise<string> {
   setWatchKey(key);
   // Keep the birthday the link carried: a later history recovery scans from here
   // instead of replaying the chain from genesis for a wallet born last week.
-  rememberBirthday(birthday);
+  rememberBirthday(birthday, address);
   ensureRegistered(token, address);
   return address;
 }

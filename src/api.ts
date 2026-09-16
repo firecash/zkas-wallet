@@ -349,6 +349,11 @@ export interface Status {
   // Watch-only wallet: the daemon holds the viewing key only. Surfaced as a badge
   // so a restored/read-only wallet never looks like it can spend. Older daemons omit it.
   watch_only?: boolean;
+  // The scan birthday (DAA height) the daemon keeps in this wallet's file. Kept in
+  // the status cache so that a device which lost its own copy can still re-register
+  // the wallet elsewhere from its real birthday instead of 0 — see `knownBirthday`
+  // in lib/deviceseed. Daemons that do not report it omit it.
+  birthday?: number;
   scanned_blocks: number;
   chain_len: number;
   balance_sompi: string;
