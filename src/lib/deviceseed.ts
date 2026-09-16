@@ -189,9 +189,48 @@ export async function findOrphanedSeed(expectedAddress: string): Promise<string>
 
 export const SEED_REQUIRED = "SEED_REQUIRED";
 
+/// Does `secret` (legacy hex, or a phrase at any account) derive `address`?
+/// Undecidable (signer not loaded, malformed secret) counts as "no": a secret that
+/// cannot be shown to own the wallet must not be presented as its key.
+const ownsCache = new Map<string, boolean>();
+export async function secretOwnsAddress(secret: string, address: string): Promise<boolean> {
+  // A phrase check derives up to ACCOUNT_SCAN_LIMIT accounts; the resolver runs on
+  // every send and status refresh, so remember the answer per (secret, address).
+  const k = `${address}\n${secret.trim()}`;
+  const hit = ownsCache.get(k);
+  if (hit !== undefined) return hit;
+  let owns = false;
+  try {
+    owns = (await keyForWallet(secret, address)) !== null;
+  } catch {
+    return false; // undecidable now (signer not ready): do not cache
+  }
+  ownsCache.set(k, owns);
+  return owns;
+}
+
+/// The stored secret under the active token did not derive the wallet on screen.
+/// Keep it — it may be another wallet's key, and `device_seed_` keeps it visible to
+/// the orphan scan — but move it out of the way so it is never shown as THIS
+/// wallet's key again.
+function shelveMismatchedSeed(token: string, secret: string): void {
+  try {
+    localStorage.setItem(`device_seed_stray_${token}_${Date.now()}`, secret);
+    localStorage.removeItem(`device_seed_${token}`);
+  } catch {
+    /* best effort */
+  }
+}
+
 export async function resolveDeviceSeed(expectedAddress?: string): Promise<string> {
   const stored = getDeviceSeed();
-  if (stored) return stored;
+  // A stored secret is only this wallet's key if it derives this wallet's address.
+  // Returning it unchecked is how a desktop revealed — and wrote into a backup file —
+  // a phrase for a wallet that phrase does not own.
+  if (stored && (!expectedAddress || (await secretOwnsAddress(stored, expectedAddress)))) return stored;
+  if (stored && expectedAddress) {
+    shelveMismatchedSeed(localStorage.getItem("wallet_token") || "default", stored);
+  }
   if (expectedAddress) {
     const orphan = await findOrphanedSeed(expectedAddress);
     if (orphan) {

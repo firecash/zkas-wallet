@@ -29,7 +29,7 @@ import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline
 import { byNewest, receiptIsOnChain, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
-import { isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, networkOfAddress } from "./lib/deviceseed";
+import { isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, networkOfAddress, secretOwnsAddress, phraseAccountFor } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
@@ -963,7 +963,13 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   useEffect(() => {
     const token = activeToken();
     const secret = getDeviceSeed();
-    if (token && secret) void adoptExistingPhrase(token, secret).catch(() => undefined);
+    const address = status?.address;
+    if (!token || !secret || !address) return;
+    void (async () => {
+      // Adopting a phrase that does not derive this wallet would label the wallet
+      // "account 0" of a phrase that cannot restore it.
+      if (await secretOwnsAddress(secret, address)) await adoptExistingPhrase(token, secret);
+    })().catch(() => undefined);
   }, [status?.address]);
   useEffect(() => {
     const open = () => {
@@ -1399,7 +1405,18 @@ export const SEED_REQUIRED = "SEED_REQUIRED";
 /// restored from the user's recovery phrase or backup.
 export async function resolveDeviceSeed(expectedAddress?: string): Promise<string> {
   const stored = getDeviceSeed();
-  if (stored) return stored;
+  // Only a secret that derives the wallet on screen is that wallet's key. An
+  // unchecked return here is what let a desktop reveal (and back up) a phrase for
+  // a wallet the phrase does not own; the mismatched secret is shelved, not lost.
+  if (stored && (!expectedAddress || (await secretOwnsAddress(stored, expectedAddress)))) return stored;
+  if (stored && expectedAddress) {
+    try {
+      localStorage.setItem(`device_seed_stray_${activeToken() ?? "default"}_${Date.now()}`, stored);
+      localStorage.removeItem(deviceSeedKey());
+    } catch {
+      /* best effort */
+    }
+  }
   if (expectedAddress) {
     const orphan = await findOrphanedSeed(expectedAddress);
     if (orphan) {
@@ -2895,7 +2912,11 @@ async function addAccountWallet(): Promise<void> {
 async function walletBackupSecret(expectedAddress?: string): Promise<string> {
   const account = accountOf(activeToken() ?? "");
   const master = masterMnemonic();
-  if (account !== null && master) return master;
+  // The master phrase is this wallet's backup only if some account of it derives
+  // this wallet's address; an account label alone is not proof (it can be stale).
+  if (account !== null && master && (!expectedAddress || (await phraseAccountFor(master, expectedAddress)) !== null)) {
+    return master;
+  }
   return resolveDeviceSeed(expectedAddress);
 }
 
