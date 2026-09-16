@@ -63,6 +63,11 @@ export interface NodeStatus {
   disk_bytes: number;
   error: string | null;
   last_exit: string | null;
+  /// DAA score the node's shielded history starts at, and whether it reaches genesis
+  /// verified. Absent/null on an older desktop backend or when the node did not answer.
+  /// `history_complete === false` on a synced node = still filling in history from peers.
+  history_from_daa?: number | null;
+  history_complete?: boolean | null;
 }
 
 export interface WalletdStatus {

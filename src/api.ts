@@ -34,6 +34,16 @@ function defaultBase(): string {
 export function getBase(): string {
   return localStorage.getItem("walletd_base") || defaultBase();
 }
+/** True when the wallet service is a single-wallet engine on THIS device — the
+ * desktop's embedded daemon, the Android in-process engine, or a self-hosted walletd on
+ * loopback — rather than the shared hosted service. The hosted service serves spend
+ * witnesses from a daemon-wide shared tree, so asking it to pre-build a per-wallet spend
+ * index would only burn its CPU; a local engine has no such tree and pays that build on
+ * the first payment unless it is asked to do it beforehand. */
+export function localEngine(): boolean {
+  if ("__TAURI_INTERNALS__" in globalThis) return !desktopRemoteBase();
+  return /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:|\/|$)/i.test(getBase());
+}
 /** True when running inside the native mobile (Capacitor) shell rather than a browser. */
 export function isNative(): boolean {
   const cap = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
@@ -306,6 +316,16 @@ export interface Status {
   // Synced, but still doing the one-time witness warm-up that makes sends fast.
   // Sends work during this (just slower). Older daemons omit it.
   warming?: boolean;
+  // While the daemon is building this wallet's spend index (the one-time O(chain)
+  // fold a first payment otherwise waits on): leaves folded so far, leaves in total,
+  // percent, and seconds remaining at the observed rate. Present ONLY while a build
+  // is actually running, so `warming_pct !== undefined` is "a build is in flight" —
+  // the signal the send flow waits on instead of failing at its transport ceiling.
+  // Older daemons omit all four.
+  warming_done_leaves?: number;
+  warming_total_leaves?: number;
+  warming_pct?: number;
+  warming_eta_secs?: number;
   // Whether the daemon would ACCEPT a spend right now — the same condition `/prepare`
   // enforces, which `synced` alone does not capture: a wallet borrowing the shared
   // chain tree is scanned up to the tip yet still has no valid mirror tree, and
@@ -323,6 +343,9 @@ export interface Status {
   // be seen here, so the balance is a lower bound. The UI must say so — silence
   // here is how "my coins vanished" happens. Older daemons omit it.
   missing_history?: boolean;
+  // With `missing_history`: the DAA score this wallet's view starts at, so the
+  // banner can name the floor. Older daemons (and a restarted one) omit it.
+  history_from_daa?: number;
   // Watch-only wallet: the daemon holds the viewing key only. Surfaced as a badge
   // so a restored/read-only wallet never looks like it can spend. Older daemons omit it.
   watch_only?: boolean;
@@ -343,6 +366,13 @@ export interface Status {
   pending_in_sompi?: string;
   pending_out_fc?: string;
   pending_out_sompi?: string;
+  // Change coming back from this wallet's OWN in-flight send: the part of the parked
+  // input note(s) that is neither the amount paid nor the fee. The daemon takes the
+  // whole input note out of `balance_*` at submit, so without this the headline read
+  // 0 for the 1-3 s until the change note was seen on-chain. Not spendable until the
+  // send is mined and settles. Older daemons omit it — absent means "none".
+  pending_change_fc?: string;
+  pending_change_sompi?: string;
   note_count: number;
   updated_unix: number;
   error: string | null;
@@ -363,6 +393,10 @@ export function loadStatusCache(): Status | null {
     // Volatile flags must not be revived stale: a cached "warming" would flash the
     // warm-up notice on every open, and a cached error is long resolved.
     s.warming = false;
+    delete s.warming_done_leaves;
+    delete s.warming_total_leaves;
+    delete s.warming_pct;
+    delete s.warming_eta_secs;
     s.error = null;
     return s.has_wallet && s.address ? s : null;
   } catch {
@@ -390,6 +424,7 @@ export function saveStatusCache(s: Status) {
       s.maturing_sompi,
       s.pending_in_sompi,
       s.pending_out_sompi,
+      s.pending_change_sompi,
       s.note_count,
       s.error,
       s.missing_history,
@@ -545,6 +580,11 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
 export const api = {
   status: () => req<Status>("GET", "/api/status"),
   balance: () => req<Balance>("GET", "/api/wallet/balance"),
+  // Ask the daemon to build this wallet's spend index NOW, in the background, rather
+  // than at the end of a caught-up sync pass — or, worst, on the first payment. The
+  // build's progress then shows in `status.warming_pct`. Idempotent and cheap: the
+  // daemon applies its own gates (not already built, memory, nothing proving).
+  warm: () => req<{ subtree_cache_ready: boolean; building: boolean; armed: boolean }>("POST", "/api/wallet/warm", {}, 15_000),
   // Wallet registration/load can take minutes on the hosted daemon (a cold wallet
   // loads its scan state from disk, then catches up to the tip) — hence 2-3 min
   // ceilings here vs the 10s default for lightweight calls.

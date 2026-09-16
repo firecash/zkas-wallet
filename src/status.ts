@@ -38,6 +38,12 @@ export interface StatusInput {
   etaSeconds: number | null;
   /// How long this wallet has been in the getting-ready state, if known.
   warmingSeconds?: number | null;
+  /// Real progress of the getting-ready step, when the daemon reports one: it is
+  /// building the wallet's spend index and publishes percent and seconds remaining
+  /// (`status.warming_pct` / `warming_eta_secs`). Null/absent on older daemons and
+  /// when the warm-up is something without a counter.
+  warmingPct?: number | null;
+  warmingEtaSeconds?: number | null;
   /// The daemon has the wallet on disk but has not opened it yet, so its balance and
   /// scan progress are UNKNOWN — not zero. Absent on daemons that predate the field.
   ///
@@ -276,15 +282,22 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     // any "about N minutes" would be invented — and a wallet that says two minutes and
     // takes six has lied. A number that is simply TRUE ("2m so far") still answers the
     // real question, which is "is this moving or is it stuck".
+    //
+    // ...unless the daemon IS counting: while it builds the spend index it reports a
+    // percentage and an ETA from the measured rate, and those are shown as-is.
     const waited = s.warmingSeconds != null && s.warmingSeconds >= 5 ? ` (${formatDuration(s.warmingSeconds)} so far)` : "";
+    const counted = typeof s.warmingPct === "number" ? s.warmingPct : null;
     return {
       phase: "almost-ready",
-      label: "Almost ready",
-      detail: `Your balance is up to date. The wallet is getting ready to pay${waited} — the first payment is the slow one, later ones take seconds.`,
-      pct: null,
-      pctFine: null,
+      label: counted != null ? "Preparing to pay" : "Almost ready",
+      detail:
+        counted != null
+          ? `Your balance is up to date. The wallet is locating your coins in the chain (${counted.toFixed(1)}%)${waited} — done once, never again; later payments take seconds.`
+          : `Your balance is up to date. The wallet is getting ready to pay${waited} — the first payment is the slow one, later ones take seconds.`,
+      pct: counted != null ? Math.max(0, Math.min(100, Math.floor(counted))) : null,
+      pctFine: counted != null ? `${counted.toFixed(1)}%` : null,
       progress: null,
-      eta: null,
+      eta: counted != null && s.warmingEtaSeconds != null && s.warmingEtaSeconds > 0 ? formatDuration(s.warmingEtaSeconds) : null,
       tone: "busy",
       balanceIsFinal: true,
       canSpend: walletCanSpend(s),

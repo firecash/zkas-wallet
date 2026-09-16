@@ -202,10 +202,18 @@ export function NodeRunner() {
   const syncLabel = useMemo(() => {
     if (!node) return "Checking…";
     if (!node.running) return "Stopped";
-    if (node.is_synced === true) return "Synced";
-    if (node.sync_progress != null) return `Syncing · ${node.sync_progress.toFixed(1)}%`;
-    return "Starting…";
+    // A node still filling in shielded history from peers is not done from the wallet's
+    // point of view: on a first sync the block count does not move for the whole backfill
+    // (bodies wait for it), so a bare percentage reads as a stuck sync.
+    const filling = node.history_complete === false;
+    const from = node.history_from_daa != null ? ` · from DAA ${node.history_from_daa.toLocaleString()}` : "";
+    if (node.is_synced === true) return filling ? `Filling shielded history${from}` : "Synced";
+    if (node.sync_progress != null) return `Syncing · ${node.sync_progress.toFixed(1)}%${filling ? " · filling shielded history" : ""}`;
+    return filling ? `Filling shielded history${from}` : "Starting…";
   }, [node]);
+  // `false` gates the attach; unknown (older backend / node did not answer) keeps
+  // today's behaviour of trusting `is_synced` alone.
+  const fillingHistory = node?.running === true && node.history_complete === false;
 
   const run = async (name: typeof busy, task: () => Promise<unknown>): Promise<boolean> => {
     setBusy(name);
@@ -324,7 +332,7 @@ export function NodeRunner() {
           <Metric label="RPC" value={walletd?.node_rpc ?? "—"} />
         </div>
         <div className="control-actions">
-          {walletd?.node_source !== "local" && config?.settings.node_preset !== "mining" && node?.is_synced === true && (
+          {walletd?.node_source !== "local" && config?.settings.node_preset !== "mining" && node?.is_synced === true && !fillingHistory && (
             <button className="btn" disabled={busy !== null} onClick={() => run("attach", async () => { await setNodeSource("local"); location.reload(); })}>{busy === "attach" ? "Connecting…" : "Use this node for wallet"}</button>
           )}
           {walletd?.node_source === "local" && (
@@ -332,7 +340,12 @@ export function NodeRunner() {
           )}
           <button className="btn ghost" onClick={() => setLogService("wallet-engine")}>View wallet logs</button>
         </div>
-        {node?.running && node.is_synced !== true && <p className="inline-warning">Local node is syncing. Your wallet stays on {walletd?.node_source === "custom" ? "your existing node" : "the public node"} with its current balance until the local node is complete.</p>}
+        {node?.running && node.is_synced !== true && !fillingHistory && <p className="inline-warning">Local node is syncing. Your wallet stays on {walletd?.node_source === "custom" ? "your existing node" : "the public node"} with its current balance until the local node is complete.</p>}
+        {fillingHistory && (
+          <p className="inline-warning">
+            {node?.is_synced === true ? "Synced, but still" : "Local node is syncing and still"} filling in shielded history from peers{node?.history_from_daa != null ? ` (currently from DAA ${node.history_from_daa.toLocaleString()})` : ""}. Block sync waits for this, so the block count can sit still for a while — it is working, not stuck. The wallet can attach once the node log says &quot;shielded history: VERIFIED&quot; (or the floor drops below your wallet&apos;s birthday). Your wallet stays on {walletd?.node_source === "custom" ? "your existing node" : "the public node"} until then.
+          </p>
+        )}
         {walletd?.running && walletd.node_connected === false && <p className="inline-warning">The wallet is open, but its selected node is not answering yet. It retries automatically and keeps the last confirmed wallet state visible.</p>}
         {walletd?.error && <p className="inline-warning">Wallet engine: {walletd.error}</p>}
         {config?.settings.node_preset === "mining" && <p className="inline-warning">Mining mode is never offered to the wallet because it does not retain complete historical notes.</p>}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo} from
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
-import { api, chainTx, findReachableDaemon, getBase, getToken, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, isOnionAddress, DEFAULT_WALLETD_PORT, isNative, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
+import { api, chainTx, findReachableDaemon, getBase, getToken, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, isOnionAddress, DEFAULT_WALLETD_PORT, isNative, localEngine, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { parsePairingUri } from "./pairing";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
@@ -273,17 +273,23 @@ function sameStatus(a: Status, b: Status): boolean {
     a.address === b.address &&
     a.synced === b.synced &&
     a.warming === b.warming &&
+    // Spend-index build progress: the one busy state that now HAS a number, so
+    // it must repaint as the number moves.
+    a.warming_pct === b.warming_pct &&
+    a.warming_eta_secs === b.warming_eta_secs &&
     a.node_connected === b.node_connected &&
     a.balance_fc === b.balance_fc &&
     a.spendable_fc === b.spendable_fc &&
     a.maturing_fc === b.maturing_fc &&
     a.pending_in_fc === b.pending_in_fc &&
     a.pending_out_fc === b.pending_out_fc &&
+    a.pending_change_fc === b.pending_change_fc &&
     a.note_count === b.note_count &&
     a.error === b.error &&
     // Warnings/badges: a lower-bound balance (pruned node) or watch-only state
     // must appear and clear reactively, not on the next unrelated change.
     a.missing_history === b.missing_history &&
+    a.history_from_daa === b.history_from_daa &&
     a.watch_only === b.watch_only &&
     // Scan progress only matters while it is being shown as progress.
     (a.synced ? true : a.scanned_blocks === b.scanned_blocks && a.chain_len === b.chain_len)
@@ -517,6 +523,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   const [receipts, setReceipts] = useState<Receipt[]>(() => loadReceipts());
   /// Set once the on-device signer has been asked to initialise; see the poll below.
   const signerWarmed = useRef(false);
+  // Which wallet token `/api/wallet/warm` has been asked for this session (see refresh).
+  const warmArmedFor = useRef<string | null>(null);
   // Consecutive polls answering "no wallet"; see the guard in `refresh`.
   const missingPolls = useRef(0);
   // Auto-repair state: when the daemon has genuinely forgotten this token's
@@ -779,6 +787,20 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       if (s.has_wallet && !notifAsked.current) {
         notifAsked.current = true;
         void ensureNotificationPermission();
+      }
+      // Have a LOCAL engine build the wallet's spend index now, in the background,
+      // rather than on the first payment. The engine only ever armed that build at the
+      // end of a caught-up sync pass and behind a memory floor sized for the hosted
+      // service, so on a laptop the first Send paid the whole one-time fold — an hour
+      // on one core, with the UI giving up at five minutes. The endpoint is idempotent
+      // and applies the engine's own gates; its progress arrives as `warming_pct`.
+      // Once per wallet per session; only once the scan is caught up, since a build
+      // under a moving stream cannot install. Not for the hosted service, whose
+      // shared tree already serves witnesses (see `localEngine`). Older engines 404;
+      // ignored.
+      if (s.has_wallet && s.synced && localEngine() && warmArmedFor.current !== getToken()) {
+        warmArmedFor.current = getToken();
+        void api.warm().catch(() => {});
       }
       // Announce money ARRIVING. The wallet knew — the number changed — but it never
       // said so, and a payment you have to notice yourself is a payment you distrust.
@@ -1873,6 +1895,14 @@ function pendingInFc(status: Status | null): number {
 function pendingOutFc(status: Status | null): number {
   return status?.pending_out_fc != null ? parseFloat(status.pending_out_fc) : 0;
 }
+// Change coming back from this wallet's own in-flight send. The daemon parks the
+// WHOLE input note at submit (so it can never be double-spent), which took the
+// change out of `balance_fc` too — a one-note wallet read 0 for the seconds until
+// the change note was seen on-chain. Counts toward the headline and "maturing",
+// never toward spendable. Absent on older daemons.
+function pendingChangeFc(status: Status | null): number {
+  return status?.pending_change_fc != null ? parseFloat(status.pending_change_fc) : 0;
+}
 
 /// Hold a transient flag ON for at least `minMs` once it shows.
 ///
@@ -2251,7 +2281,7 @@ function ConsolidateDialog({
             <div className="row">
               <button className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
               <button className="btn" disabled={busy} onClick={() => void run()}>
-                {busy ? stage === "signing" ? "Signing…" : stage === "broadcasting" ? "Broadcasting…" : "Building proof…" : grow ? "Add notes" : "Combine"}
+                {busy ? stage === "warming" ? "Preparing…" : stage === "signing" ? "Signing…" : stage === "broadcasting" ? "Broadcasting…" : "Building proof…" : grow ? "Add notes" : "Combine"}
               </button>
             </div>
           </>
@@ -2403,6 +2433,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // unsettled window), so a received payment lands here seconds after it is mined.
   const pendingIn = pendingInFc(status);
   const pendingOut = pendingOutFc(status);
+  const pendingChange = pendingChangeFc(status);
   // Outflow is known two ways: this device's own record of a just-broadcast send,
   // and the daemon seeing our nullifier on-chain. Take the larger rather than the
   // sum — they describe the same spend, and adding them would debit it twice.
@@ -2413,6 +2444,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // 10s: long enough that a notice reads as a state, not a blink.
   const inNotice = useHeldAmount(pendingIn, 10_000);
   const outNotice = useHeldAmount(outflow, 10_000);
+  const changeNotice = useHeldAmount(pendingChange, 10_000);
   // Whether the outgoing send has been seen on-chain. Latched for as long as the
   // notice is up, so the wording cannot oscillate under the user.
   const outConfirmed = useLatch(
@@ -2485,12 +2517,18 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
     haveConfirmedBalance: !!snap,
     etaSeconds: eta,
     warmingSeconds,
+    warmingPct: status.warming_pct ?? null,
+    warmingEtaSeconds: status.warming_eta_secs ?? null,
   });
   const pendingCount = txs.filter((t) => t.pending).length;
-  const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") + pendingIn - outflow);
+  // The change owed back by our own in-flight send is part of the headline: the
+  // daemon already debited the whole input note, so leaving it out reads as the
+  // money being gone for the seconds until the send is mined — the "balance goes
+  // to 0 after a small send" report. Never spendable until it settles.
+  const shownBal = Math.max(0, parseFloat(status.balance_fc || "0") + pendingIn + pendingChange - outflow);
   // Spendable now vs still-maturing (shielded anchor depth ~10 min). Incoming 0-conf
-  // value is NOT spendable yet, so it only counts toward maturing.
-  const maturing = maturingFc(status) + pendingIn;
+  // value and pending change are NOT spendable yet, so they only count toward maturing.
+  const maturing = maturingFc(status) + pendingIn + pendingChange;
   const spendable = spendableFc(status) - outflow;
   // MUST be called before the `restoring` early return: a hook below it renders
   // only on some renders, and the moment "restoring" flips off React throws
@@ -2550,8 +2588,9 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         </div>
         {status.missing_history && (
           <div className="msg warn">
-            This node has pruned old history, so the rebuilt balance may come out a <b>lower bound</b>. Your coins are
-            on-chain — rescan from a node that serves full history to see everything.
+            This node has pruned old history{status.history_from_daa != null ? ` (available from block ${status.history_from_daa.toLocaleString()})` : ""}, so the rebuilt balance may come out a <b>lower bound</b>. Your coins are
+            on-chain — rescan from a node that serves full history to see everything. If this is your own node and it is
+            still filling in shielded history, wait for its log to say &quot;shielded history: VERIFIED&quot; and rescan.
           </div>
         )}
       </div>
@@ -2621,11 +2660,21 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
             paid someone else; reported live as a "+100 ZKAS arriving" ten minutes after
             their own send. While a payment of ours is still settling, the same number is
             true but means something else entirely, so it is named for what it is. */}
-        {inNotice.shown
+        {/* `pending_change` is the daemon saying it outright: this is our own send's
+            change, known from the moment of submit rather than inferred from the
+            chain. When a daemon restarted mid-send the figure still arrives the old
+            way, via `pending_in`, so that branch stays. */}
+        {changeNotice.shown
           ? ownActivityExplainsRise(txs)
-            ? `${trimFc(inNotice.amount.toFixed(8))} ZKAS coming back as change from your payment`
-            : `+${trimFc(inNotice.amount.toFixed(8))} ZKAS arriving — confirmed, settling into your wallet`
-          : ""}
+            ? `${trimFc(changeNotice.amount.toFixed(8))} ZKAS coming back as change from your payment`
+            : // No send recorded on this device: the daemon merged this wallet's own notes
+              // in the background (or another device paid from the same wallet).
+              `${trimFc(changeNotice.amount.toFixed(8))} ZKAS coming back from this wallet's own transaction`
+          : inNotice.shown
+            ? ownActivityExplainsRise(txs)
+              ? `${trimFc(inNotice.amount.toFixed(8))} ZKAS coming back as change from your payment`
+              : `+${trimFc(inNotice.amount.toFixed(8))} ZKAS arriving — confirmed, settling into your wallet`
+            : ""}
       </div>
       <div className="sub notice-slot" style={{ color: "var(--ember)" }}>
         {outNotice.shown
@@ -2684,8 +2733,10 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
       {status.missing_history && (
         <div className="msg warn">
           This balance is a <b>lower bound</b>: the wallet's view was rebuilt through a node that has pruned old
-          history, so notes created long ago may be missing from it. Your coins are safe on-chain — rescan only from
-          a node that serves full history (rebuilding through this one would come out just as blind).
+          history{status.history_from_daa != null ? ` (available from block ${status.history_from_daa.toLocaleString()})` : ""}, so notes created long ago may be missing from it. Your coins are safe on-chain — rescan only from
+          a node that serves full history (rebuilding through this one would come out just as blind). If this is your
+          own node and it is still filling in shielded history, wait for its log to say &quot;shielded history: VERIFIED&quot;
+          and rescan then.
         </div>
       )}
       {/* Only real faults get the red box.
@@ -3641,7 +3692,7 @@ function Onboard({
 /// that make a ZKas payment worth making, shown while the proof builds so the
 /// wait reads as "sealing your payment", not "hanging". The stage drives which
 /// beat is emphasised; the scene loops so a long multi-note send stays alive.
-function SendScene({ stage, estimateMs }: { stage?: SendStage; estimateMs?: number | null }) {
+function SendScene({ stage, estimateMs, progress }: { stage?: SendStage; estimateMs?: number | null; progress?: SendProgress | null }) {
   const s = stage ?? "proving";
   // Elapsed seconds on the long step. "Proving" is named for the Halo 2 proof, but
   // the proof is the FAST part (~2s): most of the wait is the daemon locating each
@@ -3664,16 +3715,30 @@ function SendScene({ stage, estimateMs }: { stage?: SendStage; estimateMs?: numb
   // unpredictable, and inventing a figure teaches people to disbelieve the real ones
   // later. `remainingLabel` also stops predicting once it overruns, rather than
   // sitting at zero, which is the other way a countdown loses trust.
-  const remaining = remainingLabel(estimateMs ?? null, secs * 1000);
+  // The estimate is a proving figure; while the engine builds its spend index the
+  // daemon's own ETA (below) is the honest number, so no countdown here.
+  const remaining = s === "warming" ? null : remainingLabel(estimateMs ?? null, secs * 1000);
   const slow = s === "proving" && secs >= 15;
+  // "warming": the engine is building this wallet's spend index — the one-time step
+  // behind "the first payment is slow" — and, unlike every other wait here, it
+  // reports a real percentage and ETA. Show them: a number that moves is the
+  // difference between "working" and "hung", and this step can run for a long time
+  // on a laptop. The daemon keeps building even if this screen is closed.
+  const warmPct = s === "warming" && typeof progress?.warmingPct === "number" ? `${progress.warmingPct.toFixed(1)}%` : null;
+  const warmEta =
+    s === "warming" && typeof progress?.warmingEtaSecs === "number" && progress.warmingEtaSecs > 0
+      ? `about ${Math.max(1, Math.round(progress.warmingEtaSecs / 60))} min left`
+      : null;
   const caption =
-    s === "signing"
-      ? "Signing on your device — your key never leaves it"
-      : s === "broadcasting"
-        ? "Sealed and shielded — broadcasting to the network"
-        : slow
-          ? "Locating your coins in the chain — this can take a minute or two"
-          : "Building your zero-knowledge proof — nobody will see amount or recipient";
+    s === "warming"
+      ? `Preparing: locating your coins in the chain${warmPct ? ` · ${warmPct}` : ""}${warmEta ? ` · ${warmEta}` : ""} — done once, never again`
+      : s === "signing"
+        ? "Signing on your device — your key never leaves it"
+        : s === "broadcasting"
+          ? "Sealed and shielded — broadcasting to the network"
+          : slow
+            ? "Locating your coins in the chain — this can take a minute or two"
+            : "Building your zero-knowledge proof — nobody will see amount or recipient";
   return (
     <div className={"sendscene s-" + s} role="status" aria-live="polite">
       <div className="sendscene-stage" aria-hidden="true">
@@ -3710,7 +3775,7 @@ function SendScene({ stage, estimateMs }: { stage?: SendStage; estimateMs?: numb
         </div>
       </div>
       <div className="sendscene-steps" aria-hidden="true">
-        <span className={"ss-step" + (s === "proving" ? " on" : " done")}>Prove</span>
+        <span className={"ss-step" + (s === "proving" || s === "warming" ? " on" : " done")}>Prove</span>
         <span className={"ss-step" + (s === "signing" ? " on" : s === "broadcasting" ? " done" : "")}>Sign</span>
         <span className={"ss-step" + (s === "broadcasting" ? " on" : "")}>Send</span>
       </div>
@@ -3724,7 +3789,7 @@ function SendScene({ stage, estimateMs }: { stage?: SendStage; estimateMs?: numb
           {remaining && <span className="sendscene-remaining"> · {remaining}</span>}
         </div>
       )}
-      {slow && (
+      {(slow || s === "warming") && (
         <div className="sendscene-cap sendscene-reassure" aria-hidden="true">
           Nothing has been sent yet and nothing can be lost — keep this open.
         </div>
@@ -5348,7 +5413,7 @@ function Send({
           </>
         )}
         {busy ? (
-          <SendScene stage={stage ?? undefined} estimateMs={sendEstimateMs} />
+          <SendScene stage={stage ?? undefined} estimateMs={sendEstimateMs} progress={sendProgress} />
         ) : status?.warming ? (
           <div className="msg warn small">
             <b>⚡ This first payment will take a few minutes</b> — the wallet has to locate your coins in the chain
@@ -5379,11 +5444,13 @@ function Send({
             {busy ? (
               <>
                 <span className="spin" />{" "}
-                {stage === "signing"
-                  ? "Signing on device…"
-                  : stage === "broadcasting"
-                    ? "Broadcasting…"
-                    : "Building private proof…"}
+                {stage === "warming"
+                  ? `Preparing${typeof sendProgress?.warmingPct === "number" ? ` ${sendProgress.warmingPct.toFixed(0)}%` : ""}…`
+                  : stage === "signing"
+                    ? "Signing on device…"
+                    : stage === "broadcasting"
+                      ? "Broadcasting…"
+                      : "Building private proof…"}
                 {/* A multi-transaction payment can run for minutes; without the part
                     counter a healthy send is indistinguishable from a hung one. */}
                 {sendProgress && sendProgress.parts > 1 && ` (${sendProgress.part} of ${sendProgress.parts})`}

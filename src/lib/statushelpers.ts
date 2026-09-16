@@ -14,9 +14,11 @@ export function sameStatus(a: Status, b: Status): boolean {
     a.maturing_fc === b.maturing_fc &&
     a.pending_in_fc === b.pending_in_fc &&
     a.pending_out_fc === b.pending_out_fc &&
+    a.pending_change_fc === b.pending_change_fc &&
     a.note_count === b.note_count &&
     a.error === b.error &&
     a.missing_history === b.missing_history &&
+    a.history_from_daa === b.history_from_daa &&
     a.watch_only === b.watch_only &&
     (a.synced ? true : a.scanned_blocks === b.scanned_blocks && a.chain_len === b.chain_len)
   );

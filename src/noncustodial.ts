@@ -112,9 +112,11 @@ export const MAX_NOTES_PER_TX = 38;
 const MAX_CHUNKS = 24;
 
 /// Where a send currently is, so the UI can show honest progress instead of a
-/// single opaque spinner. "proving" is the long step (the daemon builds the
+/// single opaque spinner. "warming" is the one-time step a first payment from a
+/// local engine may hit — the daemon building the wallet's spend index, with a
+/// real percentage; "proving" is the long step (the daemon builds the
 /// Halo 2 proof); signing is on-device and quick; broadcast is near-instant.
-export type SendStage = "proving" | "signing" | "broadcasting";
+export type SendStage = "warming" | "proving" | "signing" | "broadcasting";
 
 /// Progress of an explicitly approved split payment. A wallet holding many small
 /// notes can pay in chunks of at most ~38 notes each, which can take minutes.
@@ -127,6 +129,115 @@ export interface SendProgress {
   sentFc: number;
   /// ZKAS originally requested.
   totalFc: number;
+  /// While `stage` is "warming": how far the daemon's spend-index build is, as the
+  /// daemon reports it (`status.warming_pct` / `warming_eta_secs`). Null when the
+  /// daemon has not produced a rate yet.
+  warmingPct?: number | null;
+  warmingEtaSecs?: number | null;
+}
+
+/// A spend-index build the daemon reports in flight (see `Status.warming_pct`).
+export interface IndexProgress {
+  pct: number | null;
+  etaSecs: number | null;
+  done: number | null;
+}
+
+/// How often the send flow asks the daemon where its spend-index build is.
+const INDEX_POLL_MS = 2_000;
+/// Give up waiting if the build's leaf counter has not moved for this long: the
+/// daemon reports progress every ~1 K leaves, so a genuinely running build advances
+/// many times a minute, and one that has not for ten minutes is not going to.
+const INDEX_STALL_MS = 10 * 60_000;
+
+/// The daemon's spend-index build for this wallet, if one is running right now.
+async function indexProgress(): Promise<IndexProgress | null> {
+  try {
+    const s = await api.status();
+    if (typeof s.warming_pct !== "number") return null;
+    return { pct: s.warming_pct, etaSecs: s.warming_eta_secs ?? null, done: s.warming_done_leaves ?? null };
+  } catch {
+    return null;
+  }
+}
+
+/// Wait for a running spend-index build to finish, reporting its progress as it goes.
+/// Resolves true when the daemon no longer reports one (built, or given up on its
+/// side — either way a prepare can be asked for), false if it stalled.
+async function waitForSpendIndex(onProgress: (p: IndexProgress) => void): Promise<boolean> {
+  let lastDone: number | null = null;
+  let movedAt = Date.now();
+  for (;;) {
+    const p = await indexProgress();
+    if (!p) return true;
+    onProgress(p);
+    if (p.done !== lastDone) {
+      lastDone = p.done;
+      movedAt = Date.now();
+    } else if (Date.now() - movedAt >= INDEX_STALL_MS) {
+      return false;
+    }
+    await new Promise((r) => setTimeout(r, INDEX_POLL_MS));
+  }
+}
+
+/// A prepare that did not come back because the wallet's spend index was being built
+/// behind it: the transport gave up at its ceiling, or the daemon answered 429 naming
+/// the build. Only meaningful together with the daemon CONFIRMING a build in flight —
+/// a timeout for any other reason, or a 429 for a genuine second payment, stays the
+/// failure it always was.
+function looksLikeIndexWait(message: string): boolean {
+  return /timed out|still being prepared|spend index/i.test(message);
+}
+
+/**
+ * `api.prepare`, made aware of the one-time spend-index build a first payment from a
+ * local engine may be waiting on.
+ *
+ * The daemon runs that build detached and keeps its result whatever the client does,
+ * but the UI used to abort the request at its 300 s ceiling and report "not
+ * responding" — while the engine went on building for the better part of an hour with
+ * nothing on screen. Now: if a build is already running, wait for it first with its
+ * percentage on screen; while a prepare is in flight, keep polling so the same
+ * percentage shows instead of a bare spinner; and if the request does time out (or is
+ * refused) while the daemon confirms a build is running, wait it out and ask again
+ * rather than fail. The daemon's own per-wallet guard means a re-issued prepare never
+ * duplicates work.
+ */
+async function prepareWaitingForIndex<T>(
+  prepare: () => Promise<T>,
+  onWarming: (p: IndexProgress) => void,
+  onProving: () => void,
+): Promise<T> {
+  const settle = async () => {
+    const finished = await waitForSpendIndex(onWarming);
+    onProving();
+    return finished;
+  };
+  if (await indexProgress()) await settle();
+  for (let attempt = 0; ; attempt++) {
+    // Side poll: a build the daemon starts FOR this prepare shows up here, so the
+    // scene reads "Preparing … 12%" rather than "proving" for five silent minutes.
+    let stop = false;
+    void (async () => {
+      while (!stop) {
+        await new Promise((r) => setTimeout(r, INDEX_POLL_MS));
+        if (stop) return;
+        const p = await indexProgress();
+        if (p && !stop) onWarming(p);
+      }
+    })();
+    try {
+      return await prepare();
+    } catch (e) {
+      stop = true;
+      const msg = (e as Error).message ?? "";
+      if (attempt >= 2 || !looksLikeIndexWait(msg) || !(await indexProgress())) throw e;
+      if (!(await settle())) throw e;
+    } finally {
+      stop = true;
+    }
+  }
 }
 
 /**
@@ -185,7 +296,11 @@ export async function sendNonCustodial(
       // A normal transfer is all-or-nothing: without partial mode walletd
       // rejects an over-fragmented payment before it builds, signs or broadcasts
       // anything. Multi-transaction delivery is an explicit user choice.
-      const prep = await api.prepare(fvk, to, owed, fee, memo, allowMultipleTransactions);
+      const prep = await prepareWaitingForIndex(
+        () => api.prepare(fvk, to, owed, fee, memo, allowMultipleTransactions),
+        (p) => onStage?.("warming", { ...progress(), warmingPct: p.pct, warmingEtaSecs: p.etaSecs }),
+        () => onStage?.("proving", progress()),
+      );
       // Exact integer figures; the plain-number fields are the fallback for a
       // daemon that predates the *_exact decimal strings.
       const chunkAmount = BigInt(prep.amount_sompi_exact ?? Math.round(prep.amount_sompi));
@@ -406,7 +521,11 @@ export async function consolidateNonCustodial(
     let requested = share < floor ? sweepable : share;
     try {
     onStage?.("proving");
-    let prep = await api.prepare(fvk, ownAddress, requested, undefined, undefined, true);
+    let prep = await prepareWaitingForIndex(
+      () => api.prepare(fvk, ownAddress, requested, undefined, undefined, true),
+      () => onStage?.("warming"),
+      () => onStage?.("proving"),
+    );
     // A split round is only worth its fee if it actually merges notes. When the
     // daemon covers a whole share from ONE note, splitting would move value for
     // nothing — stop splitting and sweep the rest instead. Preparing does not

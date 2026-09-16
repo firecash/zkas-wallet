@@ -1738,9 +1738,10 @@ async fn set_node_source(
                 "node at {target} is still syncing. The wallet remains on its previous source so its balance cannot become partial."
             ));
         }
+        let wallet_dir = engine(&state).wallet_dir();
         tokio::time::timeout(
             std::time::Duration::from_secs(8),
-            verify_wallet_history_rpc(&target),
+            verify_wallet_history_rpc(&target, &wallet_dir, mode == "custom"),
         )
         .await
         .map_err(|_| {
@@ -1912,6 +1913,12 @@ struct NodeStatus {
     disk_bytes: u64,
     error: Option<String>,
     last_exit: Option<String>,
+    /// DAA score of the oldest block the node can serve shielded history for, and whether
+    /// that history reaches genesis verified. `None` when the node did not answer (older
+    /// build, or the status poll's tree-state call timed out). A synced node with
+    /// `history_complete == Some(false)` is still filling in history from peers.
+    history_from_daa: Option<u64>,
+    history_complete: Option<bool>,
 }
 
 /// Ask a node for its status, and CLOSE the session however this ends.
@@ -2018,14 +2025,79 @@ async fn query_node_rpc_with_deadline(
     ))
 }
 
+/// The node's own statement of what shielded history it holds: `(history_from_daa_score,
+/// history_complete)` from `GetShieldedTreeState`, the same call walletd anchors scans
+/// with. `None` when the node cannot be reached, is an older build without the call, or
+/// does not answer within `deadline`. Closes its session however it ends.
+async fn query_node_history_status(addr: &str, deadline: std::time::Duration) -> Option<(u64, bool)> {
+    use kaspa_grpc_client::GrpcClient;
+    use kaspa_rpc_core::{api::rpc::RpcApi, notify::mode::NotificationMode};
+
+    let client = GrpcClient::connect_with_args(
+        NotificationMode::Direct,
+        format!("grpc://{addr}"),
+        None,
+        false,
+        None,
+        false,
+        Some(500_000),
+        Default::default(),
+    )
+    .await
+    .ok()?;
+    // Cleanup guard: see `query_node_rpc_with_deadline`.
+    let _guard = scopeguard_disconnect(client.clone());
+    let result = tokio::time::timeout(deadline, client.get_shielded_tree_state(None)).await;
+    let _ = client.disconnect().await;
+    match result {
+        Ok(Ok(ts)) => Some((ts.history_from_daa_score, ts.history_complete)),
+        _ => None,
+    }
+}
+
+/// The earliest birthday among the wallets this daemon serves, with the token of the
+/// wallet that has it: `<data_dir>/wallets/<token>.json`, where walletd keeps `birthday`
+/// as a plaintext field even when the seed is encrypted. `None` when there are no wallet
+/// files (or none parse). A birthday of 0 means "may hold funds from genesis".
+fn min_wallet_birthday(wallet_dir: &str) -> Option<(String, u64)> {
+    let entries = std::fs::read_dir(wallet_dir).ok()?;
+    let mut best: Option<(String, u64)> = None;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+        let Ok(raw) = std::fs::read_to_string(&path) else { continue };
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) else { continue };
+        let birthday = v.get("birthday").and_then(|b| b.as_u64()).unwrap_or(0);
+        let token = path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string();
+        if best.as_ref().map_or(true, |(_, b)| birthday < *b) {
+            best = Some((token, birthday));
+        }
+    }
+    best
+}
+
 /// Prove that an RPC is suitable for wallet recovery, not merely that it is a
 /// live consensus node. A pruned mining-only node answers ordinary DAG calls
-/// perfectly while returning incomplete historical notes; requesting the first
-/// shielded page after genesis catches that dangerous configuration.
-async fn verify_wallet_history_rpc(addr: &str) -> Result<(), String> {
-    use kaspa_consensus_core::{config::params::Params, network::NetworkType};
+/// perfectly while returning incomplete historical notes.
+///
+/// This used to request the first shielded page after genesis and fold EVERY error
+/// into "cannot serve complete shielded history (cannot find header b63f7fe…)" — the
+/// hash being genesis, which nobody could tell, and the reason (pruned, still
+/// backfilling, or backfill failed) being invisible. The node already publishes the
+/// answer on `GetShieldedTreeState`: the DAA score its history starts at and whether
+/// it reaches genesis verified. So ask that, and compare the floor against the
+/// birthdays of the wallets in `wallet_dir`: a wallet born after the floor is fully
+/// servable without genesis. A wallet born at 0 (or no wallet on disk yet) keeps the
+/// strict rule — the node must be complete — exactly as before.
+///
+/// `custom_node` widens the hint: a managed local node can only be still filling in
+/// (mining-only is refused earlier), while a user's own node may have been started
+/// with `--shielded-history=off`.
+async fn verify_wallet_history_rpc(addr: &str, wallet_dir: &str, custom_node: bool) -> Result<(), String> {
     use kaspa_grpc_client::GrpcClient;
-    use kaspa_rpc_core::{api::rpc::RpcApi, notify::mode::NotificationMode, RpcHash};
+    use kaspa_rpc_core::{api::rpc::RpcApi, notify::mode::NotificationMode};
 
     let client = GrpcClient::connect_with_args(
         NotificationMode::Direct,
@@ -2043,16 +2115,49 @@ async fn verify_wallet_history_rpc(addr: &str) -> Result<(), String> {
     // under an outer timeout, so it must not rely on reaching its own end to disconnect.
     let closer = client.clone();
     let _guard = scopeguard_disconnect(closer);
-    let genesis = RpcHash::from_bytes(Params::from(NetworkType::Mainnet).genesis.hash.as_bytes());
-    let result = client.get_shielded_blocks(genesis, 1).await;
+    let result = client.get_shielded_tree_state(None).await;
     let _ = client.disconnect().await;
-    match result {
-        Ok(page) if !page.blocks.is_empty() => Ok(()),
-        Ok(_) => Err(format!(
-            "node at {addr} returned no shielded history after genesis; it is not safe as a wallet source"
-        )),
-        Err(error) => Err(format!(
-            "node at {addr} cannot serve complete shielded history ({error}); use Shielded history/Archive or keep the wallet on the public node"
+    let ts = result.map_err(|error| {
+        format!(
+            "node at {addr} did not answer the shielded-history check ({error}); it may be an older build — use Shielded history/Archive or keep the wallet on the public node"
+        )
+    })?;
+    let (floor, complete) = (ts.history_from_daa_score, ts.history_complete);
+    if complete {
+        return Ok(());
+    }
+    let birthday = min_wallet_birthday(wallet_dir);
+    if let Some((_, b)) = birthday {
+        // Every wallet here was born at or after the node's floor: nothing is missing.
+        // `floor == 0` is excluded on purpose: without `complete` it also describes a
+        // node with no chain index at all, an older build that does not know the field
+        // (proto default), and a backfill still under verification — none of which has
+        // proven it can serve anything, so that case falls through to the message below.
+        if b > 0 && floor > 0 && floor <= b {
+            return Ok(());
+        }
+    }
+    let off_hint = if custom_node {
+        " — or it was started with --shielded-history=off: restart it with --shielded-history=on (Shielded history/Archive preset)"
+    } else {
+        ""
+    };
+    if floor == 0 {
+        // The index reaches genesis but the replay verification has not finished (or this
+        // is an older node that cannot say). Either way it is not safe to call complete yet.
+        return Err(format!(
+            "node at {addr} has fetched shielded history to genesis but has not finished verifying it (or is an older build); wait for \"shielded history: VERIFIED\" in its log and retry"
+        ));
+    }
+    match birthday {
+        Some((token, b)) if b > 0 => {
+            let short: String = token.chars().take(8).collect();
+            Err(format!(
+                "node at {addr} serves shielded history from DAA {floor}, but wallet {short}… was born at DAA {b}; its older notes would be missing. If the node is still filling in history (node log: \"shielded history: … % … left\"), wait until it passes DAA {b} and retry{off_hint}; otherwise keep the wallet on the public node"
+            ))
+        }
+        _ => Err(format!(
+            "node at {addr} holds shielded history only from DAA {floor}; it is still filling it in from peers — watch the node log for \"shielded history: … % … left\" and retry when it says VERIFIED{off_hint}; or keep the wallet on the public node"
         )),
     }
 }
@@ -2122,46 +2227,57 @@ async fn node_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<NodeStatu
             disk_bytes: disk,
             error: None,
             last_exit,
+            history_from_daa: None,
+            history_complete: None,
         });
     }
     let status =
         match tokio::time::timeout(std::time::Duration::from_secs(7), query_node_rpc_with_deadline(&rpc_addr, std::time::Duration::from_secs(4)))
             .await
         {
-            Ok(Ok((blocks, headers, daa, peers, synced, mempool, difficulty))) => NodeStatus {
-                running: true,
-                managed: true,
-                pid,
-                rpc_addr,
-                block_count: Some(blocks),
-                header_count: Some(headers),
-                daa_score: Some(daa),
-                peer_count: Some(peers),
-                is_synced: Some(synced),
-                mempool_size: Some(mempool),
-                // `blocks / headers` is NOT sync progress and must not be shown as one
-                // once it is near the top. Headers are fetched ahead of bodies, so the
-                // ratio dips whenever the node pulls a batch of headers — it was seen
-                // going 99.4% -> 97.3% across a restart — and a pruned node drops
-                // bodies it no longer needs, so the ratio has no reason to ever reach
-                // 100. Presented as a percentage it parks a few points short forever
-                // and reads as a node stuck at 97%.
-                //
-                // It IS a fair signal during real initial sync, when bodies are far
-                // behind. Past that, report no number rather than a false one: the UI
-                // says "Catching up" and shows the counters, which do move.
-                sync_progress: if synced {
-                    Some(100.0)
-                } else if headers > 0 && (blocks as f64) < headers as f64 * 0.98 {
-                    Some((blocks as f64 / headers as f64 * 100.0).clamp(0.0, 97.9))
-                } else {
-                    None
-                },
-                difficulty: Some(difficulty),
-                disk_bytes: disk,
-                error: None,
-                last_exit,
-            },
+            Ok(Ok((blocks, headers, daa, peers, synced, mempool, difficulty))) => {
+                // Separate call, tolerated to fail: an older node without the call, or a
+                // slow answer, must not turn a healthy status into an error. This is what
+                // lets the panel say "synced, still filling shielded history" instead of a
+                // frozen percentage during a first-sync backfill.
+                let history = query_node_history_status(&rpc_addr, std::time::Duration::from_secs(3)).await;
+                NodeStatus {
+                    running: true,
+                    managed: true,
+                    pid,
+                    rpc_addr,
+                    block_count: Some(blocks),
+                    header_count: Some(headers),
+                    daa_score: Some(daa),
+                    peer_count: Some(peers),
+                    is_synced: Some(synced),
+                    mempool_size: Some(mempool),
+                    // `blocks / headers` is NOT sync progress and must not be shown as one
+                    // once it is near the top. Headers are fetched ahead of bodies, so the
+                    // ratio dips whenever the node pulls a batch of headers — it was seen
+                    // going 99.4% -> 97.3% across a restart — and a pruned node drops
+                    // bodies it no longer needs, so the ratio has no reason to ever reach
+                    // 100. Presented as a percentage it parks a few points short forever
+                    // and reads as a node stuck at 97%.
+                    //
+                    // It IS a fair signal during real initial sync, when bodies are far
+                    // behind. Past that, report no number rather than a false one: the UI
+                    // says "Catching up" and shows the counters, which do move.
+                    sync_progress: if synced {
+                        Some(100.0)
+                    } else if headers > 0 && (blocks as f64) < headers as f64 * 0.98 {
+                        Some((blocks as f64 / headers as f64 * 100.0).clamp(0.0, 97.9))
+                    } else {
+                        None
+                    },
+                    difficulty: Some(difficulty),
+                    disk_bytes: disk,
+                    error: None,
+                    last_exit,
+                    history_from_daa: history.map(|(daa, _)| daa),
+                    history_complete: history.map(|(_, complete)| complete),
+                }
+            }
             Ok(Err(error)) => NodeStatus {
                 running: true,
                 managed: true,
@@ -2178,6 +2294,8 @@ async fn node_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<NodeStatu
                 disk_bytes: disk,
                 error: Some(error),
                 last_exit,
+                history_from_daa: None,
+                history_complete: None,
             },
             Err(_) => NodeStatus {
                 running: true,
@@ -2195,6 +2313,8 @@ async fn node_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<NodeStatu
                 disk_bytes: disk,
                 error: Some("node RPC status timed out".into()),
                 last_exit,
+                history_from_daa: None,
+                history_complete: None,
             },
         };
     Ok(status)

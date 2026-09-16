@@ -55,6 +55,23 @@ describe("what the wallet tells the user it is doing", () => {
     expect(withRate.eta).toBe("about 10 minutes left");
   });
 
+  // The getting-ready step used to have no counter, so the card could only show
+  // elapsed time. When the daemon IS counting (it is building the spend index and
+  // reports percent + ETA) the card must show that, in the user's words.
+  it("shows the spend-index build as real progress when the daemon reports one", () => {
+    const v = walletStatus({ ...base, warming: true, warmingPct: 43.2, warmingEtaSeconds: 600 });
+    expect(v.phase).toBe("almost-ready");
+    expect(v.pctFine).toBe("43.2%");
+    expect(v.eta).toBe("about 10 minutes");
+    expect(v.detail).toMatch(/43\.2%/);
+    expect(v.detail).not.toMatch(/warm|witness|index/i);
+    expect(v.canSpend).toBe(true);
+    // Without a counter, nothing is invented.
+    const plain = walletStatus({ ...base, warming: true });
+    expect(plain.pctFine).toBeNull();
+    expect(plain.eta).toBeNull();
+  });
+
   it("keeps spending disabled until the wallet knows about all its coins", () => {
     expect(walletStatus({ ...base, synced: false, haveConfirmedBalance: true }).canSpend).toBe(false);
     expect(walletStatus({ ...base, warming: true }).canSpend).toBe(true);
