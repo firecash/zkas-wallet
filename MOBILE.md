@@ -1,13 +1,18 @@
 # ZKas mobile wallet
 
-The ZKas wallet ships as a native **Android + iOS** app that wraps the same static SPA
-serving [wallet.zkas.info](https://wallet.zkas.info), via
-[**Capacitor**](https://capacitorjs.com/). One codebase, three targets (web, Android, iOS).
+The ZKas wallet ships as a native **Android** app that wraps the same static SPA serving
+[wallet.zkas.info](https://wallet.zkas.info), via [**Capacitor**](https://capacitorjs.com/).
+One codebase, three targets (web, Android, iOS); the iOS project builds but is not published.
 
-**The app is non-custodial.** The seed is generated on the device, in WebAssembly, and is never
-sent anywhere. The daemon is registered with the wallet's **full viewing key** only: it can sync
-the wallet and build spend *proofs*, but it holds no spend authority and cannot move the funds —
-a compromised server leaks *visibility*, never coins. See
+**The app is non-custodial in every mode.** The seed is generated on the device, in
+WebAssembly, and is never sent anywhere. It offers two wallet services:
+
+| Service | Where the daemon runs | Who can watch the wallet |
+|---|---|---|
+| **Hosted** (default, zero setup) | our `zkas-walletd`, over HTTPS or the Tor onion | our server holds the **viewing key**: it can see balance and history, it cannot spend |
+| **Run on this phone** (opt-in: first run, or Settings → Wallet service) | **inside the app** — `zkas-walletd` as a native library, trial-decrypting on the phone | **nobody**. No daemon anywhere sees your keys, balance or history; the node you sync from serves compact block records and learns only your IP (nothing, over Tor via Orbot or against your own node) |
+
+See [Run on this phone](#run-on-this-phone-the-local-engine) and
 [Custody](#custody-how-the-server-is-kept-powerless).
 
 ## Build
@@ -45,6 +50,32 @@ signing key, so losing it means no user can ever install an update over their ex
 App identity lives in `capacitor.config.ts` (`appId: com.firecash.wallet`); version lives in
 `android/app/build.gradle` (`versionCode` / `versionName`).
 
+## Run on this phone: the local engine
+
+`src/embedded.ts` + `android/.../EmbeddedEnginePlugin.kt` start `zkas-walletd` **in the app
+process** (the `zkas-walletd-mobile` UniFFI library from `firecash/zkas-signer`, the same
+daemon the desktop app embeds) bound to a loopback port; the WebView then talks to
+`http://127.0.0.1:<port>` exactly as it would to a server. What that changes:
+
+- **Keys never leave the phone** — not the seed, not the viewing key. The engine pulls
+  compact block records (148 bytes per shielded action) from a node over gRPC and
+  trial-decrypts them locally. The node cannot tell which notes are yours.
+- **Node choice.** Default is the public ZKas node; any `host:port` works, including your
+  own. *Reach the node over Tor* routes the gRPC through Orbot so the node does not see
+  your IP either.
+- **Sync survives closing the app.** The engine checkpoints its scan every ~60 s and on
+  exit, and a `dataSync` foreground service (with its ongoing notification) holds the process
+  while a sync is in progress; it is dropped the moment the wallet is synced, so a synced
+  wallet costs no battery. Reopening resumes from the checkpoint.
+- **Birthday matters.** A restored wallet is placed at its birthday with one node call and
+  scans only from there. A wallet that would need the whole chain (no birthday, millions of
+  blocks) is refused with a clear message instead of grinding for hours — enter the
+  creation date or DAA score.
+- **Sends** are prepared, proved and signed on the phone; only the finished transaction
+  reaches the node. Proving a spend takes a few seconds per note on a phone.
+- The hosted service remains available and is the fast default; switching services keeps
+  the wallet (the seed lives on the device in both).
+
 ## Custody: how the server is kept powerless
 
 A shielded spend splits into two independent steps, and only the second needs spend authority
@@ -73,11 +104,10 @@ The daemon refuses every spend path for such a wallet (`/send`, `/consolidate`, 
 watch-only-registered wallet spent 1 ZKAS in tx
 `35dd94a1d8d20d8b19e1b70531f105736071876945f04b2028d5b97fdeff43ff`, signed on the device.
 
-**Honest tradeoff:** the daemon sees the FVK, so it can *watch* your balance and history — a
-**privacy** cost, not a **custody** one. Run your own `zkas-walletd` (override the daemon URL
-in the app) and even that goes away. Closing it for hosted users needs in-browser Halo 2 proving
-(large WASM, seconds-long proofs on a phone) — feasible (Zcash's WebZjs does it), and gated behind
-the same `bridgetree` work as the O(log N) witness rebuild.
+**Honest tradeoff of the hosted service:** the daemon sees the FVK, so it can *watch* your
+balance and history — a **privacy** cost, not a **custody** one. **Run on this phone** removes
+it: the daemon runs inside the app, so nothing off the phone ever holds the viewing key.
+(Self-hosting `zkas-walletd` and overriding the daemon URL is the third option.)
 
 The installed Android and iOS apps may connect directly to `http://<LAN-IP>:8501`. This is
 intentional for a private network where a public TLS certificate is normally unavailable. The
@@ -104,9 +134,11 @@ messages, with no daemon at all.
 - The browser PWA caches only static UI assets. Capacitor does not register that service worker,
   preventing an installed native update from reopening an obsolete web bundle.
 
-## Background sync (Android, opt-in)
+## Background sync (Android, opt-in) — hosted service
 
-Settings → **Background sync** registers a `WorkManager` periodic wake (~every 15 min, network
+Applies to the **hosted** service, where the server does the scanning. (In *Run on this phone*
+mode the engine syncs while the app runs, held by a foreground service until synced — see
+above.) Settings → **Background sync** registers a `WorkManager` periodic wake (~every 15 min, network
 required — the platform minimum) implemented in `android/.../BackgroundSyncPlugin.java` +
 `SyncWorker.java`, toggled from `src/bgsync.ts`. Each wake does ONE `GET /api/status`:
 

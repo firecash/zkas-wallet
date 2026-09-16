@@ -16,13 +16,17 @@ native Android app.
 > is serve tampered page code that reads your seed out of browser storage — so a
 > strict Content-Security-Policy is enforced, but the residual "you trust the code
 > the server hands you each visit" risk is inherent to any website. For the
-> strongest guarantee, run your own daemon (self-hosted), use the desktop or mobile
-> app (fixed, signed code), or keep funds in a **paper wallet** (cold). See
-> [Custody model](#custody-model).
+> strongest guarantee use the **desktop app** or the Android app in **Run on this
+> phone** mode: both run `zkas-walletd` *inside the app*, so no server ever sees even
+> your viewing key — or self-host the daemon, or keep funds in a **paper wallet**
+> (cold). See [Custody model](#custody-model).
 
-This is a static React + Vite single-page app. It holds no keys itself — it is a thin
-UI over a **[`zkas-walletd`](https://github.com/firecash/zkas-rusty)** daemon,
-which owns the seed, scans the chain, builds Orchard proofs, and submits transactions.
+This is a static React + Vite single-page app. It is a thin UI over a
+**[`zkas-walletd`](https://github.com/firecash/zkas-rusty)** daemon, which scans the
+chain, builds Orchard proofs, and submits transactions. Where that daemon runs is the
+whole trust model: on our server (hosted web, hosted mobile), on your own server
+(self-hosted), or **inside the app on your own device** (desktop, and Android with
+*Run on this phone*). The seed is generated and kept on your device in every mode.
 
 ## Features
 
@@ -48,13 +52,19 @@ which owns the seed, scans the chain, builds Orchard proofs, and submits transac
 The wallet talks to a daemon at a configurable base URL (`Daemon:` line in the footer,
 overridable in the UI):
 
-| Mode | Daemon | Who holds the seed | Notes |
+| Mode | Where `zkas-walletd` runs | Who holds the seed | What a third party learns |
 |---|---|---|---|
-| **Hosted web** (default) | same-origin `/<origin>/daemon` → `zkas-walletd` on the server | **only your browser** — the daemon gets the viewing key, not the seed | non-custodial: the seed is generated in-browser and the device signs, so the daemon **cannot spend**. Residual risk is the served page code (mitigated by a strict CSP) and the seed sitting in browser storage — back it up and clear storage loses nothing but the local copy |
-| **Self-hosted web** | your own **HTTPS** walletd endpoint | **only your machine/server** | fully non-custodial. The hosted HTTPS page cannot connect to a cleartext HTTP service; use an installed app for HTTP on a LAN |
-| **Desktop** (Tauri app) | an **embedded** `zkas-walletd`, on a random loopback port with a per-install token | **only your machine** | fully non-custodial; seed files live in the OS app-data dir and are decrypted at load by a passphrase that is never written. mac / Linux / Windows |
-| **Mobile** (Android/iOS app) | hosted HTTPS or your own HTTPS/**HTTP LAN** walletd | **only your device** | non-custodial: the seed is generated on-device (WebAssembly) and the daemon receives the **full viewing key only**. Installed apps permit a direct cleartext LAN service; the browser does not. See [`MOBILE.md`](./MOBILE.md) |
-| **Paper** (cold) | none | **you, offline** | derive an address and receive with no daemon at all; import the seed later to spend |
+| **Desktop** (Tauri app) | **inside the app**, on a random loopback port with a per-install token; syncs from the public node or a node the app installs and supervises | **only your machine** | nothing about your wallet — the node only serves blocks (it sees your IP; point the app at your own node or Tor and not even that) |
+| **Mobile — Run on this phone** (Android, opt-in) | **inside the app**: the same daemon as a native library (`zkas-walletd-mobile`), trial-decrypting on the phone; syncs from the public node or yours, optionally over Tor via Orbot | **only your phone** | same as desktop: no daemon anywhere sees your keys, balance or history. A foreground notification keeps the sync alive while it runs |
+| **Mobile — hosted** (Android, default) | `zkas-walletd` on our server, reached over HTTPS or the Tor onion | **only your phone** — the server gets the viewing key | the server can see balance and history (privacy cost); it **cannot spend** |
+| **Hosted web** (wallet.zkas.info) | same-origin `/daemon` → `zkas-walletd` on the server | **only your browser** — the server gets the viewing key | same as hosted mobile, plus the inherent "you trust the page code served each visit" risk of any website |
+| **Self-hosted web** | your own **HTTPS** walletd endpoint | **only your machine/server** | whatever you run it on; the hosted HTTPS page cannot connect to a cleartext HTTP service — use an installed app for HTTP on a LAN |
+| **Paper** (cold) | none | **you, offline** | nothing; derive an address and receive with no daemon at all, import the seed later to spend |
+
+**Spending is the same in every mode.** A payment is built and *proved* from the viewing
+key, then *signed* on the device that holds the seed; the daemon, wherever it runs, can
+never authorize a spend. The modes differ only in **who can watch**: with the daemon on
+your own device, nobody.
 
 To go self-hosted, run `zkas-walletd` locally (see the
 [core repo](https://github.com/firecash/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet))
@@ -62,16 +72,15 @@ and select it from the connection control. Use HTTPS from the web wallet; the in
 mobile app may use `http://<LAN-IP>:8501`. Desktop already runs walletd over private loopback HTTP
 and accepts custom chain-node endpoints as `host:port`.
 
-> **🔑 Keeping the server powerless.** The current hosted wallet sends only a viewing key to
-> the remote daemon. The spend seed stays with you: the web **Local** tab runs the
-> [`zkas-signer`](https://github.com/firecash/zkas-signer) in your browser (WebAssembly) to
-> generate a cold wallet, derive an address and sign/verify **without the seed leaving your
-> device**; the **desktop** app runs its own loopback daemon; and the **mobile** app is fully
-> non-custodial via Orchard's split — **prove** needs only the viewing key, **sign** needs the
-> spend key, so the phone signs and the daemon (viewing key only) can never spend. This is live
-> and verified on mainnet — details in [`MOBILE.md`](./MOBILE.md) and the core repo's
-> `docs/NON_CUSTODIAL_WALLET.md`. The remaining cost of a hosted daemon is **privacy** (it sees
-> your viewing key), not **custody**.
+> **🔑 Two guarantees, pick your level.** *Custody* is solved in every mode by Orchard's
+> split: **prove** needs only the viewing key, **sign** needs the spend key, so the device
+> signs and a daemon holding the viewing key can never spend (live and verified on mainnet;
+> see [`MOBILE.md`](./MOBILE.md) and the core repo's `docs/NON_CUSTODIAL_WALLET.md`).
+> *Privacy* is solved by running the daemon on your own device: the **desktop** app always
+> does, and the Android app does in **Run on this phone** mode — then no server holds your
+> viewing key, and the public node it syncs from learns only your IP (or nothing, over Tor
+> or against your own node). The hosted service stays the zero-setup default; its only cost
+> is that our server can see your balance and history.
 
 > **⚠️ Mainnet.** ZKas is live on mainnet. Your **recovery seed is the only way to
 > restore a wallet**: back it up offline.

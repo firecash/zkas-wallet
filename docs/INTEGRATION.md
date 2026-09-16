@@ -15,7 +15,10 @@ You do not implement any cryptography. You pull in three ready-made pieces:
 
 **Trust model in one line:** you send the daemon a **viewing key** (it can watch), never
 the seed (only the seed can spend), and the device **re-checks and signs every payment**
-so a hostile daemon can neither redirect funds nor inflate the fee.
+so a hostile daemon can neither redirect funds nor inflate the fee. Want the daemon to see
+nothing at all? Embed it: our Android app runs `zkas-walletd` in-process as a native
+library and the desktop app embeds the same crate, so the only outside party is a node
+serving compact blocks (see the *Fully local* tier).
 
 ---
 
@@ -179,7 +182,7 @@ await z.send(seedHex, "zkas:…", 5_000_000_000n, 10_000_000n); // 50 ZKAS, ≤0
 | **Receive** | show a `zkas:` address | signer's `address_from_seed` only — no daemon |
 | **Watch-only** | balance + history | + register the FVK with a daemon (`/watch`) |
 | **Non-custodial spend** ← *the quickstart* | private send, seed on device | + `verify_and_sign_payment` (SDK or drop-in) |
-| **Fully local** | nothing trusts a service | run `zkas-walletd` yourself / the Rust crates |
+| **Fully local** | nothing trusts a service — no server holds even the viewing key | run `zkas-walletd` yourself, or **embed it** the way our apps do: Android via the `zkas-walletd-mobile` UniFFI library (`firecash/zkas-signer`, AAR + xcframework published), desktop via the `zkas_walletd` lib crate; the app talks to it on loopback with the same REST API, and it syncs from any node's gRPC |
 
 ---
 
