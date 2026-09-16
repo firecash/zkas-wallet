@@ -213,6 +213,81 @@ export function readBackupFile(path: string): Promise<string> {
   return invoke<string>("read_backup_file", { path });
 }
 
+/// Where the desktop builds are published (the same repo `scripts/release.sh` tags).
+const RELEASES_REPO = "firecash/zkas-wallet";
+
+export interface DesktopUpdate {
+  /// The newer release, e.g. "1.0.36".
+  version: string;
+  /// Its release page, with the downloads.
+  url: string;
+}
+
+/// Is release `candidate` newer than `current`? Both are `x.y.z` or `x.y.z-suffix`
+/// (release.sh tags `v1.0.36` and `v1.0.36-rc2`). A plain release outranks any
+/// pre-release of the same triple; two pre-releases compare by their trailing
+/// number. Anything unparsable is never "newer" — a banner must not appear over a
+/// tag this rule cannot read.
+export function isNewerVersion(candidate: string, current: string): boolean {
+  const parse = (v: string) => {
+    const m = v.trim().replace(/^v/, "").match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.]+))?$/);
+    if (!m) return null;
+    const pre = m[4] ? Number((m[4].match(/(\d+)$/) ?? ["", "0"])[1]) : null;
+    return { triple: [Number(m[1]), Number(m[2]), Number(m[3])], pre };
+  };
+  const a = parse(candidate);
+  const b = parse(current);
+  if (!a || !b) return false;
+  for (let i = 0; i < 3; i++) {
+    if (a.triple[i] !== b.triple[i]) return a.triple[i] > b.triple[i];
+  }
+  if (a.pre === null) return b.pre !== null;
+  if (b.pre === null) return false;
+  return a.pre > b.pre;
+}
+
+let updateCheck: Promise<DesktopUpdate | null> | null = null;
+
+/**
+ * A newer desktop release than this build, if GitHub lists one. Desktop only,
+ * asked once per launch and remembered; the desktop app has no updater and no
+ * other way of learning a version exists. Fetched from the WebView: GitHub's API
+ * answers with `Access-Control-Allow-Origin: *` and the shell's CSP allows
+ * `https:` connects, so no Rust relay is needed and nothing of the wallet's is
+ * sent — a bare, anonymous GET. Any failure (offline, rate-limited) is "no
+ * update", never an error on screen.
+ */
+export function checkForDesktopUpdate(currentVersion: string): Promise<DesktopUpdate | null> {
+  if (!isDesktop()) return Promise.resolve(null);
+  // A user who pointed the app at the Tor onion chose to show no IP to anyone; a
+  // clearnet GET to GitHub from the WebView would undo that on every launch.
+  if (desktopRemoteBase().toLowerCase().includes(".onion")) return Promise.resolve(null);
+  if (!updateCheck) {
+    updateCheck = (async () => {
+      try {
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 8_000);
+        const res = await fetch(`https://api.github.com/repos/${RELEASES_REPO}/releases/latest`, {
+          headers: { Accept: "application/vnd.github+json" },
+          signal: ctl.signal,
+        }).finally(() => clearTimeout(timer));
+        if (!res.ok) return null;
+        const data = (await res.json()) as { tag_name?: unknown; html_url?: unknown };
+        const tag = typeof data.tag_name === "string" ? data.tag_name : "";
+        const version = tag.replace(/^v/, "");
+        if (!version || !isNewerVersion(version, currentVersion)) return null;
+        const url = typeof data.html_url === "string" && data.html_url.startsWith("https://github.com/")
+          ? data.html_url
+          : `https://github.com/${RELEASES_REPO}/releases/latest`;
+        return { version, url };
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return updateCheck;
+}
+
 /**
  * Delete this device's wallet (file + scan state) and restart the daemon empty.
  * Irreversible here; the coins remain on-chain and return with the seed or a

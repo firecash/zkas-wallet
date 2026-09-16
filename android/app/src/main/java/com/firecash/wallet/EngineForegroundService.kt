@@ -55,7 +55,7 @@ class EngineForegroundService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         return NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setSmallIcon(R.drawable.ic_stat_zkas)
             .setContentTitle("ZKas Wallet")
             .setContentText(text)
             .setOngoing(true)

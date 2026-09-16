@@ -2,15 +2,30 @@
 // Pulled from the OTC desk (CORS-enabled). Cached in localStorage, refreshed on
 // mount and every 60s, and degrades silently to the last cache (or nothing) when
 // unreachable — a price is a nicety, never a blocker.
+//
+// ONE poller, however many consumers. The balance card, History, the detail sheet
+// and Send all call useZkasPrice(); when each mount ran its own fetch + 60 s
+// interval, an idle wallet polled two to four times a minute and History — which
+// remounts on every tab switch — fetched again on every visit. Now the first
+// subscriber starts the interval, the last one stops it, a figure younger than
+// FRESH_MS is reused instead of refetched, nothing is fetched while the tab is
+// hidden, and listeners are only told about a price that actually changed.
 import { useEffect, useState } from "react";
 
 const PRICE_URL = "https://mining-pool.zkas.info/api/otc/price";
 const CACHE_KEY = "zkas_price_v1";
+const POLL_MS = 60_000;
+/// A figure younger than this is served from memory: a consumer mounting right
+/// after another one (or a tab coming back after a few seconds) does not refetch.
+const FRESH_MS = 30_000;
 
 export type ZkasPrice = { usdPerZkas: number; kasPerZkas: number; asOf: number };
 
 let mem: ZkasPrice | null = null;
 const listeners = new Set<() => void>();
+/// The fetch currently on the wire, so concurrent callers share one request.
+let inflight: Promise<ZkasPrice | null> | null = null;
+let timer: ReturnType<typeof setInterval> | null = null;
 
 /// "$0.00215" | "0.00215" -> 0.00215 ; NaN if not a number.
 function num(s: unknown): number {
@@ -28,7 +43,12 @@ export function cachedPrice(): ZkasPrice | null {
   return mem;
 }
 
-export async function refreshPrice(): Promise<ZkasPrice | null> {
+export function refreshPrice(): Promise<ZkasPrice | null> {
+  if (!inflight) inflight = fetchPrice().finally(() => { inflight = null; });
+  return inflight;
+}
+
+async function fetchPrice(): Promise<ZkasPrice | null> {
   try {
     const r = await fetch(PRICE_URL, { cache: "no-store" });
     if (!r.ok) return mem;
@@ -40,16 +60,57 @@ export async function refreshPrice(): Promise<ZkasPrice | null> {
     const usd = num(j?.mid?.usd) || num(j?.last?.usd);
     const kas = num(j?.mid?.kas) || num(j?.last?.kas);
     if (!Number.isFinite(usd) || usd <= 0) return mem;
-    mem = { usdPerZkas: usd, kasPerZkas: Number.isFinite(kas) ? kas : 0, asOf: Date.now() };
+    const next: ZkasPrice = { usdPerZkas: usd, kasPerZkas: Number.isFinite(kas) ? kas : 0, asOf: Date.now() };
+    const changed = !mem || mem.usdPerZkas !== next.usdPerZkas || mem.kasPerZkas !== next.kasPerZkas;
+    mem = next;
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(mem));
     } catch {
       /* best-effort cache */
     }
-    listeners.forEach((l) => l());
+    // An unchanged figure is not news: every consumer would re-render for nothing.
+    if (changed) listeners.forEach((l) => l());
     return mem;
   } catch {
     return mem;
+  }
+}
+
+/// Fetch only when the cached figure is stale (or absent).
+function refreshIfStale(): void {
+  const cur = cachedPrice();
+  if (cur && Date.now() - cur.asOf < FRESH_MS) return;
+  void refreshPrice();
+}
+
+/// The interval tick. A hidden tab fetches nothing; the visibilitychange hook
+/// below catches it up the moment it is shown again.
+function tick(): void {
+  if (document.hidden) return;
+  refreshIfStale();
+}
+
+function onVisible(): void {
+  if (!document.hidden && listeners.size > 0) refreshIfStale();
+}
+
+function subscribe(l: () => void): void {
+  listeners.add(l);
+  if (listeners.size === 1) {
+    timer = setInterval(tick, POLL_MS);
+    document.addEventListener("visibilitychange", onVisible);
+  }
+  // Cheap when a fresh figure is already in memory — the common case for a
+  // consumer that mounts while another is up.
+  if (!document.hidden) refreshIfStale();
+}
+
+function unsubscribe(l: () => void): void {
+  listeners.delete(l);
+  if (listeners.size === 0 && timer !== null) {
+    clearInterval(timer);
+    timer = null;
+    document.removeEventListener("visibilitychange", onVisible);
   }
 }
 
@@ -60,13 +121,12 @@ export function useZkasPrice(): ZkasPrice | null {
   useEffect(() => {
     let live = true;
     const on = () => { if (live) setP(cachedPrice()); };
-    listeners.add(on);
-    void refreshPrice();
-    const t = setInterval(() => void refreshPrice(), 60_000);
+    subscribe(on);
+    // A fetch may have landed between the initial state and this subscription.
+    on();
     return () => {
       live = false;
-      listeners.delete(on);
-      clearInterval(t);
+      unsubscribe(on);
     };
   }, []);
   return p;

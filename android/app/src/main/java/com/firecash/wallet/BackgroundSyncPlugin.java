@@ -2,8 +2,6 @@ package com.firecash.wallet;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.os.Build;
 import androidx.work.Constraints;
 import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.NetworkType;
@@ -87,9 +85,6 @@ public class BackgroundSyncPlugin extends Plugin {
     // Android 13+ gates notifications behind a runtime permission. Worst case a
     // denial means the sync still runs but stays silent — so we ask and move on.
     private void maybeAskNotifications() {
-        if (Build.VERSION.SDK_INT >= 33 && getActivity() != null
-            && getActivity().checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-            getActivity().requestPermissions(new String[] { "android.permission.POST_NOTIFICATIONS" }, 0);
-        }
+        NotificationPermission.maybeAsk(getActivity());
     }
 }

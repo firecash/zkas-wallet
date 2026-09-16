@@ -10,7 +10,11 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
-tauri-plugin-shell = "2"
+# Opens `target="_blank"` links in the system browser; the WebView itself has no
+# new-window handler, so without this every outside link opened nothing. This
+# replaced tauri-plugin-shell, which nothing invoked but whose own link
+# interceptor would swallow the same clicks a second time.
+tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
 serde = { version = "1", features = ["derive"] }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo} from "react";
+import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo, memo } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
@@ -18,11 +18,11 @@ import {
   type LocalTx,
 } from "./localtx";
 import { ensureSigner, fvkHex, generateMnemonicWallet, accountSeedHex, signLocal, verifyLocal, type Network } from "./signer";
-import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, MIN_NOTES_PER_MERGE, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
+import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, prepareAhead, prepareAheadUsable, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, MIN_NOTES_PER_MERGE, type PreparedAhead, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
 import { walletStatus, walletCanSpend } from "./status";
 import { useZkasPrice, fmtFiat } from "./price";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
-import { useMaintenance } from "./useMaintenance";
+import { useMaintenance, mergeInFlight } from "./useMaintenance";
 import { isMaintenanceEnabled, setMaintenanceEnabled } from "./maintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline, type Receipt } from "./receipts";
@@ -36,6 +36,7 @@ const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ defa
 import { exportFile, exportMessage } from "./exportfile";
 import {
   backupWallet,
+  checkForDesktopUpdate,
   initDesktop,
   isDesktop,
   forgetWallet,
@@ -48,6 +49,7 @@ import {
   vaultStatus,
   writeBackupFile,
   type DesktopConfig,
+  type DesktopUpdate,
 } from "./desktop";
 import { makeBackup, readBackup } from "./backup";
 import { listWallets as listAllWallets } from "./wallets";
@@ -67,6 +69,7 @@ import {
 import {
   addContact,
   findContact,
+  loadContacts,
   removeContact,
   displayName,
   sortedContacts,
@@ -85,7 +88,7 @@ import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
 import { adoptViewKey } from "./lib/watchadopt";
-import { APP_BUILT, platformName, versionLine, versionTag } from "./version";
+import { APP_BUILT, APP_VERSION, platformName, versionLine, versionTag } from "./version";
 import { OrbotHelp } from "./OrbotHelp";
 import { desktopServices } from "./desktop-services";
 import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
@@ -242,7 +245,29 @@ const TAB_LABEL: Record<Tab, string> = {
 /// capabilities that deserve to be one click away where there is room, and would
 /// crowd out the three that matter where there isn't — on narrow screens they
 /// live in Settings → Tools instead.
-const ROOMY = () => isDesktop() || (typeof window !== "undefined" && window.innerWidth >= 900);
+const ROOMY_QUERY = "(min-width: 900px)";
+
+/// Does a media query match right now — and keep matching as the window changes?
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() => typeof matchMedia === "function" && matchMedia(query).matches);
+  useEffect(() => {
+    if (typeof matchMedia !== "function") return;
+    const mql = matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
+}
+
+/// Live, not a module constant: the tab set used to be decided once from
+/// `window.innerWidth` when App.tsx first loaded, so a phone that opened in
+/// landscape kept desktop tabs after rotating, and a browser opened narrow and
+/// then widened never grew them.
+function useRoomy(): boolean {
+  return useMediaQuery(ROOMY_QUERY) || isDesktop();
+}
 // Three verbs and a gear.
 //
 // This used to be five pills (Sign and Verify sat beside Receive/Send/History)
@@ -258,8 +283,12 @@ const ROOMY = () => isDesktop() || (typeof window !== "undefined" && window.inne
 /// is now what it should always have been — where you go to LOOK at things — and the
 /// buttons are what you press to DO things.
 // "Pay" only where there is room for it: it is a desktop-sized tool (multi-line
-// batch entry) and was never offered on Android.
-const TABS: Tab[] = ROOMY() ? ["history", "signatures", "tools", "settings"] : ["history", "settings"];
+// batch entry) and was never offered on Android — gated on the platform, not on
+// the width, so a landscape phone does not grow it.
+function walletTabs(roomy: boolean): Tab[] {
+  if (!roomy) return ["history", "settings"];
+  return isNative() ? ["history", "signatures", "settings"] : ["history", "signatures", "tools", "settings"];
+}
 
 /// Do two status snapshots differ in anything the UI renders?
 ///
@@ -277,6 +306,12 @@ function sameStatus(a: Status, b: Status): boolean {
     // it must repaint as the number moves.
     a.warming_pct === b.warming_pct &&
     a.warming_eta_secs === b.warming_eta_secs &&
+    // The spend gate and the "still opening" flag: Send/Notes and the balance hero
+    // key on these directly, and the daemon can flip either without any balance,
+    // note or warming field moving — dropped here, the buttons stayed disabled and
+    // the hero read "Finishing up" until something unrelated changed.
+    a.spend_ready === b.spend_ready &&
+    a.loading === b.loading &&
     a.node_connected === b.node_connected &&
     a.balance_fc === b.balance_fc &&
     a.spendable_fc === b.spendable_fc &&
@@ -292,7 +327,7 @@ function sameStatus(a: Status, b: Status): boolean {
     a.history_from_daa === b.history_from_daa &&
     a.watch_only === b.watch_only &&
     // Scan progress only matters while it is being shown as progress.
-    (a.synced ? true : a.scanned_blocks === b.scanned_blocks && a.chain_len === b.chain_len)
+    (a.synced ? true : a.scanned_blocks === b.scanned_blocks && a.chain_len === b.chain_len && a.blocks_behind === b.blocks_behind)
   );
 }
 
@@ -366,6 +401,10 @@ const CONF_MAX_TRIES = 120;
 /// at `0-conf` after CONF_MAX_TRIES. Keep retrying recent rows; the cap remains for
 /// old/dead records so they cannot starve current payments.
 const CONF_RECENT_RETRY_MS = 60 * 60 * 1000;
+/// Status poll cadence while the page is hidden. Under the daemon's 90 s
+/// active-sync window, so a backgrounded wallet keeps syncing; far above the
+/// 1 s foreground cadence, so a background tab is no longer a request per second.
+const HIDDEN_POLL_MS = 30_000;
 
 function nextConfirmationPoll(tx: LocalTx, confirmations: number | null): number {
   const age = Date.now() - tx.ts;
@@ -473,6 +512,13 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // meant every launch started with a QR code nobody asked for; what a person wants on
   // opening a wallet is to see that their money is there and what happened to it.
   const [tab, setTab] = useState<Tab>(() => (routeSticky ? null : asTab(routeTab)) ?? walletTabFromHash() ?? "history");
+  const roomy = useRoomy();
+  const tabs = useMemo(() => walletTabs(roomy), [roomy]);
+  // A pill that just left the row (rotate to portrait while on Signatures) must not
+  // leave the pane showing a section with no tab to name it.
+  useEffect(() => {
+    if (tab !== "send" && tab !== "receive" && !tabs.includes(tab)) setTab("history");
+  }, [tabs, tab]);
   // This device holds a viewing key and no seed. It cannot sign a spend at all —
   // the UI simply must not offer what would fail, and must not imply the balance
   // is spendable from here.
@@ -609,9 +655,23 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // keep displaying the previous steady state.
   const unsyncedSince = useRef<number | null>(null);
   const warmingSince = useRef<number | null>(null);
+  /// When the last poll ran while the page was hidden (see HIDDEN_POLL_MS).
+  const lastHiddenPoll = useRef(0);
 
   const refresh = useCallback(async () => {
     if (refreshInFlight.current) return;
+    // A hidden tab (screen off, task-switched, another browser tab) has nobody
+    // looking at it, yet the 1 Hz poll kept going — a status request per second
+    // per background tab through the hosted proxy, plus explorer lookups for recent
+    // sends. Slow to one poll per HIDDEN_POLL_MS instead of stopping outright: the
+    // daemon keeps a wallet in its active sync set for 90 s after the last status
+    // call, so this keeps the wallet warm and the next open instant. The resume
+    // handler polls immediately on foreground.
+    const hidden = typeof document !== "undefined" && document.hidden;
+    if (hidden) {
+      if (Date.now() - lastHiddenPoll.current < HIDDEN_POLL_MS) return;
+      lastHiddenPoll.current = Date.now();
+    }
     refreshInFlight.current = true;
     try {
       const s = await api.status();
@@ -879,8 +939,9 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // 1-second poll wiped it. Rows are removed only by an explicit wallet wipe.
       setTxs((prev) => (sameTxs(prev, list) ? prev : list.length === 0 && prev.length > 0 ? prev : list));
       // Confirmation lookups have their own schedule and never hold the one-second
-      // balance/sync poll hostage to a slow explorer request.
-      void pollConfirmations(list);
+      // balance/sync poll hostage to a slow explorer request. Not while hidden:
+      // nobody is watching the badge tick, and it catches up on resume.
+      if (!hidden) void pollConfirmations(list);
       // Remember a balance the daemon actually knows, so a later reload/restart — when
       // it answers with zeros while rebuilding — has something honest to show instead.
       // Keep the wallet registry in step: a wallet that existed before the
@@ -1027,6 +1088,13 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
     },
     [refresh],
   );
+  // Stable identity: History is memoised (it re-rendered on every 1 s status
+  // tick during a scan), and an inline arrow here would defeat that.
+  const onSendAnother = useCallback((prefill?: string) => {
+    setJustSent(null);
+    setSendPrefill(prefill ?? null);
+    setTab("send");
+  }, []);
 
   // Native app: every tap on a control answers with a soft haptic tick.
   useEffect(() => attachTapHaptics(), []);
@@ -1113,6 +1181,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             it belongs in the disclosure on the screen that decides it. */}
         {status?.has_wallet && <ConnectionButton />}
         <HostedNotice />
+        {status && <IosInstallNotice hasWallet={!!status.has_wallet} />}
+        <DesktopUpdateNotice />
       </div>
       {/* First-ever open (nothing cached yet): a designed connecting state while the
           first status call is in flight, never a stretch of empty page. A shield
@@ -1162,21 +1232,20 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           Back leaves it, and the wallet underneath keeps whichever tab the user
           was on. Making it a wallet TAB is what caused Settings to bounce to
           History. The desktop gear still opens the tab-based pane below. */}
+      {/* Not inside `.wallet-dashboard`: at ≥1100px that is the two-column grid,
+          and Settings as its only child sat in the narrow balance column with the
+          right ~60% of the page empty. A plain full-width section instead. */}
       {reachable && !freshSeed && status && status.has_wallet && routeSticky && (
-        <div className="wallet-dashboard">
-          <section className="wallet-overview" aria-label="Settings">
-            <div className="pane appear">
-              <button
-                className="btn ghost"
-                style={{ marginBottom: 12 }}
-                onClick={() => onClearRoute?.()}
-              >
-                ← Wallet
-              </button>
-              <SettingsPane status={status} />
-            </div>
-          </section>
-        </div>
+        <section className="pane appear settings-route" aria-label="Settings">
+          <button
+            className="btn ghost"
+            style={{ marginBottom: 12 }}
+            onClick={() => onClearRoute?.()}
+          >
+            ← Wallet
+          </button>
+          <SettingsPane status={status} />
+        </section>
       )}
       {reachable && !freshSeed && status && status.has_wallet && !routeSticky && (
         <div className="wallet-dashboard">
@@ -1244,7 +1313,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           </section>
           <section className="wallet-workspace" aria-label="Wallet activity">
             <div className="tabs" role="tablist" aria-label="Wallet sections">
-            {(viewOnly ? TABS.filter((t) => t !== "send" && t !== "signatures" && t !== "tools") : TABS).map((t) => (
+            {(viewOnly ? tabs.filter((t) => t !== "send" && t !== "signatures" && t !== "tools") : tabs).map((t) => (
               <button
                 key={t}
                 role="tab"
@@ -1256,8 +1325,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                   // Arrow keys move between tabs, as a tablist is expected to.
                   if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
                   e.preventDefault();
-                  const i = TABS.indexOf(t);
-                  setTab(TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length]);
+                  const i = tabs.indexOf(t);
+                  setTab(tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length]);
                 }}
               >
                 {t === "settings" ? <Settings aria-hidden="true" size={29} strokeWidth={2.2} /> : TAB_LABEL[t]}
@@ -1276,11 +1345,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 justSent={justSent}
                 synced={!!status?.synced}
                 daaScore={status?.daa_score}
-                onSendAnother={(prefill) => {
-                  setJustSent(null);
-                  setSendPrefill(prefill ?? null);
-                  setTab("send");
-                }}
+                onSendAnother={onSendAnother}
               />
             )}
             {tab === "signatures" && !viewOnly && <Signatures status={status} />}
@@ -1473,6 +1538,111 @@ function HostedNotice() {
           </a>
         </b>
         .
+      </div>
+    </div>
+  );
+}
+
+/// Desktop: a newer release exists. The desktop app has no updater, and the only
+/// pointer to the releases page is shown when NOT on desktop — so a desktop user
+/// never learned a new version existed. One line, one link, dismissable per version.
+function DesktopUpdateNotice() {
+  const [update, setUpdate] = useState<DesktopUpdate | null>(null);
+  const [dismissed, setDismissed] = useState("");
+  useEffect(() => {
+    if (!isDesktop()) return;
+    let live = true;
+    try {
+      setDismissed(localStorage.getItem("desktop_update_dismissed") ?? "");
+    } catch {
+      /* per-device convenience only */
+    }
+    void checkForDesktopUpdate(APP_VERSION).then((u) => {
+      if (live) setUpdate(u);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (!update || dismissed === update.version) return null;
+  const dismiss = () => {
+    try {
+      localStorage.setItem("desktop_update_dismissed", update.version);
+    } catch {
+      /* best effort */
+    }
+    setDismissed(update.version);
+  };
+  return (
+    <div className="warnbar" role="note">
+      <ShieldAlert className="warnbar-icon" aria-hidden="true" size={17} strokeWidth={2.2} />
+      <div>
+        ZKas Wallet {update.version} is available (you have {APP_VERSION}).{" "}
+        <b>
+          <a href={update.url} target="_blank" rel="noreferrer">
+            Download
+          </a>
+        </b>{" "}
+        <button className="linkbtn" onClick={dismiss}>
+          Later
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/// Is this page running as an iOS Home Screen web app (its own storage partition)?
+function iosStandalone(): boolean {
+  if (typeof window === "undefined") return false;
+  if ((navigator as Navigator & { standalone?: boolean }).standalone === true) return true;
+  return typeof matchMedia === "function" && matchMedia("(display-mode: standalone)").matches;
+}
+
+/// iPhone or iPad browser (iPadOS reports itself as a Mac, but with touch).
+function isIosBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+
+const IOS_INSTALL_NOTICE_KEY = "ios_install_notice_dismissed";
+
+/// iPhone: "Add to Home Screen" is the channel index.html promotes, but iOS gives
+/// the installed copy its OWN storage — and the seed, token and wallet list live in
+/// localStorage. So the installed app opened empty, and nothing said why. Say it
+/// on both sides of the move: in Safari with a wallet (back up first, restore
+/// there), and in the installed copy with none (your Safari wallet is not here).
+function IosInstallNotice({ hasWallet }: { hasWallet: boolean }) {
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(IOS_INSTALL_NOTICE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  if (isDesktop() || isNative() || !isIosBrowser() || dismissed) return null;
+  const standalone = iosStandalone();
+  // Safari with a wallet: warn BEFORE the install, not after the empty open.
+  // Installed copy with no wallet: the phrase is the only way across.
+  if (standalone === hasWallet) return null;
+  const dismiss = () => {
+    try {
+      localStorage.setItem(IOS_INSTALL_NOTICE_KEY, "1");
+    } catch {
+      /* per-device convenience only */
+    }
+    setDismissed(true);
+  };
+  return (
+    <div className="warnbar" role="note">
+      <ShieldAlert className="warnbar-icon" aria-hidden="true" size={17} strokeWidth={2.2} />
+      <div>
+        {standalone
+          ? "Have a wallet in Safari? It is not shared with this installed copy — restore it here from its recovery phrase. "
+          : "Installing to your Home Screen starts a separate, empty copy — back up your recovery phrase first, then restore it in the installed app. "}
+        <button className="linkbtn" onClick={dismiss}>
+          Got it
+        </button>
       </div>
     </div>
   );
@@ -3303,7 +3473,8 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
       </button>
       <p className="muted small">
         To stop this happening again, add the wallet to your Home Screen — an
-        installed app keeps its storage, a browser tab may not.
+        installed app keeps its storage, a browser tab may not. The installed copy
+        starts empty: enter the phrase there once, and it stays.
       </p>
       <button className="linkbtn" onClick={onStartOver}>
         Not your wallet? Create or import a different one
@@ -3375,6 +3546,15 @@ function Onboard({
   const [createdDate, setCreatedDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Desktop: backups the app itself wrote, offered as a shortcut beside the file
+  // picker. The picker is the main path — the WebView reads a chosen file like any
+  // browser and the decrypt is client-side, so desktop no longer has to type a
+  // filesystem path where web and mobile get a chooser.
+  const [foundBackups, setFoundBackups] = useState<string[]>([]);
+  useEffect(() => {
+    if (mode !== "restorefile" || !isDesktop()) return;
+    listBackups().then(setFoundBackups).catch(() => {});
+  }, [mode]);
 
   // The seed is generated HERE, in WebAssembly on this device, and never sent
   // anywhere. The daemon only gets the 96-byte full viewing key, which lets it
@@ -3524,10 +3704,36 @@ function Onboard({
         <h2>Restore from backup file</h2>
         <p className="muted" style={{ marginTop: 0 }}>
           Select the encrypted <code>.json</code> backup you saved, then enter its passphrase. The seed is
-          decrypted on this device — the file and passphrase never leave your browser.
+          decrypted on this device — the file and passphrase never leave it.
         </p>
         {error && <div className="msg err">{error}</div>}
-        <label>Backup file (.json)</label>
+        {foundBackups.length > 0 && (
+          <>
+            <label>Backups found on this computer</label>
+            <select
+              value=""
+              onChange={(e) => {
+                const p = e.target.value;
+                if (!p) return;
+                readBackupFile(p)
+                  .then((json) => {
+                    setRestoreJson(json);
+                    setRestoreName(p.split(/[/\\]/).pop() ?? p);
+                    setError("");
+                  })
+                  .catch(() => setError("Could not read that backup file."));
+              }}
+            >
+              <option value="">Choose one…</option>
+              {foundBackups.map((f) => (
+                <option key={f} value={f}>
+                  {f.split(/[/\\]/).pop()}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+        <label>{foundBackups.length > 0 ? "…or open a backup file (.json)" : "Backup file (.json)"}</label>
         <input
           type="file"
           accept="application/json,.json"
@@ -3729,7 +3935,9 @@ function Onboard({
       <div className="settings-section" style={{ textAlign: "center", margin: "20px 0 6px" }}>
         Already have a wallet?
       </div>
-      <button className="btn ghost" onClick={() => setMode(isDesktop() ? "backup" : "restorefile")}>
+      {/* Desktop too: it used to get the path-typing screen while web/mobile got a
+          file chooser for the same client-side decrypt. */}
+      <button className="btn ghost" onClick={() => setMode("restorefile")}>
         Restore from a backup file
       </button>
       <button className="btn ghost" onClick={() => setMode("import")}>
@@ -3795,7 +4003,11 @@ function SendScene({ stage, estimateMs, progress }: { stage?: SendStage; estimat
       : null;
   const caption =
     s === "warming"
-      ? `Preparing: locating your coins in the chain${warmPct ? ` · ${warmPct}` : ""}${warmEta ? ` · ${warmEta}` : ""} — done once, never again`
+      // A wait with its own reason (the wallet finishing a background merge) says
+      // that; the index build is the only other thing "warming" ever means.
+      ? progress?.note
+        ? progress.note
+        : `Preparing: locating your coins in the chain${warmPct ? ` · ${warmPct}` : ""}${warmEta ? ` · ${warmEta}` : ""} — done once, never again`
       : s === "signing"
         ? "Signing on your device — your key never leaves it"
         : s === "broadcasting"
@@ -4225,6 +4437,9 @@ function SettingsPane({ status }: { status: Status }) {
   // A viewer has no seed, so everything that reveals or shares one is not merely
   // hidden here — there is nothing behind it to reveal.
   const viewOnly = isWatchOnly();
+  // Same live width test as the tab row, so the Signatures card appears here
+  // exactly when the Signatures tab is not in the row.
+  const roomy = useRoomy();
   return (
     <>
       <SettingsSection label="Security" />
@@ -4284,7 +4499,7 @@ function SettingsPane({ status }: { status: Status }) {
       {/* Renders its own "Debug logs" Collapsible; kept top-level rather than buried
           inside Background sync. Returns null when there's no on-device engine. */}
       <DebugLogsCard />
-      {!ROOMY() && (
+      {!roomy && (
         <Collapsible title="Signatures">
           <Signatures status={status} />
         </Collapsible>
@@ -5275,6 +5490,31 @@ function Send({
     setAmount(max > 0 ? String(Number(max.toFixed(8))) : "0");
   };
 
+  // Start proving the moment the Confirm screen opens. Nothing about the witness
+  // lookup and Halo2 proof depends on the tap, so the seconds spent reading the
+  // confirmation used to be dead time before "Building private proof…" even began.
+  // The seed resolves silently from this device's storage exactly as doSend does;
+  // a device that needs the phrase first simply does not speculate. Kept across
+  // Back/Confirm (the daemon's work cannot be cancelled anyway) and adopted by
+  // the send only when it was asked for precisely the same payment.
+  const ahead = useRef<PreparedAhead | null>(null);
+  useEffect(() => {
+    if (!confirming || busy || fragmented) return;
+    const feeSompi = feeCustomSet ? Math.round(feeCustom * 1e8) : undefined;
+    if (prepareAheadUsable(ahead.current, to.trim(), amt, feeSompi, memo, false)) return;
+    let live = true;
+    void resolveDeviceSeed(status?.address ?? undefined)
+      .then((seed) => {
+        if (live) ahead.current = prepareAhead(seed.trim(), to.trim(), amt, feeSompi, memo, false);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+    // Only the opening of the screen starts one; the inputs cannot change while it is up.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirming]);
+
   const doSend = async (allowMultipleTransactions = false) => {
     // Rows for one payment: ONE ROW PER TRANSACTION (see the recording comment
     // below), all stamped with the payment's shared preFc and a payId, so
@@ -5348,11 +5588,24 @@ function Send({
         }
       }
       const feeSompi = feeCustomSet ? Math.round(feeCustom * 1e8) : undefined;
+      // A background merge already proving holds the wallet on the daemon; a
+      // /prepare now would be refused (429). Wait for it here, saying so, rather
+      // than let the refusal land as an error on the form.
+      const merge = mergeInFlight();
+      if (merge) {
+        onStage("warming", { part: 1, parts: 1, sentFc: 0, totalFc: amt, note: "Finishing a background merge…" });
+        await merge;
+      }
       const sendStartedAt = Date.now();
       // Captured at the START, not at completion: by the time the payment lands the
       // wallet is warm BECAUSE of it, so reading the flag afterwards would file every
       // cold run under "warm" and re-create the over-prediction this bucketing fixes.
       const startedWarm = !!status?.spend_ready && !status?.warming;
+      // The proof that may already be running since the Confirm screen opened.
+      // Taken, not borrowed: /submit pops its session single-use, so a send that
+      // fails after submitting must not hand the same prepare to the retry.
+      const early = ahead.current;
+      ahead.current = null;
       const r = await sendNonCustodial(
         seed.trim(),
         networkOf(status),
@@ -5362,6 +5615,7 @@ function Send({
         onStage,
         memo,
         allowMultipleTransactions,
+        early,
       );
       // Remember how long that actually took, scaled by the notes it spent, so the
       // NEXT send can count down instead of only counting up. Recorded on success
@@ -5877,7 +6131,33 @@ function fmtTime(ms: number): string {
 // history, so this is the record; each row links to the tx on the explorer.
 // A just-broadcast send lands here directly (no separate success screen) with a
 // success banner and a highlighted row whose confirmation count ticks up live.
-function History({
+/// Last chain history fetched, per wallet token. The tab pane is keyed on the tab
+/// (so the entrance transition plays), which unmounts History on every switch —
+/// without this every visit painted the skeleton and downloaded the list again.
+/// Seeded from here, a remount paints the last answer at once and the poll
+/// refreshes it behind. Never persisted: it lives exactly as long as the page.
+const historyCache = new Map<string, ChainHistory>();
+const NO_ROWS: ChainHistoryRow[] = [];
+
+/// Is a freshly polled history the same list as the one on screen? The 15 s poll
+/// answers with a new object every time; adopting it unchanged re-sorted and
+/// re-rendered the whole list for nothing.
+function sameHistory(a: ChainHistory, b: ChainHistory): boolean {
+  if (a.recoverableHistory !== b.recoverableHistory || a.total !== b.total || a.rows.length !== b.rows.length) return false;
+  const ap = a.pendingOutgoing ?? [];
+  const bp = b.pendingOutgoing ?? [];
+  if (ap.length !== bp.length || ap.some((r, i) => r.txid !== bp[i].txid)) return false;
+  return a.rows.every((r, i) => {
+    const o = b.rows[i];
+    return r.txid === o.txid && r.kind === o.kind && r.daaScore === o.daaScore && r.timestamp === o.timestamp && r.amountSompi === o.amountSompi;
+  });
+}
+
+/// Memoised: rendered inside the 7k-line App, it otherwise re-rendered on every
+/// status tick — once a second during a scan — and each render re-filtered,
+/// re-sorted and re-read localStorage per row. Its props are primitives plus
+/// lists whose identity the parent already preserves (`sameTxs`, receipts state).
+const History = memo(function History({
   txs,
   receipts,
   justSent,
@@ -5901,7 +6181,15 @@ function History({
   const toast = useToast();
   const price = useZkasPrice();
   const hide = useHideBalances();
-  const [chain, setChain] = useState<ChainHistory | null>(null);
+  const historyKey = activeToken() ?? "default";
+  const [chain, setChainState] = useState<ChainHistory | null>(() => historyCache.get(historyKey) ?? null);
+  const setChain = useCallback(
+    (h: ChainHistory) => {
+      historyCache.set(historyKey, h);
+      setChainState((prev) => (prev && sameHistory(prev, h) ? prev : h));
+    },
+    [historyKey],
+  );
   const [busy, setBusy] = useState(false);
   // True from the moment history is enabled until the recovery scan finishes —
   // so the tab explains the wait instead of looking empty and broken.
@@ -5912,7 +6200,35 @@ function History({
   const [detail, setDetail] = useState<(ChainHistoryRow & { confs?: number }) | null>(null);
   const [q, setQ] = useState("");
   const [kindFilter, setKindFilter] = useState<"all" | "received" | "sent" | "coinbase">("all");
-  const [, setLabelRevision] = useState(0);
+  // Bumped when a label is saved or the address book changes: the only two events
+  // after which the per-render lookup tables below need rebuilding.
+  const [labelRevision, setLabelRevision] = useState(0);
+  useEffect(() => {
+    const h = () => setLabelRevision((value) => value + 1);
+    window.addEventListener("contacts-changed", h);
+    return () => window.removeEventListener("contacts-changed", h);
+  }, []);
+  // Contacts and labels, read from localStorage once and then answered from
+  // memory. `displayName`/`getTxLabel` each parse their whole store per call,
+  // and this tab called them two to four times per row on every render.
+  const lookups = useMemo(() => {
+    const byAddr = new Map<string, Contact>();
+    for (const c of loadContacts()) byAddr.set(c.address.trim().toLowerCase(), c);
+    const labels = new Map<string, string>();
+    const contact = (address: string | null | undefined): Contact | null =>
+      address ? byAddr.get(address.trim().toLowerCase()) ?? null : null;
+    const name = (address: string | null | undefined, fallback: string): string => contact(address)?.name ?? fallback;
+    const label = (txid: string): string => {
+      const k = txid.toLowerCase();
+      let v = labels.get(k);
+      if (v === undefined) {
+        v = getTxLabel(txid);
+        labels.set(k, v);
+      }
+      return v;
+    };
+    return { contact, name, label };
+  }, [labelRevision]);
   // Long histories render windowed — a miner wallet accrues thousands of rows
   // and a multi-thousand-button list makes the tab unusable.
   const [showAll, setShowAll] = useState(false);
@@ -5936,17 +6252,28 @@ function History({
   }, [recovering, chain, synced]);
   useEffect(() => {
     let live = true;
-    const pull = () => api.history().then((h) => live && setChain(h)).catch(() => {});
+    const pull = () => {
+      // Nobody is reading a hidden tab; the daemon serialises the whole page under
+      // the wallet lock for each of these, so don't ask for it until it is visible.
+      if (typeof document !== "undefined" && document.hidden) return;
+      void api.history(showAll ? undefined : HISTORY_PAGE).then((h) => live && setChain(h)).catch(() => {});
+    };
     pull();
     // 15s is fine for a settled wallet, but a recovery scan writes rows continuously
     // for minutes — at that cadence the tab sat empty long enough to look broken. Poll
     // hard while recovering, idle otherwise.
     const t = setInterval(pull, recovering ? 2_000 : 15_000);
+    // Coming back to the foreground refreshes at once rather than at the next tick.
+    const onVis = () => {
+      if (!document.hidden) pull();
+    };
+    document.addEventListener("visibilitychange", onVis);
     return () => {
       live = false;
       clearInterval(t);
+      document.removeEventListener("visibilitychange", onVis);
     };
-  }, [recovering]);
+  }, [recovering, setChain, showAll]);
 
   // History is opt-in: nothing readable is stored until the user activates it,
   // and turning it off erases the stored record immediately.
@@ -5972,7 +6299,7 @@ function History({
         // above then fills it in.
         setRecovering(true);
       }
-      setChain(await api.history());
+      setChain(await api.history(showAll ? undefined : HISTORY_PAGE));
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -6001,37 +6328,58 @@ function History({
   }, [chain]);
 
   const fresh = justSent ? txs.find((t) => t.txid === justSent) : undefined;
-  const allRows = chain?.rows ?? [];
+  const allRows = chain?.rows ?? NO_ROWS;
   // Search covers what a person actually remembers about a payment: who, what it
   // was for, and roughly how much — not the txid they never read.
   const needle = q.trim().toLowerCase();
-  const chainRows = allRows.filter((r) => {
-    if (kindFilter !== "all" && r.kind !== kindFilter) return false;
-    if (!needle) return true;
-    const who = r.recipient ? `${displayName(r.recipient, "")} ${r.recipient}` : "";
-    return (
-      who.toLowerCase().includes(needle) ||
-      (r.memo ?? "").toLowerCase().includes(needle) ||
-      getTxLabel(r.txid).toLowerCase().includes(needle) ||
-      r.amountZkas.toFixed(8).includes(needle) ||
-      r.txid.toLowerCase().includes(needle)
-    );
-  });
+  // Memoised on their real inputs so the `merged` sort below only re-runs when
+  // rows, filter or search change — not on every status tick.
+  const chainRows = useMemo(
+    () =>
+      allRows.filter((r) => {
+        if (kindFilter !== "all" && r.kind !== kindFilter) return false;
+        if (!needle) return true;
+        const who = r.recipient ? `${lookups.name(r.recipient, "")} ${r.recipient}` : "";
+        return (
+          who.toLowerCase().includes(needle) ||
+          (r.memo ?? "").toLowerCase().includes(needle) ||
+          lookups.label(r.txid).toLowerCase().includes(needle) ||
+          r.amountZkas.toFixed(8).includes(needle) ||
+          r.txid.toLowerCase().includes(needle)
+        );
+      }),
+    [allRows, kindFilter, needle, lookups],
+  );
   // Device-local sends the chain scan hasn't caught up to yet stay on top as
   // 0-conf rows; once the chain reports the same transaction AS A SEND, the chain
   // row is authoritative and the device row steps aside. See `visibleDeviceRows`
   // for why a bare txid match was wrong. Dedupe against ALL chain rows, never the
   // filtered view, or an active filter hides the chain row while still suppressing
   // the device row and the payment disappears from both lists.
-  const notYetOnChain = visibleDeviceRows(txs, allRows);
+  // The first page holds only the newest HISTORY_PAGE chain rows, so a device
+  // send older than that window has nothing here to be matched against; it is
+  // left to the full list ("Show all") rather than shown beside a page it is not
+  // in, where the chain row it duplicates is simply not loaded yet.
+  const notYetOnChain = useMemo(() => {
+    const rows = visibleDeviceRows(txs, allRows);
+    const capped = (chain?.total ?? 0) > allRows.length;
+    const oldest = capped ? (allRows[allRows.length - 1]?.timestamp ?? 0) : 0;
+    return oldest > 0 ? rows.filter((t) => t.ts >= oldest) : rows;
+  }, [txs, allRows, chain]);
+  // A device-recorded send matches the filter/search the same way whether it is
+  // still pending or already confirmed.
+  const deviceMatches = useCallback(
+    (t: LocalTx) => {
+      if (kindFilter !== "all" && kindFilter !== "sent") return false;
+      if (!needle) return true;
+      const who = `${lookups.name(t.to, "")} ${t.to}`.toLowerCase();
+      return who.includes(needle) || lookups.label(t.txid).toLowerCase().includes(needle) || t.amountFc.toFixed(8).includes(needle) || t.txid.toLowerCase().includes(needle);
+    },
+    [kindFilter, needle, lookups],
+  );
   // These are always SENDS, so they must honour the same filter and search the
   // chain rows do — otherwise a send shows up under "Received".
-  const pending = notYetOnChain.filter((t) => {
-    if (kindFilter !== "all" && kindFilter !== "sent") return false;
-    if (!needle) return true;
-    const who = `${displayName(t.to, "")} ${t.to}`.toLowerCase();
-    return who.includes(needle) || getTxLabel(t.txid).toLowerCase().includes(needle) || t.amountFc.toFixed(8).includes(needle) || t.txid.toLowerCase().includes(needle);
-  });
+  const pending = useMemo(() => notYetOnChain.filter(deviceMatches), [notYetOnChain, deviceMatches]);
   const historyOff = chain !== null && !chain.recoverableHistory;
   // Arrivals belong to the on-device scope only. With full recovery on, the chain
   // reports receives itself and these would list the same payment twice.
@@ -6054,12 +6402,7 @@ function History({
   // "turn history on" wall of text, as if the device had never known about it. It did:
   // localtx rows live in this app's own storage and are readable with chain history
   // off, because they never left the device.
-  const deviceRows = txs.filter((t) => {
-    if (kindFilter !== "all" && kindFilter !== "sent") return false;
-    if (!needle) return true;
-    const who = `${displayName(t.to, "")} ${t.to}`.toLowerCase();
-    return who.includes(needle) || getTxLabel(t.txid).toLowerCase().includes(needle) || t.amountFc.toFixed(8).includes(needle) || t.txid.toLowerCase().includes(needle);
-  });
+  const deviceRows = useMemo(() => txs.filter(deviceMatches), [txs, deviceMatches]);
 
   // ONE list, in time order, out of three sources that record time differently.
   //
@@ -6207,7 +6550,7 @@ function History({
                     <span className="mono">to {shortAddr(t.to)}</span>
                     <span>{fmtTime(t.ts)}</span>
                   </div>
-                  {getTxLabel(t.txid) && <div className="txrow-label">{getTxLabel(t.txid)}</div>}
+                  {lookups.label(t.txid) && <div className="txrow-label">{lookups.label(t.txid)}</div>}
                 </button>
               );
             }
@@ -6251,8 +6594,8 @@ function History({
                   {isConsolidationRow(r) ? (
                     <span>merged notes in your wallet</span>
                   ) : r.kind === "sent" && r.recipient ? (
-                    <span className={findContact(r.recipient) ? "" : "mono"}>
-                      to {displayName(r.recipient, shortAddr(r.recipient))}
+                    <span className={lookups.contact(r.recipient) ? "" : "mono"}>
+                      to {lookups.name(r.recipient, shortAddr(r.recipient))}
                     </span>
                   ) : r.memo ? (
                     <span className="memo">“{r.memo}”</span>
@@ -6266,15 +6609,17 @@ function History({
                     <span className="memo">“{r.memo}”</span>
                   </div>
                 )}
-                {getTxLabel(r.txid) && <div className="txrow-label">{getTxLabel(r.txid)}</div>}
+                {lookups.label(r.txid) && <div className="txrow-label">{lookups.label(r.txid)}</div>}
               </button>
             );
           })}
 
       </div>
-      {!showAll && merged.length > HISTORY_PAGE && (
+      {/* The first page asks the daemon for HISTORY_PAGE rows, so "more" is also
+          what it says it holds beyond them — not only what is on screen. */}
+      {!showAll && (merged.length > HISTORY_PAGE || (chain?.total ?? 0) > allRows.length) && (
         <button className="btn ghost small" onClick={() => setShowAll(true)}>
-          Show all {merged.length} rows
+          {(chain?.total ?? 0) > allRows.length ? "Show all rows" : `Show all ${merged.length} rows`}
         </button>
       )}
       {heldTxids > 0 && (
@@ -6362,7 +6707,7 @@ function History({
       )}
     </div>
   );
-}
+});
 
 /// The daemon this wallet talks to. Always reachable — not just when the hosted
 /// service is down — because pointing it at your own `zkas-walletd` is how you
@@ -7406,6 +7751,10 @@ function DeviceSeedBackup() {
 function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
   const [found, setFound] = useState<string[]>([]);
   const [path, setPath] = useState("");
+  // A file chosen through the OS picker: read by the WebView like any browser
+  // would, and used instead of the path box. Typing a path was the only way in.
+  const [fileJson, setFileJson] = useState("");
+  const [fileName, setFileName] = useState("");
   const [pass, setPass] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -7422,10 +7771,10 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
 
   const run = async () => {
     setErr("");
-    if (!path.trim()) return setErr("Choose a backup file.");
+    if (!fileJson && !path.trim()) return setErr("Choose a backup file.");
     setBusy(true);
     try {
-      const json = await readBackupFile(path.trim());
+      const json = fileJson || (await readBackupFile(path.trim()));
       const { seedHex, birthday, accounts } = await readBackup(json, pass);
       // This restores INTO the active wallet's slot. That slot already holds a
       // key (this screen is only offered when it does), so a backup of a
@@ -7491,7 +7840,7 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
       {found.length > 0 && (
         <>
           <label>Backups found on this computer</label>
-          <select value={path} onChange={(e) => setPath(e.target.value)}>
+          <select value={path} onChange={(e) => { setPath(e.target.value); setFileJson(""); setFileName(""); }}>
             {found.map((f) => (
               <option key={f} value={f}>
                 {f.split(/[/\\]/).pop()}
@@ -7500,8 +7849,25 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
           </select>
         </>
       )}
-      <label>{found.length > 0 ? "…or paste a path" : "Path to your backup file"}</label>
-      <input value={path} onChange={(e) => setPath(e.target.value)} placeholder="/path/to/zkas-wallet-backup-….json" />
+      <label>{found.length > 0 ? "…or open a backup file (.json)" : "Backup file (.json)"}</label>
+      <input
+        type="file"
+        accept="application/json,.json"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          f.text()
+            .then((text) => {
+              setFileJson(text);
+              setFileName(f.name);
+              setErr("");
+            })
+            .catch(() => setErr("Could not read that file."));
+        }}
+      />
+      {fileName && <div className="muted" style={{ fontSize: "0.85em" }}>Selected: {fileName}</div>}
+      <label>…or paste a path</label>
+      <input value={path} onChange={(e) => { setPath(e.target.value); setFileJson(""); setFileName(""); }} placeholder="/path/to/zkas-wallet-backup-….json" />
       <label>Backup passphrase</label>
       <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="The passphrase you gave the file" />
       {err && <div className="msg err">{err}</div>}

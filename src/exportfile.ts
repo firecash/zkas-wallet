@@ -16,9 +16,18 @@
 //      A worse experience than a file, but an honest one, and it never silently fails.
 //   3. the <a download> path — correct on the web, where it has always worked.
 //
+// That order is for the native shells. In a plain browser the download goes FIRST:
+// every HTTPS browser has clipboard.writeText, so with share → clipboard → download
+// the download branch was unreachable on the web, and "Create backup file" quietly
+// copied the backup to the clipboard (Firefox, Linux Chrome) or raised a share sheet
+// whose dismissal still read as "Backup written".
+//
 // Every branch reports what actually happened so the caller can say so. Nothing here
 // is allowed to fail silently, because a backup a user believes they took and did not
 // is worse than no backup at all.
+
+import { isNative } from "./api";
+import { isDesktop } from "./desktop";
 
 export type ExportOutcome = "shared" | "copied" | "downloaded";
 
@@ -42,6 +51,17 @@ function canShareFile(file: File): boolean {
  */
 export async function exportFile(filename: string, mime: string, content: string): Promise<ExportOutcome> {
   const file = new File([content], filename, { type: mime });
+
+  // 0. Plain browser: the file download is the expected result and has always
+  // worked here, so it is the first route, not the last. Share/clipboard remain
+  // below purely as fallbacks should it throw.
+  if (!isNative() && !isDesktop()) {
+    try {
+      return download(filename, mime, content);
+    } catch {
+      /* fall through to the share/clipboard routes */
+    }
+  }
 
   // 1. Native share sheet.
   if (canShareFile(file)) {
@@ -87,6 +107,11 @@ export async function exportFile(filename: string, mime: string, content: string
   }
 
   // 3. Browser download.
+  return download(filename, mime, content);
+}
+
+/// The <a download> route: a Blob URL on an anchor, clicked programmatically.
+function download(filename: string, mime: string, content: string): ExportOutcome {
   const url = URL.createObjectURL(new Blob([content], { type: mime }));
   try {
     const a = document.createElement("a");

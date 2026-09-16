@@ -50,6 +50,12 @@ signing key, so losing it means no user can ever install an update over their ex
 App identity lives in `capacitor.config.ts` (`appId: com.firecash.wallet`); version lives in
 `android/app/build.gradle` (`versionCode` / `versionName`).
 
+The Android release APK/AAB is the **only** signed artifact this repo produces. The desktop
+builds on the same release tag are *ad-hoc signed, not notarized* (macOS) or *unsigned*
+(Windows, Linux) — every OS warns on first launch. The per-OS steps (macOS 15 "Open Anyway"
+in Privacy & Security, Windows "More info → Run anyway", Linux `chmod +x`) are in the README
+under *All-in-one desktop → First launch*.
+
 ## Run on this phone: the local engine
 
 `src/embedded.ts` + `android/.../EmbeddedEnginePlugin.kt` start `zkas-walletd` **in the app

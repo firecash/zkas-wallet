@@ -27,7 +27,30 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("getting a file out of the wallet on any platform", () => {
+// A plain browser (the jsdom default) downloads first: the file is what a web user
+// expects, and every HTTPS browser has a clipboard, so any other order made the
+// download unreachable and "Create backup file" quietly copied the backup instead.
+describe("getting a file out of the wallet in a browser", () => {
+  it("downloads the file even when share and clipboard exist", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    setNav({ share, canShare: () => true, clipboard: { writeText } });
+    expect(await exportFile("a.csv", "text/csv", "x,y")).toBe("downloaded");
+    expect(share).not.toHaveBeenCalled();
+    expect(writeText).not.toHaveBeenCalled();
+  });
+});
+
+// The native shells (Capacitor WebView, Tauri) ignore <a download>, so there the
+// share sheet comes first and the clipboard is the fallback.
+describe("getting a file out of the wallet in a native shell", () => {
+  beforeEach(() => {
+    vi.stubGlobal("Capacitor", { isNativePlatform: () => true });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("uses the native share sheet when it can take a file", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     setNav({ share, canShare: () => true });

@@ -31,6 +31,8 @@ class EmbeddedEnginePlugin : Plugin() {
         val node = call.getString("nodeAddr") ?: DEFAULT_NODE
         val secret = call.getString("secret")
         val socks = call.getString("socks")
+        // The sync notification below is invisible on Android 13+ until this is granted.
+        NotificationPermission.maybeAsk(activity)
         Thread {
             val port = try {
                 uniffi.zkas_walletd_mobile.start(node, walletDir(), secret, socks).toInt()

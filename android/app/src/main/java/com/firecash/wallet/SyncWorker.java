@@ -210,7 +210,7 @@ public class SyncWorker extends Worker {
         Intent open = new Intent(ctx, MainActivity.class);
         PendingIntent tap = PendingIntent.getActivity(ctx, 0, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, CHANNEL)
-            .setSmallIcon(ctx.getApplicationInfo().icon)
+            .setSmallIcon(R.drawable.ic_stat_zkas)
             .setContentTitle("ZKas payment received")
             .setContentText(amountZkas + " ZKAS arrived in your wallet.")
             .setContentIntent(tap)

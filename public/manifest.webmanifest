@@ -16,9 +16,8 @@
     { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Receive ZKAS", "short_name": "Receive", "url": "/#/tools?tab=request", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Explore network", "short_name": "Explore", "url": "/#/explore", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Mining", "short_name": "Mine", "url": "/#/mine", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Receive ZKAS", "short_name": "Receive", "url": "/#/?tab=receive", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Explore network", "short_name": "Explore", "url": "/#/explore", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
   ],
   "protocol_handlers": [
     { "protocol": "web+zkas", "url": "/?payment=%s" }

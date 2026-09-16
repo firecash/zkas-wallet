@@ -17,7 +17,7 @@
 // note/value commitment check, and the signature is over the sighash of the *checked*
 // bundle, which will not finalize any other bundle).
 
-import { api } from "./api";
+import { api, type PrepareResp } from "./api";
 import { fvkHex, verifyAndSignPayment, type Network } from "./signer";
 import { feeReserveSompi, minRelayFeeForSpends } from "./fees";
 
@@ -134,6 +134,9 @@ export interface SendProgress {
   /// daemon has not produced a rate yet.
   warmingPct?: number | null;
   warmingEtaSecs?: number | null;
+  /// While `stage` is "warming" for a reason other than the index build — the
+  /// wallet is finishing its own background merge — the one line to show for it.
+  note?: string;
 }
 
 /// A spend-index build the daemon reports in flight (see `Status.warming_pct`).
@@ -190,6 +193,24 @@ function looksLikeIndexWait(message: string): boolean {
   return /timed out|still being prepared|spend index/i.test(message);
 }
 
+/// A prepare refused (429) because THIS wallet already has one in flight: the app's
+/// own background merge (`useMaintenance`), or a previous payment whose proof is
+/// still running on the server. Both finish on their own — a merge holds the
+/// wallet for the length of one proof, typically 30-60 s — and the daemon's own
+/// wording says "your payment can be sent straight after". So it is a wait, not a
+/// failure to hand back with the form.
+function looksLikeBusyWallet(message: string): boolean {
+  return /merging its own notes|still being prepared/i.test(message);
+}
+/// How long a send will wait for the wallet's in-flight prepare before giving up
+/// with the daemon's message. Well above one merge proof; short of a hang.
+const BUSY_WALLET_WAIT_MS = 120_000;
+
+/// The one-line reason shown while waiting out a busy wallet.
+function busyWalletNote(message: string): string {
+  return /merging its own notes/i.test(message) ? "Finishing a background merge…" : "Waiting for the previous payment to finish preparing…";
+}
+
 /**
  * `api.prepare`, made aware of the one-time spend-index build a first payment from a
  * local engine may be waiting on.
@@ -208,6 +229,11 @@ async function prepareWaitingForIndex<T>(
   prepare: () => Promise<T>,
   onWarming: (p: IndexProgress) => void,
   onProving: () => void,
+  /// When given, a 429 for a prepare THIS wallet already has running (its own
+  /// background merge, a previous payment) is waited out — polling every
+  /// INDEX_POLL_MS for up to BUSY_WALLET_WAIT_MS — with the reason reported here,
+  /// instead of failing the send. Absent, such a 429 is the error it always was.
+  onBusy?: (note: string, waitedSecs: number) => void,
 ): Promise<T> {
   const settle = async () => {
     const finished = await waitForSpendIndex(onWarming);
@@ -215,7 +241,8 @@ async function prepareWaitingForIndex<T>(
     return finished;
   };
   if (await indexProgress()) await settle();
-  for (let attempt = 0; ; attempt++) {
+  let busySince: number | null = null;
+  for (let attempt = 0; ; ) {
     // Side poll: a build the daemon starts FOR this prepare shows up here, so the
     // scene reads "Preparing … 12%" rather than "proving" for five silent minutes.
     let stop = false;
@@ -232,12 +259,143 @@ async function prepareWaitingForIndex<T>(
     } catch (e) {
       stop = true;
       const msg = (e as Error).message ?? "";
-      if (attempt >= 2 || !looksLikeIndexWait(msg) || !(await indexProgress())) throw e;
+      // A wallet busy with its own earlier prepare: wait, then ask again. These
+      // retries do not count against the index-build attempts below — the merge
+      // that caused them can itself be waiting on the index.
+      if (onBusy && looksLikeBusyWallet(msg)) {
+        // The earlier prepare may itself be waiting on the one-time index build:
+        // that is the build's clock (with its percentage), not the busy one.
+        if (await indexProgress()) {
+          if (!(await settle())) throw e;
+          busySince = null;
+          continue;
+        }
+        if (busySince == null) busySince = Date.now();
+        const waited = Date.now() - busySince;
+        if (waited >= BUSY_WALLET_WAIT_MS) throw e;
+        onBusy(busyWalletNote(msg), Math.round(waited / 1000));
+        await new Promise((r) => setTimeout(r, INDEX_POLL_MS));
+        continue;
+      }
+      attempt++;
+      if (attempt > 2 || !looksLikeIndexWait(msg) || !(await indexProgress())) throw e;
       if (!(await settle())) throw e;
     } finally {
       stop = true;
     }
   }
+}
+
+/// Await a prepare already in flight (one started ahead of the send) while showing
+/// the spend-index build the daemon may be running behind it, exactly as a prepare
+/// issued here would — the early one reported its progress to nobody.
+async function awaitShowingIndex<T>(inFlight: Promise<T>, onWarming: (p: IndexProgress) => void, onProving: () => void): Promise<T> {
+  let stop = false;
+  let warming = false;
+  void (async () => {
+    while (!stop) {
+      await new Promise((r) => setTimeout(r, INDEX_POLL_MS));
+      if (stop) return;
+      const p = await indexProgress();
+      if (stop) return;
+      if (p) {
+        warming = true;
+        onWarming(p);
+      } else if (warming) {
+        warming = false;
+        onProving();
+      }
+    }
+  })();
+  try {
+    return await inFlight;
+  } finally {
+    stop = true;
+  }
+}
+
+/// The integer sompi a user-typed amount stands for — the ONE float→integer
+/// conversion, shared by the send and by a prepare started ahead of it so the
+/// two agree to the sompi on what was asked.
+function amountToSompi(amountFc: number): bigint {
+  return BigInt(Math.round(amountFc * Number(SOMPI_PER_ZKAS)));
+}
+
+/// A /prepare started when the Confirm screen opened, before "Confirm & send".
+///
+/// The witness lookup and the Halo2 proof are the slow part of a payment and
+/// nothing about them depends on the tap: the few seconds a person spends reading
+/// the confirmation used to be pure dead time before the proof even began. The
+/// daemon only records a session for a prepare — no note is parked until
+/// /submit, and the session simply expires after 5 minutes — so one that is never
+/// submitted costs nothing but the proof. Keyed by exactly what was asked, so an
+/// edited amount or recipient can never be sent on a stale proof.
+export interface PreparedAhead {
+  key: string;
+  startedAt: number;
+  /// When the daemon answered — the moment its 5-minute session clock starts.
+  /// Null while the proof is still running.
+  finishedAt: number | null;
+  promise: Promise<PrepareResp>;
+}
+
+/// Answered longer ago than this, a prepared session is too close to the daemon's
+/// 5-minute expiry (counted from its answer, not from the request) to trust at
+/// submit time; the send starts afresh instead. One still in flight is always
+/// adopted: a second /prepare beside it would only be refused by the per-wallet guard.
+const PREPARED_AHEAD_MAX_AGE_MS = 240_000;
+
+function prepareKey(to: string, owed: bigint, fee: number | undefined, memo: string | undefined, allowMultiple: boolean): string {
+  return [to.trim(), owed.toString(), fee ?? "", (memo ?? "").trim(), allowMultiple ? 1 : 0].join("|");
+}
+
+/// Would `sendNonCustodial` adopt this early prepare for this payment? Exactly the
+/// same request, and young enough for its session to outlive the send.
+export function prepareAheadUsable(
+  ahead: PreparedAhead | null | undefined,
+  to: string,
+  amountFc: number,
+  fee?: number,
+  memo?: string,
+  allowMultipleTransactions = false,
+): boolean {
+  return (
+    !!ahead &&
+    ahead.key === prepareKey(to, amountToSompi(amountFc), fee, memo, allowMultipleTransactions) &&
+    (ahead.finishedAt === null || Date.now() - ahead.finishedAt < PREPARED_AHEAD_MAX_AGE_MS)
+  );
+}
+
+/// Start the first transaction's /prepare for a payment now. The result is only
+/// ever used by a `sendNonCustodial` asked for exactly the same payment; a
+/// rejection is kept for that call to surface (or ignored, if the user backs out).
+export function prepareAhead(
+  seedHex: string,
+  to: string,
+  amountFc: number,
+  fee?: number,
+  memo?: string,
+  allowMultipleTransactions = false,
+): PreparedAhead {
+  const owed = amountToSompi(amountFc);
+  const promise = (async () => {
+    const fvk = await fvkHex(seedHex);
+    return prepareWaitingForIndex(
+      () => api.prepare(fvk, to, owed, fee, memo, allowMultipleTransactions),
+      () => undefined,
+      () => undefined,
+    );
+  })();
+  const ahead: PreparedAhead = { key: prepareKey(to, owed, fee, memo, allowMultipleTransactions), startedAt: Date.now(), finishedAt: null, promise };
+  // Nobody may be listening if the user backs out; an unhandled rejection is not
+  // an error here. The send that adopts the promise re-awaits it and gets it.
+  promise.then(
+    () => {
+      ahead.finishedAt = Date.now();
+    },
+    () => undefined,
+  );
+  return ahead;
 }
 
 /**
@@ -246,6 +404,9 @@ async function prepareWaitingForIndex<T>(
  * payment, and to sign it — and is never transmitted. Rejects if the daemon reports
  * insufficient matured funds, if the prepared payment does not match what was asked
  * (a lying daemon), or if the node rejects the finalized payment.
+ *
+ * `ahead`: a `prepareAhead` started for this same payment; adopted for the first
+ * transaction when its key matches and it is young enough, otherwise ignored.
  */
 export async function sendNonCustodial(
   seedHex: string,
@@ -256,6 +417,7 @@ export async function sendNonCustodial(
   onStage?: (stage: SendStage, progress?: SendProgress) => void,
   memo?: string,
   allowMultipleTransactions = false,
+  ahead?: PreparedAhead | null,
 ): Promise<SendResult> {
   const fvk = await fvkHex(seedHex);
   const sentParts: SendPart[] = [];
@@ -265,8 +427,11 @@ export async function sendNonCustodial(
   // The ONE float→integer conversion, at the user-input boundary. From here on
   // every amount is integer sompi — no floating-point coin math on the wire or
   // in the chunk accounting.
-  let owed = BigInt(Math.round(amountFc * Number(SOMPI_PER_ZKAS)));
+  let owed = amountToSompi(amountFc);
   const totalSompi = owed;
+  // Adopt a prepare started at the Confirm screen only for THIS exact payment
+  // and only while its session is comfortably inside the daemon's expiry.
+  const adopted = ahead && prepareAheadUsable(ahead, to, amountFc, fee, memo, allowMultipleTransactions) ? ahead.promise : null;
 
   // The fee ceiling the on-device signer enforces per transaction. A custom fee is
   // a floor the daemon may raise to the byte-priced relay minimum, so the ceiling
@@ -296,11 +461,29 @@ export async function sendNonCustodial(
       // A normal transfer is all-or-nothing: without partial mode walletd
       // rejects an over-fragmented payment before it builds, signs or broadcasts
       // anything. Multi-transaction delivery is an explicit user choice.
-      const prep = await prepareWaitingForIndex(
-        () => api.prepare(fvk, to, owed, fee, memo, allowMultipleTransactions),
-        (p) => onStage?.("warming", { ...progress(), warmingPct: p.pct, warmingEtaSecs: p.etaSecs }),
-        () => onStage?.("proving", progress()),
-      );
+      // The first transaction may already be proving since the Confirm screen
+      // opened (`prepareAhead`); a second /prepare for it would only be refused
+      // by the daemon's per-wallet guard anyway.
+      // A refusal of that early attempt (the wallet was mid-merge when the screen
+      // opened, say) is not this payment's answer: ask again, properly staged.
+      let prep: PrepareResp | null =
+        chunk === 0 && adopted
+          ? await awaitShowingIndex(
+              adopted,
+              (p) => onStage?.("warming", { ...progress(), warmingPct: p.pct, warmingEtaSecs: p.etaSecs }),
+              () => onStage?.("proving", progress()),
+            ).catch(() => null)
+          : null;
+      if (!prep) {
+        prep = await prepareWaitingForIndex(
+          () => api.prepare(fvk, to, owed, fee, memo, allowMultipleTransactions),
+          (p) => onStage?.("warming", { ...progress(), warmingPct: p.pct, warmingEtaSecs: p.etaSecs }),
+          () => onStage?.("proving", progress()),
+          // The wallet's own background merge (or an earlier payment) still proving:
+          // wait it out on the same screen rather than bounce back to the form.
+          (note, waitedSecs) => onStage?.("warming", { ...progress(), note: waitedSecs >= 5 ? `${note} (${waitedSecs}s)` : note }),
+        );
+      }
       // Exact integer figures; the plain-number fields are the fallback for a
       // daemon that predates the *_exact decimal strings.
       const chunkAmount = BigInt(prep.amount_sompi_exact ?? Math.round(prep.amount_sompi));

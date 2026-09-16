@@ -140,6 +140,25 @@ if [ "$DO_DEPLOY" = 1 ]; then
 fi
 
 # ---- 6. upload Android to the GitHub release (CI creates it from the tag) ----
+# Release notes. The desktop builds are ad-hoc signed (macOS, not notarized) or
+# unsigned (Windows, Linux), so every OS warns on first launch; the notes say
+# exactly what to click, because the README is not what a downloader is looking
+# at when the warning appears. Keep in step with README "First launch".
+RELEASE_NOTES="$(cat <<EOF
+zkas-wallet $VERSION
+
+**Desktop first launch.** These builds are ad-hoc signed on macOS (not notarized) and unsigned on Windows and Linux, so each OS warns once:
+
+- **macOS** — "Apple could not verify…": click **Done**, then **System Settings → Privacy & Security → Open Anyway** (next to ZKas Wallet) and confirm. On macOS 15 right-click → Open no longer bypasses this; the Settings route is the only one.
+- **Windows** — "Windows protected your PC": click **More info → Run anyway**.
+- **Linux** — \`.AppImage\`: \`chmod +x\` then run; \`.deb\`: \`sudo apt install ./<file>.deb\`.
+
+**Android** — the APK/AAB below is signed with the project's release key; the Play/AAB build updates over an existing install, the APK needs "install from this source" the first time.
+
+Download only from this release page.
+EOF
+)"
+release_body_json="$(printf '%s' "$RELEASE_NOTES" | python3 -c 'import sys,json;print(json.dumps(sys.stdin.read()))')"
 log "Waiting for the $TAG release, then uploading Android artifacts"
 rel_id=""
 for i in $(seq 1 60); do
@@ -150,8 +169,15 @@ done
 if [ -z "$rel_id" ]; then
   echo "release $TAG not created yet by CI; creating it now"
   rel_id="$(gh_api -X POST "https://api.github.com/repos/$REPO/releases" \
-    -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"body\":\"zkas-wallet $VERSION\",\"prerelease\":$([ "$DO_PRE" = 1 ] && echo true || echo false)}" \
+    -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"body\":$release_body_json,\"prerelease\":$([ "$DO_PRE" = 1 ] && echo true || echo false)}" \
     | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')"
+else
+  # CI creates the release with a placeholder body ("Desktop builds."). Put the
+  # first-launch notes on it — but never over notes someone has written by hand.
+  cur_body="$(gh_api "https://api.github.com/repos/$REPO/releases/$rel_id" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("body") or "")' 2>/dev/null || true)"
+  if [ -z "$cur_body" ] || [ "$cur_body" = "Desktop builds." ]; then
+    gh_api -X PATCH "https://api.github.com/repos/$REPO/releases/$rel_id" -d "{\"body\":$release_body_json}" >/dev/null && echo "release notes written to $TAG"
+  fi
 fi
 # The desktop CI may have created the release without the prerelease flag; mark it.
 if [ "$DO_PRE" = 1 ]; then

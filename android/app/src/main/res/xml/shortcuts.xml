@@ -3,9 +3,6 @@
     <shortcut android:shortcutId="receive" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_receive_short" android:shortcutLongLabel="@string/shortcut_receive_long">
         <intent android:action="android.intent.action.VIEW" android:targetPackage="com.firecash.wallet" android:targetClass="com.firecash.wallet.MainActivity" android:data="zkas-wallet://receive" />
     </shortcut>
-    <shortcut android:shortcutId="mine" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_mine_short" android:shortcutLongLabel="@string/shortcut_mine_long">
-        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.firecash.wallet" android:targetClass="com.firecash.wallet.MainActivity" android:data="zkas-wallet://mine" />
-    </shortcut>
     <shortcut android:shortcutId="explore" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_explore_short" android:shortcutLongLabel="@string/shortcut_explore_long">
         <intent android:action="android.intent.action.VIEW" android:targetPackage="com.firecash.wallet" android:targetClass="com.firecash.wallet.MainActivity" android:data="zkas-wallet://explore" />
     </shortcut>

@@ -33,8 +33,11 @@
   --radius: 18px;
   --radius-sm: 12px;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  --sans: Rubik, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* System stacks, honestly. Rubik and Roboto Mono used to head these but were
+     never shipped (no @font-face, no files, and the desktop CSP allows no font
+     host), so every platform already rendered its OS face — just not on purpose. */
+  --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --glow-1: rgba(23, 214, 190, 0.08);
   --glow-2: rgba(23, 214, 190, 0.05);
 }
@@ -116,6 +119,11 @@ a { color: var(--ember-text); }
     font-size: 16px;
   }
   .app-switcher { backdrop-filter: none; }
+  /* Text actions and filter pills sit at 15-32px tall, which a thumb misses:
+     "Choose a contact" / "Max" / "+ Add a private note" in the Send sheet and
+     the History kind filter. 44px is the rule the rest of the app follows. */
+  .linkbtn { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 0; }
+  .chip, .filterbar .chip { min-height: 44px; }
 }
 
 .dot.on { background: var(--good); box-shadow: 0 0 8px var(--good); }
@@ -2397,6 +2405,14 @@ select { appearance: none; cursor: pointer; }
   --ember-hover: #3ee6d1;
   --ember-soft: rgba(23, 214, 190, .12);
   --ember-ink: #06110e;
+  /* This page is dark whatever the theme, so its accent TEXT must be the bright
+     accent too. Without these the light theme's --ember-text (accent darkened
+     toward black for white surfaces) leaked in and the active nav item, links
+     and the wordmark's "Z" sat near-invisible on the dark-green surfaces. */
+  --ember-text: var(--ember);
+  --ember-rgb: 23 214 190;
+  --glow-1: rgba(23, 214, 190, .08);
+  --glow-2: rgba(23, 214, 190, .05);
   min-height: 100vh;
   min-height: 100dvh;
   background:

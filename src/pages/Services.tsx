@@ -23,6 +23,7 @@ import {
   type ServiceCategory,
   type ServiceIcon,
 } from "../services-directory";
+import { isDesktop } from "../desktop";
 
 type Category = ServiceCategory;
 
@@ -46,6 +47,11 @@ const ICONS: Record<ServiceIcon, LucideIcon> = {
 const INTERNAL_ROUTES: Record<string, string> = {
   "web-wallet": "/",
   explorer: "/explore",
+};
+// Mining and node supervision are pages only the desktop shell can act on; on a
+// phone or the web they render a "Get the desktop app" dead end, so those cards
+// open the directory's own page instead.
+const DESKTOP_ROUTES: Record<string, string> = {
   "mining-pools": "/mine",
   "node-solo-mining": "/node",
 };
@@ -102,8 +108,11 @@ export function Services() {
     setParams(next === "all" ? {} : { filter: next }, { replace: true });
   };
   const open = (service: DirectoryService) => {
-    const internalRoute = INTERNAL_ROUTES[service.id];
+    const internalRoute = INTERNAL_ROUTES[service.id] ?? (isDesktop() ? DESKTOP_ROUTES[service.id] : undefined);
     if (internalRoute) navigate(internalRoute);
+    // The desktop WebView has no window.open target, so the click went nowhere;
+    // hand the URL to the system browser through the shell's opener plugin.
+    else if (isDesktop()) void import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(service.href)).catch(() => {});
     else window.open(service.href, "_blank", "noopener,noreferrer");
   };
   return (

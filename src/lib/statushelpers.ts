@@ -8,6 +8,11 @@ export function sameStatus(a: Status, b: Status): boolean {
     a.address === b.address &&
     a.synced === b.synced &&
     a.warming === b.warming &&
+    a.warming_pct === b.warming_pct &&
+    a.warming_eta_secs === b.warming_eta_secs &&
+    // Mirrors App.tsx's sameStatus: the spend gate can flip on its own.
+    a.spend_ready === b.spend_ready &&
+    a.loading === b.loading &&
     a.node_connected === b.node_connected &&
     a.balance_fc === b.balance_fc &&
     a.spendable_fc === b.spendable_fc &&
@@ -20,7 +25,7 @@ export function sameStatus(a: Status, b: Status): boolean {
     a.missing_history === b.missing_history &&
     a.history_from_daa === b.history_from_daa &&
     a.watch_only === b.watch_only &&
-    (a.synced ? true : a.scanned_blocks === b.scanned_blocks && a.chain_len === b.chain_len)
+    (a.synced ? true : a.scanned_blocks === b.scanned_blocks && a.chain_len === b.chain_len && a.blocks_behind === b.blocks_behind)
   );
 }
 

@@ -105,10 +105,33 @@ Then set the daemon URL in the app footer to `http://127.0.0.1:8501`.
 
 ## All-in-one desktop
 
-The signed desktop application has seven focused pages: **Wallet**, **Node**, **Mine**,
+The desktop application has seven focused pages: **Wallet**, **Node**, **Mine**,
 **Explore**, **Services**, **Pay** and **Host**. A beginner can install pinned, SHA-256-verified node/mining components
 from the UI; no binary paths or command-line flags are required. Advanced users
 can use existing ZKas and Kaspa gRPC nodes instead.
+
+### First launch
+
+The desktop builds are **ad-hoc signed on macOS and not notarized**, and the Windows
+and Linux builds carry **no code signature** at all (there is no Apple Developer or
+Authenticode certificate in the pipeline yet). Every OS therefore warns once on first
+launch; the release is what you verify, not the signature:
+
+- **macOS** — the first open says *"Apple could not verify…"*. Click **Done**, then
+  open **System Settings → Privacy & Security**, scroll to the *Security* section and
+  click **Open Anyway** next to ZKas Wallet, then confirm. (On macOS 15 the old
+  right-click → Open shortcut no longer bypasses this; the Settings route is the only
+  one.) If the app was quarantined by a download manager instead of Safari, `xattr -d
+  com.apple.quarantine "/Applications/ZKas Wallet.app"` clears it.
+- **Windows** — SmartScreen shows *"Windows protected your PC"*. Click **More info**,
+  then **Run anyway**. The installer name and version are shown on that panel; check
+  them against the release page.
+- **Linux** — `.AppImage`: `chmod +x` it and run; `.deb`: `sudo apt install ./<file>.deb`.
+  No prompt, but nothing is verified either.
+
+Download only from the [GitHub release page](https://github.com/firecash/zkas-wallet/releases);
+with no notarization or Authenticode, the download origin is the only provenance a
+desktop build has today.
 
 The managed port layout deliberately keeps both chains separate: ZKas RPC/P2P is
 `16810/16811`, Kaspa parent RPC/P2P is `16110/16111`, and local ASIC Stratum is
@@ -166,12 +189,14 @@ Requests carry `X-Wallet-Token`. See `src/api.ts` for the typed client.
   hosted model still have their seed on the daemon until they are restored to a device.)
 - The page is served under a strict **Content-Security-Policy** (`default-src 'none'`;
   `script-src 'self' 'wasm-unsafe-eval'` + one hashed inline bootstrap; `connect-src`
-  same-origin + the services host + localhost), so an injected script can neither run nor
-  exfiltrate the seed to another host. The policy is enforced at the web host (nginx) and
-  its canonical copy lives in this repo at [`deploy/wallet-sec.conf`](deploy/wallet-sec.conf)
-  so it can be reviewed and diffed here. The one risk a website can't fully remove is the
-  server serving tampered code — for that, prefer the desktop/mobile app (fixed, signed
-  builds) or self-host.
+  same-origin + the services host + the price feed + localhost), so an injected script
+  can neither run nor exfiltrate the seed to another host. The policy is enforced at the
+  web host (nginx) and its canonical copy lives in this repo at
+  [`deploy/wallet-sec.conf`](deploy/wallet-sec.conf) so it can be reviewed and diffed
+  here. The one risk a website can't fully remove is the server serving tampered code —
+  for that, prefer the desktop/mobile app (a fixed build you install once; note the
+  desktop builds are ad-hoc signed / unsigned, not notarized — see *First launch* above)
+  or self-host.
 - `zkas-walletd` is hardened: CORS is locked to `--allow-origin`, the wallet token is
   required, and any seed it does hold (self-host / legacy) can be encrypted at rest with
   `--wallet-secret`. Always launch it with the exact origin you serve this app from.

@@ -7,7 +7,14 @@
 
 import { isNative } from "./api";
 import { isDesktop } from "./desktop";
-import { ONION_WALLETD_URL, ORBOT_PLAY_URL } from "./lib/relay";
+import { ONION_WALLETD_URL, ORBOT_APPSTORE_URL, ORBOT_PLAY_URL } from "./lib/relay";
+
+/// iPhone or Android — they get Orbot from different stores, and only Android has
+/// a "VPN mode" to turn on (Orbot for iOS is a VPN, full stop).
+function isIos(): boolean {
+  const cap = (globalThis as { Capacitor?: { getPlatform?: () => string } }).Capacitor;
+  return cap?.getPlatform?.() === "ios";
+}
 
 /// The onion origin without the /daemon suffix — the address a Tor Browser user
 /// can open directly to get the whole wallet over Tor.
@@ -15,6 +22,9 @@ const ONION_SITE = ONION_WALLETD_URL.replace(/\/daemon\/?$/, "");
 
 export function OrbotHelp() {
   if (isNative()) {
+    // Same app, two stores, and Android's "VPN mode" wording does not exist on
+    // iOS — sending an iPhone to Google Play read as "not for you".
+    const ios = isIos();
     return (
       <div className="orbot-help">
         <b>Tor needs Orbot</b>
@@ -22,11 +32,13 @@ export function OrbotHelp() {
           The wallet reaches the onion through Orbot, the free Tor app. It isn't running:
         </p>
         <ol className="orbot-steps">
-          <li>Install Orbot.</li>
-          <li>Open it and turn on <b>VPN mode</b>.</li>
+          <li>Install Orbot{ios ? " from the App Store" : ""}.</li>
+          {ios
+            ? <li>Open it and <b>connect</b> — Orbot runs as a VPN on iPhone, so allow the VPN configuration it asks for.</li>
+            : <li>Open it and turn on <b>VPN mode</b>.</li>}
           <li>Come back and tap <b>Connect over Tor</b> again.</li>
         </ol>
-        <a className="btn small ghost" href={ORBOT_PLAY_URL} target="_blank" rel="noreferrer">Get Orbot</a>
+        <a className="btn small ghost" href={ios ? ORBOT_APPSTORE_URL : ORBOT_PLAY_URL} target="_blank" rel="noreferrer">Get Orbot</a>
       </div>
     );
   }

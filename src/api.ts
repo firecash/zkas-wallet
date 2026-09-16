@@ -680,7 +680,10 @@ export const api = {
   // Chain-derived history: recovered from the blocks themselves during scan
   // (coinbase mints, received notes, and — via the OVK — own sends), so unlike
   // the device-local send list it survives a seed restore and other devices.
-  history: () => req<ChainHistory>("GET", "/api/wallet/history", undefined, 30_000),
+  // `limit` caps the page the daemon serialises under the wallet lock: the tab shows
+  // HISTORY_PAGE rows unless "show all" is pressed, so it asks for only that many.
+  history: (limit?: number) =>
+    req<ChainHistory>("GET", `/api/wallet/history${limit ? `?limit=${limit}` : ""}`, undefined, 30_000),
   // History is opt-in: enabling stores a readable transaction record in the
   // wallet's scan data (and makes sends OVK-recoverable); disabling erases it.
   setHistoryEnabled: (on: boolean) =>

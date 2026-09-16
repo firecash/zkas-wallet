@@ -32,7 +32,14 @@ const ACCENT_KEY = "accent";
 export function currentTheme(): Theme {
   // Dark unless the user explicitly chose otherwise. Never derived from the OS on
   // its own — only if the user deliberately selected "system".
-  const v = localStorage.getItem(KEY);
+  // Guarded: with site storage blocked the accessor throws, and this runs on the
+  // boot path before React mounts — the identity (dark) is the right answer.
+  let v: string | null = null;
+  try {
+    v = localStorage.getItem(KEY);
+  } catch {
+    /* storage unavailable — dark */
+  }
   return v === "light" || v === "system" ? v : "dark";
 }
 
@@ -48,7 +55,12 @@ function resolveTheme(t: Theme): "dark" | "light" {
 }
 
 export function currentAccent(): Accent {
-  const a = localStorage.getItem(ACCENT_KEY);
+  let a: string | null = null;
+  try {
+    a = localStorage.getItem(ACCENT_KEY);
+  } catch {
+    /* storage unavailable — teal */
+  }
   return a && a in ACCENTS ? (a as Accent) : "teal";
 }
 
@@ -86,12 +98,28 @@ export function setAccent(a: Accent): void {
   applyAccent(a);
 }
 
+/// Browser/OS chrome colors per palette. `theme-color` paints the tab strip and
+/// the PWA title bar; the Apple status-bar style is read at launch, so the value
+/// written here takes effect the next time the home-screen app opens. Both were
+/// static (dark) in index.html and never followed a light choice, leaving dark
+/// chrome over a white page.
+const CHROME = {
+  dark: { color: "#08080c", statusBar: "black-translucent" },
+  light: { color: "#f7f7fa", statusBar: "default" },
+} as const;
+
 function apply(t: Theme): void {
   const root = document.documentElement;
   // Resolve "system" to a concrete palette; :root defaults to dark, so only light
   // needs the attribute.
-  if (resolveTheme(t) === "light") root.setAttribute("data-theme", "light");
+  const resolved = resolveTheme(t);
+  if (resolved === "light") root.setAttribute("data-theme", "light");
   else root.removeAttribute("data-theme");
+  const chrome = CHROME[resolved];
+  document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute("content", chrome.color);
+  document
+    .querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-status-bar-style"]')
+    ?.setAttribute("content", chrome.statusBar);
 }
 
 /// Push the chosen accent into the CSS custom properties every highlight reads.

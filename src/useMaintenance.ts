@@ -24,6 +24,16 @@ import { embeddedChosen } from "./embedded";
 /// already in hand — and the real rate limit is `MAINTENANCE_MIN_INTERVAL_MS`.
 const POLL_MS = 60_000;
 
+/// The merge round running right now, if any. `busy` keeps a round from STARTING
+/// while the user is on Send, but one already running keeps going — its /prepare
+/// holds the wallet on the daemon for the whole proof, and a payment prepared in
+/// that window is refused with 429 "merging its own notes". A send checks here
+/// first and waits for the round instead of colliding with it. Never rejects.
+let inFlight: Promise<void> | null = null;
+export function mergeInFlight(): Promise<void> | null {
+  return inFlight;
+}
+
 export interface MaintenanceOptions {
   status: Status | null;
   /// The active wallet's token: the interval is remembered per wallet.
@@ -61,25 +71,33 @@ export function useMaintenance(options: MaintenanceOptions): void {
         now: Date.now(),
       });
       if (!decision.run || !status?.address) return;
+      const address = status.address;
+      const spendable = BigInt(status.spendable_sompi ?? "0");
 
       running.current = true;
-      try {
-        const seed = await getSeed();
-        const spendable = BigInt(status.spendable_sompi ?? "0");
-        // ONE round. The point is to keep the count down over time, not to empty
-        // the wallet into a merge storm the moment the app opens.
-        const merged = await consolidateNonCustodial(seed, network, status.address, spendable, undefined, 1);
-        if (!cancelled && merged.rounds > 0) {
-          // Recorded only on success, so a daemon that is busy or a device that
-          // cannot sign does not consume the wallet's next maintenance window.
-          recordMaintenanceRun(token, Date.now());
-          onMerged?.();
+      const round = (async () => {
+        try {
+          const seed = await getSeed();
+          // ONE round. The point is to keep the count down over time, not to empty
+          // the wallet into a merge storm the moment the app opens.
+          const merged = await consolidateNonCustodial(seed, network, address, spendable, undefined, 1);
+          if (!cancelled && merged.rounds > 0) {
+            // Recorded only on success, so a daemon that is busy or a device that
+            // cannot sign does not consume the wallet's next maintenance window.
+            recordMaintenanceRun(token, Date.now());
+            onMerged?.();
+          }
+        } catch {
+          // Locked app, no seed on this device, prover busy, node unreachable — all
+          // ordinary and all temporary. Stay silent and let the next tick decide.
         }
-      } catch {
-        // Locked app, no seed on this device, prover busy, node unreachable — all
-        // ordinary and all temporary. Stay silent and let the next tick decide.
+      })();
+      inFlight = round;
+      try {
+        await round;
       } finally {
         running.current = false;
+        if (inFlight === round) inFlight = null;
       }
     };
 

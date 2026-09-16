@@ -20,7 +20,10 @@ export const PRIVATE_RELAY_URL: string =
   (import.meta.env.VITE_PRIVATE_RELAY_URL as string | undefined)?.trim() || "";
 
 // Where to send a user who taps "Connect over Tor" without a Tor transport up.
+// Orbot exists for both phone platforms, in different stores: on iOS it is a
+// VPN-only app (there is no "VPN mode" to switch on — the whole app is one).
 export const ORBOT_PLAY_URL = "https://play.google.com/store/apps/details?id=org.torproject.android";
+export const ORBOT_APPSTORE_URL = "https://apps.apple.com/app/id1609461599";
 
 /// The public wallet service. It has already scanned the chain, so a wallet
 /// pointed at it shows its balance immediately instead of scanning locally.

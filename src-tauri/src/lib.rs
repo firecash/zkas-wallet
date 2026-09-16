@@ -350,6 +350,12 @@ struct Engine {
     services: ServiceManager,
     node_disk_bytes: u64,
     node_disk_checked: Option<std::time::Instant>,
+    /// One gRPC session per node address, kept across the Node/Mine status polls.
+    /// See `node_client`.
+    node_clients: NodeClientCache,
+    /// The managed local node's last status probe, so `mining_status` (polled on the
+    /// same 2 s tick as `node_status`) reads it instead of probing the node again.
+    local_node_probe: Option<(std::time::Instant, Result<NodeProbe, String>)>,
     /// The wallet passphrase, held in memory ONLY between unlock and lock. It is
     /// never written anywhere: the daemon uses it to decrypt the seed at load,
     /// and `lock()` drops it and stops the daemon. Nothing on disk can be turned
@@ -485,6 +491,70 @@ fn walletd_api_ready(
     status.starts_with("HTTP/1.1 200 ") || status.starts_with("HTTP/1.0 200 ")
 }
 
+/// `Engine::wait_walletd_ready` for a command that has RELEASED the engine lock:
+/// each probe takes the lock only long enough to read the port and credentials, so
+/// wallet requests and status polls keep flowing while the daemon comes up. Runs
+/// on a blocking thread — the probe is plain std TCP with 500 ms timeouts.
+async fn wait_walletd_ready_unlocked(
+    app: &tauri::AppHandle,
+    timeout: std::time::Duration,
+) -> Result<(), String> {
+    let app = app.clone();
+    tokio::task::spawn_blocking(move || {
+        let deadline = std::time::Instant::now() + timeout;
+        loop {
+            let state = app.state::<Mutex<Engine>>();
+            let (address, token, bearer) = {
+                let e = engine(&state);
+                let stopped = e
+                    .walletd_task
+                    .as_ref()
+                    .is_some_and(tokio::task::JoinHandle::is_finished);
+                if e.port == 0 || stopped {
+                    return Err(e
+                        .walletd_error
+                        .lock()
+                        .unwrap_or_else(|p| p.into_inner())
+                        .clone()
+                        .unwrap_or_else(|| {
+                            if e.port == 0 {
+                                "wallet engine has no listening port".into()
+                            } else {
+                                "wallet engine stopped during startup".into()
+                            }
+                        }));
+                }
+                (
+                    std::net::SocketAddr::from(([127, 0, 0, 1], e.port)),
+                    e.token.clone(),
+                    (e.settings.wallet_access != "device").then(|| e.wallet_access_token.clone()),
+                )
+            };
+            if walletd_api_ready(address, &token, bearer.as_deref()) {
+                return Ok(());
+            }
+            if std::time::Instant::now() >= deadline {
+                let state = app.state::<Mutex<Engine>>();
+                let e = engine(&state);
+                return Err(e
+                    .walletd_error
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .clone()
+                    .unwrap_or_else(|| {
+                        format!(
+                            "wallet engine did not answer authenticated /api/status within {} seconds",
+                            timeout.as_secs()
+                        )
+                    }));
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+    })
+    .await
+    .unwrap_or_else(|e| Err(format!("wallet engine readiness check failed: {e}")))
+}
+
 impl Engine {
     fn write_private(path: &std::path::Path, contents: &[u8]) {
         if std::fs::write(path, contents).is_ok() {
@@ -525,6 +595,8 @@ impl Engine {
             services: ServiceManager::default(),
             node_disk_bytes: 0,
             node_disk_checked: None,
+            node_clients: NodeClientCache::default(),
+            local_node_probe: None,
             secret: None,
         }
     }
@@ -590,8 +662,16 @@ impl Engine {
             let _ = tx.send(());
         }
         if let Some(mut task) = self.walletd_task.take() {
-            let stopped = self.rt.block_on(async {
-                tokio::time::timeout(std::time::Duration::from_secs(30), &mut task).await
+            // `block_in_place`: the async commands (`set_node_source`, `stop_node`,
+            // `set_host_access`) reach here from a worker of Tauri's tokio runtime,
+            // and a plain `Runtime::block_on` there panics ("Cannot start a runtime
+            // from within a runtime") — the command's promise then never settled and
+            // the engine lock was left poisoned. Outside a runtime (sync commands,
+            // setup, the tray/exit handlers) it just runs the closure.
+            let stopped = tokio::task::block_in_place(|| {
+                self.rt.block_on(async {
+                    tokio::time::timeout(std::time::Duration::from_secs(30), &mut task).await
+                })
             });
             if stopped.is_err() {
                 log_crash("embedded walletd did not stop within 30s; aborting its task");
@@ -600,7 +680,7 @@ impl Engine {
                     "shutdown exceeded 30 seconds; aborting wallet engine task",
                 );
                 task.abort();
-                let _ = self.rt.block_on(task);
+                let _ = tokio::task::block_in_place(|| self.rt.block_on(task));
             }
         }
         self.port = 0;
@@ -723,7 +803,23 @@ impl Engine {
             // block, say — gets slower to send from every day unless something
             // consolidates them. `None` would disable that silently.
             auto_consolidate: Some(zkas_walletd::AUTO_CONSOLIDATE_DEFAULT),
-            resources: zkas_walletd::ResourceLimits::default(),
+            resources: {
+                let mut r = zkas_walletd::ResourceLimits::default();
+                // Against a remote node the desktop is in the same fetch-bound,
+                // high-RTT shape the phone was tuned for: the default depth of 1
+                // fetches one 1000-block page per round-trip with the cores idle in
+                // between (`deep_prefetch` only runs at depth > 1). A local node
+                // answers in well under a millisecond, so the read-ahead buys
+                // nothing there and the defaults stay.
+                if self.settings.mode != "local" {
+                    r.prefetch_depth = 8;
+                    // Keep prefetched pages warm long enough for the cursor to reach them.
+                    r.page_cache_ttl_secs = 60;
+                    // Single wallet: the cache only needs to hold the read-ahead window.
+                    r.page_cache_entries = r.prefetch_depth + 2;
+                }
+                r
+            },
             // Single-wallet on-device engine: nobody borrows a daemon-wide shared tree, so
             // building it from genesis only delays the first send. Serve from the wallet's
             // own near-tip frontier tree instead.
@@ -1425,6 +1521,19 @@ fn reveal_path(path: String) -> Result<(), String> {
     if !target.starts_with(&home) {
         return Err("refusing to open a path outside your home folder".into());
     }
+    // On Windows `canonicalize` returns the extended-length form
+    // (`\\?\C:\Users\...`, or `\\?\UNC\server\share\...` for a network home),
+    // which explorer.exe does not accept: it opened the wrong folder. The
+    // verbatim form was only needed for the prefix check above; hand the OS
+    // the plain path.
+    #[cfg(windows)]
+    let target = {
+        let verbatim = target.to_string_lossy();
+        PathBuf::from(match verbatim.strip_prefix(r"\\?\UNC\") {
+            Some(unc) => format!(r"\\{unc}"),
+            None => verbatim.trim_start_matches(r"\\?\").to_string(),
+        })
+    };
     let cmd = if cfg!(target_os = "macos") {
         "open"
     } else if cfg!(target_os = "windows") {
@@ -1671,7 +1780,7 @@ fn list_backups(state: tauri::State<'_, Mutex<Engine>>) -> Vec<String> {
 /// refused here, with the running daemon untouched.
 #[tauri::command]
 async fn set_node_source(
-    _app: tauri::AppHandle,
+    app: tauri::AppHandle,
     state: tauri::State<'_, Mutex<Engine>>,
     mode: String,
     node_addr: Option<String>,
@@ -1743,12 +1852,17 @@ async fn set_node_source(
     // on a wrong address or an unsynced node, rather than silently connect to
     // nothing.
     if mode != "remote" {
-        let (_, _, _, _, synced, _, _) = tokio::time::timeout(
+        let node_clients = engine(&state).node_clients.clone();
+        let probed = tokio::time::timeout(
             std::time::Duration::from_secs(11),
-            query_node_rpc_with_deadline(&target, std::time::Duration::from_secs(8)),
+            query_node_rpc_with_deadline(&node_clients, &target, std::time::Duration::from_secs(8)),
         )
-        .await
-        .map_err(|_| format!("node RPC at {target} timed out; wallet connection was not changed"))??;
+        .await;
+        // A one-shot check, so do not keep this session around: the status polls
+        // reopen one on demand if this address does become the node they watch.
+        forget_node_client(&node_clients, &target).await;
+        let (_, _, _, _, synced, _, _) = probed
+            .map_err(|_| format!("node RPC at {target} timed out; wallet connection was not changed"))??;
         if !synced {
             return Err(format!(
                 "node at {target} is still syncing. The wallet remains on its previous source so its balance cannot become partial."
@@ -1765,43 +1879,58 @@ async fn set_node_source(
         })??;
     }
 
-    let mut e = engine(&state);
+    // Hold the engine lock only to swap the settings and (re)spawn the daemon.
+    // The readiness wait below can take up to WALLETD_START_GRACE, and holding
+    // the lock through it froze every other command — each wallet request, the
+    // status polls, the config reads — behind the switch, so the UI showed
+    // "Checking…" and nothing else for minutes.
+    //
     // Roll back only to a daemon that was actually up. Normally one is — boot
     // starts walletd on the default source — so a switch that fails to come up
     // is correctly restored to the working connection. But if boot's own start
     // failed (port == 0), `previous` is just unusable defaults: rolling back to
     // it (a second 15s wait) buys nothing and reports a "previous connection"
     // that was never live. There, return the real error instead.
-    let had_daemon = e.port != 0;
-    let previous = e.settings.clone();
-    if let Some(a) = normalized_addr {
-        e.settings.node_addr = a;
-    }
-    e.settings.mode = mode;
-    if let Some(b) = node_binary {
-        e.settings.node_binary = if b.trim().is_empty() { None } else { Some(b) };
-    }
-    e.start_walletd();
-    if let Err(error) = e.wait_walletd_ready(WALLETD_START_GRACE) {
-        // Slow is not dead. If the engine is still up it is loading its scan
-        // state, and the source it was asked for IS the one it is loading with —
-        // rolling back here would kill that work and start the wait over, which
-        // is what turned a slow first sync into "THE WALLET ENGINE DIDN'T START"
-        // that no amount of retrying could clear.
-        if e.walletd_alive() {
-            e.save_settings();
-            return Ok(config_of(&mut e));
+    let (had_daemon, previous) = {
+        let mut e = engine(&state);
+        let had_daemon = e.port != 0;
+        let previous = e.settings.clone();
+        if let Some(a) = normalized_addr {
+            e.settings.node_addr = a;
         }
-        if had_daemon {
+        e.settings.mode = mode;
+        if let Some(b) = node_binary {
+            e.settings.node_binary = if b.trim().is_empty() { None } else { Some(b) };
+        }
+        e.start_walletd();
+        (had_daemon, previous)
+    };
+    if let Err(error) = wait_walletd_ready_unlocked(&app, WALLETD_START_GRACE).await {
+        // The guard lives in this block so it is released before the rollback
+        // wait below (a std guard must not be held across an await).
+        {
+            let mut e = engine(&state);
+            // Slow is not dead. If the engine is still up it is loading its scan
+            // state, and the source it was asked for IS the one it is loading with —
+            // rolling back here would kill that work and start the wait over, which
+            // is what turned a slow first sync into "THE WALLET ENGINE DIDN'T START"
+            // that no amount of retrying could clear.
+            if e.walletd_alive() {
+                e.save_settings();
+                return Ok(config_of(&mut e));
+            }
+            if !had_daemon {
+                return Err(error);
+            }
             // Transactional rollback: never persist a source that leaves the app
             // dead, and restore the already-working daemon in the same command.
             e.settings = previous;
             e.start_walletd();
-            let _ = e.wait_walletd_ready(WALLETD_START_GRACE);
-            return Err(format!("{error}; restored the previous wallet connection"));
         }
-        return Err(error);
+        let _ = wait_walletd_ready_unlocked(&app, WALLETD_START_GRACE).await;
+        return Err(format!("{error}; restored the previous wallet connection"));
     }
+    let mut e = engine(&state);
     e.save_settings();
     Ok(config_of(&mut e))
 }
@@ -1954,6 +2083,14 @@ struct NodeStatus {
 /// fixed on the public node the same week: nothing was closing what it opened.
 ///
 /// So: connect, run the calls under the deadline, and disconnect unconditionally.
+///
+/// Since then the status polls moved to ONE session per node address, kept in
+/// `Engine::node_clients` (see `node_client`): the Node and Mine pages poll every 2-3 s,
+/// and a fresh TCP + HTTP/2 handshake per poll — up to four per tick on the Mine page,
+/// two of them against a public node — was the other half of the same load. A session
+/// is dropped and reopened only after a failed or timed-out call. The one-shot checks
+/// (`verify_wallet_history_rpc`) still open and close their own.
+///
 /// Close a gRPC session when this guard drops — including when the surrounding future is
 /// CANCELLED, which is exactly the case a plain `disconnect().await` at the end misses.
 ///
@@ -1976,13 +2113,38 @@ fn scopeguard_disconnect(client: kaspa_grpc_client::GrpcClient) -> DisconnectOnD
     DisconnectOnDrop(Some(client))
 }
 
-async fn query_node_rpc_with_deadline(
-    addr: &str,
-    deadline: std::time::Duration,
-) -> Result<(u64, u64, u64, usize, bool, usize, f64), String> {
-    use kaspa_grpc_client::GrpcClient;
-    use kaspa_rpc_core::{api::rpc::RpcApi, notify::mode::NotificationMode};
+/// `(block_count, header_count, daa_score, peer_count, is_synced, mempool_size, difficulty)`.
+type NodeProbe = (u64, u64, u64, usize, bool, usize, f64);
 
+/// The status polls' sessions, one per node address (`host:port`). A tokio mutex
+/// because it is taken from async commands and must never be held across an await
+/// by a std one; the Engine's own lock is not held while a node is being dialed.
+type NodeClientCache =
+    std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, kaspa_grpc_client::GrpcClient>>>;
+
+/// The kept session to `addr`, opened on first use. A session whose receiver has
+/// gone (node restarted, connection dropped) is replaced here; one that merely fails
+/// a call is replaced by `forget_node_client` at the call site.
+///
+/// The dial happens with the cache UNLOCKED so a slow or unreachable node (a custom
+/// address that is down) never stalls the poll of the other one; if two polls raced
+/// to open the same address, the later one closes its own and uses the first.
+async fn node_client(cache: &NodeClientCache, addr: &str) -> Result<kaspa_grpc_client::GrpcClient, String> {
+    use kaspa_grpc_client::GrpcClient;
+    use kaspa_rpc_core::notify::mode::NotificationMode;
+
+    let stale = {
+        let mut cache = cache.lock().await;
+        if let Some(client) = cache.get(addr) {
+            if client.is_connected() {
+                return Ok(client.clone());
+            }
+        }
+        cache.remove(addr)
+    };
+    if let Some(stale) = stale {
+        let _ = stale.disconnect().await;
+    }
     let client = GrpcClient::connect_with_args(
         NotificationMode::Direct,
         format!("grpc://{addr}"),
@@ -1995,9 +2157,47 @@ async fn query_node_rpc_with_deadline(
     )
     .await
     .map_err(|e| format!("cannot connect to node RPC at {addr}: {e}"))?;
+    let raced = {
+        let mut cache = cache.lock().await;
+        let existing = cache.get(addr).filter(|c| c.is_connected()).cloned();
+        if existing.is_none() {
+            cache.insert(addr.to_string(), client.clone());
+        }
+        existing
+    };
+    match raced {
+        Some(existing) => {
+            let _ = client.disconnect().await;
+            Ok(existing)
+        }
+        None => Ok(client),
+    }
+}
 
-    // Every call that can hang lives inside this block, so the deadline covers them and
-    // the disconnect below is reached no matter which way it ends.
+/// Close and drop the kept session to `addr` after a failed or timed-out call, so the
+/// next poll dials afresh instead of reusing a session that may be wedged. Closing
+/// hands the node its slot back — the leak this whole section exists to prevent.
+async fn forget_node_client(cache: &NodeClientCache, addr: &str) {
+    let removed = cache.lock().await.remove(addr);
+    if let Some(client) = removed {
+        let _ = client.disconnect().await;
+    }
+}
+
+async fn query_node_rpc_with_deadline(
+    cache: &NodeClientCache,
+    addr: &str,
+    deadline: std::time::Duration,
+) -> Result<NodeProbe, String> {
+    use kaspa_rpc_core::api::rpc::RpcApi;
+
+    let client = node_client(cache, addr).await?;
+
+    // Every call that can hang lives inside this block, so the deadline covers them.
+    // `get_info` carries the mempool size; this used to download the ENTIRE mempool
+    // (`get_mempool_entries`) every poll just to count it. `get_sync_status` stays for
+    // `is_synced`: it is the stricter of the two (it also excludes a node still in
+    // transitional IBD), and it gates whether the bridge is started against the node.
     let gathered = tokio::time::timeout(deadline, async {
         let dag = client
             .get_block_dag_info()
@@ -2013,22 +2213,24 @@ async fn query_node_rpc_with_deadline(
             .map(|r| r.peer_info.len())
             .unwrap_or(0);
         let mempool = client
-            .get_mempool_entries(false, false)
+            .get_info()
             .await
-            .map(|r| r.len())
+            .map(|r| r.mempool_size as usize)
             .unwrap_or(0);
         Ok::<_, String>((dag, synced, peers, mempool))
     })
     .await;
 
-    // Unconditional. This is the whole point of the restructure — a timed-out or failed
-    // query must still hand the node its slot back.
-    let _ = client.disconnect().await;
-
     let (dag, synced, peers, mempool) = match gathered {
         Ok(Ok(v)) => v,
-        Ok(Err(e)) => return Err(e),
-        Err(_) => return Err(format!("node RPC at {addr} did not answer within {}s", deadline.as_secs())),
+        Ok(Err(e)) => {
+            forget_node_client(cache, addr).await;
+            return Err(e);
+        }
+        Err(_) => {
+            forget_node_client(cache, addr).await;
+            return Err(format!("node RPC at {addr} did not answer within {}s", deadline.as_secs()));
+        }
     };
     Ok((
         dag.block_count,
@@ -2044,30 +2246,40 @@ async fn query_node_rpc_with_deadline(
 /// The node's own statement of what shielded history it holds: `(history_from_daa_score,
 /// history_complete)` from `GetShieldedTreeState`, the same call walletd anchors scans
 /// with. `None` when the node cannot be reached, is an older build without the call, or
-/// does not answer within `deadline`. Closes its session however it ends.
-async fn query_node_history_status(addr: &str, deadline: std::time::Duration) -> Option<(u64, bool)> {
-    use kaspa_grpc_client::GrpcClient;
-    use kaspa_rpc_core::{api::rpc::RpcApi, notify::mode::NotificationMode};
+/// does not answer within `deadline`. Runs on the kept session (see `node_client`)
+/// rather than opening a second one per poll; a timeout drops that session.
+async fn query_node_history_status(cache: &NodeClientCache, addr: &str, deadline: std::time::Duration) -> Option<(u64, bool)> {
+    use kaspa_rpc_core::api::rpc::RpcApi;
 
-    let client = GrpcClient::connect_with_args(
-        NotificationMode::Direct,
-        format!("grpc://{addr}"),
-        None,
-        false,
-        None,
-        false,
-        Some(500_000),
-        Default::default(),
-    )
-    .await
-    .ok()?;
-    // Cleanup guard: see `query_node_rpc_with_deadline`.
-    let _guard = scopeguard_disconnect(client.clone());
+    let client = node_client(cache, addr).await.ok()?;
     let result = tokio::time::timeout(deadline, client.get_shielded_tree_state(None)).await;
-    let _ = client.disconnect().await;
     match result {
         Ok(Ok(ts)) => Some((ts.history_from_daa_score, ts.history_complete)),
-        _ => None,
+        // An older node answers with an error (no such method): keep the session.
+        Ok(Err(_)) => None,
+        Err(_) => {
+            forget_node_client(cache, addr).await;
+            None
+        }
+    }
+}
+
+/// Just `is_synced` (`get_sync_status`) on the kept session — what the Mine page
+/// needs from a work-source node. Drops the session on failure like the full probe.
+async fn query_node_synced(cache: &NodeClientCache, addr: &str, deadline: std::time::Duration) -> Result<bool, String> {
+    use kaspa_rpc_core::api::rpc::RpcApi;
+
+    let client = node_client(cache, addr).await?;
+    match tokio::time::timeout(deadline, client.get_sync_status()).await {
+        Ok(Ok(synced)) => Ok(synced),
+        Ok(Err(e)) => {
+            forget_node_client(cache, addr).await;
+            Err(format!("getSyncStatus failed: {e}"))
+        }
+        Err(_) => {
+            forget_node_client(cache, addr).await;
+            Err(format!("node RPC at {addr} did not answer within {}s", deadline.as_secs()))
+        }
     }
 }
 
@@ -2197,7 +2409,7 @@ fn directory_size(path: &std::path::Path) -> u64 {
 
 #[tauri::command]
 async fn node_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<NodeStatus, String> {
-    let (rpc_addr, pid, last_exit, node_dir, cached_disk, refresh_disk) = {
+    let (rpc_addr, pid, last_exit, node_dir, cached_disk, refresh_disk, node_clients) = {
         let mut e = engine(&state);
         let pid = e.services.zkas_node.pid();
         let refresh_disk = e
@@ -2215,6 +2427,7 @@ async fn node_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<NodeStatu
             e.data_dir.join("node"),
             e.node_disk_bytes,
             refresh_disk,
+            e.node_clients.clone(),
         )
     };
     let disk = if refresh_disk {
@@ -2227,6 +2440,7 @@ async fn node_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<NodeStatu
         cached_disk
     };
     if pid.is_none() {
+        engine(&state).local_node_probe = None;
         return Ok(NodeStatus {
             running: false,
             managed: true,
@@ -2247,16 +2461,29 @@ async fn node_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<NodeStatu
             history_complete: None,
         });
     }
+    let probe = tokio::time::timeout(
+        std::time::Duration::from_secs(7),
+        query_node_rpc_with_deadline(&node_clients, &rpc_addr, std::time::Duration::from_secs(4)),
+    )
+    .await;
+    // Remembered for `mining_status`, which the Mine page polls on the same tick
+    // and which only needs `is_synced` of this same node.
+    engine(&state).local_node_probe = Some((
+        std::time::Instant::now(),
+        match &probe {
+            Ok(Ok(v)) => Ok(*v),
+            Ok(Err(error)) => Err(error.clone()),
+            Err(_) => Err("node RPC status timed out".into()),
+        },
+    ));
     let status =
-        match tokio::time::timeout(std::time::Duration::from_secs(7), query_node_rpc_with_deadline(&rpc_addr, std::time::Duration::from_secs(4)))
-            .await
-        {
+        match probe {
             Ok(Ok((blocks, headers, daa, peers, synced, mempool, difficulty))) => {
                 // Separate call, tolerated to fail: an older node without the call, or a
                 // slow answer, must not turn a healthy status into an error. This is what
                 // lets the panel say "synced, still filling shielded history" instead of a
                 // frozen percentage during a first-sync backfill.
-                let history = query_node_history_status(&rpc_addr, std::time::Duration::from_secs(3)).await;
+                let history = query_node_history_status(&node_clients, &rpc_addr, std::time::Duration::from_secs(3)).await;
                 NodeStatus {
                     running: true,
                     managed: true,
@@ -2508,28 +2735,42 @@ fn start_node_preset(
     Ok(pid)
 }
 
+/// Async, and the engine lock is released while the wallet daemon comes back up
+/// on the public node: this used to run synchronously with the lock held for the
+/// whole readiness wait, freezing every other command behind "Stopping…".
 #[tauri::command]
-fn stop_node(app: tauri::AppHandle, state: tauri::State<'_, Mutex<Engine>>) -> Result<(), String> {
-    let mut e = engine(&state);
-    e.services.stop_cpu_miner(&app);
-    e.services.stop_bridge(&app);
-    if e.settings.kaspa_mode == "local" {
-        e.services.stop_kaspa_node(&app);
-    }
-    // Keep the wallet available: switch its embedded daemon back to the public
-    // node before stopping the managed local process.
-    if e.settings.mode == "local" {
-        e.settings.mode = "remote".into();
-        e.start_walletd();
-        if let Err(error) = e.wait_walletd_ready(WALLETD_START_GRACE) {
-            e.settings.mode = "local".into();
+async fn stop_node(app: tauri::AppHandle, state: tauri::State<'_, Mutex<Engine>>) -> Result<(), String> {
+    let moving_wallet = {
+        let mut e = engine(&state);
+        e.services.stop_cpu_miner(&app);
+        e.services.stop_bridge(&app);
+        if e.settings.kaspa_mode == "local" {
+            e.services.stop_kaspa_node(&app);
+        }
+        // Keep the wallet available: switch its embedded daemon back to the public
+        // node before stopping the managed local process.
+        if e.settings.mode == "local" {
+            e.settings.mode = "remote".into();
             e.start_walletd();
-            let _ = e.wait_walletd_ready(WALLETD_START_GRACE);
+            true
+        } else {
+            false
+        }
+    };
+    if moving_wallet {
+        if let Err(error) = wait_walletd_ready_unlocked(&app, WALLETD_START_GRACE).await {
+            {
+                let mut e = engine(&state);
+                e.settings.mode = "local".into();
+                e.start_walletd();
+            }
+            let _ = wait_walletd_ready_unlocked(&app, WALLETD_START_GRACE).await;
             return Err(format!(
                 "could not move the wallet to the public node: {error}; restored the local wallet connection"
             ));
         }
     }
+    let mut e = engine(&state);
     e.stop_local_node(&app);
     e.settings.node_auto_start = false;
     e.save_settings();
@@ -2720,10 +2961,10 @@ fn wait_then_resume_mining(app: &tauri::AppHandle) -> Result<(), String> {
     const RESUME_MINING_DEADLINE: std::time::Duration = std::time::Duration::from_secs(60 * 60);
     const POLL: std::time::Duration = std::time::Duration::from_secs(15);
 
-    let rpc = {
+    let (rpc, node_clients) = {
         let state = app.state::<Mutex<Engine>>();
         let mut e = engine(&state);
-        e.mining_zkas_rpc()?
+        (e.mining_zkas_rpc()?, e.node_clients.clone())
     };
 
     // First the port, then the answer. `wait_for_node_listener` already exists for the
@@ -2736,6 +2977,7 @@ fn wait_then_resume_mining(app: &tauri::AppHandle) -> Result<(), String> {
     let deadline = std::time::Instant::now() + RESUME_MINING_DEADLINE;
     loop {
         match tauri::async_runtime::block_on(query_node_rpc_with_deadline(
+            &node_clients,
             &rpc,
             std::time::Duration::from_secs(8),
         )) {
@@ -3101,11 +3343,25 @@ async fn mining_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<MiningS
         zkas_should_probe,
         kaspa_rpc,
         kaspa_should_probe,
+        node_clients,
+        http,
+        local_probe,
     ) = {
         let mut e = engine(&state);
         let bridge_pid = e.services.bridge.pid();
         let miner_pid = e.services.cpu_miner.pid();
         let kaspa_pid = e.services.kaspa_node.pid();
+        // The Mine page polls this and `node_status` on the same tick. When the
+        // work source is the managed node, `node_status` has just probed it —
+        // reuse that answer while it is fresh instead of asking the node again.
+        let local_probe = (e.settings.mining_node_mode == "local" && e.services.zkas_node.running())
+            .then(|| {
+                e.local_node_probe
+                    .as_ref()
+                    .filter(|(at, _)| at.elapsed() < std::time::Duration::from_secs(5))
+                    .map(|(_, probe)| probe.clone())
+            })
+            .flatten();
         (
             e.settings.mining_mode.clone(),
             bridge_pid.is_some(),
@@ -3124,11 +3380,18 @@ async fn mining_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<MiningS
             e.settings.mining_node_mode == "custom" || e.services.zkas_node.running(),
             (e.settings.kaspa_mode != "disabled").then(|| e.settings.kaspa_node_addr.clone()),
             e.settings.kaspa_mode == "custom" || kaspa_pid.is_some(),
+            e.node_clients.clone(),
+            e.http.clone(),
+            local_probe,
         )
     };
-    let zkas_status = if zkas_should_probe {
+    // Only `is_synced` is read here, so one `get_sync_status` on the kept session
+    // is the whole probe — not the four-call status the Node page needs.
+    let zkas_status = if let Some(probe) = local_probe {
+        Some(Ok(probe.map(|(_, _, _, _, synced, _, _)| synced)))
+    } else if zkas_should_probe {
         Some(
-            tokio::time::timeout(std::time::Duration::from_secs(6), query_node_rpc_with_deadline(&zkas_rpc, std::time::Duration::from_secs(3)))
+            tokio::time::timeout(std::time::Duration::from_secs(6), query_node_synced(&node_clients, &zkas_rpc, std::time::Duration::from_secs(3)))
                 .await,
         )
     } else {
@@ -3137,7 +3400,7 @@ async fn mining_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<MiningS
     let kaspa_status = if kaspa_should_probe {
         if let Some(address) = kaspa_rpc.as_deref() {
             Some(
-                tokio::time::timeout(std::time::Duration::from_secs(6), query_node_rpc_with_deadline(address, std::time::Duration::from_secs(3)))
+                tokio::time::timeout(std::time::Duration::from_secs(6), query_node_synced(&node_clients, address, std::time::Duration::from_secs(3)))
                     .await,
             )
         } else {
@@ -3146,14 +3409,9 @@ async fn mining_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<MiningS
     } else {
         None
     };
-    let rpc_fields = |status: Option<
-        Result<
-            Result<(u64, u64, u64, usize, bool, usize, f64), String>,
-            tokio::time::error::Elapsed,
-        >,
-    >| {
+    let rpc_fields = |status: Option<Result<Result<bool, String>, tokio::time::error::Elapsed>>| {
         match status {
-            Some(Ok(Ok((_, _, _, _, synced, _, _)))) => (true, Some(synced), None),
+            Some(Ok(Ok(synced))) => (true, Some(synced), None),
             Some(Ok(Err(error))) => (false, None, Some(error)),
             Some(Err(_)) => (false, None, Some("RPC status timed out".to_string())),
             None => (false, None, None),
@@ -3162,8 +3420,7 @@ async fn mining_status(state: tauri::State<'_, Mutex<Engine>>) -> Result<MiningS
     let (zkas_rpc_connected, zkas_synced, zkas_rpc_error) = rpc_fields(zkas_status);
     let (kaspa_rpc_connected, kaspa_synced, kaspa_rpc_error) = rpc_fields(kaspa_status);
     let local = if bridge_running {
-        reqwest::Client::new()
-            .get("http://127.0.0.1:18114/api/stats")
+        http.get("http://127.0.0.1:18114/api/stats")
             .timeout(std::time::Duration::from_secs(2))
             .send()
             .await
@@ -3380,8 +3637,11 @@ fn self_host_status(
     }
 }
 
+/// Async, and the engine lock is released while the daemon restarts on the new
+/// policy — see `stop_node`.
 #[tauri::command]
-fn set_host_access(
+async fn set_host_access(
+    app: tauri::AppHandle,
     state: tauri::State<'_, Mutex<Engine>>,
     wallet_access: String,
     wallet_access_port: u16,
@@ -3405,31 +3665,40 @@ fn set_host_access(
         }
     }
 
-    let mut e = engine(&state);
-    let node_changed =
-        e.settings.node_lan_rpc != node_lan_rpc || e.settings.node_public_p2p != node_public_p2p;
-    if node_changed && e.services.zkas_node.running() {
-        return Err("stop the managed node before changing its network access".into());
-    }
-    let previous = e.settings.clone();
-    e.settings.wallet_access = wallet_access;
-    e.settings.wallet_access_port = wallet_access_port;
-    e.settings.wallet_public_url = public_url;
-    e.settings.node_lan_rpc = node_lan_rpc;
-    e.settings.node_public_p2p = node_public_p2p;
+    let (restarted, previous) = {
+        let mut e = engine(&state);
+        let node_changed =
+            e.settings.node_lan_rpc != node_lan_rpc || e.settings.node_public_p2p != node_public_p2p;
+        if node_changed && e.services.zkas_node.running() {
+            return Err("stop the managed node before changing its network access".into());
+        }
+        let previous = e.settings.clone();
+        e.settings.wallet_access = wallet_access;
+        e.settings.wallet_access_port = wallet_access_port;
+        e.settings.wallet_public_url = public_url;
+        e.settings.node_lan_rpc = node_lan_rpc;
+        e.settings.node_public_p2p = node_public_p2p;
 
-    // A locked wallet has no engine to restart; the new policy applies on its
-    // next unlock. An active engine is switched transactionally.
-    if e.port != 0 {
-        e.start_walletd();
-        if let Err(error) = e.wait_walletd_ready(WALLETD_START_GRACE) {
-            e.settings = previous;
+        // A locked wallet has no engine to restart; the new policy applies on its
+        // next unlock. An active engine is switched transactionally.
+        let restarted = e.port != 0;
+        if restarted {
             e.start_walletd();
-            let _ = e.wait_walletd_ready(WALLETD_START_GRACE);
+        }
+        (restarted, previous)
+    };
+    if restarted {
+        if let Err(error) = wait_walletd_ready_unlocked(&app, WALLETD_START_GRACE).await {
+            {
+                let mut e = engine(&state);
+                e.settings = previous;
+                e.start_walletd();
+            }
+            let _ = wait_walletd_ready_unlocked(&app, WALLETD_START_GRACE).await;
             return Err(format!("{error}; restored the previous Host settings"));
         }
     }
-    e.save_settings();
+    engine(&state).save_settings();
     Ok(())
 }
 
@@ -3503,6 +3772,8 @@ fn wait_for_node_listener(addr: &str, timeout: std::time::Duration) -> Result<()
 
 #[cfg(desktop)]
 fn show_main_window(app: &tauri::AppHandle) {
+    let mut restarted = false;
+    let mut engine_down = false;
     if let Some(state) = app.try_state::<Mutex<Engine>>() {
         let mut e = engine(&state);
         // A hidden plaintext/watch-only wallet has no passphrase ceremony to
@@ -3510,15 +3781,24 @@ fn show_main_window(app: &tauri::AppHandle) {
         // encrypted wallet deliberately remains stopped and opens locked.
         if e.port == 0 && e.vault() != zkas_walletd::VaultState::Encrypted {
             e.start_walletd();
+            restarted = true;
         }
+        engine_down = e.port == 0;
     }
     if let Some(window) = app.webview_windows().values().next() {
+        let was_visible = window.is_visible().unwrap_or(false);
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
-        // Closing to tray locks/stops walletd beneath the still-mounted web UI.
-        // Reload on restore so boot re-reads the engine port and vault state.
-        let _ = window.eval("location.reload()");
+        // Closing to tray may have locked/stopped walletd beneath the still-mounted
+        // web UI. Reload on restore so boot re-reads the engine port and vault
+        // state — but only then: a tray click or second launch on a window that
+        // is already open used to reload the live wallet page for nothing, and a
+        // hidden window whose engine kept running (watch-only/plaintext, see
+        // `CloseRequested`) still shows the live page it was hiding.
+        if restarted || (!was_visible && engine_down) {
+            let _ = window.eval("location.reload()");
+        }
     }
 }
 
@@ -3542,7 +3822,7 @@ pub fn run() {
             #[cfg(desktop)]
             show_main_window(app);
         }))
-        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -3553,16 +3833,11 @@ pub fn run() {
             std::fs::create_dir_all(&config_dir).ok();
             std::fs::create_dir_all(&data_dir).ok();
             let mut app_engine = Engine::new(config_dir, data_dir);
-            if app_engine.settings.node_auto_start {
-                if let Err(error) = app_engine.start_local_node(app.handle()) {
-                    log_crash(&format!("managed ZKas node did not start: {error}"));
-                    app_engine.settings.node_auto_start = false;
-                    if app_engine.settings.mode == "local" {
-                        app_engine.settings.mode = "remote".into();
-                    }
-                    app_engine.save_settings();
-                }
-            } else if app_engine.settings.mode == "local" {
+            // The managed node itself is started on the thread below, after the
+            // engine is managed: reaping orphans enumerates every process and can
+            // wait 12 s + 5 s on one, and none of that belongs in `setup`.
+            let start_node_wanted = app_engine.settings.node_auto_start;
+            if !start_node_wanted && app_engine.settings.mode == "local" {
                 // Never leave walletd aimed at a local port with no process.
                 // Running a node and selecting a wallet source are independent.
                 app_engine.settings.mode = "remote".into();
@@ -3599,46 +3874,27 @@ pub fn run() {
             // showed "the wallet engine didn't start" with no way to reach
             // onboarding and create one. A device with no wallet has no secret to
             // protect and is exactly when the engine is needed most.
-            // (C) When the wallet is pointed at the user's OWN node, wait a
-            // bounded moment for that node's RPC to accept connections before the
-            // engine dials it. `start_local_node` above only spawns the process; a
-            // freshly launched node takes seconds to open its gRPC port, so without
-            // this the engine's first connection races a port nothing is listening
-            // on yet. Deferring here keeps the engine aimed at 127.0.0.1 and never
-            // lets it fall to the public node while mode == "local".
-            //
-            // Strictly best-effort: on timeout (a slow, wedged, or crashed node) we
-            // start the engine anyway — it retries the node on its own — so a local
-            // node that never comes up degrades to a usable wallet rather than
-            // blocking the app from ever opening. Only when a passphrase is still
-            // owed does the engine not start at boot, so skip the wait then too.
-            if app_engine.settings.mode == "local"
-                && app_engine.services.zkas_node.running()
-                && app_engine.vault() != zkas_walletd::VaultState::Encrypted
-            {
-                let node_rpc = app_engine.settings.rpc_addr();
-                if let Err(error) =
-                    wait_for_node_listener(&node_rpc, std::time::Duration::from_secs(20))
-                {
-                    log_crash(&format!(
-                        "local node RPC not ready at launch ({error}); starting the wallet anyway"
-                    ));
-                }
-            }
+            // When the wallet is pointed at the user's OWN node the engine dials
+            // 127.0.0.1 before that node has opened its gRPC port. That is fine:
+            // the daemon's connector retries the configured node every few
+            // seconds for as long as it takes and never falls to the public node
+            // while mode == "local". This used to block `setup` for up to 20 s
+            // polling the port, which only kept the window from appearing.
             if app_engine.vault() != zkas_walletd::VaultState::Encrypted {
                 app_engine.start_walletd();
             }
             let resume_mining_wanted = app_engine.settings.mining_auto_start;
             app.manage(Mutex::new(app_engine));
-            // Resume mining if that is what this machine was doing when it went down.
+            // Start the managed node, then resume mining if that is what this machine
+            // was doing when it went down.
             //
             // On a THREAD, and never on the startup path. Two reasons, both of which the
             // first version of this got wrong:
             //
-            //   * The node was launched microseconds ago by the block above. It is not
-            //     listening yet — a kaspad takes seconds to open its gRPC port and longer
-            //     to be useful — so probing it once here fails on every cold boot, which
-            //     is precisely the case this feature exists for.
+            //   * The node is launched here, so it is not listening yet — a kaspad
+            //     takes seconds to open its gRPC port and longer to be useful — so
+            //     probing it once from `setup` fails on every cold boot, which is
+            //     precisely the case the mining resume exists for.
             //   * Waiting for it synchronously would block `setup`, so the window would
             //     not appear until mining was sorted out. Nobody wants a wallet that
             //     takes a minute to open because a miner is warming up.
@@ -3647,11 +3903,50 @@ pub fn run() {
             // bridge runs with BRIDGE_ALLOW_UNSYNCED=0 and would exit immediately against
             // a node still catching up — after a long outage that catch-up is minutes to
             // hours, which is exactly when a miner is least able to babysit it.
-            if resume_mining_wanted {
+            if start_node_wanted || resume_mining_wanted {
                 let handle = app.handle().clone();
                 std::thread::spawn(move || {
-                    if let Err(error) = wait_then_resume_mining(&handle) {
-                        log_crash(&format!("mining did not resume after restart: {error}"));
+                    if start_node_wanted {
+                        let state = handle.state::<Mutex<Engine>>();
+                        // Reap a crashed launch's orphan BEFORE taking the engine lock:
+                        // that is a full process-table scan plus up to 12 s + 5 s of
+                        // waiting, and the window's first commands must not queue
+                        // behind it. `start_local_node` scans again, cheaply, and
+                        // finds nothing left to wait on.
+                        let (bin, appdir) = {
+                            let e = engine(&state);
+                            (e.settings.node_binary.clone(), e.data_dir.join("node"))
+                        };
+                        if let Some(bin) = bin {
+                            match services::stop_orphaned_node_processes(std::path::Path::new(&bin), &appdir) {
+                                Ok(recovered) if !recovered.is_empty() => log_crash(&format!(
+                                    "recovered orphaned ZKas node process(es): {}",
+                                    recovered.iter().map(u32::to_string).collect::<Vec<_>>().join(", ")
+                                )),
+                                _ => {}
+                            }
+                        }
+                        let mut e = engine(&state);
+                        if let Err(error) = e.start_local_node(&handle) {
+                            log_crash(&format!("managed ZKas node did not start: {error}"));
+                            e.settings.node_auto_start = false;
+                            if e.settings.mode == "local" {
+                                e.settings.mode = "remote".into();
+                                e.save_settings();
+                                // The engine is already dialing the local port; aim it
+                                // at the public node it would otherwise wait on forever.
+                                if e.port != 0 {
+                                    e.start_walletd();
+                                }
+                            } else {
+                                e.save_settings();
+                            }
+                        }
+                    }
+                    if resume_mining_wanted {
+                        if let Err(error) = wait_then_resume_mining(&handle) {
+                            log_crash(&format!("mining did not resume after restart: {error}"));
+                        }
                     }
                 });
             }
@@ -3710,13 +4005,29 @@ pub fn run() {
             match event {
                 tauri::WindowEvent::CloseRequested { api, .. } => {
                     if let Some(state) = window.app_handle().try_state::<Mutex<Engine>>() {
-                        let mut e = engine(&state);
-                        if e.services.any_background_running() {
+                        let to_tray = engine(&state).services.any_background_running();
+                        if to_tray {
                             // Keep node/mining/explorer children alive, but never
                             // keep an unlocked spending engine alive invisibly.
-                            e.lock();
+                            //
+                            // Hide FIRST. Stopping the engine waits for its scan
+                            // loops to drain and checkpoints to flush (up to 30 s),
+                            // and doing that inside the window event handler
+                            // before `hide()` left a dead-looking window on screen
+                            // for the whole wait. Only an ENCRYPTED vault has a
+                            // passphrase in memory to drop; the watch-only and
+                            // plaintext engines hold no secret, so stopping them
+                            // only bought a cold reload on the next tray click.
                             api.prevent_close();
                             let _ = window.hide();
+                            let handle = window.app_handle().clone();
+                            std::thread::spawn(move || {
+                                let state = handle.state::<Mutex<Engine>>();
+                                let mut e = engine(&state);
+                                if e.vault() == zkas_walletd::VaultState::Encrypted {
+                                    e.lock();
+                                }
+                            });
                         }
                     }
                 }
@@ -3767,8 +4078,26 @@ pub fn run() {
             read_backup_file,
             forget_wallet
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| match event {
+            // macOS: the Dock icon after close-to-tray. Nothing handled this, so
+            // clicking it did nothing; the tray menu was the only way back.
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => show_main_window(app),
+            // Cmd+Q (the default macOS menu) and any other exit path that never
+            // destroys the hidden window: the managed node/bridge/explorer are
+            // plain std::process children with no kill-on-exit, so without this
+            // they were orphaned and only reaped on the next launch.
+            tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
+                if let Some(state) = app.try_state::<Mutex<Engine>>() {
+                    let mut e = engine(&state);
+                    e.lock();
+                    e.services.stop_all(app);
+                }
+            }
+            _ => {}
+        });
 }
 
 #[cfg(test)]

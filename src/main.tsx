@@ -274,9 +274,19 @@ async function boot() {
   // upgrade must not drop it onto a setup screen. Settle the choice silently so
   // the gate never reappears for them, and so no poll is deferred for a returning
   // user who already consented by using the app.
-  const hasWalletHistory =
-    listWallets().length > 0 || !!loadStatusCache() || !!localStorage.getItem("wallet_token");
-  if (hasWalletHistory && needsNodeChoice()) markNodeChoiceMade();
+  //
+  // Guarded: with site storage blocked (Safari "Block all cookies", Chrome "Don't
+  // allow sites to save data") the localStorage accessor itself throws, and this
+  // was the first unguarded read on the boot path — the splash then stayed up
+  // forever. Treat a throw as no history; the boot().catch below explains.
+  let hasWalletHistory = false;
+  try {
+    hasWalletHistory =
+      listWallets().length > 0 || !!loadStatusCache() || !!localStorage.getItem("wallet_token");
+    if (hasWalletHistory && needsNodeChoice()) markNodeChoiceMade();
+  } catch {
+    /* storage unavailable — a fresh-install boot, at best */
+  }
   const askNode = needsNodeChoice() && (isDesktop() || isNative());
   // Existing users skip first-run, so announce the new connection/privacy/theme
   // features once via a "what's new" popup instead.
@@ -323,6 +333,25 @@ async function boot() {
     </StrictMode>,
   );
 
+  // Desktop: the WebView has no new-window handler, so an `<a target="_blank">`
+  // opened nothing at all (Mining.tsx documented the symptom). Route those
+  // clicks — and only those — to the system browser through the opener plugin
+  // the shell registers (src-tauri: tauri-plugin-opener + `opener:default`).
+  // Loaded on demand so the web/mobile bundles never pull the Tauri module in.
+  if (isDesktop()) {
+    document.addEventListener("click", (ev) => {
+      if (ev.defaultPrevented || ev.button !== 0) return;
+      const a = (ev.target as Element | null)?.closest?.("a[href]");
+      if (!(a instanceof HTMLAnchorElement) || a.target !== "_blank") return;
+      const href = a.href;
+      if (!/^(https?|mailto):/i.test(href)) return;
+      ev.preventDefault();
+      void import("@tauri-apps/plugin-opener")
+        .then(({ openUrl }) => openUrl(href))
+        .catch((e) => console.error("could not open the link in the system browser:", (e as Error)?.message ?? e));
+    });
+  }
+
   const openLink = (url: string) => {
     const route = internalRouteFromLink(url);
     if (route) {
@@ -341,6 +370,17 @@ async function boot() {
       const launch = await CapacitorApp.getLaunchUrl();
       if (launch?.url) openLink(launch.url);
       await CapacitorApp.addListener("appUrlOpen", ({ url }) => openLink(url));
+      // Hardware/gesture Back. @capacitor/app's default only walks WebView history
+      // and does NOTHING at the root, so the app could never be left with Back and
+      // state-only overlays (QR scanner, dialogs) could not be dismissed. An open
+      // overlay claims the press by calling preventDefault() on "zkas:back";
+      // otherwise Back walks the router history and, at the root, minimizes.
+      await CapacitorApp.addListener("backButton", ({ canGoBack }) => {
+        const claimed = !window.dispatchEvent(new CustomEvent("zkas:back", { cancelable: true }));
+        if (claimed) return;
+        if (canGoBack) history.back();
+        else void CapacitorApp.minimizeApp();
+      });
     }).catch(() => {});
   }
   // Installable web app with an OFFLINE UI shell. The service worker explicitly
@@ -368,4 +408,27 @@ async function boot() {
   }
 }
 
-boot();
+// A rejected boot() used to leave the index.html splash animating forever with
+// nothing to read — the same "white screen" the old-engine guard there exists
+// to prevent. The usual cause is site storage being blocked, which makes the
+// first localStorage access throw; say so in plain text, the way that guard does.
+boot().catch((err: unknown) => {
+  console.error("wallet boot failed:", err);
+  const el = document.querySelector(".boot");
+  if (!el) return; // React already mounted; its own Boundary owns the screen now
+  const box = document.createElement("div");
+  box.style.cssText = "max-width:420px;padding:24px;text-align:center;color:#f6f6f8;";
+  const mark = document.createElement("div");
+  mark.style.cssText = "font-size:24px;font-weight:700;margin-bottom:12px;";
+  mark.textContent = "ZKas";
+  const what = document.createElement("p");
+  what.style.cssText = "color:#b9b9c6;line-height:1.5;";
+  what.textContent =
+    "The wallet could not start. It needs site storage (cookies / site data) enabled for this site — " +
+    `your wallet and its settings live there. Allow it for ${location.hostname || "this site"}, then reload.`;
+  const why = document.createElement("p");
+  why.style.cssText = "color:#7a7a8c;line-height:1.5;font-size:12px;word-break:break-all;";
+  why.textContent = String((err as Error)?.message ?? err);
+  box.append(mark, what, why);
+  el.replaceChildren(box);
+});
