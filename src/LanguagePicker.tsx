@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Globe } from "lucide-react";
@@ -88,6 +88,24 @@ export function LanguageButton({ compact = false }: { compact?: boolean }) {
     void setLanguage(code);
     setOpen(false);
   };
+  // While open, the modal owns Back (hardware/gesture on Android, see main.tsx) and
+  // Escape: claiming "zkas:back" keeps the press from walking the router history.
+  useEffect(() => {
+    if (!open) return;
+    const onBack = (event: Event) => {
+      event.preventDefault();
+      setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("zkas:back", onBack);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("zkas:back", onBack);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
   return (
     <>
       <button

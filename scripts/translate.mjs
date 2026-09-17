@@ -139,7 +139,7 @@ ${terms}`;
 }
 
 const REVIEW = args.includes("--review");
-const REVIEW_MODEL = process.env.REVIEW_MODEL || (VENICE ? "deepseek-v4-pro" : "deepseek-reasoner");
+const REVIEW_MODEL = process.env.REVIEW_MODEL || (VENICE ? "gemini-3-8-flash" : "deepseek-reasoner");
 
 /// Review pass: send English + current translation, get back ONLY the keys that need a
 /// better rendering. A stronger model judges what the fast one produced.

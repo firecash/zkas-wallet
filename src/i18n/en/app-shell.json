@@ -75,6 +75,8 @@
     "on": "On",
     "use": "Use",
     "checking": "Checking…",
+    "stageRestarting": "Restarting wallet engine · {{s}}s",
+    "stageLoadingScan": "Loading scan state…",
     "connected": "Connected",
     "connecting": "Connecting…",
     "setUp": "Set up",

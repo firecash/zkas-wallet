@@ -104,29 +104,35 @@ function Maintenance({ status, onRefresh }: { status: Status | null; onRefresh: 
   );
 }
 
-export function WalletTools() {
+/// `status` is the shell's already-polled wallet status. When the caller passes it
+/// (even as null, while it loads) this page runs no poll of its own; left undefined,
+/// the page keeps its own 2 s /api/status poll so other call sites still work.
+export function WalletTools({ status: shared }: { status?: Status | null } = {}) {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const requested = params.get("tab") as ToolTab | null;
   const [tab, setTabState] = useState<ToolTab>(requested && ["batch", "maintenance"].includes(requested) ? requested : "batch");
-  const [status, setStatus] = useState<Status | null>(null);
+  const [ownStatus, setOwnStatus] = useState<Status | null>(null);
+  const polls = shared === undefined;
+  const status = polls ? ownStatus : shared;
   const refreshInFlight = useRef(false);
   const refresh = useCallback(async () => {
-    if (refreshInFlight.current) return;
+    if (!polls || refreshInFlight.current) return;
     refreshInFlight.current = true;
     try {
-      setStatus(await api.status());
+      setOwnStatus(await api.status());
     } catch {
       // Preserve the last known status through a transient connection failure.
     } finally {
       refreshInFlight.current = false;
     }
-  }, []);
+  }, [polls]);
   useEffect(() => {
+    if (!polls) return;
     void refresh();
     const timer = window.setInterval(() => void refresh(), 2_000);
     return () => clearInterval(timer);
-  }, [refresh]);
+  }, [polls, refresh]);
   const choose = (next: ToolTab) => {
     setTabState(next);
     setParams({ tab: next }, { replace: true });

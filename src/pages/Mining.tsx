@@ -114,8 +114,34 @@ export function Mining() {
     desktopServices.localNetworkInfo()
       .then((info) => setLanIps(info.lan_ips?.length ? info.lan_ips : info.lan_ip ? [info.lan_ip] : []))
       .catch(() => undefined);
-    const timer = window.setInterval(() => refreshLocal().catch(() => undefined), 2_000);
-    return () => clearInterval(timer);
+    // Polling pauses while the page is hidden (one poll the moment it comes back)
+    // and relaxes to 5 s once the window has been out of focus for half a minute.
+    let alive = true;
+    let blurredAt: number | null = document.hasFocus() ? null : Date.now();
+    let timer = 0;
+    const cadence = () => (blurredAt != null && Date.now() - blurredAt > 30_000 ? 5_000 : 2_000);
+    const tick = () => {
+      if (!alive) return;
+      timer = window.setTimeout(tick, cadence());
+      if (document.hidden) return;
+      refreshLocal().catch(() => undefined);
+    };
+    timer = window.setTimeout(tick, cadence());
+    const onVisibility = () => {
+      if (!document.hidden) refreshLocal().catch(() => undefined);
+    };
+    const onFocus = () => { blurredAt = null; };
+    const onBlur = () => { blurredAt = Date.now(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
+    };
   }, [desktop, refreshLocal]);
 
   useEffect(() => {

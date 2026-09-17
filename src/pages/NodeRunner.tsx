@@ -170,10 +170,32 @@ export function NodeRunner() {
     if (!desktop) return;
     let alive = true;
     refresh().catch((e) => alive && setError(e.message));
-    const timer = window.setInterval(() => refresh().catch(() => undefined), 3_000);
+    // Polling pauses while the page is hidden (one poll the moment it comes back)
+    // and relaxes to 5 s once the window has been out of focus for half a minute.
+    let blurredAt: number | null = document.hasFocus() ? null : Date.now();
+    let timer = 0;
+    const cadence = () => (blurredAt != null && Date.now() - blurredAt > 30_000 ? 5_000 : 3_000);
+    const tick = () => {
+      if (!alive) return;
+      timer = window.setTimeout(tick, cadence());
+      if (document.hidden) return;
+      refresh().catch(() => undefined);
+    };
+    timer = window.setTimeout(tick, cadence());
+    const onVisibility = () => {
+      if (!document.hidden) refresh().catch(() => undefined);
+    };
+    const onFocus = () => { blurredAt = null; };
+    const onBlur = () => { blurredAt = Date.now(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("blur", onBlur);
     return () => {
       alive = false;
-      clearInterval(timer);
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
     };
   }, [desktop, refresh]);
 
@@ -219,11 +241,22 @@ export function NodeRunner() {
   // today's behaviour of trusting `is_synced` alone.
   const fillingHistory = node?.running === true && node.history_complete === false;
 
+  // Stopping first moves the wallet back to the public node (stop_node restarts the
+  // daemon and waits for it to answer) and only then ends the node process. The
+  // wallet status keeps polling meanwhile: the move is over once the daemon reports
+  // itself connected on a non-local source.
+  const stopMovesWallet = useRef(false);
+  const stopStage = stopMovesWallet.current && (walletd?.node_source === "local" || walletd?.node_connected !== true)
+    ? t("nodeRunner.movingWalletToPublic")
+    : t("nodeRunner.stoppingNode");
+
   const run = async (name: typeof busy, task: () => Promise<unknown>): Promise<boolean> => {
     setBusy(name);
     setError(null);
     try {
       await task();
+      // No page reload: the API reads its base URL per request, so refreshing the
+      // shell config (initDesktop / setNodeSource) and this page's state is enough.
       await refresh();
       return true;
     } catch (e) {
@@ -321,8 +354,8 @@ export function NodeRunner() {
           <button className="btn" disabled={!installed || updateAvailable || busy !== null || !!node?.running} onClick={openStartDialog}>
             {updateAvailable ? t("nodeRunner.updateBeforeRunning") : t("nodeRunner.runNode")}
           </button>
-          <button className="btn ghost" disabled={busy !== null || !node?.running || !node.managed} onClick={() => run("stop", async () => { await desktopServices.stopNode(); await initDesktop(); location.reload(); })}>
-            {busy === "stop" ? t("nodeRunner.stopping") : t("nodeRunner.stop")}
+          <button className="btn ghost" disabled={busy !== null || !node?.running || !node.managed} onClick={() => { stopMovesWallet.current = walletd?.node_source === "local"; void run("stop", async () => { await desktopServices.stopNode(); await initDesktop(); }); }}>
+            {busy === "stop" ? stopStage : t("nodeRunner.stop")}
           </button>
           <button className="btn ghost" onClick={() => setLogService("zkas-node")}>{t("nodeRunner.viewNodeLogs")}</button>
         </div>
@@ -337,10 +370,10 @@ export function NodeRunner() {
         </div>
         <div className="control-actions">
           {walletd?.node_source !== "local" && config?.settings.node_preset !== "mining" && node?.is_synced === true && !fillingHistory && (
-            <button className="btn" disabled={busy !== null} onClick={() => run("attach", async () => { await setNodeSource("local"); location.reload(); })}>{busy === "attach" ? t("nodeRunner.connecting") : t("nodeRunner.useThisNode")}</button>
+            <button className="btn" disabled={busy !== null} onClick={() => run("attach", () => setNodeSource("local"))}>{busy === "attach" ? t("nodeRunner.connecting") : t("nodeRunner.useThisNode")}</button>
           )}
           {walletd?.node_source === "local" && (
-            <button className="btn ghost" disabled={busy !== null} onClick={() => run("attach", async () => { await setNodeSource("remote"); location.reload(); })}>{t("nodeRunner.usePublicNode")}</button>
+            <button className="btn ghost" disabled={busy !== null} onClick={() => run("attach", () => setNodeSource("remote"))}>{t("nodeRunner.usePublicNode")}</button>
           )}
           <button className="btn ghost" onClick={() => setLogService("wallet-engine")}>{t("nodeRunner.viewWalletLogs")}</button>
         </div>

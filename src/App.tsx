@@ -1,7 +1,7 @@
 import { useTranslation, Trans } from "react-i18next";
-import i18n from "./i18n";
+import i18n, { formatDate } from "./i18n";
 import { LanguagePicker, LanguageInline, LanguageNotice, LanguageButton } from "./LanguagePicker";
-import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo, memo } from "react";
+import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo, memo, Fragment } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
@@ -990,7 +990,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         // the 1s status poll times out for the whole ~50s it runs. That is the engine
         // WORKING, not down: don't self-heal (a restart would kill the send in flight)
         // and don't flip to "can't reach" until far longer (2 min) than any send takes.
-        const busy = embeddedChosen() && engineBusy();
+        // A desktop chain-source switch restarts the embedded engine on purpose
+        // and the modal is already showing its progress; flipping to the
+        // engine-down screen meanwhile would only add a reload once it answers.
+        const busy = (embeddedChosen() && engineBusy()) || desktopSwitching;
         if (embeddedChosen() && !busy && failedPolls.current === 3 && !engineHealing.current) {
           // Not mid-send: the engine may have died — try once to revive it.
           // ensureEmbedded is a no-op if running, and restarts it (new port) if not.
@@ -1176,6 +1179,11 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
     };
   }, [refresh]);
 
+  // Android Back dismisses the Send/Receive sheet the way a backdrop tap does —
+  // and, like the tap, never while a payment is broadcasting.
+  const sheetOpen = (tab === "send" || tab === "receive") && !!reachable && !freshSeed && !!status?.has_wallet;
+  useBackClose(sheetOpen, () => { if (!engineBusy()) setTab("history"); });
+
   return (
     <div className={`wrap wallet-wrap${status?.has_wallet ? " has-wallet" : ""}`}>
       <div className="wallet-topline">
@@ -1357,7 +1365,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             {tab === "signatures" && !viewOnly && <Signatures status={status} />}
             {tab === "tools" && !viewOnly && (
               <Suspense fallback={<div className="card"><div className="muted small">{t("app.loading")}</div></div>}>
-                <WalletTools />
+                <WalletTools status={status} />
               </Suspense>
             )}
             {tab === "settings" && <SettingsPane status={status} />}
@@ -1696,6 +1704,38 @@ function WalletBar() {
  * pointing the desktop webview at an arbitrary walletd would bypass the
  * embedded, locally-held wallet and weaken the desktop custody model.
  */
+/// Android Back dismisses the topmost overlay. main.tsx dispatches a cancelable
+/// "zkas:back" on window before it walks the router history; an open overlay
+/// claims the press with preventDefault() and closes itself instead. Overlays
+/// nest (the QR scanner opens inside the connection modal), and window listeners
+/// fire in registration order — the OUTER one first — so the open overlays are
+/// kept on a stack and only the one on top answers.
+const backStack: Array<() => void> = [];
+/// True while ConnectionButton has the shell restarting the embedded engine for a
+/// new chain source; the status poll reads it so the expected run of failed polls
+/// is not taken for an outage.
+let desktopSwitching = false;
+function useBackClose(open: boolean, close: () => void) {
+  const closeRef = useRef(close);
+  closeRef.current = close;
+  useEffect(() => {
+    if (!open) return;
+    const entry = () => closeRef.current();
+    backStack.push(entry);
+    const onBack = (event: Event) => {
+      if (backStack[backStack.length - 1] !== entry) return;
+      event.preventDefault();
+      entry();
+    };
+    window.addEventListener("zkas:back", onBack);
+    return () => {
+      const at = backStack.indexOf(entry);
+      if (at >= 0) backStack.splice(at, 1);
+      window.removeEventListener("zkas:back", onBack);
+    };
+  }, [open]);
+}
+
 function ConnectionButton() {
   const { t } = useTranslation();
   const desktop = isDesktop();
@@ -1712,6 +1752,43 @@ function ConnectionButton() {
   // The "add your own walletd" fields stay behind one button until asked for —
   // most people use a listed option and never type an address.
   const [showAdd, setShowAdd] = useState(false);
+  // Desktop node switch in flight. The shell probes the node, restarts the
+  // embedded engine and only returns once it answers — on a cold wallet that is
+  // the whole scan-state load. Watch the engine meanwhile (the same status the
+  // engine-down screen polls) and say where it is, instead of a bare "Checking…"
+  // that reads as a hang after ten seconds.
+  const [switching, setSwitching] = useState(false);
+  const [switchStage, setSwitchStage] = useState<{ loading: boolean; secs: number }>({ loading: false, secs: 0 });
+  useEffect(() => {
+    if (!switching) return;
+    let live = true;
+    const started = Date.now();
+    const tick = async () => {
+      let loading = false;
+      try {
+        loading = (await desktopServices.walletdStatus()).starting;
+      } catch {
+        /* the shell is mid-restart; keep counting */
+      }
+      if (live) setSwitchStage({ loading, secs: Math.floor((Date.now() - started) / 1000) });
+    };
+    void tick();
+    const timer = setInterval(() => void tick(), 1000);
+    return () => {
+      live = false;
+      clearInterval(timer);
+      setSwitchStage({ loading: false, secs: 0 });
+    };
+  }, [switching]);
+  const stageLine = (key: string) =>
+    switching && busy === key ? (
+      <p className="muted small connection-stage" style={{ margin: "-2px 4px 0" }}>
+        {switchStage.loading ? t("connectionButton.stageLoadingScan") : t("connectionButton.stageRestarting", { s: switchStage.secs })}
+      </p>
+    ) : null;
+  // Back closes the modal like the backdrop does — never mid-switch, when the
+  // engine is being restarted underneath it.
+  useBackClose(open, () => { if (busy === null) setOpen(false); });
 
   // Connecting over Tor fails almost only because no Tor transport is up — so on
   // failure show the Orbot steps, not a bare connection error.
@@ -1810,17 +1887,25 @@ function ConnectionButton() {
     ? onion ? t("connectionButton.labelTor") : hosted ? t("connectionButton.labelPublicService") : cfg?.mode === "local" ? t("connectionButton.labelMyNode") : cfg?.mode === "custom" ? currentProfile?.name ?? t("connectionButton.labelMyNode") : t("connectionButton.labelThisComputer")
     : embeddedChosen() ? t("connectionButton.labelOnPhone") : onion ? t("connectionButton.labelTor") : hosted ? t("connectionButton.labelWeb") : currentProfile?.name ?? t("connectionButton.labelMyWalletd");
 
+  // No page reload after a switch: `setNodeSource` has already re-pointed the
+  // app at the restarted engine, and the 1 s status poll reads the base afresh on
+  // every tick — SelfHost.tsx changes the engine the same way. A reload here threw
+  // away the whole UI (and the modal's error, on failure) for nothing.
   const switchDesktop = async (mode: "remote" | "local" | "custom", profile?: EndpointProfile) => {
     setBusy(profile?.id ?? mode);
     setError("");
+    setSwitching(true);
+    desktopSwitching = true;
     try {
       const next = await setNodeSource(mode, profile?.address);
       setCfg(next);
+      void refresh();
       setOpen(false);
-      location.reload();
     } catch (e) {
       setError((e as Error).message || String(e));
     } finally {
+      desktopSwitching = false;
+      setSwitching(false);
       setBusy(null);
     }
   };
@@ -1868,14 +1953,19 @@ function ConnectionButton() {
     if (desktop) {
       setBusy("add");
       setError("");
+      setSwitching(true);
+      desktopSwitching = true;
       try {
         const next = await setNodeSource("custom", address);
         walletNodeProfiles.save(name, next.node_addr);
         setCfg(next);
+        void refresh();
         setOpen(false);
-        location.reload();
       } catch (e) {
         setError((e as Error).message || String(e));
+      } finally {
+        desktopSwitching = false;
+        setSwitching(false);
         setBusy(null);
       }
       return;
@@ -1891,7 +1981,7 @@ function ConnectionButton() {
         <ChevronDown aria-hidden="true" size={15} />
       </button>
       {open && createPortal(
-        <div className="modalwrap" onClick={() => setOpen(false)}>
+        <div className="modalwrap" onClick={() => busy === null && setOpen(false)}>
           <div className="card modalcard connection-modal" onClick={(event) => event.stopPropagation()}>
             <div className="connection-modal-head">
               <div><span className="eyebrow">{t("connectionButton.eyebrow")}</span><h2>{desktop ? t("connectionButton.chainSource") : t("connectionButton.chooseService")}</h2></div>
@@ -1915,38 +2005,47 @@ function ConnectionButton() {
                    which takes a long time on a fresh install — the old copy here
                    said "Works immediately", which is what sent people to a wallet
                    stuck on "Found 0 ZKAS so far". */
-                <button className={`connection-option ${cfg?.mode === "remote" && !onion && !hosted ? "active" : ""}`} disabled={busy !== null} onClick={() => void switchDesktop("remote")}>
-                  <span><b>{t("connectionButton.thisComputerPublic")}</b><small>{t("connectionButton.thisComputerPublicDesc")}</small></span><span>{busy === "remote" ? t("connectionButton.checking") : cfg?.mode === "remote" && !onion && !hosted ? t("connectionButton.connected") : t("connectionButton.use")}</span>
-                </button>
+                <>
+                  <button className={`connection-option ${cfg?.mode === "remote" && !onion && !hosted ? "active" : ""}`} disabled={busy !== null} onClick={() => void switchDesktop("remote")}>
+                    <span><b>{t("connectionButton.thisComputerPublic")}</b><small>{t("connectionButton.thisComputerPublicDesc")}</small></span><span>{busy === "remote" ? null : cfg?.mode === "remote" && !onion && !hosted ? t("connectionButton.connected") : t("connectionButton.use")}</span>
+                  </button>
+                  {stageLine("remote")}
+                </>
               )}
               <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectTor()}>
                 <span><b>{t("connectionButton.overTor")}</b><small>{desktop ? t("connectionButton.torDescDesktop") : t("connectionButton.torDescMobile")}</small></span><span>{busy === "tor" ? t("connectionButton.connecting") : onion ? t("connectionButton.connected") : t("connectionButton.use")}</span>
               </button>
               {desktop && (
-                <button className={`connection-option ${cfg?.mode === "local" && !onion && !hosted ? "active" : ""}`} disabled={busy !== null} onClick={() => {
-                  if (!cfg?.node_running) {
-                    setOpen(false);
-                    location.hash = "#/node";
-                    return;
-                  }
-                  void switchDesktop("local");
-                }}>
-                  <span><b>{t("connectionButton.thisComputerOwn")}</b><small>{t("connectionButton.managedHere", { port: MANAGED_ZKAS_RPC })}</small></span><span>{busy === "local" ? t("connectionButton.checking") : cfg?.mode === "local" && !onion && !hosted ? t("connectionButton.connected") : cfg?.node_running ? t("connectionButton.use") : t("connectionButton.setUp")}</span>
-                </button>
+                <>
+                  <button className={`connection-option ${cfg?.mode === "local" && !onion && !hosted ? "active" : ""}`} disabled={busy !== null} onClick={() => {
+                    if (!cfg?.node_running) {
+                      setOpen(false);
+                      location.hash = "#/node";
+                      return;
+                    }
+                    void switchDesktop("local");
+                  }}>
+                    <span><b>{t("connectionButton.thisComputerOwn")}</b><small>{t("connectionButton.managedHere", { port: MANAGED_ZKAS_RPC })}</small></span><span>{busy === "local" ? null : cfg?.mode === "local" && !onion && !hosted ? t("connectionButton.connected") : cfg?.node_running ? t("connectionButton.use") : t("connectionButton.setUp")}</span>
+                  </button>
+                  {stageLine("local")}
+                </>
               )}
               {profiles.map((profile) => {
                 const active = desktop
                   ? cfg?.mode === "custom" && !onion && currentProfile?.id === profile.id
                   : currentProfile?.id === profile.id;
-                return <div className={`connection-option saved ${active ? "active" : ""}`} key={profile.id}>
-                  <button disabled={busy !== null} onClick={() => desktop ? void switchDesktop("custom", profile) : void switchWalletd(profile.address, profile.id, profile.bearer ?? "")}>
-                    <span><b>{profile.name}</b><small className="mono">{profile.address}</small></span><span>{busy === profile.id ? t("connectionButton.checking") : active ? t("connectionButton.connected") : t("connectionButton.use")}</span>
-                  </button>
-                  <button className="connection-remove" aria-label={t("connectionButton.removeAria", { name: profile.name })} disabled={busy !== null || active} onClick={() => {
-                    (desktop ? walletNodeProfiles : walletdProfiles).remove(profile.id);
-                    setProfiles(desktop ? walletNodeProfiles.load() : walletdProfiles.load());
-                  }}><Trash2 size={16} /></button>
-                </div>;
+                return <Fragment key={profile.id}>
+                  <div className={`connection-option saved ${active ? "active" : ""}`}>
+                    <button disabled={busy !== null} onClick={() => desktop ? void switchDesktop("custom", profile) : void switchWalletd(profile.address, profile.id, profile.bearer ?? "")}>
+                      <span><b>{profile.name}</b><small className="mono">{profile.address}</small></span><span>{busy === profile.id ? (desktop ? null : t("connectionButton.checking")) : active ? t("connectionButton.connected") : t("connectionButton.use")}</span>
+                    </button>
+                    <button className="connection-remove" aria-label={t("connectionButton.removeAria", { name: profile.name })} disabled={busy !== null || active} onClick={() => {
+                      (desktop ? walletNodeProfiles : walletdProfiles).remove(profile.id);
+                      setProfiles(desktop ? walletNodeProfiles.load() : walletdProfiles.load());
+                    }}><Trash2 size={16} /></button>
+                  </div>
+                  {stageLine(profile.id)}
+                </Fragment>;
               })}
             </div>
 
@@ -1956,8 +2055,9 @@ function ConnectionButton() {
                 <div className="connection-add-grid">
                   <input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("connectionButton.namePlaceholder")} />
                   <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={STANDALONE_ZKAS_RPC_EXAMPLE} />
-                  <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? t("connectionButton.checking") : t("connectionButton.saveConnect")}</button>
+                  <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{t("connectionButton.saveConnect")}</button>
                 </div>
+                {stageLine("add")}
               </div>
             ) : (
               <div className="connection-add-own">
@@ -2011,6 +2111,7 @@ function ConnectionButton() {
 
 function WalletSwitcher({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
+  useBackClose(true, onClose);
   const active = activeToken();
   const registered = listWallets();
   // The first status poll registers legacy wallets. If the switcher is opened
@@ -2161,6 +2262,7 @@ function ConfirmDialog({
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
+  useBackClose(true, onCancel);
   // Rendered through a portal on <body>: a `position: fixed` overlay inside an
   // ancestor that has a transform (the pane's entrance animation) would be
   // positioned against that ancestor instead of the viewport — the classic
@@ -2221,6 +2323,7 @@ function RecoverHistoryDialog({
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
+  useBackClose(true, onCancel);
   const [when, setWhen] = useState<"unknown" | "date">(known > 0 ? "date" : "unknown");
   const [createdDate, setCreatedDate] = useState("");
   const [height, setHeight] = useState(known > 0 ? String(known) : "");
@@ -2297,6 +2400,8 @@ function ConsolidateDialog({
 }) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
+  // Back behaves like the backdrop: claimed, but no closing mid-consolidation.
+  useBackClose(true, () => { if (!busy) onClose(); });
   const [stage, setStage] = useState<SendStage | null>(null);
   const [error, setError] = useState("");
   const [needSeed, setNeedSeed] = useState(false);
@@ -4122,6 +4227,7 @@ function TxDetail({
   onLabelSaved?: () => void;
 }) {
   const { t } = useTranslation();
+  useBackClose(true, onClose);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState("");
   const [label, setLabel] = useState(() => getTxLabel(row.txid));
@@ -4645,6 +4751,7 @@ function initials(name: string): string {
 /// Pick someone to pay from the address book.
 function ContactPicker({ onPick, onClose }: { onPick: (c: Contact) => void; onClose: () => void }) {
   const { t } = useTranslation();
+  useBackClose(true, onClose);
   const [q, setQ] = useState("");
   const list = sortedContacts().filter(
     (c) => !q.trim() || c.name.toLowerCase().includes(q.toLowerCase()) || c.address.toLowerCase().includes(q.toLowerCase()),
@@ -4688,6 +4795,7 @@ function ContactPicker({ onPick, onClose }: { onPick: (c: Contact) => void; onCl
 /// the user confirms it here explicitly.
 function SaveContactDialog({ address, initialName, onClose }: { address: string; initialName?: string; onClose: () => void }) {
   const { t } = useTranslation();
+  useBackClose(true, onClose);
   const [name, setName] = useState(findContact(address)?.name ?? initialName ?? "");
   const [note, setNote] = useState(findContact(address)?.note ?? "");
   const toast = useToast();
@@ -4803,6 +4911,7 @@ function ContactsCard() {
 
 function EditContact({ contact, onClose }: { contact: Contact; onClose: () => void }) {
   const { t } = useTranslation();
+  useBackClose(true, onClose);
   const [name, setName] = useState(contact.name);
   const [note, setNote] = useState(contact.note ?? "");
   const [confirmDel, setConfirmDel] = useState(false);
@@ -5280,6 +5389,7 @@ const FEE_MAX_FC = 0.045; // worst-case single-tx fee — used for Max & validat
 // our cleanup stops the camera.
 function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; onClose: () => void }) {
   const { t } = useTranslation();
+  useBackClose(true, onClose);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [err, setErr] = useState("");
 
@@ -6142,8 +6252,9 @@ function shortAddr(a: string): string {
   return body.length > 20 ? `${a.slice(0, 16)}…${a.slice(-6)}` : a;
 }
 
+// In the UI language, not the OS locale (amounts stay as they are: they get copied).
 function fmtTime(ms: number): string {
-  return new Date(ms).toLocaleString(undefined, {
+  return formatDate(ms, {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -7580,6 +7691,7 @@ function SwitchWallet() {
 
 function RenameWallet({ wallet, onClose }: { wallet: WalletRef; onClose: () => void }) {
   const { t } = useTranslation();
+  useBackClose(true, onClose);
   const [name, setName] = useState(wallet.label);
   return createPortal(
     <div className="modalwrap" onClick={onClose}>
