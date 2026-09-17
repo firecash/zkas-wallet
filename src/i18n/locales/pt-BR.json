@@ -1069,19 +1069,19 @@
   },
   "hooks": {
     "underMinuteLeft": "menos de 1 min",
-    "minutesLeft": "~{{m}} min restantes",
-    "hoursMinutesLeft": "~{{h}}h {{m}}m restantes",
-    "hoursLeft": "~{{h}}h rest.},"
+    "minutesLeft": "restam ~{{m}} min",
+    "hoursMinutesLeft": "restam ~{{h}}h {{m}}m",
+    "hoursLeft": "restam ~{{h}}h"
   },
   "networkGlobe": {
     "blockInfo": "bloco aceito",
-    "ambientCommitment": "compromisso de nota ⊕ #{{blue}}",
-    "ambientCommitmentBare": "compromisso de nota ⊕",
+    "ambientCommitment": "compromisso de moeda ⊕ #{{blue}}",
+    "ambientCommitmentBare": "compromisso de moeda ⊕",
     "ambientAnchor": "sinsemilla · âncora ✓",
-    "ambientWork": "kHeavyHash · trabalho vivo",
+    "ambientWork": "kHeavyHash · em tempo real",
     "ambientRelay": "retransmissão de transação privada",
-    "ambientSealed": "{{txs}} tx · quantias blindadas",
-    "ambientSealedBare": "quantias blindadas",
+    "ambientSealed": "{{txs}} tx · valores selados",
+    "ambientSealedBare": "valores selados",
     "ambientPeers": "pares: retransmitindo ✓",
     "txInfo_one": "{{count}} ação orchard · prova halo2 verificada · retransmitida",
     "txInfo_other": "{{count}} ações Orchard · prova Halo 2 verificada · retransmitida",
@@ -1800,36 +1800,36 @@
     "invalidViewKey": "Chave de visualização inválida"
   },
   "bootLoader": {
-    "opening": "Abrindo"
+    "opening": "Abrindo…"
   },
   "serviceLogs": {
     "searchAria": "Pesquisar logs",
-    "findPlaceholder": "Buscar...",
+    "findPlaceholder": "Buscar nos logs",
     "serviceAria": "Serviço",
     "allServices": "Todos serviços",
-    "issues": "Problemas",
-    "pauseFollow": "Pausar seguir",
+    "issues": "Erros",
+    "pauseFollow": "Pausar rolagem",
     "followNewest": "Seguir novos",
     "follow": "Seguir",
-    "wrapTitle": "Quebrar linhas longas",
+    "wrapTitle": "Quebrar linhas",
     "wrap": "Quebrar",
     "copied": "Copiado",
     "copy": "Copiar",
     "save": "Salvar",
     "clearView": "Limpar tela",
-    "noMatching": "Nenhum log.",
+    "noMatching": "Nenhum log encontrado.",
     "lines": "{{n}} linhas",
     "followingNewest": "Seguindo mais novos",
     "paused": "Pausado"
   },
   "serviceLogsDialog": {
-    "diagnosticsAria": "Diagnósticos {{title}}",
+    "diagnosticsAria": "Diagnósticos de {{title}}",
     "eyebrow": "Diagnósticos",
     "reconnecting": "Reconectando",
     "live": "Ao vivo",
     "opening": "Abrindo",
     "closeLogsAria": "Fechar logs",
     "closeTitle": "Fechar",
-    "interrupted": "Eventos ao vivo foram interrompidos. A sondagem continuará tentando: {{error}}"
+    "interrupted": "Eventos ao vivo foram interrompidos. A consulta continuará tentando: {{error}}"
   }
 }
