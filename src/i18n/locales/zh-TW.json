@@ -692,7 +692,9 @@
     "torDescMobile": "隱藏 IP。守護程式仍可看到交易。需 Orbot。",
     "thisComputerOwn": "此電腦 · 自有節點",
     "managedHere": "在此管理 · gRPC {{port}}",
-    "removeAria": "移除 {{name}}"
+    "removeAria": "移除 {{name}}",
+    "stageRestarting": "正在重啟錢包引擎 · {{s}}秒",
+    "stageLoadingScan": "載入掃描狀態…"
   },
   "walletSwitcher": {
     "defaultLabel": "錢包 1",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "錢包引擎：{{error}}",
     "miningNeverOffered": "錢包不會提供挖礦模式，因為它不保留完整的歷史幣。",
     "nodeLogsTitle": "ZKAS 節點日誌",
-    "walletLogsTitle": "錢包引擎日誌"
+    "walletLogsTitle": "錢包引擎日誌",
+    "movingWalletToPublic": "正在將錢包移至公開節點…",
+    "stoppingNode": "停止節點…"
   },
   "selfHost": {
     "copied": "已複製",

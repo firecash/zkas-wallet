@@ -701,7 +701,9 @@
     "accessToken": "Token de acceso",
     "notPairingCode": "Ese código no es de emparejamiento de servicio de billetera. En la computadora que aloja la billetera, abre Host → Acceso a la red → Emparejar teléfono.",
     "nodeNotInstalled": "El nodo local gestionado no está instalado. Las pantallas Minería y Nodo pueden instalar la versión verificada automáticamente.",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "stageRestarting": "Reiniciando motor · {{s}}s",
+    "stageLoadingScan": "Cargando escaneo…"
   },
   "walletSwitcher": {
     "defaultLabel": "Billetera 1",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "Motor: {{error}}",
     "miningNeverOffered": "El modo minería nunca se ofrece a la billetera porque no retiene el historial completo de monedas. (maxChars: 125, actual: 99)",
     "nodeLogsTitle": "Logs del nodo ZKAS",
-    "walletLogsTitle": "Registros del motor"
+    "walletLogsTitle": "Registros del motor",
+    "movingWalletToPublic": "Moviendo billetera al nodo público…",
+    "stoppingNode": "Deteniendo nodo…"
   },
   "selfHost": {
     "webEyebrow": "Autogestión",

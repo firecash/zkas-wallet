@@ -1271,7 +1271,9 @@
     "usePublicNode": "Öffentlichen Node nutzen",
     "viewWalletLogs": "Wallet-Logs anzeigen",
     "yourExistingNode": "eigener Node",
-    "thePublicNode": "öffentlicher Node"
+    "thePublicNode": "öffentlicher Node",
+    "movingWalletToPublic": "Wallet wird zur öffentlichen Node verschoben…",
+    "stoppingNode": "Node stoppen…"
   },
   "endpointField": {
     "hint": "IP und Port eines beliebigen Nodes – muss nicht auf diesem Rechner sein. z. B. 203.0.113.5:16110",
@@ -1689,7 +1691,9 @@
     "torDescMobile": "Verbirgt deine IP. Der Daemon sieht trotzdem deine Transaktionen. Benötigt Orbot.",
     "thisComputerOwn": "Dieser Computer · eigener Node",
     "managedHere": "Verwaltet hier · gRPC {{port}}",
-    "removeAria": "{{name}} entfernen"
+    "removeAria": "{{name}} entfernen",
+    "stageRestarting": "Wallet-Engine wird neu gestartet · {{s}}s",
+    "stageLoadingScan": "Scan-Status wird geladen…"
   },
   "walletSwitcher": {
     "defaultLabel": "Wallet 1",

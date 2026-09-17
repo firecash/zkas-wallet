@@ -701,7 +701,9 @@
     "accessToken": "رسائی ٹوکن",
     "notPairingCode": "یہ کوڈ والٹ سروس پئرنگ کوڈ نہیں ہے۔ والٹ چلانے والے کمپیوٹر پر، Host → Network access → Pair a phone کھولیں۔",
     "nodeNotInstalled": "مقامی نوڈ انسٹال نہیں ہے۔ Mine اور Node اسکرینز تصدیق شدہ ریلیز خودکار انسٹال کر سکتی ہیں۔",
-    "close": "بند کریں"
+    "close": "بند کریں",
+    "stageRestarting": "والٹ انجن دوبارہ شروع ہو رہا ہے · {{s}}s",
+    "stageLoadingScan": "اسکین کی حالت لوڈ ہو رہی ہے…"
   },
   "consolidateDialog": {
     "errEnterSeed": "اس والٹ کا 64 حرفی بازیابی کا سیڈ درج کریں تاکہ اس ڈیوائس پر سائن کریں۔",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "والیٹ انجن: {{error}}",
     "miningNeverOffered": "والٹ کو مائننگ موڈ کبھی پیش نہیں کیا جاتا کیونکہ یہ مکمل تاریخی سکے برقرار نہیں رکھتا۔",
     "nodeLogsTitle": "ZKAS نوڈ لاگز",
-    "walletLogsTitle": "والیٹ انجن لاگز"
+    "walletLogsTitle": "والیٹ انجن لاگز",
+    "movingWalletToPublic": "والٹ کو عوامی نوڈ میں منتقل کیا جا رہا ہے…",
+    "stoppingNode": "نوڈ رک رہا ہے…"
   },
   "selfHost": {
     "copied": "کاپی",

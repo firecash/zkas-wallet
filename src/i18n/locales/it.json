@@ -701,7 +701,9 @@
     "accessToken": "Token accesso",
     "notPairingCode": "Il codice non è un codice pairing del servizio wallet. Sul computer che serve il wallet, apri Host → Network access → Pair a phone.",
     "nodeNotInstalled": "Il nodo locale gestito non è installato. Le schermate Mine e Node possono installare la release verificata automaticamente.",
-    "close": "Chiudi"
+    "close": "Chiudi",
+    "stageRestarting": "Riavvio motore portafoglio · {{s}}s",
+    "stageLoadingScan": "Carico scansione…"
   },
   "walletSwitcher": {
     "defaultLabel": "Wallet 1",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "Motore wallet: {{error}}",
     "miningNeverOffered": "La modalità mining non viene proposta al portafoglio perché non conserva lo storico completo delle monete. (max 125)",
     "nodeLogsTitle": "Log nodo ZKAS",
-    "walletLogsTitle": "Log motore wallet"
+    "walletLogsTitle": "Log motore wallet",
+    "movingWalletToPublic": "Sposto il portafoglio sul nodo pubblico…",
+    "stoppingNode": "Arresto nodo…"
   },
   "selfHost": {
     "copied": "Copiato",

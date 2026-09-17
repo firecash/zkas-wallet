@@ -701,7 +701,9 @@
     "accessToken": "액세스 토큰",
     "notPairingCode": "이 코드는 지갑 서비스 페어링 코드가 아닙니다. 지갑을 제공하는 컴퓨터에서 호스트 → 네트워크 액세스 → 휴대폰 페어링을 여세요.",
     "nodeNotInstalled": "관리형 로컬 노드가 아직 설치되지 않았습니다. 채굴 및 노드 화면에서 검증된 릴리스를 자동 설치할 수 있습니다.",
-    "close": "닫기"
+    "close": "닫기",
+    "stageRestarting": "지갑 엔진 재시작 중 · {{s}}초",
+    "stageLoadingScan": "스캔 상태 불러오는 중…"
   },
   "walletSwitcher": {
     "defaultLabel": "지갑 1",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "지갑 엔진: {{error}}",
     "miningNeverOffered": "전체 과거 코인을 보관하지 않기 때문에 지갑에 채굴 모드가 제공되지 않습니다.",
     "nodeLogsTitle": "ZKAS 노드 로그",
-    "walletLogsTitle": "지갑 엔진 로그"
+    "walletLogsTitle": "지갑 엔진 로그",
+    "movingWalletToPublic": "공용 노드로 지갑 이동 중…",
+    "stoppingNode": "노드 중지 중…"
   },
   "selfHost": {
     "webEyebrow": "자가 호스팅",

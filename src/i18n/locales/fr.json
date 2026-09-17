@@ -692,7 +692,9 @@
     "torDescMobile": "Masque votre IP. Le daemon voit toujours vos transactions. Nécessite Orbot.",
     "thisComputerOwn": "Cet ordinateur · votre propre nœud",
     "managedHere": "Géré ici · gRPC {{port}}",
-    "removeAria": "Supprimer {{name}}"
+    "removeAria": "Supprimer {{name}}",
+    "stageRestarting": "Redémarrage du moteur · {{s}}s",
+    "stageLoadingScan": "Chargement analyse…"
   },
   "walletSwitcher": {
     "defaultLabel": "Portefeuille 1",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "Moteur portefeuille : {{error}}",
     "miningNeverOffered": "Le mode minage n'est jamais proposé au portefeuille car il ne conserve pas l'historique complet des pièces. (125 chars)",
     "nodeLogsTitle": "Logs du nœud ZKAS",
-    "walletLogsTitle": "Journaux du moteur"
+    "walletLogsTitle": "Journaux du moteur",
+    "movingWalletToPublic": "Déplacement du portefeuille vers le nœud public…",
+    "stoppingNode": "Arrêt du nœud…"
   },
   "selfHost": {
     "copied": "Copié",

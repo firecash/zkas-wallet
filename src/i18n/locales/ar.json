@@ -701,7 +701,9 @@
     "accessToken": "رمز الوصول",
     "notPairingCode": "هذا الرمز ليس رمز اقتران خدمة المحفظة. على الكمبيوتر الذي يشغل المحفظة، افتح Host → Network access → Pair a phone.",
     "nodeNotInstalled": "العقدة المحلية المُدارة غير مثبتة بعد. يمكن لشاشتي التعدين والعقدة تثبيت الإصدار المُعتمد تلقائيًا.",
-    "close": "إغلاق"
+    "close": "إغلاق",
+    "stageRestarting": "إعادة تشغيل محرك المحفظة · {{s}}ث",
+    "stageLoadingScan": "تحميل حالة المسح…"
   },
   "walletSwitcher": {
     "defaultLabel": "المحفظة 1",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "محرك المحفظة: {{error}}",
     "miningNeverOffered": "لا يُعرض وضع التعدين للمحفظة أبدًا لأنها لا تحتفظ بسجل العملات التاريخي الكامل.‏",
     "nodeLogsTitle": "سجلات عقدة ZKAS",
-    "walletLogsTitle": "سجلات محرك المحفظة"
+    "walletLogsTitle": "سجلات محرك المحفظة",
+    "movingWalletToPublic": "نقل المحفظة إلى العقدة العامة…",
+    "stoppingNode": "إيقاف العقدة…"
   },
   "selfHost": {
     "explorerApi": "API المستكشف",

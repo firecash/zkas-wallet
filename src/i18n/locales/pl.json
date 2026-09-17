@@ -701,7 +701,9 @@
     "accessToken": "Token dostępu",
     "notPairingCode": "To nie jest kod parowania usługi portfela. Na komputerze obsługującym portfel otwórz Host → Network access → Pair a phone.",
     "nodeNotInstalled": "Lokalny węzeł zarządzany nie jest jeszcze zainstalowany. Ekrany Wydobywanie i Węzeł mogą zainstalować zweryfikowane wydanie automatycznie.",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "stageRestarting": "Restartowanie silnika portfela · {{s}}s",
+    "stageLoadingScan": "Ładuję stan skanu…"
   },
   "walletSwitcher": {
     "defaultLabel": "Portfel 1",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "Silnik portfela: {{error}}",
     "miningNeverOffered": "Tryb kopania nie jest oferowany portfelowi, ponieważ nie zachowuje on pełnych historycznych monet. (max 125 znaków: 93 znaki) OK",
     "nodeLogsTitle": "Logi węzła ZKAS",
-    "walletLogsTitle": "Logi silnika portfela"
+    "walletLogsTitle": "Logi silnika portfela",
+    "movingWalletToPublic": "Przenoszenie portfela do węzła publicznego…",
+    "stoppingNode": "Zatrzymuję węzeł…"
   },
   "selfHost": {
     "webEyebrow": "Self-host",

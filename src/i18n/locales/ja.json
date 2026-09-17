@@ -608,7 +608,9 @@
     "accessToken": "アクセストークン",
     "notPairingCode": "そのコードはウォレットサービスのペアリングコードではありません。ウォレットを提供しているPCで、ホスト→ネットワークアクセス→電話をペアリングを開いてください。",
     "nodeNotInstalled": "管理対象ローカルノードが未インストールです。Mine画面とNode画面から検証済みリリースを自動インストールできます。",
-    "close": "閉じる"
+    "close": "閉じる",
+    "stageRestarting": "ウォレットエンジン再起動中 · {{s}}秒",
+    "stageLoadingScan": "スキャン状態を読み込み中…"
   },
   "walletSwitcher": {
     "defaultLabel": "ウォレット1",
@@ -1372,7 +1374,9 @@
     "walletEngineError": "ウォレットエンジン: {{error}}",
     "miningNeverOffered": "完全な履歴のコインを保持しないため、ウォレットにマイニングモードは提供されません。",
     "nodeLogsTitle": "ZKASノードログ",
-    "walletLogsTitle": "ウォレットエンジンログ"
+    "walletLogsTitle": "ウォレットエンジンログ",
+    "movingWalletToPublic": "ウォレットをパブリックノードに移行中…",
+    "stoppingNode": "ノード停止中"
   },
   "selfHost": {
     "copied": "コピー済",

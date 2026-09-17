@@ -701,7 +701,9 @@
     "accessToken": "एक्सेस टोकन",
     "notPairingCode": "यह कोड वॉलेट सेवा पेयरिंग कोड नहीं है। वॉलेट वाले कंप्यूटर पर Host → Network access → Pair a phone खोलें।",
     "nodeNotInstalled": "मैनेज्ड लोकल नोड अभी इंस्टॉल नहीं है। Mine और Node स्क्रीन वेरिफाइड रिलीज़ अपने आप इंस्टॉल कर सकती हैं।",
-    "close": "बंद करें"
+    "close": "बंद करें",
+    "stageRestarting": "वॉलेट इंजन रीस्टार्ट हो रहा है · {{s}}सेकंड",
+    "stageLoadingScan": "स्कैन स्टेट लोड हो रही है…"
   },
   "walletSwitcher": {
     "defaultLabel": "वॉलेट 1",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "वॉलेट इंजन: {{error}}",
     "miningNeverOffered": "वॉलेट को माइनिंग मोड कभी नहीं दिया जाता क्योंकि यह पूरे ऐतिहासिक सिक्के नहीं रखता।",
     "nodeLogsTitle": "ZKAS नोड लॉग्स",
-    "walletLogsTitle": "वॉलेट इंजन लॉग्स"
+    "walletLogsTitle": "वॉलेट इंजन लॉग्स",
+    "movingWalletToPublic": "वॉलेट पब्लिक नोड पर ले जाया जा रहा है…",
+    "stoppingNode": "नोड रोक रहे हैं"
   },
   "selfHost": {
     "webEyebrow": "सेल्फ़-होस्ट",

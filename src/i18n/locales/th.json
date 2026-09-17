@@ -692,7 +692,9 @@
     "torDescMobile": "ซ่อน IP ของคุณ แต่ daemon จะยังคงเห็นธุรกรรม ต้องใช้ Orbot",
     "thisComputerOwn": "คอมพิวเตอร์นี้ · โหนดของคุณเอง",
     "managedHere": "จัดการที่นี่ · gRPC {{port}}",
-    "removeAria": "ลบ {{name}}"
+    "removeAria": "ลบ {{name}}",
+    "stageRestarting": "กำลังเริ่มระบบกระเป๋าใหม่ · {{s}}วิ",
+    "stageLoadingScan": "กำลังโหลดสถานะสแกน…"
   },
   "walletSwitcher": {
     "defaultLabel": "กระเป๋า 1",
@@ -1443,7 +1445,6 @@
     "lastRun": "รันล่าสุด: {{exit}}",
     "updateBeforeRunning": "อัปเดตก่อนรัน",
     "runNode": "รันโหนด",
-    "stopping": "กำลังหยุด…",
     "stop": "หยุด",
     "viewNodeLogs": "ดูบันทึกโหนด",
     "walletConnection": "การเชื่อมต่อกระเป๋า",
@@ -1466,7 +1467,9 @@
     "walletEngineError": "เอนจินกระเป๋า: {{error}}",
     "miningNeverOffered": "โหมดขุดไม่เปิดให้กระเป๋าใช้งาน เนื่องจากไม่ได้เก็บโน้ตประวัติอย่างครบถ้วน",
     "nodeLogsTitle": "Log โหนด ZKAS",
-    "walletLogsTitle": "Log เอนจินกระเป๋า"
+    "walletLogsTitle": "Log เอนจินกระเป๋า",
+    "movingWalletToPublic": "กำลังย้ายกระเป๋าไปยังโหนดสาธารณะ…",
+    "stoppingNode": "กำลังหยุดโหนด…"
   },
   "selfHost": {
     "webEyebrow": "โฮสต์เอง",

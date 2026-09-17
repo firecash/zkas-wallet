@@ -701,7 +701,9 @@
     "accessToken": "Erişim jetonu",
     "notPairingCode": "Bu kod bir cüzdan hizmeti eşleşme kodu değil. Cüzdanı sunan bilgisayarda Ana Bilgisayar → Ağ erişimi → Telefon eşle'yi aç.",
     "nodeNotInstalled": "Yönetilen yerel düğüm henüz kurulu değil. Madencilik ve Düğüm ekranları doğrulanmış sürümü otomatik kurabilir.",
-    "close": "Kapat"
+    "close": "Kapat",
+    "stageRestarting": "Cüzdan motoru yeniden başlatılıyor · {{s}}s",
+    "stageLoadingScan": "Tarama durumu yükleniyor…"
   },
   "walletSwitcher": {
     "defaultLabel": "Cüzdan 1",
@@ -1433,7 +1435,9 @@
     "walletEngineError": "Cüzdan motoru: {{error}}",
     "miningNeverOffered": "Cüzdan, tam geçmiş jetonları tutmadığı için madencilik modu hiçbir zaman sunulmaz. (125 karakter sınırına uygun, doğal ve kısa.)",
     "nodeLogsTitle": "ZKAS düğüm günlükleri",
-    "walletLogsTitle": "Cüzdan motoru günlükleri"
+    "walletLogsTitle": "Cüzdan motoru günlükleri",
+    "movingWalletToPublic": "Cüzdan genel düğüme taşınıyor…",
+    "stoppingNode": "Düğüm durduruluyor…"
   },
   "selfHost": {
     "webEyebrow": "Kendi barındır",

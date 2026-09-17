@@ -701,7 +701,9 @@
     "accessToken": "Токен доступа",
     "notPairingCode": "Это не код сопряжения сервиса кошелька. На компьютере с кошельком откройте Host → Network access → Pair a phone.",
     "nodeNotInstalled": "Локальная нода ещё не установлена. Экраны «Майнинг» и «Нода» могут установить проверенный релиз автоматически.",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "stageRestarting": "Перезапуск кошелька · {{s}}с",
+    "stageLoadingScan": "Загрузка сканирования…"
   },
   "walletSwitcher": {
     "defaultLabel": "Кошелёк 1",
@@ -1433,7 +1435,9 @@
     "nodeLogsTitle": "Логи узла ZKAS",
     "walletLogsTitle": "Логи движка кошелька",
     "updateNote": "{{release}} исправляет синхронизацию нового узла и передачу защищённой истории.",
-    "updateTo": "Обновить до {{version}}"
+    "updateTo": "Обновить до {{version}}",
+    "movingWalletToPublic": "Перенос кошелька на публичную ноду…",
+    "stoppingNode": "Остановка ноды…"
   },
   "appLockScreen": {
     "intro": "Ключ кошелька зашифрован на этом устройстве. Введите {{secret}}, чтобы использовать его.",

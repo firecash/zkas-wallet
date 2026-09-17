@@ -701,7 +701,9 @@
     "accessToken": "توکن دسترسی",
     "notPairingCode": "این کد یک کد جفت‌سازی سرویس کیف پول نیست. در رایانه میزبان کیف پول، Host → Network access → Pair a phone را باز کنید.",
     "nodeNotInstalled": "گره محلی مدیریت‌شده هنوز نصب نشده. صفحات استخراج و گره می‌توانند نسخه تأییدشده را خودکار نصب کنند.",
-    "close": "بستن"
+    "close": "بستن",
+    "stageRestarting": "راه‌اندازی مجدد موتور کیف پول · {{s}}ثانیه",
+    "stageLoadingScan": "بارگذاری وضعیت اسکن…"
   },
   "walletSwitcher": {
     "defaultLabel": "کیف پول ۱",
@@ -1433,7 +1435,9 @@
     "walletEngineError": "موتور کیف پول: {{error}}",
     "miningNeverOffered": "حالت استخراج هرگز به کیف پول ارائه نمی‌شود زیرا سکه‌های تاریخی کامل را نگه نمی‌دارد.",
     "nodeLogsTitle": "لاگ‌های گره ZKAS",
-    "walletLogsTitle": "لاگ‌های موتور کیف پول"
+    "walletLogsTitle": "لاگ‌های موتور کیف پول",
+    "movingWalletToPublic": "انتقال کیف پول به نود عمومی…",
+    "stoppingNode": "توقف نود…"
   },
   "selfHost": {
     "webEyebrow": "خودمیزبانی",

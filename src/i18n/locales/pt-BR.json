@@ -692,7 +692,9 @@
     "torDescMobile": "Oculta seu IP. O daemon ainda vê suas transações. Precisa do Orbot.",
     "thisComputerOwn": "Este computador · seu próprio nó",
     "managedHere": "Gerenciado aqui · gRPC {{port}}",
-    "removeAria": "Remover {{name}}"
+    "removeAria": "Remover {{name}}",
+    "stageRestarting": "Reiniciando motor · {{s}}s",
+    "stageLoadingScan": "Carregando escaneamento…"
   },
   "walletSwitcher": {
     "defaultLabel": "Carteira 1",
@@ -1415,7 +1417,9 @@
     "walletEngineError": "Motor da carteira: {{error}}",
     "miningNeverOffered": "O modo mineração nunca é oferecido à carteira porque ela não retém o histórico completo de moedas. (125 chars: 112) OK.",
     "nodeLogsTitle": "Logs do nó ZKAS",
-    "walletLogsTitle": "Logs do motor da carteira"
+    "walletLogsTitle": "Logs do motor da carteira",
+    "movingWalletToPublic": "Movendo carteira para o nó público…",
+    "stoppingNode": "Parando nó…"
   },
   "selfHost": {
     "webEyebrow": "Auto-hospedar",

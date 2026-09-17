@@ -701,7 +701,9 @@
     "accessToken": "Токен доступу",
     "notPairingCode": "Цей код не є кодом парування сервісу гаманця. На комп'ютері з гаманцем відкрийте Host → Network access → Pair a phone.",
     "nodeNotInstalled": "Керований локальний вузол ще не встановлено. Екрани Майнінг та Вузол можуть встановити перевірену версію автоматично.",
-    "close": "Закрити"
+    "close": "Закрити",
+    "stageRestarting": "Перезапуск гаманця · {{s}}с",
+    "stageLoadingScan": "Завантаження сканування…"
   },
   "consolidateDialog": {
     "errEnterSeed": "Введіть 64-символьний сід відновлення цього гаманця для підпису на цьому пристрої.",
@@ -1433,7 +1435,9 @@
     "walletEngineError": "Рушій гаманця: {{error}}",
     "miningNeverOffered": "Режим майнінгу не пропонується гаманцю, оскільки він не зберігає повну історію монет. (maxChars: 125, actual: 88)",
     "nodeLogsTitle": "Журнал вузла ZKAS",
-    "walletLogsTitle": "Журнал рушія гаманця"
+    "walletLogsTitle": "Журнал рушія гаманця",
+    "movingWalletToPublic": "Перенесення гаманця на публічний вузол…",
+    "stoppingNode": "Зупинка вузла…"
   },
   "selfHost": {
     "webEyebrow": "Селф-хостинг",

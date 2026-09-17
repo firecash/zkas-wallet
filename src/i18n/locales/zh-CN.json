@@ -701,7 +701,9 @@
     "accessToken": "访问令牌",
     "notPairingCode": "该代码不是钱包服务配对码。请在运行钱包的电脑上打开主机→网络访问→配对手机。",
     "nodeNotInstalled": "托管本地节点尚未安装。挖矿和节点页面可自动安装已验证版本。",
-    "close": "关闭"
+    "close": "关闭",
+    "stageRestarting": "正在重启钱包引擎 · {{s}}秒",
+    "stageLoadingScan": "加载扫描状态…"
   },
   "walletSwitcher": {
     "defaultLabel": "钱包1",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "钱包引擎：{{error}}",
     "miningNeverOffered": "挖矿模式不会提供给该钱包，因为它不保留完整的历史币。",
     "nodeLogsTitle": "ZKAS节点日志",
-    "walletLogsTitle": "钱包引擎日志"
+    "walletLogsTitle": "钱包引擎日志",
+    "movingWalletToPublic": "正在将钱包移至公共节点…",
+    "stoppingNode": "停止节点…"
   },
   "selfHost": {
     "webEyebrow": "自托管",

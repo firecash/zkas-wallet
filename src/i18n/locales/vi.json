@@ -692,7 +692,9 @@
     "torDescMobile": "Ẩn IP của bạn. Daemon vẫn thấy giao dịch. Cần Orbot.",
     "thisComputerOwn": "Máy này · nút riêng",
     "managedHere": "Quản lý tại đây · gRPC {{port}}",
-    "removeAria": "Xóa {{name}}"
+    "removeAria": "Xóa {{name}}",
+    "stageRestarting": "Đang khởi động lại ví · {{s}}s",
+    "stageLoadingScan": "Đang tải trạng thái quét…"
   },
   "walletSwitcher": {
     "defaultLabel": "Ví 1",
@@ -1433,7 +1435,9 @@
     "walletEngineError": "Lỗi engine ví: {{error}}",
     "miningNeverOffered": "Chế độ đào không được cung cấp cho ví vì nó không giữ lại toàn bộ lịch sử đồng.",
     "nodeLogsTitle": "Nhật ký nút ZKAS",
-    "walletLogsTitle": "Nhật ký engine ví"
+    "walletLogsTitle": "Nhật ký engine ví",
+    "movingWalletToPublic": "Đang chuyển ví sang nút công khai…",
+    "stoppingNode": "Đang dừng nút…"
   },
   "selfHost": {
     "copied": "Đã sao",

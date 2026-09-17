@@ -692,7 +692,9 @@
     "torDescMobile": "Sembunyikan IP. Daemon tetap lihat transaksi. Butuh Orbot.",
     "thisComputerOwn": "Komputer ini · node sendiri",
     "managedHere": "Dikelola di sini · gRPC {{port}}",
-    "removeAria": "Hapus {{name}}"
+    "removeAria": "Hapus {{name}}",
+    "stageRestarting": "Mulai ulang mesin dompet · {{s}}d",
+    "stageLoadingScan": "Muat status pindai…"
   },
   "walletSwitcher": {
     "defaultLabel": "Dompet 1",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "Mesin dompet: {{error}}",
     "miningNeverOffered": "Mode penambangan tidak ditawarkan ke dompet karena tidak menyimpan riwayat koin lengkap.",
     "nodeLogsTitle": "Log node ZKAS",
-    "walletLogsTitle": "Log mesin dompet"
+    "walletLogsTitle": "Log mesin dompet",
+    "movingWalletToPublic": "Memindahkan dompet ke node publik…",
+    "stoppingNode": "Hentikan node…"
   },
   "selfHost": {
     "copied": "Disalin",
