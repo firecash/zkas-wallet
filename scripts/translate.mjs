@@ -55,7 +55,7 @@ function charge(model, usage) {
 const args = process.argv.slice(2);
 const force = args.includes("--force");
 const dryRun = args.includes("--dry-run");
-const only = args.filter((a) => !a.startsWith("--"));
+const only = args.filter((a, i) => !a.startsWith("--") && args[i - 1] !== "--retranslate");
 
 // The language list lives in index.ts; read it without importing TS.
 const indexTs = readFileSync(join(ROOT, "src", "i18n", "index.ts"), "utf8");
@@ -148,7 +148,7 @@ function kindOf(key, en) {
 function systemPrompt(lang, termBank) {
   const terms = termBank ? `Established terminology for this language — use these EXACT renderings whenever the concept appears, never a synonym:\n${JSON.stringify(termBank)}\n` : "";
   return `You are the localisation lead for a cryptocurrency wallet app (ZKas: a private, shielded coin; screens: Send, Receive, History, Settings, Node, Mining, Explorer). You translate its UI strings from English into ${NAMES[lang] || lang}.
-Input: a JSON object {strings: {key: English}, kind: {key: "button/label" | "title" | "input placeholder" | "sentence"}, maxChars: {key: N}}. Output: a JSON object with EXACTLY the keys of "strings", each mapped to its translation. JSON only, no commentary.
+Input: a JSON object {strings: {key: English}, kind: {key: "button/label" | "title" | "input placeholder" | "sentence"}, maxChars: {key: N}, instructions?: {key: a per-key note from the developer that overrides the glossary for that key}}. Output: a JSON object with EXACTLY the keys of "strings", each mapped to its translation. JSON only, no commentary.
 Register: ${REGISTER[lang] || "one consistent register throughout"}. Buttons (kind button/label) take the form a native app uses on a button — an imperative verb or a short noun, never an infinitive-as-noun or a description.
 Quality bar: write what a native speaker would expect to read in a polished, popular wallet app in this language — the most natural, idiomatic, everyday wording, never a literal or bureaucratic rendering. Prefer the common term over the technically precise one when both are understood. Match the English register: plain and direct, no marketing tone, sentence case unless the English is a title.
 Length: a translation should be at most maxChars[key] characters and should be SHORTER than the English whenever the language allows. Buttons, tabs and labels are the priority: abbreviate, drop articles and filler, use the short synonym, use everyday forms — a short natural phrase beats a long precise one. If a key truly cannot fit, still answer it with the shortest natural wording; NEVER omit a key and never leave a value empty.
@@ -160,6 +160,10 @@ ${terms}`;
 }
 
 const REVIEW = args.includes("--review");
+// Targeted re-translation: a JSON file {key: instruction} — those keys are translated
+// again, in every language, with the instruction attached (used for word-sense fixes
+// such as "note" = coin vs "note" = written message, which no glossary can settle per key).
+const RETRANSLATE = (() => { const i = args.indexOf("--retranslate"); return i >= 0 ? JSON.parse(readFileSync(args[i + 1], "utf8")) : null; })();
 const FLAGGED = args.includes("--flagged");
 const STATS = args.includes("--stats");
 const REVIEW_BATCH = Number(process.env.REVIEW_BATCH || 80);
@@ -295,6 +299,7 @@ async function callDeepSeek(lang, batch, termBank) {
           strings: batch,
           kind: Object.fromEntries(Object.entries(batch).map(([k, v]) => [k, kindOf(k, v)])),
           maxChars: Object.fromEntries(Object.entries(batch).map(([k, v]) => [k, budget(v)])),
+          ...(RETRANSLATE ? { instructions: Object.fromEntries(Object.keys(batch).filter((k) => RETRANSLATE[k]).map((k) => [k, RETRANSLATE[k]])) } : {}),
         }),
       },
     ],
@@ -395,7 +400,7 @@ async function termBankFetch(lang) {
 async function translateLanguage(lang, en, source) {
   const file = join(OUT_DIR, `${lang}.json`);
   const existing = existsSync(file) ? flatten(JSON.parse(readFileSync(file, "utf8"))) : {};
-  const todo = Object.entries(en).filter(([k, text]) => force || !(k in existing) || source[lang]?.[k] !== text);
+  const todo = Object.entries(en).filter(([k, text]) => RETRANSLATE ? k in RETRANSLATE : force || !(k in existing) || source[lang]?.[k] !== text);
   console.log(`${lang}: ${Object.keys(en).length} keys, ${todo.length} to translate`);
   if (!todo.length || dryRun) return;
   const termBank = await termBankFor(lang);
