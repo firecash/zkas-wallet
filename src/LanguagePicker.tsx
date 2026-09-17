@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Languages } from "lucide-react";
+import { Globe } from "lucide-react";
 import { LANGUAGES, currentLanguage, hasChosenLanguage, languageName, setLanguage } from "./i18n";
 
 function LanguageSelect({ label }: { label: string }) {
@@ -42,7 +42,7 @@ export function LanguageInline() {
   const { t } = useTranslation();
   return (
     <div className="lang-inline">
-      <Languages aria-hidden="true" size={15} strokeWidth={2.2} />
+      <Globe aria-hidden="true" size={15} strokeWidth={2.2} />
       <LanguageSelect label={t("languagePicker.label")} />
     </div>
   );
@@ -59,7 +59,7 @@ export function LanguageNotice() {
   if (gone || current === "en" || hasChosenLanguage()) return null;
   return (
     <div className="warnbar lang-notice" role="note">
-      <Languages className="warnbar-icon" aria-hidden="true" size={17} strokeWidth={2.2} />
+      <Globe className="warnbar-icon" aria-hidden="true" size={17} strokeWidth={2.2} />
       <div className="lang-notice-body">
         <span>{t("languagePicker.autoNotice", { name: languageName(current) })}</span>
         <LanguageSelect label={t("languagePicker.label")} />
@@ -96,7 +96,7 @@ export function LanguageButton({ compact = false }: { compact?: boolean }) {
         aria-label={t("languagePicker.label")}
         title={t("languagePicker.label")}
       >
-        <Languages aria-hidden="true" size={17} strokeWidth={2.2} />
+        <Globe aria-hidden="true" size={17} strokeWidth={2.2} />
         {!compact && <span>{current.toUpperCase()}</span>}
       </button>
       {open &&

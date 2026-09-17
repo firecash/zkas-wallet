@@ -7,6 +7,7 @@
 //   … de ja                                                      # only these languages
 //   … --force                                                    # retranslate everything
 //   … --dry-run                                                  # show what would be sent
+//   … --review                                                   # stronger model re-reads every translation and fixes the bad ones
 //
 // Incremental: src/i18n/locales/<lang>.json carries every key; src/i18n/locales/.source.json
 // remembers the English text each translation was made from, so only keys whose English
@@ -85,22 +86,34 @@ const GLOSSARY = `Never translate or transliterate (product/protocol names): ZKA
 // batch prompt, so "recovery phrase" or "viewing key" reads the same on every screen —
 // batch-by-batch translation otherwise drifts between synonyms.
 const TERMS = {
-  "recovery phrase": "the 12-word seed phrase that restores the wallet (use the term popular wallets use in the language)",
+  "recovery phrase": "the 12-word seed phrase that restores the wallet — the term popular wallets (Trust Wallet, MetaMask, Zashi) use in this language",
   "viewing key": "a key that lets a device see balances and history but never spend",
-  "spend key / seed": "the secret that can spend",
-  wallet: "",
-  "wallet service": "the server (daemon) the app talks to; hosted by ZKas or self-hosted",
-  node: "a blockchain node",
-  "shielded": "private / encrypted on-chain (as in shielded transaction)",
-  note: "one shielded coin record inside the wallet (wallet jargon; keep a short consistent word)",
+  "passphrase": "the password that unlocks the app / a backup file — render with the language's ordinary word for password/passphrase, never a bare 'phrase'",
+  wallet: "the app or an account in it",
+  "wallet service": "the server (daemon) the app talks to — hosted by ZKas or self-hosted",
+  node: "a blockchain node (the technical term used by crypto apps in this language)",
+  shielded: "private/encrypted on-chain, as in 'shielded transaction' (Zcash's term)",
+  note: "one shielded coin inside the wallet (Zcash jargon). Render it with the language's everyday word for 'coin' (as in 'your balance is spread across 12 coins') — NEVER the word for a written note, a banknote or a musical note",
   "sync / syncing / synced": "keeping the wallet up to date with the chain",
-  "scan / rescan": "reading the chain to find the wallet's notes",
-  birthday: "the block height/date the wallet was created at (scan starts there)",
-  send: "", receive: "", history: "", settings: "", balance: "", address: "", amount: "", fee: "", memo: "",
-  "pending": "not yet confirmed", "confirmed": "", "maturing": "received but not spendable yet",
-  "back up / backup": "", restore: "", "import": "", "watch-only": "can see, cannot spend",
-  "app lock": "the PIN/biometric lock of the app", "mining": "", "explorer": "the block explorer",
+  "scan / rescan": "reading the chain to find the wallet's coins",
+  birthday: "the block height/date the wallet was created at (scanning starts there)",
+  send: "verb, button", receive: "verb, button", pay: "verb, button", connect: "verb, button (imperative)", continue: "verb, button", "set up": "verb, button",
+  history: "list of past transactions", settings: "", balance: "", address: "", amount: "", fee: "network fee", memo: "an encrypted message attached to a payment",
+  pending: "not yet confirmed", confirmed: "", maturing: "received but not spendable yet",
+  "back up / backup": "verb / noun: safety copy", restore: "bring a wallet back from its phrase or backup", import: "", "watch-only": "can see, cannot spend",
+  "app lock": "the PIN/biometric lock of the app", mining: "", explorer: "the block explorer",
   "chain source": "which node the desktop app reads the chain from",
+};
+
+// One register per language, held throughout. Mixed "du/Sie" or "tú/usted" inside one
+// app is the most visible tell of machine translation.
+const REGISTER = {
+  de: "informal 'du' throughout (as popular consumer apps do), never 'Sie'",
+  fr: "'vous' throughout", es: "'tú' throughout (neutral Latin-American Spanish, no vosotros)", "pt-BR": "'você' throughout",
+  it: "informal 'tu' throughout", nl: "'je/jij' throughout", pl: "second person singular, no 'Pan/Pani'", uk: "'ви' throughout", ru: "'вы' (lowercase) throughout, never 'ты'",
+  tr: "'siz' throughout", id: "'Anda' throughout", ms: "'anda' throughout", vi: "'bạn' throughout", th: "polite (คุณ), no ครับ/ค่ะ particles in labels",
+  ja: "です・ます polite form; labels and buttons as concise noun/verb forms without です", ko: "해요체 polite form; buttons as concise noun forms",
+  "zh-CN": "neutral 您/你 → use 你 throughout", "zh-TW": "你 throughout", hi: "'आप' throughout", bn: "'আপনি' throughout", ur: "'آپ' throughout", ar: "Modern Standard Arabic, second person masculine singular as apps do", fa: "'شما' throughout", sw: "second person singular",
 };
 
 function kindOf(key, en) {
@@ -115,6 +128,7 @@ function systemPrompt(lang, termBank) {
   const terms = termBank ? `Established terminology for this language — use these EXACT renderings whenever the concept appears, never a synonym:\n${JSON.stringify(termBank)}\n` : "";
   return `You are the localisation lead for a cryptocurrency wallet app (ZKas: a private, shielded coin; screens: Send, Receive, History, Settings, Node, Mining, Explorer). You translate its UI strings from English into ${NAMES[lang] || lang}.
 Input: a JSON object {strings: {key: English}, kind: {key: "button/label" | "title" | "input placeholder" | "sentence"}, maxChars: {key: N}}. Output: a JSON object with EXACTLY the keys of "strings", each mapped to its translation. JSON only, no commentary.
+Register: ${REGISTER[lang] || "one consistent register throughout"}. Buttons (kind button/label) take the form a native app uses on a button — an imperative verb or a short noun, never an infinitive-as-noun or a description.
 Quality bar: write what a native speaker would expect to read in a polished, popular wallet app in this language — the most natural, idiomatic, everyday wording, never a literal or bureaucratic rendering. Prefer the common term over the technically precise one when both are understood. Match the English register: plain and direct, no marketing tone, sentence case unless the English is a title.
 Length: a translation should be at most maxChars[key] characters and should be SHORTER than the English whenever the language allows. Buttons, tabs and labels are the priority: abbreviate, drop articles and filler, use the short synonym, use everyday forms — a short natural phrase beats a long precise one. If a key truly cannot fit, still answer it with the shortest natural wording; NEVER omit a key and never leave a value empty.
 Example (English → German): "Confirm & send" → "Senden" is wrong (meaning lost); "Bestätigen und senden" is too long; "Bestätigen & senden" is right. "Loading…" → "Lädt…". "Show all" → "Alle".
@@ -122,6 +136,78 @@ Placeholders and markup: keep every {{placeholder}} verbatim (same spelling, sam
 Plurals: keys ending in _one / _other are the singular / plural form of the same sentence; translate both per the language's plural rules (identical if the language does not inflect for number). Keep "…" and "·" characters, numbers, units and product names as in the English.
 ${GLOSSARY}
 ${terms}`;
+}
+
+const REVIEW = args.includes("--review");
+const REVIEW_MODEL = process.env.REVIEW_MODEL || (VENICE ? "deepseek-v4-pro" : "deepseek-reasoner");
+
+/// Review pass: send English + current translation, get back ONLY the keys that need a
+/// better rendering. A stronger model judges what the fast one produced.
+async function reviewBatch(lang, batch, current, termBank) {
+  const body = {
+    model: REVIEW_MODEL,
+    temperature: 0.1,
+    response_format: { type: "json_object" },
+    ...(VENICE ? { venice_parameters: { include_venice_system_prompt: false, disable_thinking: true } } : {}),
+    messages: [
+      { role: "system", content: systemPrompt(lang, termBank) + `
+REVIEW MODE. You receive {strings: {key: English}, current: {key: current translation}, kind, maxChars}. Judge every current translation as the app's ${NAMES[lang] || lang} localisation lead would. Return a JSON object containing ONLY the keys whose translation must change, each mapped to the corrected translation. Change a translation when it is: wrong in meaning; an unnatural, literal or bureaucratic rendering a native speaker would not write; the wrong sense of a word (e.g. musical/written 'note' for a coin, 'phrase' for a password); inconsistent with the established terminology or the required register; a noun/description where a button needs a verb; grammatically off; clumsily over-abbreviated; or clearly longer than needed; also fix abbreviations cut with a period on buttons/labels ("Подключ.", "Einst.") — use the full word or a shorter synonym; a label may exceed maxChars by a few characters rather than be mangled. Keep good translations out of the answer. If everything is fine, answer {}.` },
+      { role: "user", content: JSON.stringify({
+        strings: batch, current,
+        kind: Object.fromEntries(Object.entries(batch).map(([k, v]) => [k, kindOf(k, v)])),
+        maxChars: Object.fromEntries(Object.entries(batch).map(([k, v]) => [k, budget(v)])),
+      }) },
+    ],
+  };
+  let res;
+  for (let wait = 1; ; wait++) {
+    res = await fetch(API, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${KEY}` }, body: JSON.stringify(body), signal: AbortSignal.timeout(240_000) });
+    if (res.ok) break;
+    const text = (await res.text()).slice(0, 200);
+    if ((res.status === 429 || res.status >= 500) && wait <= 6) { await new Promise((r) => setTimeout(r, wait * 8_000 + Math.random() * 4_000)); continue; }
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
+  const data = await res.json();
+  let parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+  if (parsed && typeof parsed === "object" && !Object.keys(batch).some((k) => k in parsed)) {
+    const inner = Object.values(parsed).find((v) => v && typeof v === "object" && Object.keys(batch).some((k) => k in v));
+    if (inner) parsed = inner; else { const flat = flatten(parsed); if (Object.keys(batch).some((k) => k in flat)) parsed = flat; }
+  }
+  return parsed;
+}
+
+async function printTermBank(lang) {
+  const bank = await termBankFor(lang);
+  console.log(`${lang}: ${JSON.stringify(bank)}`);
+}
+
+async function reviewLanguage(lang, en, source) {
+  const file = join(OUT_DIR, `${lang}.json`);
+  if (!existsSync(file)) { console.log(`${lang}: nothing to review`); return; }
+  const cur = flatten(JSON.parse(readFileSync(file, "utf8")));
+  const keys = Object.keys(en).filter((k) => k in cur);
+  const termBank = await termBankFor(lang);
+  let changed = 0, rejected = 0;
+  const starts = []; for (let i = 0; i < keys.length; i += BATCH) starts.push(i);
+  const INFLIGHT = Number(process.env.TRANSLATE_BATCHES || 3);
+  await Promise.all(Array.from({ length: INFLIGHT }, async () => {
+    for (let i = starts.shift(); i !== undefined; i = starts.shift()) {
+      const slice = keys.slice(i, i + BATCH);
+      const batch = Object.fromEntries(slice.map((k) => [k, en[k]]));
+      const current = Object.fromEntries(slice.map((k) => [k, cur[k]]));
+      let a;
+      try { a = await reviewBatch(lang, batch, current, termBank); } catch (e) { console.warn(`  ${lang} review batch ${i / BATCH + 1} failed: ${e.message}`); continue; }
+      for (const [k, v] of Object.entries(a || {})) {
+        if (!(k in batch) || typeof v !== "string" || !v.trim() || v === cur[k]) continue;
+        if (placeholders(v) !== placeholders(en[k])) { rejected++; continue; }
+        cur[k] = v; source[lang][k] = en[k]; changed++;
+      }
+      writeFileSync(file, JSON.stringify(unflatten(cur), null, 2) + "\n");
+      writeFileSync(SOURCE_FILE, JSON.stringify(source, null, 0) + "\n");
+      console.log(`  ${lang}: reviewed ${Math.min(i + BATCH, keys.length)}/${keys.length}, ${changed} changed`);
+    }
+  }));
+  console.log(`  ${lang}: review done — ${changed} improved, ${rejected} rejected (placeholders)`);
 }
 
 async function callDeepSeek(lang, batch, termBank) {
@@ -204,7 +290,7 @@ async function termBankFor(lang) {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${KEY}` },
         body: JSON.stringify({
-          model: MODEL,
+          model: REVIEW ? REVIEW_MODEL : MODEL,
           temperature: 0.1,
           response_format: { type: "json_object" },
           ...(VENICE ? { venice_parameters: { include_venice_system_prompt: false, disable_thinking: true } } : {}),
@@ -301,7 +387,9 @@ async function main() {
   await Promise.all(Array.from({ length: PARALLEL }, async () => {
     for (let l = queue.shift(); l; l = queue.shift()) {
       source[l.code] ??= {};
-      await translateLanguage(l.code, en, source);
+      if (args.includes("--terms")) await printTermBank(l.code);
+      else if (REVIEW) await reviewLanguage(l.code, en, source);
+      else await translateLanguage(l.code, en, source);
     }
   }));
 }

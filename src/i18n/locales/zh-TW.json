@@ -1113,14 +1113,14 @@
     "hoursLeft": "剩~{{h}}h"
   },
   "walletMaintenance": {
-    "combining": "合併筆記中…",
+    "combining": "合併幣中…",
     "consolidateOnce": "合併一次",
-    "combined": "已合併 {{consolidated}} 筆筆記。剩餘 {{remaining}} 筆。",
+    "combined": "已合併 {{consolidated}} 筆幣。剩餘 {{remaining}} 筆。",
     "custodial": "手動合併需自託管 walletd 並持有此錢包種子。自動安全合併為 daemon 設定，應用程式絕不上傳您的種子。",
     "title": "筆記",
     "intro": "較少筆記可讓大額付款更便宜且更快證明。",
-    "notesCount": "{{n}} 筆筆記",
-    "warning": "不要為了讓筆記數變少而合併一般錢包：這會產生實際手續費並建立鏈上交易。這對有數百筆小額成熟筆記的挖礦與付款錢包才有用。"
+    "notesCount": "{{n}} 筆幣",
+    "warning": "不要為了減少幣數而合併一般錢包：這會產生實際手續費並建立鏈上交易。這對擁有數百筆小額成熟幣的挖礦與付款錢包才有用。"
   },
   "walletTools": {
     "eyebrow": "錢包工具",
