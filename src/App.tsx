@@ -1,3 +1,6 @@
+import { useTranslation, Trans } from "react-i18next";
+import i18n from "./i18n";
+import { LanguagePicker, LanguageInline, LanguageNotice } from "./LanguagePicker";
 import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo, memo } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
@@ -226,19 +229,19 @@ export type AppRouteProps = {
   /// the router cannot see a raw history write and would strand the nav.
   onClearRoute?: () => void;
 };
-const TAB_LABEL: Record<Tab, string> = {
-  receive: "Receive",
-  send: "Send",
-  history: "History",
+const TAB_LABEL: Record<Tab, () => string> = {
+  receive: () => i18n.t("appShell.tabReceive"),
+  send: () => i18n.t("appShell.tabSend"),
+  history: () => i18n.t("appShell.tabHistory"),
   // Signing and verifying are two halves of one idea — proving control of an
   // address — and split across two tabs they each looked like a whole feature
   // while together they crowded out the three that matter.
-  signatures: "Signatures",
+  signatures: () => i18n.t("appShell.tabSignatures"),
   // Batch payouts and manual note merging. It used to be a top-level destination
   // beside Wallet, Node and Mine, which put occasional self-hosted tooling on the
   // same footing as the whole wallet; it belongs among the wallet's own sections.
-  tools: "Pay",
-  settings: "Settings",
+  tools: () => i18n.t("appShell.tabTools"),
+  settings: () => i18n.t("appShell.tabSettings"),
 };
 
 /// Desktop has a window; a phone has a thumb's width. Sign and Verify are real
@@ -450,12 +453,12 @@ function confBadge(t: LocalTx): string {
   // stale count. Without that timestamp the raw number is the only honest one.
   const confs = (t.confAt ? tickedConfirmations({ serverConfs: t.confs ?? null, serverAt: t.confAt }) : t.confs) ?? 0;
   if (confs >= 1) {
-    return Date.now() - t.ts > CONF_RECENT_RETRY_MS ? "confirmed" : `${confs} conf${confs === 1 ? "" : "s"}`;
+    return Date.now() - t.ts > CONF_RECENT_RETRY_MS ? i18n.t("appShell.confConfirmed") : i18n.t("appShell.confs", { count: confs });
   }
-  if (t.confs == null && (t.confTries ?? 0) >= CONF_MAX_TRIES) return "not seen on-chain";
+  if (t.confs == null && (t.confTries ?? 0) >= CONF_MAX_TRIES) return i18n.t("appShell.confNotSeen");
   // "0-conf" is exchange jargon. What the user needs to know is that the payment has
   // left and is waiting to be included in a block.
-  return "sending…";
+  return i18n.t("appShell.confSending");
 }
 
 /// History renders windowed: a miner wallet accrues thousands of chain rows and
@@ -501,6 +504,7 @@ function scrollToPane(force = false) {
 }
 
 export default function App({ routeTab = null, routeSticky = false, onClearRoute }: AppRouteProps = {}) {
+  const { t } = useTranslation();
   // Boot from the cached last-known status: the whole UI (balance, address, QR)
   // renders in the first frame instead of trickling in as network calls land —
   // the 1s poll then corrects anything stale within a second.
@@ -903,8 +907,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           // An arrival found on opening was almost certainly already announced by the
           // background worker that woke for it. Saying it twice is noise; the record
           // above is the part that was missing.
-          if (!whileAway) notifyOs("ZKAS received", `+${amount} ZKAS arrived in your wallet.`);
-          toast.show("good", `Received ${amount} ZKAS`);
+          if (!whileAway) notifyOs(i18n.t("app.receivedNotifTitle"), i18n.t("app.receivedNotifBody", { amount }));
+          toast.show("good", i18n.t("app.receivedToast", { amount }));
           successFeedback();
         }
         lastFinalBalance.current = now;
@@ -1181,6 +1185,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             it belongs in the disclosure on the screen that decides it. */}
         {status?.has_wallet && <ConnectionButton />}
         <HostedNotice />
+        <LanguageNotice />
         {status && <IosInstallNotice hasWallet={!!status.has_wallet} />}
         <DesktopUpdateNotice />
       </div>
@@ -1210,10 +1215,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               />
             </svg>
           </div>
-          <div className="connect-title">Opening your private wallet</div>
+          <div className="connect-title">{t("app.connectTitle")}</div>
           <div className="connect-sub">
-            <span className="connect-pill">Zero-knowledge</span>
-            <span className="connect-pill">Seconds to sync</span>
+            <span className="connect-pill">{t("app.connectPillZk")}</span>
+            <span className="connect-pill">{t("app.connectPillSync")}</span>
           </div>
         </div>
       )}
@@ -1236,20 +1241,20 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           and Settings as its only child sat in the narrow balance column with the
           right ~60% of the page empty. A plain full-width section instead. */}
       {reachable && !freshSeed && status && status.has_wallet && routeSticky && (
-        <section className="pane appear settings-route" aria-label="Settings">
+        <section className="pane appear settings-route" aria-label={t("app.settingsAria")}>
           <button
             className="btn ghost"
             style={{ marginBottom: 12 }}
             onClick={() => onClearRoute?.()}
           >
-            ← Wallet
+            {t("app.backToWallet")}
           </button>
           <SettingsPane status={status} />
         </section>
       )}
       {reachable && !freshSeed && status && status.has_wallet && !routeSticky && (
         <div className="wallet-dashboard">
-          <section className="wallet-overview" aria-label="Wallet balance and actions">
+          <section className="wallet-overview" aria-label={t("app.overviewAria")}>
             <BalanceHero status={status} txs={txs} />
           {/* The two things people open a wallet to DO, as the two biggest targets on
               the screen.
@@ -1267,10 +1272,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               <button
                 className="qa qa-receive"
                 onClick={() => setTab("receive")}
-                aria-label="Receive ZKAS"
+                aria-label={t("app.receiveAria")}
               >
                 <ArrowDownLeft className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
-                <span className="qa-label">Receive</span>
+                <span className="qa-label">{t("app.receive")}</span>
               </button>
               {!viewOnly && <button
                 className="qa qa-send"
@@ -1279,24 +1284,24 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 // may spend, including while it is still warming up. An unsynced one
                 // may not: it does not yet know about all of its own notes.
                 disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready })}
-                aria-label="Send ZKAS"
+                aria-label={t("app.sendAria")}
               >
                 <ArrowUpRight className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
-                <span className="qa-label">Send</span>
+                <span className="qa-label">{t("app.send")}</span>
               </button>}
               {!viewOnly && <button
                 className="qa qa-consolidate"
                 onClick={() => setShowConsolidate(true)}
                 disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready })}
-                aria-label="Manage wallet notes"
+                aria-label={t("app.notesAria")}
               >
-                <span className="qa-label">Notes</span>
-                <span className="qa-detail">{status.note_count ?? 0} · manage</span>
+                <span className="qa-label">{t("app.notes")}</span>
+                <span className="qa-detail">{t("app.notesManage", { n: status.note_count ?? 0 })}</span>
               </button>}
               {viewOnly && (
                 <div className="qa qa-viewonly" aria-live="polite">
-                  <span className="qa-label">View only</span>
-                  <span className="qa-detail">This device cannot send</span>
+                  <span className="qa-label">{t("app.viewOnly")}</span>
+                  <span className="qa-detail">{t("app.viewOnlyDetail")}</span>
                 </div>
               )}
             </div>
@@ -1311,14 +1316,14 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               />
             )}
           </section>
-          <section className="wallet-workspace" aria-label="Wallet activity">
-            <div className="tabs" role="tablist" aria-label="Wallet sections">
+          <section className="wallet-workspace" aria-label={t("app.activityAria")}>
+            <div className="tabs" role="tablist" aria-label={t("app.sectionsAria")}>
             {(viewOnly ? tabs.filter((t) => t !== "send" && t !== "signatures" && t !== "tools") : tabs).map((t) => (
               <button
                 key={t}
                 role="tab"
                 aria-selected={tab === t}
-                aria-label={t === "settings" ? "Settings" : TAB_LABEL[t]}
+                aria-label={TAB_LABEL[t]()}
                 className={`${tab === t ? "active" : ""}${t === "settings" ? " gear" : ""}`}
                 onClick={() => setTab(t)}
                 onKeyDown={(e) => {
@@ -1329,7 +1334,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                   setTab(tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length]);
                 }}
               >
-                {t === "settings" ? <Settings aria-hidden="true" size={29} strokeWidth={2.2} /> : TAB_LABEL[t]}
+                {t === "settings" ? <Settings aria-hidden="true" size={29} strokeWidth={2.2} /> : TAB_LABEL[t]()}
               </button>
             ))}
             </div>
@@ -1350,7 +1355,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             )}
             {tab === "signatures" && !viewOnly && <Signatures status={status} />}
             {tab === "tools" && !viewOnly && (
-              <Suspense fallback={<div className="card"><div className="muted small">Loading…</div></div>}>
+              <Suspense fallback={<div className="card"><div className="muted small">{t("app.loading")}</div></div>}>
                 <WalletTools />
               </Suspense>
             )}
@@ -1370,8 +1375,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             <button
               className="action-sheet-close"
               onClick={() => { if (!engineBusy()) setTab("history"); }}
-              aria-label="Close"
-              title="Close"
+              aria-label={t("app.close")}
+              title={t("app.close")}
             >
               ✕
             </button>
@@ -1531,13 +1536,10 @@ function HostedNotice() {
             then a compromised server can make that promise false. It is a guarantee only
             the signed app can make, so only the app makes it. Saying it here would be
             exactly the kind of assurance somebody relies on and later regrets. */}
-        Browser wallet. {" "}
-        <b>
-          <a href="https://github.com/firecash/zkas-wallet/releases" target="_blank" rel="noreferrer">
-            Get the safer app
-          </a>
-        </b>
-        .
+        <Trans
+          i18nKey="hostedNotice.browserWallet"
+          components={{ b: <b />, a: <a href="https://github.com/firecash/zkas-wallet/releases" target="_blank" rel="noreferrer" /> }}
+        />
       </div>
     </div>
   );
@@ -1547,6 +1549,7 @@ function HostedNotice() {
 /// pointer to the releases page is shown when NOT on desktop — so a desktop user
 /// never learned a new version existed. One line, one link, dismissable per version.
 function DesktopUpdateNotice() {
+  const { t } = useTranslation();
   const [update, setUpdate] = useState<DesktopUpdate | null>(null);
   const [dismissed, setDismissed] = useState("");
   useEffect(() => {
@@ -1577,14 +1580,14 @@ function DesktopUpdateNotice() {
     <div className="warnbar" role="note">
       <ShieldAlert className="warnbar-icon" aria-hidden="true" size={17} strokeWidth={2.2} />
       <div>
-        ZKas Wallet {update.version} is available (you have {APP_VERSION}).{" "}
+        {t("desktopUpdateNotice.available", { version: update.version, current: APP_VERSION })}{" "}
         <b>
           <a href={update.url} target="_blank" rel="noreferrer">
-            Download
+            {t("desktopUpdateNotice.download")}
           </a>
         </b>{" "}
         <button className="linkbtn" onClick={dismiss}>
-          Later
+          {t("desktopUpdateNotice.later")}
         </button>
       </div>
     </div>
@@ -1613,6 +1616,7 @@ const IOS_INSTALL_NOTICE_KEY = "ios_install_notice_dismissed";
 /// on both sides of the move: in Safari with a wallet (back up first, restore
 /// there), and in the installed copy with none (your Safari wallet is not here).
 function IosInstallNotice({ hasWallet }: { hasWallet: boolean }) {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState(() => {
     try {
       return localStorage.getItem(IOS_INSTALL_NOTICE_KEY) === "1";
@@ -1638,10 +1642,10 @@ function IosInstallNotice({ hasWallet }: { hasWallet: boolean }) {
       <ShieldAlert className="warnbar-icon" aria-hidden="true" size={17} strokeWidth={2.2} />
       <div>
         {standalone
-          ? "Have a wallet in Safari? It is not shared with this installed copy — restore it here from its recovery phrase. "
-          : "Installing to your Home Screen starts a separate, empty copy — back up your recovery phrase first, then restore it in the installed app. "}
+          ? t("iosInstallNotice.installedCopy")
+          : t("iosInstallNotice.beforeInstall")}{" "}
         <button className="linkbtn" onClick={dismiss}>
-          Got it
+          {t("iosInstallNotice.gotIt")}
         </button>
       </div>
     </div>
@@ -1657,6 +1661,7 @@ function IosInstallNotice({ hasWallet }: { hasWallet: boolean }) {
 /// exactly the "wait, which wallet is this?" mistake that ends in a payment from
 /// the wrong one.
 function WalletBar() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [, bump] = useState(0);
   useEffect(() => {
@@ -1671,9 +1676,9 @@ function WalletBar() {
 
   return (
     <>
-      <button className="walletbar" onClick={() => setOpen(true)} aria-label="Switch wallet">
+      <button className="walletbar" onClick={() => setOpen(true)} aria-label={t("walletBar.switchWallet")}>
         <WalletCards aria-hidden="true" size={18} strokeWidth={2.2} />
-        <span className="walletbar-name">{current?.label ?? "Wallet 1"}</span>
+        <span className="walletbar-name">{current?.label ?? t("walletBar.defaultName")}</span>
         <span className="walletbar-chev" aria-hidden="true">
           <ChevronDown size={16} strokeWidth={2.2} />
         </span>
@@ -1691,6 +1696,7 @@ function WalletBar() {
  * embedded, locally-held wallet and weaken the desktop custody model.
  */
 function ConnectionButton() {
+  const { t } = useTranslation();
   const desktop = isDesktop();
   const [open, setOpen] = useState(false);
   const [cfg, setCfg] = useState<DesktopConfig | null>(null);
@@ -1727,7 +1733,7 @@ function ConnectionButton() {
       void bgSyncReconfigure(); // tell the bg worker to talk to the on-device engine
       void refresh();
     } catch (e) {
-      setError((e as Error).message || "The on-device engine could not start.");
+      setError((e as Error).message || t("connectionButton.engineStartFailed"));
     } finally { setBusy(null); }
   };
   // Leaving the on-device engine for a server: forget the choice and stop it so
@@ -1800,8 +1806,8 @@ function ConnectionButton() {
     return current?.replace(/\/$/, "").toLowerCase() === profile.address.replace(/\/$/, "").toLowerCase();
   });
   const label = desktop
-    ? onion ? "Tor" : hosted ? "Public service" : cfg?.mode === "local" ? "My node" : cfg?.mode === "custom" ? currentProfile?.name ?? "My node" : "This computer"
-    : embeddedChosen() ? "On this phone" : onion ? "Tor" : hosted ? "Web" : currentProfile?.name ?? "My walletd";
+    ? onion ? t("connectionButton.labelTor") : hosted ? t("connectionButton.labelPublicService") : cfg?.mode === "local" ? t("connectionButton.labelMyNode") : cfg?.mode === "custom" ? currentProfile?.name ?? t("connectionButton.labelMyNode") : t("connectionButton.labelThisComputer")
+    : embeddedChosen() ? t("connectionButton.labelOnPhone") : onion ? t("connectionButton.labelTor") : hosted ? t("connectionButton.labelWeb") : currentProfile?.name ?? t("connectionButton.labelMyWalletd");
 
   const switchDesktop = async (mode: "remote" | "local" | "custom", profile?: EndpointProfile) => {
     setBusy(profile?.id ?? mode);
@@ -1850,7 +1856,7 @@ function ConnectionButton() {
       setOpen(false);
       location.reload();
     } catch (e) {
-      setError((e as Error).name === "AbortError" ? "Connection timed out after 5 seconds." : (e as Error).message);
+      setError((e as Error).name === "AbortError" ? t("connectionButton.timedOut") : (e as Error).message);
     } finally {
       setBusy(null);
     }
@@ -1873,35 +1879,35 @@ function ConnectionButton() {
       }
       return;
     }
-    await switchWalletd(address, "add", bearer, (connected) => walletdProfiles.save(name.trim() || address.replace(/^https?:\/\//, "").split(/[/?]/)[0] || "My walletd", connected, bearer));
+    await switchWalletd(address, "add", bearer, (connected) => walletdProfiles.save(name.trim() || address.replace(/^https?:\/\//, "").split(/[/?]/)[0] || t("connectionButton.labelMyWalletd"), connected, bearer));
   };
 
   return (
     <>
-      <button className="connection-button" onClick={() => { setOpen(true); void refresh(); }} aria-label={`Connection: ${label}`}>
+      <button className="connection-button" onClick={() => { setOpen(true); void refresh(); }} aria-label={t("connectionButton.connectionAria", { label })}>
         <Server aria-hidden="true" size={17} strokeWidth={2.2} />
-        <span><small>{desktop ? "Chain source" : "Wallet service"}</small><b>{label}</b></span>
+        <span><small>{desktop ? t("connectionButton.chainSource") : t("connectionButton.walletService")}</small><b>{label}</b></span>
         <ChevronDown aria-hidden="true" size={15} />
       </button>
       {open && createPortal(
         <div className="modalwrap" onClick={() => setOpen(false)}>
           <div className="card modalcard connection-modal" onClick={(event) => event.stopPropagation()}>
             <div className="connection-modal-head">
-              <div><span className="eyebrow">Connection</span><h2>{desktop ? "Chain source" : "Choose a wallet service"}</h2></div>
+              <div><span className="eyebrow">{t("connectionButton.eyebrow")}</span><h2>{desktop ? t("connectionButton.chainSource") : t("connectionButton.chooseService")}</h2></div>
               <span className="status-pill good">{label}</span>
             </div>
             <p className="muted small">
               {desktop
-                ? "Your keys stay on this device either way. Use the public service for a wallet that is ready at once, or run the wallet here and pick the node it reads the chain from."
-                : "Your keys stay on this device. Choose how it connects."}
+                ? t("connectionButton.introDesktop")
+                : t("connectionButton.introMobile")}
             </p>
 
             <div className="connection-list">
               {embeddedAvailable() && (
-                <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? "Starting…" : embeddedChosen() ? "On" : "Use"} onStart={(n, t) => connectEmbedded(n, t)} />
+                <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? t("connectionButton.starting") : embeddedChosen() ? t("connectionButton.on") : t("connectionButton.use")} onStart={(n, tor) => connectEmbedded(n, tor)} />
               )}
               <button className={`connection-option ${!embeddedChosen() && hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
-                <span><b>Public service</b><small>{desktop ? "Ready at once. The wallet daemon can see your transactions." : "Fast. The wallet daemon can see your transactions."}</small></span><span>{busy === "hosted" ? "Checking…" : hosted && !onion ? "Connected" : "Use"}</span>
+                <span><b>{t("connectionButton.publicService")}</b><small>{desktop ? t("connectionButton.publicDescDesktop") : t("connectionButton.publicDescMobile")}</small></span><span>{busy === "hosted" ? t("connectionButton.checking") : hosted && !onion ? t("connectionButton.connected") : t("connectionButton.use")}</span>
               </button>
               {desktop && (
                 /* The embedded engine. It has to scan the chain on THIS computer,
@@ -1909,11 +1915,11 @@ function ConnectionButton() {
                    said "Works immediately", which is what sent people to a wallet
                    stuck on "Found 0 ZKAS so far". */
                 <button className={`connection-option ${cfg?.mode === "remote" && !onion && !hosted ? "active" : ""}`} disabled={busy !== null} onClick={() => void switchDesktop("remote")}>
-                  <span><b>This computer · public node</b><small>Runs the wallet here. First sync scans the chain and takes a while.</small></span><span>{busy === "remote" ? "Checking…" : cfg?.mode === "remote" && !onion && !hosted ? "Connected" : "Use"}</span>
+                  <span><b>{t("connectionButton.thisComputerPublic")}</b><small>{t("connectionButton.thisComputerPublicDesc")}</small></span><span>{busy === "remote" ? t("connectionButton.checking") : cfg?.mode === "remote" && !onion && !hosted ? t("connectionButton.connected") : t("connectionButton.use")}</span>
                 </button>
               )}
               <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectTor()}>
-                <span><b>Over Tor</b><small>{desktop ? "Hides your IP. The daemon still sees your transactions. Needs Tor." : "Hides your IP. The daemon still sees your transactions. Needs Orbot."}</small></span><span>{busy === "tor" ? "Connecting…" : onion ? "Connected" : "Use"}</span>
+                <span><b>{t("connectionButton.overTor")}</b><small>{desktop ? t("connectionButton.torDescDesktop") : t("connectionButton.torDescMobile")}</small></span><span>{busy === "tor" ? t("connectionButton.connecting") : onion ? t("connectionButton.connected") : t("connectionButton.use")}</span>
               </button>
               {desktop && (
                 <button className={`connection-option ${cfg?.mode === "local" && !onion && !hosted ? "active" : ""}`} disabled={busy !== null} onClick={() => {
@@ -1924,7 +1930,7 @@ function ConnectionButton() {
                   }
                   void switchDesktop("local");
                 }}>
-                  <span><b>This computer · your own node</b><small>Managed here · gRPC {MANAGED_ZKAS_RPC}</small></span><span>{busy === "local" ? "Checking…" : cfg?.mode === "local" && !onion && !hosted ? "Connected" : cfg?.node_running ? "Use" : "Set up"}</span>
+                  <span><b>{t("connectionButton.thisComputerOwn")}</b><small>{t("connectionButton.managedHere", { port: MANAGED_ZKAS_RPC })}</small></span><span>{busy === "local" ? t("connectionButton.checking") : cfg?.mode === "local" && !onion && !hosted ? t("connectionButton.connected") : cfg?.node_running ? t("connectionButton.use") : t("connectionButton.setUp")}</span>
                 </button>
               )}
               {profiles.map((profile) => {
@@ -1933,9 +1939,9 @@ function ConnectionButton() {
                   : currentProfile?.id === profile.id;
                 return <div className={`connection-option saved ${active ? "active" : ""}`} key={profile.id}>
                   <button disabled={busy !== null} onClick={() => desktop ? void switchDesktop("custom", profile) : void switchWalletd(profile.address, profile.id, profile.bearer ?? "")}>
-                    <span><b>{profile.name}</b><small className="mono">{profile.address}</small></span><span>{busy === profile.id ? "Checking…" : active ? "Connected" : "Use"}</span>
+                    <span><b>{profile.name}</b><small className="mono">{profile.address}</small></span><span>{busy === profile.id ? t("connectionButton.checking") : active ? t("connectionButton.connected") : t("connectionButton.use")}</span>
                   </button>
-                  <button className="connection-remove" aria-label={`Remove ${profile.name}`} disabled={busy !== null || active} onClick={() => {
+                  <button className="connection-remove" aria-label={t("connectionButton.removeAria", { name: profile.name })} disabled={busy !== null || active} onClick={() => {
                     (desktop ? walletNodeProfiles : walletdProfiles).remove(profile.id);
                     setProfiles(desktop ? walletNodeProfiles.load() : walletdProfiles.load());
                   }}><Trash2 size={16} /></button>
@@ -1945,11 +1951,11 @@ function ConnectionButton() {
 
             {desktop ? (
               <div className="connection-add">
-                <h3>Add a node</h3>
+                <h3>{t("connectionButton.addNode")}</h3>
                 <div className="connection-add-grid">
-                  <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name · Home node" />
+                  <input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("connectionButton.namePlaceholder")} />
                   <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={STANDALONE_ZKAS_RPC_EXAMPLE} />
-                  <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? "Checking…" : "Save & connect"}</button>
+                  <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? t("connectionButton.checking") : t("connectionButton.saveConnect")}</button>
                 </div>
               </div>
             ) : (
@@ -1957,14 +1963,14 @@ function ConnectionButton() {
                 {/* One button holds the whole "run your own daemon" path — most people
                     never open it. Inside: scan a pairing QR, or type the address. */}
                 <button className={"connection-option" + (showAdd ? " active" : "")} disabled={busy !== null} onClick={() => setShowAdd((v) => !v)}>
-                  <span><b>Add own walletd</b><small>A wallet daemon you run yourself.</small></span><span>{showAdd ? "▲" : "▾"}</span>
+                  <span><b>{t("connectionButton.addOwnWalletd")}</b><small>{t("connectionButton.addOwnDesc")}</small></span><span>{showAdd ? "▲" : "▾"}</span>
                 </button>
                 {showAdd && (
                   <div className="connection-add firstrun-custom">
-                    <button className="btn small ghost" disabled={busy !== null} onClick={() => setScanning(true)}>Scan pairing QR</button>
+                    <button className="btn small ghost" disabled={busy !== null} onClick={() => setScanning(true)}>{t("connectionButton.scanPairing")}</button>
                     <input className="mono" value={address} onChange={(event) => setAddress(event.target.value)} placeholder={isNative() ? `192.168.1.20:${DEFAULT_WALLETD_PORT}` : "https://wallet.example.com"} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
-                    {showAccessTokenField() && <input type="password" className="mono" value={bearer} onChange={(event) => setBearer(event.target.value)} placeholder="Access token" autoCapitalize="none" autoCorrect="off" spellCheck={false} />}
-                    <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? "Checking…" : "Save & connect"}</button>
+                    {showAccessTokenField() && <input type="password" className="mono" value={bearer} onChange={(event) => setBearer(event.target.value)} placeholder={t("connectionButton.accessToken")} autoCapitalize="none" autoCorrect="off" spellCheck={false} />}
+                    <button className="btn small" disabled={busy !== null || !address.trim()} onClick={() => void add()}>{busy === "add" ? t("connectionButton.checking") : t("connectionButton.saveConnect")}</button>
                   </div>
                 )}
               </div>
@@ -1979,21 +1985,21 @@ function ConnectionButton() {
                     // A QR that is not a pairing code is far more likely to be a wallet
                     // address than a wallet service, so say what was scanned instead of
                     // dropping it into the address box and failing to connect to it.
-                    setError("That code is not a wallet-service pairing code. On the computer serving the wallet, open Host → Network access → Pair a phone.");
+                    setError(t("connectionButton.notPairingCode"));
                     return;
                   }
                   setAddress(paired.url);
                   setBearer(paired.accessToken);
                   void switchWalletd(text, "add", paired.accessToken, (connected) =>
-                    walletdProfiles.save(name.trim() || "Paired wallet", connected, paired.accessToken),
+                    walletdProfiles.save(name.trim() || t("connectionButton.defaultPairedName"), connected, paired.accessToken),
                   );
                 }}
               />
             )}
-            {desktop && !cfg?.node_binary && <p className="muted small">Managed local node is not installed yet. The Mine and Node screens can install the verified release automatically.</p>}
+            {desktop && !cfg?.node_binary && <p className="muted small">{t("connectionButton.nodeNotInstalled")}</p>}
             {torFailed && <OrbotHelp />}
             {error && <div className="msg err">{error}</div>}
-            <button className="btn ghost small" onClick={() => setOpen(false)}>Close</button>
+            <button className="btn ghost small" onClick={() => setOpen(false)}>{t("connectionButton.close")}</button>
           </div>
         </div>,
         document.body,
@@ -2003,15 +2009,16 @@ function ConnectionButton() {
 }
 
 function WalletSwitcher({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const active = activeToken();
   const registered = listWallets();
   // The first status poll registers legacy wallets. If the switcher is opened
   // before that sub-second repair completes, still show the active wallet.
-  const wallets = registered.length || !active ? registered : [{ token: active, label: "Wallet 1" }];
+  const wallets = registered.length || !active ? registered : [{ token: active, label: t("walletSwitcher.defaultLabel") }];
   return createPortal(
     <div className="modalwrap" onClick={onClose}>
       <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ marginTop: 0 }}>Your wallets</h2>
+        <h2 style={{ marginTop: 0 }}>{t("walletSwitcher.title")}</h2>
         {wallets.map((w) => (
           <div
             key={w.token}
@@ -2028,10 +2035,10 @@ function WalletSwitcher({ onClose }: { onClose: () => void }) {
             </div>
             <div className="contact-main">
               <div className="contact-name">
-                {w.label} {w.token === active && <span className="muted small">· active</span>}
+                {w.label} {w.token === active && <span className="muted small">{t("walletSwitcher.active")}</span>}
               </div>
               {accountOf(w.token) !== null && (
-                <div className="muted small">Account {accountOf(w.token)! + 1}</div>
+                <div className="muted small">{t("walletSwitcher.account", { n: accountOf(w.token)! + 1 })}</div>
               )}
               {w.address && <div className="contact-addr">{w.address}</div>}
             </div>
@@ -2043,20 +2050,20 @@ function WalletSwitcher({ onClose }: { onClose: () => void }) {
               separate WALLET has its own phrase and needs its own backup. */}
           {hasMaster() && (
             <button className="btn" onClick={() => void addAccountWallet()}>
-              Add account
+              {t("walletSwitcher.addAccount")}
             </button>
           )}
           <button className={hasMaster() ? "btn ghost" : "btn"} onClick={() => void addSeparateWallet()}>
-            Add separate wallet
+            {t("walletSwitcher.addSeparate")}
           </button>
           <button className="btn ghost" onClick={onClose}>
-            Close
+            {t("walletSwitcher.close")}
           </button>
         </div>
         <p className="muted small" style={{ marginTop: 10 }}>
           {hasMaster()
-            ? "Accounts share your phrase. Restoring on a new device? Add account brings each one back, in order."
-            : "A separate wallet gets its own recovery phrase."}
+            ? t("walletSwitcher.hintAccounts")
+            : t("walletSwitcher.hintSeparate")}
         </p>
       </div>
     </div>,
@@ -2152,6 +2159,7 @@ function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   // Rendered through a portal on <body>: a `position: fixed` overlay inside an
   // ancestor that has a transform (the pane's entrance animation) would be
   // positioned against that ancestor instead of the viewport — the classic
@@ -2166,7 +2174,7 @@ function ConfirmDialog({
             {confirmLabel}
           </button>
           <button className="btn ghost" onClick={onCancel}>
-            Cancel
+            {t("confirmDialog.cancel")}
           </button>
         </div>
       </div>
@@ -2180,11 +2188,11 @@ function ConfirmDialog({
 /// estimate but wrong for a running timer — a timer that does not visibly move is the
 /// thing that makes people think a slow operation has hung.
 function formatElapsed(secs: number): string {
-  if (!Number.isFinite(secs) || secs < 0) return "0s";
-  if (secs < 60) return `${secs}s`;
+  if (!Number.isFinite(secs) || secs < 0) return i18n.t("formatElapsed.zero");
+  if (secs < 60) return i18n.t("formatElapsed.seconds", { s: secs });
   const m = Math.floor(secs / 60);
   const s = secs % 60;
-  return s ? `${m}m ${s}s` : `${m}m`;
+  return s ? i18n.t("formatElapsed.minutesSeconds", { m, s }) : i18n.t("formatElapsed.minutes", { m });
 }
 
 /// Asks WHEN this wallet started before replaying the chain for it.
@@ -2211,6 +2219,7 @@ function RecoverHistoryDialog({
   onConfirm: (birthday?: number) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [when, setWhen] = useState<"unknown" | "date">(known > 0 ? "date" : "unknown");
   const [createdDate, setCreatedDate] = useState("");
   const [height, setHeight] = useState(known > 0 ? String(known) : "");
@@ -2231,39 +2240,41 @@ function RecoverHistoryDialog({
   return createPortal(
     <div className="modalwrap" onClick={onCancel}>
       <div className="card modalcard" onClick={(event) => event.stopPropagation()}>
-        <h2 style={{ marginTop: 0 }}>Recover full history</h2>
+        <h2 style={{ marginTop: 0 }}>{t("recoverHistoryDialog.title")}</h2>
         <p className="muted small">
-          Details are saved with this wallet, so anyone with its data can read them.
+          {t("recoverHistoryDialog.intro")}
           </p>
         <div className="choice-grid">
           <button className={`choice-button ${when === "date" ? "selected" : ""}`} onClick={() => setWhen("date")}>
-            <strong>I know roughly when</strong>
-            <span>Scan from that date. Much faster.</span>
+            <strong>{t("recoverHistoryDialog.knowWhen")}</strong>
+            <span>{t("recoverHistoryDialog.knowWhenHint")}</span>
           </button>
           <button className={`choice-button ${when === "unknown" ? "selected" : ""}`} onClick={() => setWhen("unknown")}>
-            <strong>Not sure</strong>
-            <span>Scan everything from the beginning.</span>
+            <strong>{t("recoverHistoryDialog.notSure")}</strong>
+            <span>{t("recoverHistoryDialog.notSureHint")}</span>
           </button>
         </div>
         {when === "date" && (
           <>
-            <label>Wallet created around</label>
+            <label>{t("recoverHistoryDialog.createdAround")}</label>
             <input type="date" className="control-input" value={createdDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setCreatedDate(event.target.value)} />
             <details style={{ marginTop: 8 }} open={known > 0 || undefined}>
-              <summary className="muted small">{known > 0 ? "Block height this wallet started at" : "Know the exact block height?"}</summary>
-              <input className="control-input mono" value={height} onChange={(event) => setHeight(event.target.value.replace(/[^0-9]/g, ""))} placeholder="DAA height" inputMode="numeric" />
+              <summary className="muted small">{known > 0 ? t("recoverHistoryDialog.heightKnown") : t("recoverHistoryDialog.heightAsk")}</summary>
+              <input className="control-input mono" value={height} onChange={(event) => setHeight(event.target.value.replace(/[^0-9]/g, ""))} placeholder={t("recoverHistoryDialog.heightPlaceholder")} inputMode="numeric" />
             </details>
           </>
         )}
         <p className="subtle">
           {from
-            ? `Scanning from DAA ${from.toLocaleString()}${days ? ` — about ${days} day${days === 1 ? "" : "s"} of chain.` : "."}`
-            : "Scanning the whole chain. This finds everything, and takes the longest."}
+            ? days
+              ? t("recoverHistoryDialog.scanningFromDays", { from: from.toLocaleString(), count: days })
+              : t("recoverHistoryDialog.scanningFrom", { from: from.toLocaleString() })
+            : t("recoverHistoryDialog.scanningWhole")}
         </p>
         <div className="row">
-          <button className="btn ghost" onClick={onCancel}>Cancel</button>
+          <button className="btn ghost" onClick={onCancel}>{t("recoverHistoryDialog.cancel")}</button>
           <button className="btn" disabled={when === "date" && !from} onClick={() => onConfirm(from)}>
-            Agree &amp; recover
+            {t("recoverHistoryDialog.agree")}
           </button>
         </div>
       </div>
@@ -2283,6 +2294,7 @@ function ConsolidateDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<SendStage | null>(null);
   const [error, setError] = useState("");
@@ -2356,13 +2368,13 @@ function ConsolidateDialog({
         if ((cause as Error).message !== SEED_REQUIRED) throw cause;
         if (!isSecretShaped(seedInput.trim())) {
           setNeedSeed(true);
-          throw new Error("Enter this wallet's 64-character recovery seed to sign on this device.");
+          throw new Error(t("consolidateDialog.errEnterSeed"));
         }
         const entered = seedInput.trim();
         seed = entered;
         if (status.address) {
           const r = await keyForWallet(entered, status.address);
-          if (!r) throw new Error("That seed belongs to a different wallet.");
+          if (!r) throw new Error(t("consolidateDialog.errWrongSeed"));
           seed = r.keyHex;
           const tk = activeToken();
           if (tk) await bindResolvedKey(tk, entered, r);
@@ -2371,7 +2383,7 @@ function ConsolidateDialog({
         setNeedSeed(false);
         setSeedInput("");
       }
-      if (!status.address) throw new Error("This wallet has no address yet.");
+      if (!status.address) throw new Error(t("consolidateDialog.errNoAddress"));
       const spendable = BigInt(
         status.spendable_sompi ?? Math.max(0, Math.round(spendableFc(status) * 100_000_000)).toString(),
       );
@@ -2422,26 +2434,25 @@ function ConsolidateDialog({
   return createPortal(
     <div className="modalwrap" onClick={() => !busy && onClose()}>
       <div className="card modalcard consolidate-dialog" onClick={(event) => event.stopPropagation()}>
-        <h2 style={{ marginTop: 0 }}>{result ? "Notes updated" : "Manage notes"}</h2>
+        <h2 style={{ marginTop: 0 }}>{result ? t("consolidateDialog.titleDone") : t("consolidateDialog.title")}</h2>
         {result ? (
           <>
-            <div className="msg ok">Done. Ready to spend after they settle (about 10 minutes).</div>
-            <p className="muted small">Fee: {trimFc(result.fee.toFixed(8))} ZKAS.</p>
+            <div className="msg ok">{t("consolidateDialog.done")}</div>
+            <p className="muted small">{t("consolidateDialog.fee", { fee: trimFc(result.fee.toFixed(8)) })}</p>
             {/* Saying "done" while the wallet is still too fragmented to pay is how
                 a user ends up repeating this by hand and never being told why. */}
             {result.more && (
-              <div className="msg warn small">Open this again once they settle to keep going.</div>
+              <div className="msg warn small">{t("consolidateDialog.more")}</div>
             )}
             <div className="addr">{result.txid}</div>
-            <button className="btn" onClick={onDone}>Done</button>
+            <button className="btn" onClick={onDone}>{t("consolidateDialog.doneBtn")}</button>
           </>
         ) : (
           <>
             <p className="muted small" style={{ marginTop: 0 }}>
-              Your balance is split into <b>{notesNow}</b> {notesNow === 1 ? "note" : "notes"} — the pieces it is made of.
-              Fewer are cheaper to send; more let you pay a few times in a row.
+              <Trans i18nKey="consolidateDialog.split" count={notesNow} components={{ b: <b /> }} />
             </p>
-            <label style={{ marginTop: 6 }}>Hold this many</label>
+            <label style={{ marginTop: 6 }}>{t("consolidateDialog.holdMany")}</label>
             <div className="filterbar" style={{ marginBottom: 4 }}>
               {[1, 2, 3, 5].map((n) => (
                 <button
@@ -2457,8 +2468,8 @@ function ConsolidateDialog({
             </div>
             {needSeed && (
               <>
-                <label>Recovery phrase · stays on this device</label>
-                <textarea value={seedInput} onChange={(event) => setSeedInput(event.target.value)} placeholder="Your 12-word recovery phrase" />
+                <label>{t("consolidateDialog.seedLabel")}</label>
+                <textarea value={seedInput} onChange={(event) => setSeedInput(event.target.value)} placeholder={t("consolidateDialog.seedPlaceholder")} />
               </>
             )}
             {busy && <SendScene stage={stage ?? undefined} estimateMs={passEstimateMs} />}
@@ -2468,21 +2479,21 @@ function ConsolidateDialog({
             {busy && (
               <p className="muted small" style={{ marginTop: 8 }}>
                 {merged
-                  ? `Merged ${merged.notes} notes in ${merged.round} of about ${expectedPasses} ${expectedPasses === 1 ? "pass" : "passes"}`
-                  : `Pass 1 of about ${expectedPasses}`}
+                  ? t("consolidateDialog.merged", { notes: merged.notes, round: merged.round, count: expectedPasses })
+                  : t("consolidateDialog.passOne", { passes: expectedPasses })}
                 {" · "}
-                {formatElapsed(elapsed)} elapsed
+                {t("consolidateDialog.elapsed", { elapsed: formatElapsed(elapsed) })}
                 {/* No estimate until a pass has finished: a number invented before we
                     have measured anything is exactly the kind of promise that makes a
                     slow operation feel broken when it overruns. */}
-                {remainingSecs != null && ` · about ${formatElapsed(remainingSecs)} left`}
+                {remainingSecs != null && ` · ${t("consolidateDialog.left", { remaining: formatElapsed(remainingSecs) })}`}
               </p>
             )}
             {error && <div className="msg err">{error}</div>}
             <div className="row">
-              <button className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
+              <button className="btn ghost" disabled={busy} onClick={onClose}>{t("consolidateDialog.cancel")}</button>
               <button className="btn" disabled={busy} onClick={() => void run()}>
-                {busy ? stage === "warming" ? "Preparing…" : stage === "signing" ? "Signing…" : stage === "broadcasting" ? "Broadcasting…" : "Building proof…" : grow ? "Add notes" : "Combine"}
+                {busy ? stage === "warming" ? t("consolidateDialog.preparing") : stage === "signing" ? t("consolidateDialog.signing") : stage === "broadcasting" ? t("consolidateDialog.broadcasting") : t("consolidateDialog.proving") : grow ? t("consolidateDialog.addNotes") : t("consolidateDialog.combine")}
               </button>
             </div>
           </>
@@ -2584,12 +2595,12 @@ function useScanEta(scanned: number, total: number, active: boolean): number | n
 /// Coarse on purpose — a scan rate wobbles, and a precise-looking figure that
 /// keeps changing is less trustworthy than a rounded one that holds.
 function fmtEta(secs: number): string {
-  if (secs < 45) return "under a minute left";
+  if (secs < 45) return i18n.t("fmtEta.underMinute");
   const m = Math.round(secs / 60);
-  if (m < 60) return `~${m} min left`;
+  if (m < 60) return i18n.t("fmtEta.minutes", { m });
   const h = Math.floor(m / 60);
   const rem = m % 60;
-  return rem ? `~${h}h ${rem}m left` : `~${h}h left`;
+  return rem ? i18n.t("fmtEta.hoursMinutes", { h, m: rem }) : i18n.t("fmtEta.hours", { h });
 }
 
 /// Seconds elapsed since `on` became true; null while it is false. For states the
@@ -2624,6 +2635,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // return comes and goes with the daemon's scan state, so a hook placed after
   // it would change hook order between renders — React's "rendered fewer hooks
   // than expected" crash, on exactly the path a user hits after a restart.
+  const { t } = useTranslation();
   const syncing = useMinDwell(!status.synced, 5000);
   const warming = useMinDwell(!!status.warming, 6000);
   // How long this wallet has been getting ready. The daemon publishes no progress for
@@ -2743,14 +2755,14 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         <div className="balance-glow" aria-hidden="true" />
         <div className="balance-label">
           <span className="shield-badge" aria-hidden="true" />
-          Shielded balance
+          {t("balanceHero.label")}
         </div>
         <div className="amt">
           {snap ? trimFc(snap.balanceFc.toFixed(8)) : "—"}
           <span className="unit"> ZKAS</span>
         </div>
         <div className="sub">
-          {snap ? "last confirmed balance · " : ""}
+          {snap ? t("balanceHero.lastConfirmed") : ""}
           <span className="spin" style={{ width: 11, height: 11 }} />{" "}
           {/* "rebuilding" is the wrong word for a wallet that has never scanned —
               nothing is being re-done, and it implies something was lost. */}
@@ -2763,14 +2775,14 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           aria-valuenow={pct}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={firstScan ? "Scanning the chain for this wallet's notes" : "Rebuilding this wallet's view of the chain"}
+          aria-label={firstScan ? t("balanceHero.ariaScanning") : t("balanceHero.ariaRebuilding")}
         >
           <div className="syncbar-fill" style={{ width: `${Math.max(2, pct)}%` }} />
         </div>
         <div className="sub" style={{ marginTop: 8, fontSize: 12 }}>
           {resumeFrom
-            ? `Opening — resuming from block ${resumeFrom.scanned_blocks.toLocaleString()}, nothing is lost`
-            : `Found ${trimFc(partialFc.toFixed(8))} ZKAS so far`}
+            ? t("balanceHero.resuming", { block: resumeFrom.scanned_blocks.toLocaleString() })
+            : t("balanceHero.foundSoFar", { amount: trimFc(partialFc.toFixed(8)) })}
           {!resumeFrom && view.eta ? ` · ${view.eta}` : ""}
           {/* A block count that moves on EVERY poll. Even at one decimal the percent
               can hold still for seconds on a million-block chain, and a figure that
@@ -2779,19 +2791,21 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
             <>
               <br />
               <span style={{ fontVariantNumeric: "tabular-nums", opacity: 0.8 }}>
-                block {view.progress.scanned.toLocaleString()} of {view.progress.total.toLocaleString()}
+                {t("balanceHero.blockOf", { scanned: view.progress.scanned.toLocaleString(), total: view.progress.total.toLocaleString() })}
               </span>
             </>
           )}
         </div>
         <div className="sub" style={{ marginTop: 6, fontSize: 12 }}>
-          {view.detail} You can close this and come back — it keeps going.
+          {view.detail} {t("balanceHero.keepsGoing")}
         </div>
         {status.missing_history && (
           <div className="msg warn">
-            This node has pruned old history{status.history_from_daa != null ? ` (available from block ${status.history_from_daa.toLocaleString()})` : ""}, so the rebuilt balance may come out a <b>lower bound</b>. Your coins are
-            on-chain — rescan from a node that serves full history to see everything. If this is your own node and it is
-            still filling in shielded history, wait for its log to say &quot;shielded history: VERIFIED&quot; and rescan.
+            {status.history_from_daa != null ? (
+              <Trans i18nKey="balanceHero.prunedRebuildFrom" values={{ block: status.history_from_daa.toLocaleString() }} components={{ b: <b /> }} />
+            ) : (
+              <Trans i18nKey="balanceHero.prunedRebuild" components={{ b: <b /> }} />
+            )}
           </div>
         )}
       </div>
@@ -2803,15 +2817,15 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
       <button
         className="balance-eye"
         onClick={() => toggleBalancesHidden()}
-        aria-label={hide ? "Show balance" : "Hide balance"}
+        aria-label={hide ? t("balanceHero.showBalance") : t("balanceHero.hideBalance")}
         aria-pressed={hide}
-        title={hide ? "Show balance" : "Hide balance"}
+        title={hide ? t("balanceHero.showBalance") : t("balanceHero.hideBalance")}
       >
         {hide ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
       </button>
       <div className="balance-label">
         <span className="shield-badge" aria-hidden="true" />
-        Shielded balance
+        {t("balanceHero.label")}
       </div>
       <div className="amt">
         {hide ? <span className="amt-hidden">{MASK}</span> : trimFc(animBal.toFixed(8))}
@@ -2867,32 +2881,37 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
             way, via `pending_in`, so that branch stays. */}
         {changeNotice.shown
           ? ownActivityExplainsRise(txs)
-            ? `${trimFc(changeNotice.amount.toFixed(8))} ZKAS coming back as change from your payment`
+            ? t("balanceHero.changeFromPayment", { amount: trimFc(changeNotice.amount.toFixed(8)) })
             : // No send recorded on this device: the daemon merged this wallet's own notes
               // in the background (or another device paid from the same wallet).
-              `${trimFc(changeNotice.amount.toFixed(8))} ZKAS coming back from this wallet's own transaction`
+              t("balanceHero.changeOwnTx", { amount: trimFc(changeNotice.amount.toFixed(8)) })
           : inNotice.shown
             ? ownActivityExplainsRise(txs)
-              ? `${trimFc(inNotice.amount.toFixed(8))} ZKAS coming back as change from your payment`
-              : `+${trimFc(inNotice.amount.toFixed(8))} ZKAS arriving — confirmed, settling into your wallet`
+              ? t("balanceHero.changeFromPayment", { amount: trimFc(inNotice.amount.toFixed(8)) })
+              : t("balanceHero.arriving", { amount: trimFc(inNotice.amount.toFixed(8)) })
             : ""}
       </div>
       <div className="sub notice-slot" style={{ color: "var(--ember)" }}>
         {outNotice.shown
-          ? `${trimFc(outNotice.amount.toFixed(8))} ZKAS ` +
-            // "updating your balance shortly" said nothing a user needed and was the
+          ? // "updating your balance shortly" said nothing a user needed and was the
             // longest string in the card, so it wrapped to a second line and was the
             // thing that made the box change size. "Confirmed" is the whole message.
-            (outConfirmed ? "sent — confirmed" : `sent — on its way${pendingCount > 1 ? ` · ${pendingCount} payments` : ""}`)
+            outConfirmed
+            ? t("balanceHero.sentConfirmed", { amount: trimFc(outNotice.amount.toFixed(8)) })
+            : pendingCount > 1
+              ? t("balanceHero.sentOnWayMany", { amount: trimFc(outNotice.amount.toFixed(8)), n: pendingCount })
+              : t("balanceHero.sentOnWay", { amount: trimFc(outNotice.amount.toFixed(8)) })
           : ""}
       </div>
       <div className="sub notice-slot">
         {maturing > 0.00000001 ? (
           view.canSpend ? (
             <span>
-              {trimFc(Math.max(0, spendable).toFixed(8))} ready to spend ·{" "}
-              <span style={{ color: "var(--ember)" }}>{trimFc(maturing.toFixed(8))} arriving</span> — coins become
-              spendable about 10 minutes after they land.
+              <Trans
+                i18nKey="balanceHero.readyAndArriving"
+                values={{ spendable: trimFc(Math.max(0, spendable).toFixed(8)), maturing: trimFc(maturing.toFixed(8)) }}
+                components={{ em: <span style={{ color: "var(--ember)" }} /> }}
+              />
             </span>
           ) : (
             // "Ready to spend" here means a note has MATURED. It is not a claim that
@@ -2900,8 +2919,11 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
             // both at once is what made the app look like it was contradicting
             // itself: this line offered a figure, and Send then refused it.
             <span>
-              <span style={{ color: "var(--ember)" }}>{trimFc(maturing.toFixed(8))} arriving</span> — you can pay once
-              the wallet finishes checking the chain.
+              <Trans
+                i18nKey="balanceHero.arrivingOnly"
+                values={{ maturing: trimFc(maturing.toFixed(8)) }}
+                components={{ em: <span style={{ color: "var(--ember)" }} /> }}
+              />
             </span>
           )
         ) : (
@@ -2916,12 +2938,12 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
             aria-valuenow={pct}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Wallet sync progress"
+            aria-label={t("balanceHero.ariaSync")}
           >
             <div className="syncbar-fill" style={{ width: `${Math.max(2, pct)}%` }} />
           </div>
           <div className="sub" style={{ marginTop: 8, fontSize: 12 }}>
-            Balances appear as the wallet scans the chain — your funds are safe.
+            {t("balanceHero.scanning")}
             {/* The estimate was computed for every syncing wallet but only ever
                 rendered in the rebuild card, so the plain sync — where a user sits
                 watching a percentage that barely moves — was the one case with no
@@ -2933,11 +2955,11 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
       )}
       {status.missing_history && (
         <div className="msg warn">
-          This balance is a <b>lower bound</b>: the wallet's view was rebuilt through a node that has pruned old
-          history{status.history_from_daa != null ? ` (available from block ${status.history_from_daa.toLocaleString()})` : ""}, so notes created long ago may be missing from it. Your coins are safe on-chain — rescan only from
-          a node that serves full history (rebuilding through this one would come out just as blind). If this is your
-          own node and it is still filling in shielded history, wait for its log to say &quot;shielded history: VERIFIED&quot;
-          and rescan then.
+          {status.history_from_daa != null ? (
+            <Trans i18nKey="balanceHero.lowerBoundFrom" values={{ block: status.history_from_daa.toLocaleString() }} components={{ b: <b /> }} />
+          ) : (
+            <Trans i18nKey="balanceHero.lowerBound" components={{ b: <b /> }} />
+          )}
         </div>
       )}
       {/* Only real faults get the red box.
@@ -3038,9 +3060,7 @@ async function addAccountWallet(): Promise<void> {
     // the user believed their one existing seed covered it, so the new phrase went
     // un-backed-up. Refuse loudly instead; the honest path is "Add separate wallet",
     // which makes clear the new wallet has its own phrase to back up.
-    throw new Error(
-      "This wallet has no recovery phrase, so an account cannot be derived from it. Use “Add separate wallet” — it gets its own recovery phrase, which you must back up.",
-    );
+    throw new Error(i18n.t("addAccountWallet.noPhrase"));
   }
   // Everything that can fail is done BEFORE the active wallet is touched, so a
   // failure leaves the user exactly where they were.
@@ -3065,7 +3085,7 @@ async function addAccountWallet(): Promise<void> {
     // Key FIRST, and only continue if it verifiably landed. Registering a wallet
     // the device cannot sign for would leave the user able to receive coins they
     // could never spend.
-    if (!(await persistDeviceSeed(secret))) throw new Error("could not store the account key");
+    if (!(await persistDeviceSeed(secret))) throw new Error(i18n.t("addAccountWallet.errStore"));
     // THE STEP THAT WAS MISSING. Without registering the viewing key, the daemon
     // has no wallet under this token, `has_wallet` comes back false, and the app
     // greets the user with onboarding asking them to import a phrase — for an
@@ -3105,6 +3125,7 @@ async function walletBackupSecret(expectedAddress?: string): Promise<string> {
 }
 
 function SeedBackup({ seed, address, onDone }: { seed: string; address: string; onDone: () => void }) {
+  const { t } = useTranslation();
   // New wallets are phrases; wallets created before phrases existed are 64-hex.
   const isPhrase = !/^[0-9a-fA-F]{64}$/.test(seed.trim());
   const words = seed.trim().split(/\s+/);
@@ -3161,7 +3182,7 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
   const checkQuiz = () => {
     const ok = quiz.every((w, i) => answers[i].trim().toLowerCase() === words[w].toLowerCase());
     if (!ok) {
-      setQuizErr("That does not match. Check your written copy and try again.");
+      setQuizErr(t("seedBackup.quizErr"));
       return;
     }
     onDone();
@@ -3172,19 +3193,19 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
   if (!isPhrase) {
     return (
       <div className="card">
-        <h2>Save your wallet</h2>
+        <h2>{t("seedBackup.legacyTitle")}</h2>
         <div className="msg warn">
-          This wallet exists only on this device. No backup, no recovery.
+          {t("seedBackup.legacyWarn")}
         </div>
         <DeviceSeedBackup />
-        <label style={{ marginTop: 16 }}>Your shielded address</label>
+        <label style={{ marginTop: 16 }}>{t("seedBackup.addressLabel")}</label>
         <div className="addr">{address}</div>
-        <label style={{ marginTop: 16 }}>Recovery seed</label>
+        <label style={{ marginTop: 16 }}>{t("seedBackup.seedLabel")}</label>
         <div className="addr">{seed}</div>
         <button className="btn ghost small" style={{ marginTop: 10 }} onClick={copy}>
-          {copied ? "Copied ✓" : "Copy seed"}
+          {copied ? t("seedBackup.copied") : t("seedBackup.copySeed")}
         </button>
-        <button className="btn" style={{ marginTop: 18 }} onClick={onDone}>Open wallet</button>
+        <button className="btn" style={{ marginTop: 18 }} onClick={onDone}>{t("seedBackup.openWallet")}</button>
       </div>
     );
   }
@@ -3192,13 +3213,13 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
   if (step === "verify") {
     return (
       <div className="card">
-        <h2>Check your backup</h2>
+        <h2>{t("seedBackup.verifyTitle")}</h2>
         <p className="muted small" style={{ marginTop: 0 }}>
-          Pick each word from your written copy.
+          {t("seedBackup.verifyIntro")}
         </p>
         {quiz.map((w, i) => (
           <div key={w} style={{ marginTop: 14 }}>
-            <label>Word #{w + 1}</label>
+            <label>{t("seedBackup.wordN", { n: w + 1 })}</label>
             <div className="seed-choices">
               {options[i].map((opt) => (
                 <button
@@ -3226,10 +3247,10 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
           disabled={answers.some((a) => !a.trim())}
           onClick={checkQuiz}
         >
-          Confirm &amp; open wallet
+          {t("seedBackup.confirmOpen")}
         </button>
         <button className="btn ghost small" style={{ marginTop: 10 }} onClick={() => { setStep("read"); setQuizErr(""); }}>
-          Show me the phrase again
+          {t("seedBackup.showAgain")}
         </button>
       </div>
     );
@@ -3237,9 +3258,9 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
 
   return (
     <div className="card">
-      <h2>Write down your recovery phrase</h2>
+      <h2>{t("seedBackup.title")}</h2>
       <div className="msg warn">
-        These 12 words restore your wallet. Anyone who has them owns the funds.
+        {t("seedBackup.warn")}
       </div>
 
       <div className={"seed-reveal" + (revealed ? " on" : "")}>
@@ -3250,26 +3271,26 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
         </ol>
         {!revealed && (
           <button className="btn small seed-reveal-btn" onClick={() => setRevealed(true)}>
-            Tap to reveal
+            {t("seedBackup.reveal")}
           </button>
         )}
       </div>
 
       <div className="row" style={{ marginTop: 12, gap: 10 }}>
-        <button className="btn ghost small" onClick={copy}>{copied ? "Copied ✓" : "Copy phrase"}</button>
+        <button className="btn ghost small" onClick={copy}>{copied ? t("seedBackup.copied") : t("seedBackup.copyPhrase")}</button>
       </div>
       <p className="muted small" style={{ marginTop: 8 }}>
-        Write them on paper, in order.
+        {t("seedBackup.writeOnPaper")}
       </p>
 
       <button className="btn" style={{ marginTop: 16 }} disabled={!revealed} onClick={() => setStep("verify")}>
-        I&apos;ve written it down
+        {t("seedBackup.written")}
       </button>
 
       <details style={{ marginTop: 14 }}>
-        <summary className="muted small">Also save an encrypted backup file</summary>
+        <summary className="muted small">{t("seedBackup.alsoFile")}</summary>
         <div style={{ marginTop: 10 }}><DeviceSeedBackup /></div>
-        <label style={{ marginTop: 12 }}>Your shielded address</label>
+        <label style={{ marginTop: 12 }}>{t("seedBackup.addressLabel")}</label>
         <div className="addr">{address}</div>
       </details>
     </div>
@@ -3297,6 +3318,7 @@ function networkOf(status: Status | null): Network {
 /// — the user panic-creates over their existing wallet. Show the cached address,
 /// take the seed, VERIFY it matches the address, re-register, rebuild.
 export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () => void; onStartOver: () => void }) {
+  const { t } = useTranslation();
   const cached = loadStatusCache();
   const [seed, setSeed] = useState("");
   const [watching, setWatching] = useState(false);
@@ -3323,7 +3345,7 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
   const recover = async () => {
     setErr("");
     const s = seed.trim();
-    if (!isSecretShaped(s)) return setErr("That doesn't look like a recovery phrase (12 words) or a recovery seed (64 hex characters).");
+    if (!isSecretShaped(s)) return setErr(t("recoverWallet.errNotSecret"));
     setBusy(true);
     try {
       // Never re-register the WRONG wallet over this token: the secret must derive
@@ -3335,7 +3357,7 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
       if (cached?.address) {
         resolved = await keyForWallet(s, cached.address);
         if (!resolved) {
-          setErr("That seed belongs to a different wallet. Check it and try again.");
+          setErr(t("recoverWallet.errWrongSeed"));
           return;
         }
         keyHex = resolved.keyHex;
@@ -3343,7 +3365,7 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
       // Key first and verified, then register — a wallet registered without its
       // key can receive coins it can never spend.
       if (!(await persistDeviceSeed(keyHex))) {
-        setErr("This device could not store the wallet key — free up space and try again.");
+        setErr(t("recoverWallet.errStore"));
         return;
       }
       const birthday = birthdayToUse();
@@ -3371,23 +3393,22 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
   if (watching) {
     return (
       <div className="card">
-        <h2>Watch this wallet</h2>
+        <h2>{t("recoverWallet.watchTitle")}</h2>
         <p className="muted small" style={{ marginTop: 0 }}>
-          Shows the balance and history without a recovery phrase. It cannot send:
-          a view key carries no spending authority.
+          {t("recoverWallet.watchIntro")}
         </p>
         {err && <div className="msg err">{err}</div>}
-        <label>View key or link</label>
+        <label>{t("recoverWallet.viewKeyLabel")}</label>
         <textarea
           value={viewKey}
           onChange={(e) => setViewKey(e.target.value)}
-          placeholder="paste the view key, or the whole link"
+          placeholder={t("recoverWallet.viewKeyPlaceholder")}
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
         />
         <div className="row" style={{ gap: 8, marginTop: 10 }}>
-          <button className="btn ghost" onClick={() => { setWatching(false); setErr(""); }}>Back</button>
+          <button className="btn ghost" onClick={() => { setWatching(false); setErr(""); }}>{t("recoverWallet.back")}</button>
           <button
             className="btn"
             disabled={busy || !viewKey.trim()}
@@ -3397,7 +3418,7 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
               try {
                 const raw = viewKey.trim();
                 const k = raw.includes("key=") ? (raw.split("key=")[1] ?? "").split("&")[0].trim() : raw;
-                if (!isViewKey(k)) { setErr("That is not a view key."); return; }
+                if (!isViewKey(k)) { setErr(t("recoverWallet.errNotViewKey")); return; }
                 const b = raw.includes("b=") ? Number((raw.split("b=")[1] ?? "").split("&")[0]) || 0 : 0;
                 await adoptViewKey(k, b);
                 location.reload();
@@ -3408,7 +3429,7 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
               }
             }}
           >
-            {busy ? "Connecting…" : "Watch it"}
+            {busy ? t("recoverWallet.connecting") : t("recoverWallet.watchIt")}
           </button>
         </div>
       </div>
@@ -3417,7 +3438,7 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
 
   return (
     <div className="card">
-      <h2>Reconnect your wallet</h2>
+      <h2>{t("recoverWallet.title")}</h2>
       {/* The old wording blamed the service — "the service forgot this wallet".
           It is usually the opposite: the coins and the registration are fine, and
           THIS BROWSER lost the key it had stored. Safari clears a site's storage
@@ -3425,59 +3446,54 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
           returns to find a wallet asking for a phrase and concludes the wallet ate
           their money. Say what happened, and how to stop it happening again. */}
       <div className="msg ok">
-        <b>Nothing is lost.</b> Your coins are safe on the chain. This browser no
-        longer holds the key for this wallet — browsers clear stored site data
-        (Safari does it after about a week without a visit), and the key was only
-        ever here, never on the server.
+        <Trans i18nKey="recoverWallet.nothingLost" components={{ b: <b /> }} />
       </div>
       <SyncDestination />
       {cached?.address && (
         <>
-          <label>This wallet's address</label>
+          <label>{t("recoverWallet.addressLabel")}</label>
           <div className="addr" style={{ fontSize: 12 }}>
             {cached.address}
           </div>
         </>
       )}
-      <label>Recovery phrase (or legacy 64-hex seed)</label>
+      <label>{t("recoverWallet.seedLabel")}</label>
       <textarea
         value={seed}
         onChange={(e) => setSeed(e.target.value)}
-        placeholder="Your recovery phrase, or the seed you saved"
+        placeholder={t("recoverWallet.seedPlaceholder")}
         autoCapitalize="off"
         autoCorrect="off"
         spellCheck={false}
       />
       {!known && (
         <details style={{ marginTop: 8 }}>
-          <summary className="muted small">Know roughly when this wallet was created? (much faster)</summary>
-          <label>Wallet created around</label>
+          <summary className="muted small">{t("recoverWallet.knowWhen")}</summary>
+          <label>{t("recoverWallet.createdAround")}</label>
           <input type="date" className="control-input" value={createdDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setCreatedDate(e.target.value)} />
-          <label>Or the exact block height</label>
-          <input className="control-input mono" value={height} onChange={(e) => setHeight(e.target.value.replace(/[^0-9]/g, ""))} placeholder="DAA height" inputMode="numeric" />
-          <p className="subtle">Without this the whole chain is scanned. That finds everything, and takes the longest.</p>
+          <label>{t("recoverWallet.exactHeight")}</label>
+          <input className="control-input mono" value={height} onChange={(e) => setHeight(e.target.value.replace(/[^0-9]/g, ""))} placeholder={t("recoverWallet.heightPlaceholder")} inputMode="numeric" />
+          <p className="subtle">{t("recoverWallet.wholeChain")}</p>
         </details>
       )}
       {err && <div className="msg err">{err}</div>}
       <button className="btn" disabled={busy || !seed.trim()} onClick={recover}>
-        {busy ? "Reconnecting…" : "Reconnect wallet"}
+        {busy ? t("recoverWallet.reconnecting") : t("recoverWallet.reconnect")}
       </button>
       <p className="muted small">
-        Checked on this device against the address above, and never sent anywhere.
+        {t("recoverWallet.checkedLocally")}
       </p>
       {/* Not everyone in this state wants to type their phrase into a browser —
           often they only want to see the balance. A view key does that and cannot
           spend, so it is the safer answer to "did my money arrive?". */}
       <button className="linkbtn" onClick={() => setWatching(true)}>
-        Just watch this wallet instead (no phrase needed)
+        {t("recoverWallet.justWatch")}
       </button>
       <p className="muted small">
-        To stop this happening again, add the wallet to your Home Screen — an
-        installed app keeps its storage, a browser tab may not. The installed copy
-        starts empty: enter the phrase there once, and it stays.
+        {t("recoverWallet.homeScreen")}
       </p>
       <button className="linkbtn" onClick={onStartOver}>
-        Not your wallet? Create or import a different one
+        {t("recoverWallet.notYours")}
       </button>
     </div>
   );
@@ -3501,24 +3517,24 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
 /// disclosure actually occurs — someone merely opening the app, or following a
 /// watch link, is asked nothing.
 function SyncDestination() {
+  const { t } = useTranslation();
   const base = getBase();
   const onion = isOnionAddress(base);
   const local = /127\.0\.0\.1|localhost/.test(base);
   const where = onion
-    ? "Tor"
+    ? t("syncDestination.tor")
     : local
-      ? "this computer"
+      ? t("syncDestination.thisComputer")
       : base.includes("wallet.zkas.info")
-        ? "the public service (wallet.zkas.info)"
+        ? t("syncDestination.publicService")
         : (() => {
-            try { return new URL(base).host; } catch { return "the service you chose"; }
+            try { return new URL(base).host; } catch { return t("syncDestination.chosenService"); }
           })();
   return (
     <div className="msg" style={{ textAlign: "left" }}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span className="muted small">
-          Your wallet will sync through <b>{where}</b>. It sees your balance and
-          history — never your keys, and it cannot spend.
+          <Trans i18nKey="syncDestination.intro" values={{ where }} components={{ b: <b /> }} />
         </span>
         <ConnectionButton />
       </div>
@@ -3535,6 +3551,7 @@ function Onboard({
   onCreated: (seed: string, address: string) => void;
   onImported: () => void;
 }) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"choose" | "import" | "backup" | "restorefile" | "watch">("choose");
   const [watchInput, setWatchInput] = useState("");
   const [scanningKey, setScanningKey] = useState(false);
@@ -3569,9 +3586,7 @@ function Onboard({
       // wallet under the SAME token and would replace the old seed in storage.
       // The switcher's "Add another wallet" mints a fresh token instead.
       if (getDeviceSeed()) {
-        setError(
-          "This device already holds a wallet key. Restore that wallet instead — or use the wallet switcher's 'Add another wallet' so nothing is overwritten.",
-        );
+        setError(t("onboard.errHasKey"));
         return;
       }
       // New wallets are born with a 12-word recovery phrase: it can actually be
@@ -3605,7 +3620,7 @@ function Onboard({
       // verifiably on the device: the reverse order can register a wallet whose
       // key never landed, which receives coins it can never spend.
       if (!(await persistDeviceSeed(secret))) {
-        throw new Error("This device could not store the wallet key — free up space and try again.");
+        throw new Error(t("onboard.errStore"));
       }
       const { address } = await api.watch(await fvkHex(secret), birthday);
       rememberBirthday(birthday, address);
@@ -3644,7 +3659,7 @@ function Onboard({
       const b = birthdayFromInputs();
       // Key first, verified — never register a wallet this device cannot sign for.
       if (!(await persistDeviceSeed(seed))) {
-        throw new Error("This device could not store the wallet key — free up space and try again.");
+        throw new Error(t("onboard.errStore"));
       }
       const { address } = await api.watch(await fvkHex(seed), b);
       rememberBirthday(b, address);
@@ -3673,11 +3688,11 @@ function Onboard({
     setBusy(true);
     setError("");
     try {
-      if (!restoreJson.trim()) throw new Error("Choose your backup .json file, or paste the backup text.");
+      if (!restoreJson.trim()) throw new Error(t("onboard.errChooseBackup"));
       const { seedHex, birthday, accounts } = await readBackup(restoreJson, restorePass);
       // Key first and verified: never register a wallet this device cannot sign for.
       if (!(await persistDeviceSeed(seedHex))) {
-        throw new Error("This device could not store the wallet key — free up space and try again.");
+        throw new Error(t("onboard.errStore"));
       }
       const { address } = await api.watch(await fvkHex(seedHex), birthday);
       rememberBirthday(birthday, address);
@@ -3701,15 +3716,14 @@ function Onboard({
   if (mode === "restorefile") {
     return (
       <div className="card">
-        <h2>Restore from backup file</h2>
+        <h2>{t("onboard.restoreTitle")}</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Select the encrypted <code>.json</code> backup you saved, then enter its passphrase. The seed is
-          decrypted on this device — the file and passphrase never leave it.
+          <Trans i18nKey="onboard.restoreIntro" components={{ code: <code /> }} />
         </p>
         {error && <div className="msg err">{error}</div>}
         {foundBackups.length > 0 && (
           <>
-            <label>Backups found on this computer</label>
+            <label>{t("onboard.backupsFound")}</label>
             <select
               value=""
               onChange={(e) => {
@@ -3721,10 +3735,10 @@ function Onboard({
                     setRestoreName(p.split(/[/\\]/).pop() ?? p);
                     setError("");
                   })
-                  .catch(() => setError("Could not read that backup file."));
+                  .catch(() => setError(t("onboard.errReadBackup")));
               }}
             >
-              <option value="">Choose one…</option>
+              <option value="">{t("onboard.chooseOne")}</option>
               {foundBackups.map((f) => (
                 <option key={f} value={f}>
                   {f.split(/[/\\]/).pop()}
@@ -3733,7 +3747,7 @@ function Onboard({
             </select>
           </>
         )}
-        <label>{foundBackups.length > 0 ? "…or open a backup file (.json)" : "Backup file (.json)"}</label>
+        <label>{foundBackups.length > 0 ? t("onboard.orOpenFile") : t("onboard.backupFile")}</label>
         <input
           type="file"
           accept="application/json,.json"
@@ -3741,10 +3755,10 @@ function Onboard({
             const f = e.target.files?.[0];
             if (!f) return;
             setRestoreName(f.name);
-            f.text().then(setRestoreJson).catch(() => setError("Could not read that file."));
+            f.text().then(setRestoreJson).catch(() => setError(t("onboard.errReadFile")));
           }}
         />
-        {restoreName && <div className="muted" style={{ fontSize: "0.85em" }}>Selected: {restoreName}</div>}
+        {restoreName && <div className="muted" style={{ fontSize: "0.85em" }}>{t("onboard.selected", { name: restoreName })}</div>}
         {/* Restore must accept the backup in the shape it LEFT in.
             A backup taken on a phone can leave as clipboard text — that is the fallback
             when no share sheet is available — and this screen used to accept a file and
@@ -3761,37 +3775,37 @@ function Onboard({
               const r = await pasteText();
               if (r.ok) {
                 setRestoreJson(r.text);
-                setRestoreName("pasted from clipboard");
+                setRestoreName(t("onboard.pastedFromClipboard"));
                 setError("");
               } else if (r.reason === "empty") {
-                setError("Your clipboard is empty.");
+                setError(t("onboard.errClipboardEmpty"));
               } else {
-                setError("Couldn't read the clipboard — paste the backup into the box below instead.");
+                setError(t("onboard.errClipboard"));
               }
             }}
           >
-            Paste backup
+            {t("onboard.pasteBackup")}
           </button>
-          <span className="muted small">if you saved it as text</span>
+          <span className="muted small">{t("onboard.ifText")}</span>
         </div>
         <textarea
           value={restoreJson}
           onChange={(e) => {
             setRestoreJson(e.target.value);
-            if (e.target.value.trim()) setRestoreName("pasted");
+            if (e.target.value.trim()) setRestoreName(t("onboard.pasted"));
           }}
-          placeholder='or paste the backup here — it starts with {"version"...'
+          placeholder={t("onboard.restorePlaceholder")}
           rows={3}
           style={{ marginTop: 8, fontFamily: "var(--mono, monospace)", fontSize: 12 }}
         />
-        <label>Backup passphrase</label>
-        <input type="password" value={restorePass} onChange={(e) => setRestorePass(e.target.value)} placeholder="the passphrase you set when backing up" />
+        <label>{t("onboard.passphraseLabel")}</label>
+        <input type="password" value={restorePass} onChange={(e) => setRestorePass(e.target.value)} placeholder={t("onboard.passphrasePlaceholder")} />
         <div className="row" style={{ gap: 8, marginTop: 12 }}>
           <button className="btn ghost" onClick={() => setMode("choose")}>
-            Back
+            {t("onboard.back")}
           </button>
           <button className="btn" disabled={busy || !restoreJson.trim() || !restorePass} onClick={doRestoreFile}>
-            {busy ? <span className="spin" /> : "Restore wallet"}
+            {busy ? <span className="spin" /> : t("onboard.restoreWallet")}
           </button>
         </div>
       </div>
@@ -3801,7 +3815,7 @@ function Onboard({
   if (mode === "backup") {
     return (
       <div className="card">
-        <h2>Restore from backup</h2>
+        <h2>{t("onboard.restoreBackupTitle")}</h2>
         <RestoreSeedBackup onBack={() => setMode("choose")} />
       </div>
     );
@@ -3810,28 +3824,28 @@ function Onboard({
   if (mode === "import") {
     return (
       <div className="card">
-        <h2>Import wallet</h2>
-        <label>Recovery phrase (or legacy 64-hex seed)</label>
-        <textarea value={importHex} onChange={(e) => setImportHex(e.target.value)} placeholder="12-word phrase, or a 64-hex seed" />
-        <label>When was this wallet created? (optional — makes sync much faster)</label>
+        <h2>{t("onboard.importTitle")}</h2>
+        <label>{t("onboard.seedLabel")}</label>
+        <textarea value={importHex} onChange={(e) => setImportHex(e.target.value)} placeholder={t("onboard.importPlaceholder")} />
+        <label>{t("onboard.createdWhen")}</label>
         <input type="date" value={createdDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setCreatedDate(e.target.value)} />
-        <label>Advanced — exact block height (overrides the date)</label>
+        <label>{t("onboard.advancedHeight")}</label>
         <input
           value={birthday}
           onChange={(e) => setBirthday(e.target.value.replace(/[^0-9]/g, ""))}
-          placeholder="0 = scan whole chain for old funds"
+          placeholder={t("onboard.heightPlaceholder")}
           inputMode="numeric"
         />
         <div className="msg small" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--muted)" }}>
-          Scanning starts just before the date you pick. Leave blank to scan everything.
+          {t("onboard.scanHint")}
           </div>
         {error && <div className="msg err">{error}</div>}
         <div className="row">
           <button className="btn ghost" onClick={() => setMode("choose")}>
-            Back
+            {t("onboard.back")}
           </button>
           <button className="btn" disabled={busy || !isSecretShaped(importHex)} onClick={doImport}>
-            {busy ? <span className="spin" /> : "Import"}
+            {busy ? <span className="spin" /> : t("onboard.import")}
           </button>
         </div>
       </div>
@@ -3848,7 +3862,7 @@ function Onboard({
       const raw = watchInput.trim();
       const fromLink = raw.includes("key=") ? (raw.split("key=")[1] ?? "").split("&")[0].trim() : raw;
       if (!isViewKey(fromLink)) {
-        setError("That is not a view key. Paste the key, or the whole link you were sent.");
+        setError(t("onboard.errNotViewKey"));
         return;
       }
       const b = raw.includes("b=") ? Number((raw.split("b=")[1] ?? "").split("&")[0]) || 0 : 0;
@@ -3864,45 +3878,43 @@ function Onboard({
   if (mode === "watch") {
     return (
       <div className="card">
-        <h2>Watch a wallet</h2>
+        <h2>{t("onboard.watchTitle")}</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Shows a wallet's balance and history on this device. It cannot send:
-          there is no spending key here to sign with.
+          {t("onboard.watchIntro")}
         </p>
         {/* Watching registers the view key with a service too, so the same
             disclosure applies — and here the key being registered is somebody
             else's. */}
         <SyncDestination />
         {error && <div className="msg err">{error}</div>}
-        <label>View key or link</label>
+        <label>{t("onboard.viewKeyLabel")}</label>
         <textarea
           value={watchInput}
           onChange={(e) => setWatchInput(e.target.value)}
-          placeholder="paste the view key, or the whole link"
+          placeholder={t("onboard.viewKeyPlaceholder")}
           rows={3}
           style={{ fontFamily: "var(--mono, monospace)", fontSize: 12 }}
         />
         <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-          <button className="btn ghost small" onClick={() => setScanningKey(true)}>Scan QR</button>
+          <button className="btn ghost small" onClick={() => setScanningKey(true)}>{t("onboard.scanQr")}</button>
           <button
             className="btn ghost small"
             onClick={async () => {
               const r = await pasteText();
               if (r.ok) { setWatchInput(r.text); setError(""); }
-              else setError("Couldn't read the clipboard — paste it into the box instead.");
+              else setError(t("onboard.errClipboardWatch"));
             }}
           >
-            Paste
+            {t("onboard.paste")}
           </button>
         </div>
         <div className="msg warn" style={{ marginTop: 10 }}>
-          A view key reveals every amount and memo that wallet has ever received
-          or sent. Only use one you were given for a wallet you are meant to see.
+          {t("onboard.viewKeyWarn")}
         </div>
         <div className="row" style={{ gap: 8, marginTop: 12 }}>
-          <button className="btn ghost" onClick={() => setMode("choose")}>Back</button>
+          <button className="btn ghost" onClick={() => setMode("choose")}>{t("onboard.back")}</button>
           <button className="btn" disabled={busy || !watchInput.trim()} onClick={() => void doWatch()}>
-            {busy ? <span className="spin" /> : "Watch this wallet"}
+            {busy ? <span className="spin" /> : t("onboard.watchThis")}
           </button>
         </div>
         {scanningKey && (
@@ -3917,9 +3929,10 @@ function Onboard({
 
   return (
     <div className="card center">
-      <h2>Welcome</h2>
+      <LanguageInline />
+      <h2>{t("onboard.welcome")}</h2>
       <p className="muted" style={{ marginTop: 0 }}>
-        Create a new wallet, or bring an existing one to this device. Every ZKAS payment is private.
+        {t("onboard.welcomeIntro")}
       </p>
       <SyncDestination />
       {error && <div className="msg err">{error}</div>}
@@ -3927,26 +3940,26 @@ function Onboard({
           wallet would then scan ALL 850k+ blocks for history it cannot have.
           Wait for the chain tip so the birthday anchors at "now". */}
       <button className="btn" disabled={busy || !status?.daa_score} onClick={create}>
-        {busy ? <span className="spin" /> : status?.daa_score ? "Create new wallet" : "Connecting…"}
+        {busy ? <span className="spin" /> : status?.daa_score ? t("onboard.createNew") : t("onboard.connecting")}
       </button>
       {/* The three ways to bring an EXISTING wallet, grouped under one heading and
           demoted to secondary — so the primary decision (create) stands alone, and
           "restore" is one button, not two identical ones split by platform. */}
       <div className="settings-section" style={{ textAlign: "center", margin: "20px 0 6px" }}>
-        Already have a wallet?
+        {t("onboard.alreadyHave")}
       </div>
       {/* Desktop too: it used to get the path-typing screen while web/mobile got a
           file chooser for the same client-side decrypt. */}
       <button className="btn ghost" onClick={() => setMode("restorefile")}>
-        Restore from a backup file
+        {t("onboard.restoreFromFile")}
       </button>
       <button className="btn ghost" onClick={() => setMode("import")}>
-        Import a recovery phrase
+        {t("onboard.importPhrase")}
       </button>
       {/* Watching needs no key of your own — the one option that never creates
           something to lose. */}
       <button className="btn ghost" onClick={() => setMode("watch")}>
-        Watch a wallet (view-only)
+        {t("onboard.watchWallet")}
       </button>
     </div>
   );
@@ -3965,6 +3978,7 @@ function Onboard({
 /// wait reads as "sealing your payment", not "hanging". The stage drives which
 /// beat is emphasised; the scene loops so a long multi-note send stays alive.
 function SendScene({ stage, estimateMs, progress }: { stage?: SendStage; estimateMs?: number | null; progress?: SendProgress | null }) {
+  const { t } = useTranslation();
   const s = stage ?? "proving";
   // Elapsed seconds on the long step. "Proving" is named for the Halo 2 proof, but
   // the proof is the FAST part (~2s): most of the wait is the daemon locating each
@@ -3999,7 +4013,7 @@ function SendScene({ stage, estimateMs, progress }: { stage?: SendStage; estimat
   const warmPct = s === "warming" && typeof progress?.warmingPct === "number" ? `${progress.warmingPct.toFixed(1)}%` : null;
   const warmEta =
     s === "warming" && typeof progress?.warmingEtaSecs === "number" && progress.warmingEtaSecs > 0
-      ? `about ${Math.max(1, Math.round(progress.warmingEtaSecs / 60))} min left`
+      ? t("sendScene.warmEta", { n: Math.max(1, Math.round(progress.warmingEtaSecs / 60)) })
       : null;
   const caption =
     s === "warming"
@@ -4007,14 +4021,14 @@ function SendScene({ stage, estimateMs, progress }: { stage?: SendStage; estimat
       // that; the index build is the only other thing "warming" ever means.
       ? progress?.note
         ? progress.note
-        : `Preparing: locating your coins in the chain${warmPct ? ` · ${warmPct}` : ""}${warmEta ? ` · ${warmEta}` : ""} — done once, never again`
+        : t("sendScene.warmingCaption", { details: `${warmPct ? ` · ${warmPct}` : ""}${warmEta ? ` · ${warmEta}` : ""}` })
       : s === "signing"
-        ? "Signing on your device — your key never leaves it"
+        ? t("sendScene.signingCaption")
         : s === "broadcasting"
-          ? "Sealed and shielded — broadcasting to the network"
+          ? t("sendScene.broadcastingCaption")
           : slow
-            ? "Locating your coins in the chain — this can take a minute or two"
-            : "Building your zero-knowledge proof — nobody will see amount or recipient";
+            ? t("sendScene.slowCaption")
+            : t("sendScene.provingCaption");
   return (
     <div className={"sendscene s-" + s} role="status" aria-live="polite">
       <div className="sendscene-stage" aria-hidden="true">
@@ -4025,7 +4039,7 @@ function SendScene({ stage, estimateMs, progress }: { stage?: SendStage; estimat
         <div className="ss-spark ss-spark-3" />
         <div className="ss-payload">
           <div className="ss-coin">
-            <span className="ss-coin-z">Z</span>
+            <span className="ss-coin-z">Z</span>{/* i18n-ignore: logo glyph */}
           </div>
           <div className="ss-shield">
             <svg viewBox="0 0 40 46" width="48" height="54">
@@ -4051,9 +4065,9 @@ function SendScene({ stage, estimateMs, progress }: { stage?: SendStage; estimat
         </div>
       </div>
       <div className="sendscene-steps" aria-hidden="true">
-        <span className={"ss-step" + (s === "proving" || s === "warming" ? " on" : " done")}>Prove</span>
-        <span className={"ss-step" + (s === "signing" ? " on" : s === "broadcasting" ? " done" : "")}>Sign</span>
-        <span className={"ss-step" + (s === "broadcasting" ? " on" : "")}>Send</span>
+        <span className={"ss-step" + (s === "proving" || s === "warming" ? " on" : " done")}>{t("sendScene.stepProve")}</span>
+        <span className={"ss-step" + (s === "signing" ? " on" : s === "broadcasting" ? " done" : "")}>{t("sendScene.stepSign")}</span>
+        <span className={"ss-step" + (s === "broadcasting" ? " on" : "")}>{t("sendScene.stepSend")}</span>
       </div>
       <div className="sendscene-cap">{caption}</div>
       {/* aria-hidden: the container is an aria-live region, and a counter ticking
@@ -4061,13 +4075,13 @@ function SendScene({ stage, estimateMs, progress }: { stage?: SendStage; estimat
           second. The caption above changes rarely and carries the meaning. */}
       {secs >= 5 && (
         <div className="sendscene-cap sendscene-elapsed" aria-hidden="true">
-          {secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`}
+          {secs < 60 ? t("sendScene.elapsedSecs", { s: secs }) : t("sendScene.elapsedMinSecs", { m: Math.floor(secs / 60), s: secs % 60 })}
           {remaining && <span className="sendscene-remaining"> · {remaining}</span>}
         </div>
       )}
       {(slow || s === "warming") && (
         <div className="sendscene-cap sendscene-reassure" aria-hidden="true">
-          Nothing has been sent yet and nothing can be lost — keep this open.
+          {t("sendScene.reassure")}
         </div>
       )}
     </div>
@@ -4106,6 +4120,7 @@ function TxDetail({
   onSendAgain?: (addr: string) => void;
   onLabelSaved?: () => void;
 }) {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState("");
   const [label, setLabel] = useState(() => getTxLabel(row.txid));
@@ -4113,7 +4128,7 @@ function TxDetail({
   const price = useZkasPrice();
   const contact = findContact(row.recipient);
   const isConsolidation = isConsolidationRow(row);
-  const kind = isConsolidation ? "Consolidation" : row.kind === "coinbase" ? "Mined" : row.kind === "received" ? "Received" : "Sent";
+  const kind = isConsolidation ? t("txDetail.kindConsolidation") : row.kind === "coinbase" ? t("txDetail.kindMined") : row.kind === "received" ? t("txDetail.kindReceived") : t("txDetail.kindSent");
   const sign = row.kind === "sent" ? "−" : "+";
   const copy = async (what: string, value: string) => {
     await copyText(value);
@@ -4134,60 +4149,60 @@ function TxDetail({
 
         {row.memo && (
           <div className="msg small" style={{ background: "transparent", border: "1px solid var(--border)" }}>
-            “{row.memo}”
+            {t("txDetail.memoQuoted", { memo: row.memo })}
           </div>
         )}
 
         <div className="detail-row">
-          <span className="k">Status</span>
+          <span className="k">{t("txDetail.status")}</span>
           <span className="v">
             {row.confs != null ? (
               row.confs >= 1 ? (
-                <span className="conf-pill done">{row.confs} confirmation{row.confs === 1 ? "" : "s"}</span>
+                <span className="conf-pill done">{t("txDetail.confirmations", { count: row.confs })}</span>
               ) : (
-                <span className="conf-pill wait">Broadcast · awaiting confirmation</span>
+                <span className="conf-pill wait">{t("txDetail.awaitingConfirmation")}</span>
               )
             ) : (
-              <span className="conf-pill done">Confirmed on-chain</span>
+              <span className="conf-pill done">{t("txDetail.confirmedOnChain")}</span>
             )}
           </span>
         </div>
         <div className="detail-row tx-label-row">
-          <label className="k" htmlFor="tx-label">Private label</label>
+          <label className="k" htmlFor="tx-label">{t("txDetail.privateLabel")}</label>
           <span className="v tx-label-editor">
-            <input id="tx-label" value={label} maxLength={160} placeholder="Order, customer, purpose…" onChange={(event) => { setLabel(event.target.value); setLabelState(""); }} />
+            <input id="tx-label" value={label} maxLength={160} placeholder={t("txDetail.labelPlaceholder")} onChange={(event) => { setLabel(event.target.value); setLabelState(""); }} />
             <button className="btn ghost small" onClick={() => {
               try {
                 setTxLabel(row.txid, label);
-                setLabelState("Saved on this device");
+                setLabelState(t("txDetail.labelSaved"));
                 onLabelSaved?.();
               } catch (error) {
                 setLabelState((error as Error).message);
               }
-            }}>Save</button>
+            }}>{t("txDetail.save")}</button>
             {labelState && <small>{labelState}</small>}
           </span>
         </div>
         <div className="detail-row">
-          <span className="k">When</span>
-          <span className="v">{row.timestamp > 0 ? fmtTime(row.timestamp) : `DAA ${row.daaScore}`}</span>
+          <span className="k">{t("txDetail.when")}</span>
+          <span className="v">{row.timestamp > 0 ? fmtTime(row.timestamp) : t("txDetail.daa", { daa: row.daaScore })}</span>
         </div>
         {row.feeSompi > 0 && (
           <div className="detail-row">
-            <span className="k">Network fee</span>
-            <span className="v mono">{trimFc((row.feeSompi / 1e8).toFixed(8))} ZKAS</span>
+            <span className="k">{t("txDetail.networkFee")}</span>
+            <span className="v mono">{t("txDetail.zkasAmount", { amount: trimFc((row.feeSompi / 1e8).toFixed(8)) })}</span>
           </div>
         )}
         {row.recipient && (
           <div className="detail-row">
-            <span className="k">{isConsolidation ? "Merged into" : row.kind === "sent" ? "To" : "Received at"}</span>
+            <span className="k">{isConsolidation ? t("txDetail.mergedInto") : row.kind === "sent" ? t("txDetail.to") : t("txDetail.receivedAt")}</span>
             <span className="v mono" style={{ fontSize: 12 }}>
               {contact ? <b>{contact.name}</b> : shortAddr(row.recipient)}
             </span>
           </div>
         )}
         <div className="detail-row">
-          <span className="k">Transaction</span>
+          <span className="k">{t("txDetail.transaction")}</span>
           <span className="v mono" style={{ fontSize: 12 }}>
             {shortAddr(row.txid)}
           </span>
@@ -4195,32 +4210,32 @@ function TxDetail({
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
           <button className="btn ghost small" onClick={() => copy("txid", row.txid)}>
-            {copied === "txid" ? "Copied ✓" : "Copy transaction id"}
+            {copied === "txid" ? t("txDetail.copied") : t("txDetail.copyTxid")}
           </button>
           {row.recipient && (
             <button className="btn ghost small" onClick={() => copy("addr", row.recipient!)}>
-              {copied === "addr" ? "Copied ✓" : "Copy address"}
+              {copied === "addr" ? t("txDetail.copied") : t("txDetail.copyAddress")}
             </button>
           )}
           {row.recipient && !contact && (
             <button className={"btn small" + (row.kind === "sent" ? " ghost" : "")} onClick={() => setSaving(true)}>
-              Save as contact
+              {t("txDetail.saveAsContact")}
             </button>
           )}
           {row.recipient && row.kind === "sent" && onSendAgain && (
             <button className="btn small" onClick={() => onSendAgain(row.recipient!)}>
-              Send again
+              {t("txDetail.sendAgain")}
             </button>
           )}
           <a className="btn ghost small" href={`#/explore/tx/${row.txid}`}>
-            View on explorer
+            {t("txDetail.viewOnExplorer")}
           </a>
         </div>
         <p className="muted small" style={{ marginTop: 12 }}>
-          The explorer shows only that a shielded transaction happened — never its details.
+          {t("txDetail.explorerNote")}
           </p>
         <button className="btn ghost" onClick={onClose}>
-          Close
+          {t("txDetail.close")}
         </button>
         {saving && row.recipient && <SaveContactDialog address={row.recipient} onClose={() => setSaving(false)} />}
       </div>
@@ -4260,7 +4275,7 @@ function historyCsv(rows: ChainHistoryRow[]): string {
 /// concerns rather than one wall of controls.
 function walletCountLabel(): string {
   const n = listWallets().length;
-  return n === 1 ? "1 wallet" : `${n} wallets`;
+  return i18n.t("walletCountLabel.wallets", { count: n });
 }
 
 // A settings row: title always visible, details revealed on tap. Collapsed by default so
@@ -4299,11 +4314,12 @@ function SettingsSection({ label }: { label: string }) {
 
 
 function AccessTokenSetting() {
+  const { t } = useTranslation();
   const [on, setOn] = useState(showAccessTokenField());
   return (
     <label className="row" style={{ gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
       <input type="checkbox" checked={on} style={{ marginTop: 3 }} onChange={(e) => { setShowAccessTokenField(e.target.checked); setOn(e.target.checked); }} />
-      <span><b>Show access-token field</b><br /><span className="muted small">Adds a token box to wallet-server setup. Only needed for a token-protected wallet server.</span></span>
+      <span><b>{t("accessTokenSetting.title")}</b><br /><span className="muted small">{t("accessTokenSetting.detail")}</span></span>
     </label>
   );
 }
@@ -4319,6 +4335,7 @@ function AccessTokenSetting() {
 /// reveals every amount and memo this wallet has ever seen and ever will, and it
 /// cannot be revoked without moving the coins to a new wallet.
 function WatchOnAnotherDevice({ status }: { status: Status }) {
+  const { t } = useTranslation();
   // Key-first: the view key ITSELF is what another wallet or tool wants — paste it
   // into "Watch a wallet", or scan its QR. (A "watch link" was worse: it needed a
   // specific browser and hid the key inside a URL fragment.)
@@ -4348,7 +4365,7 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
       setQr(await QRCode.toDataURL(fvk, { margin: 1, width: 440 }));
     } catch (e) {
       setError((e as Error)?.message === SEED_REQUIRED
-        ? "This device does not hold the key for this wallet."
+        ? t("watchOnAnotherDevice.noKey")
         : String((e as Error)?.message ?? e));
     } finally {
       setBusy(false);
@@ -4363,26 +4380,26 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
   return (
     <div className="stack">
       <p className="muted small">
-        Your view key lets another device or tool watch this wallet — balance and history, read-only. It can never send.
+        {t("watchOnAnotherDevice.intro")}
       </p>
       <div className="msg warn">
-        Anyone with this key sees every amount and memo this wallet has ever had, and everything it receives from now on — you can't undo that without moving your coins.
+        {t("watchOnAnotherDevice.warn")}
       </div>
       {!key && (
         <button className="btn" disabled={busy} onClick={() => void reveal()}>
-          {busy ? "Preparing…" : "Show view key"}
+          {busy ? t("watchOnAnotherDevice.preparing") : t("watchOnAnotherDevice.showViewKey")}
         </button>
       )}
       {error && <div className="msg warn">{error}</div>}
       {key && (
         <>
-          {qr && <img className="qr" src={qr} alt="View key QR" style={{ width: "100%", maxWidth: 240 }} />}
+          {qr && <img className="qr" src={qr} alt={t("watchOnAnotherDevice.qrAlt")} style={{ width: "100%", maxWidth: 240 }} />}
           <div className="addr mono" style={{ wordBreak: "break-all" }}>{key}</div>
           <button className={"btn copybtn" + (copied ? " copied" : "")} style={{ marginTop: 10 }} onClick={copy}>
-            {copied ? "Copied ✓" : "Copy view key"}
+            {copied ? t("watchOnAnotherDevice.copied") : t("watchOnAnotherDevice.copyViewKey")}
           </button>
           <p className="muted small">
-            On the other device: open the wallet → <b>Watch a wallet</b>, then paste this key (or scan the QR).
+            <Trans i18nKey="watchOnAnotherDevice.otherDevice" components={{ b: <b /> }} />
           </p>
         </>
       )}
@@ -4398,20 +4415,19 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
 /// coins to a new wallet does that, which is why the wording does not pretend
 /// otherwise.
 function StopWatching() {
+  const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
   return (
     <div className="stack">
       <p className="muted small">
-        This device holds a view key and no spending key, so it can show the
-        balance and history and cannot send. Nothing here can move coins.
+        {t("stopWatching.intro")}
       </p>
       {!confirming ? (
-        <button className="btn ghost" onClick={() => setConfirming(true)}>Stop watching</button>
+        <button className="btn ghost" onClick={() => setConfirming(true)}>{t("stopWatching.stopWatching")}</button>
       ) : (
         <>
           <div className="msg warn">
-            Removes the view key from this browser. Anyone else holding the link
-            keeps their view — that can only be ended by moving the coins.
+            {t("stopWatching.warn")}
           </div>
           <div className="row" style={{ gap: 8 }}>
             <button
@@ -4423,9 +4439,9 @@ function StopWatching() {
                 location.reload();
               }}
             >
-              Remove it
+              {t("stopWatching.removeIt")}
             </button>
-            <button className="btn ghost" onClick={() => setConfirming(false)}>Cancel</button>
+            <button className="btn ghost" onClick={() => setConfirming(false)}>{t("stopWatching.cancel")}</button>
           </div>
         </>
       )}
@@ -4434,6 +4450,7 @@ function StopWatching() {
 }
 
 function SettingsPane({ status }: { status: Status }) {
+  const { t } = useTranslation();
   // A viewer has no seed, so everything that reveals or shares one is not merely
   // hidden here — there is nothing behind it to reveal.
   const viewOnly = isWatchOnly();
@@ -4442,27 +4459,27 @@ function SettingsPane({ status }: { status: Status }) {
   const roomy = useRoomy();
   return (
     <>
-      <SettingsSection label="Security" />
-      <Collapsible title="App lock" summary={isLockEnabled() ? (isBiometricConfigured() ? "Fingerprint" : "On") : "Off"}>
+      <SettingsSection label={t("settingsPane.sectionSecurity")} />
+      <Collapsible title={t("settingsPane.appLock")} summary={isLockEnabled() ? (isBiometricConfigured() ? t("settingsPane.fingerprint") : t("settingsPane.on")) : t("settingsPane.off")}>
         <AppLockSetting />
       </Collapsible>
       {viewOnly ? (
-        <Collapsible title="View-only wallet" summary="No spending key" defaultOpen>
+        <Collapsible title={t("settingsPane.viewOnlyWallet")} summary={t("settingsPane.noSpendingKey")} defaultOpen>
           <StopWatching />
         </Collapsible>
       ) : (
         <>
-          <Collapsible title="Recovery seed" summary="Back up">
+          <Collapsible title={t("settingsPane.recoverySeed")} summary={t("settingsPane.backUp")}>
             <RevealSeedCard expectedAddress={status.address ?? undefined} />
           </Collapsible>
         </>
       )}
 
-      <SettingsSection label="Wallet" />
-      <Collapsible title="Wallets" summary={walletCountLabel()}>
+      <SettingsSection label={t("settingsPane.sectionWallet")} />
+      <Collapsible title={t("settingsPane.wallets")} summary={walletCountLabel()}>
         <SwitchWallet />
       </Collapsible>
-      <Collapsible title="Contacts">
+      <Collapsible title={t("settingsPane.contacts")}>
         <ContactsCard />
       </Collapsible>
       {/* Desktop keeps node-source controls (it runs its own daemon). Web/mobile talk
@@ -4471,42 +4488,43 @@ function SettingsPane({ status }: { status: Status }) {
           hosted wallet. The topline connection chooser remains for the rare self-host. */}
       {isDesktop() && (
         <>
-          <Collapsible title="Security &amp; backup">
+          <Collapsible title={t("settingsPane.securityBackup")}>
             <VaultSetting />
           </Collapsible>
-          <Collapsible title="Wallet node">
+          <Collapsible title={t("settingsPane.walletNode")}>
             <NodeSourceSetting />
           </Collapsible>
         </>
       )}
 
-      <SettingsSection label="Preferences" />
-      <Collapsible title="Accent color" summary={ACCENTS[currentAccent()].label}>
+      <SettingsSection label={t("settingsPane.sectionPreferences")} />
+      <Collapsible title={t("settingsPane.accentColor")} summary={ACCENTS[currentAccent()].label}>
         <AppearanceCard />
+        <LanguagePicker />
       </Collapsible>
-      <Collapsible title="Background sync">
+      <Collapsible title={t("settingsPane.backgroundSync")}>
         <BackgroundSyncCard />
       </Collapsible>
-      <Collapsible title="Automatic consolidation" summary={isMaintenanceEnabled() ? "On" : "Off"}>
+      <Collapsible title={t("settingsPane.autoConsolidation")} summary={isMaintenanceEnabled() ? t("settingsPane.on") : t("settingsPane.off")}>
         <AutoConsolidationCard />
       </Collapsible>
-      <Collapsible title="Network privacy" summary={networkPrivacyLabel()}>
+      <Collapsible title={t("settingsPane.networkPrivacy")} summary={networkPrivacyLabel()}>
         <NetworkPrivacyCard />
       </Collapsible>
-      <Collapsible title="Access-token field" summary={showAccessTokenField() ? "Shown" : "Hidden"}>
+      <Collapsible title={t("settingsPane.accessTokenField")} summary={showAccessTokenField() ? t("settingsPane.shown") : t("settingsPane.hidden")}>
         <AccessTokenSetting />
       </Collapsible>
       {/* Renders its own "Debug logs" Collapsible; kept top-level rather than buried
           inside Background sync. Returns null when there's no on-device engine. */}
       <DebugLogsCard />
       {!roomy && (
-        <Collapsible title="Signatures">
+        <Collapsible title={t("settingsPane.signatures")}>
           <Signatures status={status} />
         </Collapsible>
       )}
 
-      <SettingsSection label="About" />
-      <Collapsible title="About ZKas">
+      <SettingsSection label={t("settingsPane.sectionAbout")} />
+      <Collapsible title={t("settingsPane.aboutZkas")}>
         <AboutCard />
       </Collapsible>
     </>
@@ -4516,6 +4534,7 @@ function SettingsPane({ status }: { status: Status }) {
 /// Light/dark. Defaults to following the system, which is what most people
 /// expect and nobody has to discover.
 function AppearanceCard() {
+  const { t } = useTranslation();
   const [a, setA] = useState<Accent>(currentAccent());
   const chooseAccent = (next: Accent) => {
     setAccent(next);
@@ -4523,9 +4542,9 @@ function AppearanceCard() {
   };
   return (
     <div className="card">
-      <h2>Accent color</h2>
+      <h2>{t("appearanceCard.title")}</h2>
       <p className="muted small" style={{ marginTop: 0, marginBottom: 12 }}>
-        Balance, buttons and highlights. Teal is the ZKas signature.
+        {t("appearanceCard.intro")}
       </p>
       <div className="swatches">
         {(Object.keys(ACCENTS) as Accent[]).map((opt) => (
@@ -4553,19 +4572,20 @@ function AppearanceCard() {
 /// once. Two tabs made each look like a separate feature and cost a slot the
 /// wallet needed for money.
 function Signatures({ status }: { status: Status | null }) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"sign" | "verify">("sign");
   return (
     <div className="card">
-      <h2>Signatures</h2>
+      <h2>{t("signatures.title")}</h2>
       <p className="muted small" style={{ marginTop: 0 }}>
-        Prove you control your address without spending from it, or check somebody else's proof.
+        {t("signatures.intro")}
       </p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         <button className={"chip" + (mode === "sign" ? " on" : "")} onClick={() => setMode("sign")}>
-          Sign a message
+          {t("signatures.signMessage")}
         </button>
         <button className={"chip" + (mode === "verify" ? " on" : "")} onClick={() => setMode("verify")}>
-          Verify a signature
+          {t("signatures.verifySignature")}
         </button>
       </div>
       {mode === "sign" ? <Sign status={status} embedded /> : <Verify embedded />}
@@ -4576,10 +4596,11 @@ function Signatures({ status }: { status: Status | null }) {
 /// Message signing and verification: real capabilities, but ones a person needs
 /// a handful of times ever. They used to occupy two of five primary tabs.
 function AboutCard() {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   return (
     <div className="card">
-      <h2>About</h2>
+      <h2>{t("aboutCard.title")}</h2>
       {/* Version and platform, copyable in one tap. This is the first thing any
           bug report needs, and it was the one thing the app never told anyone —
           the build stamp is there because the web can be redeployed ahead of a
@@ -4595,20 +4616,19 @@ function AboutCard() {
             setTimeout(() => setCopied(false), 1500);
           }}
         >
-          {copied ? "Copied" : "Copy version"}
+          {copied ? t("aboutCard.copied") : t("aboutCard.copyVersion")}
         </button>
       </div>
-      {APP_BUILT && <p className="muted small" style={{ marginTop: -4 }}>Built {APP_BUILT} UTC</p>}
+      {APP_BUILT && <p className="muted small" style={{ marginTop: -4 }}>{t("aboutCard.built", { built: APP_BUILT })}</p>}
       <p className="muted small" style={{ marginTop: 0 }}>
-        ZKas Wallet — every balance and payment shielded by Orchard zero-knowledge proofs. Your spending key is held on
-        this device and never sent anywhere.
+        {t("aboutCard.blurb")}
       </p>
       <a href="https://github.com/firecash/zkas-wallet" target="_blank" rel="noreferrer">
-        Source code
+        {t("aboutCard.sourceCode")}
       </a>
       {" · "}
       <a href={EXPLORER} target="_blank" rel="noreferrer">
-        Explorer
+        {t("aboutCard.explorer")}
       </a>
     </div>
   );
@@ -4623,6 +4643,7 @@ function initials(name: string): string {
 
 /// Pick someone to pay from the address book.
 function ContactPicker({ onPick, onClose }: { onPick: (c: Contact) => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const [q, setQ] = useState("");
   const list = sortedContacts().filter(
     (c) => !q.trim() || c.name.toLowerCase().includes(q.toLowerCase()) || c.address.toLowerCase().includes(q.toLowerCase()),
@@ -4630,15 +4651,14 @@ function ContactPicker({ onPick, onClose }: { onPick: (c: Contact) => void; onCl
   return createPortal(
     <div className="modalwrap" onClick={onClose}>
       <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ marginTop: 0 }}>Choose a contact</h2>
+        <h2 style={{ marginTop: 0 }}>{t("contactPicker.title")}</h2>
         {sortedContacts().length === 0 ? (
           <p className="muted small">
-            No contacts yet. Save one after a payment, or from a received address — on a shielded chain the wallet is
-            the only place an address can have a name.
+            {t("contactPicker.empty")}
           </p>
         ) : (
           <>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or address" autoFocus />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("contactPicker.searchPlaceholder")} autoFocus />
             <div style={{ maxHeight: "46vh", overflowY: "auto", marginTop: 6 }}>
               {list.map((c) => (
                 <div key={c.id} className="contact-row" style={{ cursor: "pointer" }} onClick={() => onPick(c)}>
@@ -4649,12 +4669,12 @@ function ContactPicker({ onPick, onClose }: { onPick: (c: Contact) => void; onCl
                   </div>
                 </div>
               ))}
-              {list.length === 0 && <p className="muted small">Nobody matches that.</p>}
+              {list.length === 0 && <p className="muted small">{t("contactPicker.noMatch")}</p>}
             </div>
           </>
         )}
         <button className="btn ghost" onClick={onClose}>
-          Close
+          {t("contactPicker.close")}
         </button>
       </div>
     </div>,
@@ -4666,36 +4686,37 @@ function ContactPicker({ onPick, onClose }: { onPick: (c: Contact) => void; onCl
 /// SUGGESTED name (e.g. a QR's `label`) — a claim by the payee, never auto-saved:
 /// the user confirms it here explicitly.
 function SaveContactDialog({ address, initialName, onClose }: { address: string; initialName?: string; onClose: () => void }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(findContact(address)?.name ?? initialName ?? "");
   const [note, setNote] = useState(findContact(address)?.note ?? "");
   const toast = useToast();
   return createPortal(
     <div className="modalwrap" onClick={onClose}>
       <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ marginTop: 0 }}>Save contact</h2>
-        <label>Name</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alice" autoFocus />
-        <label>Note (optional)</label>
-        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What this address is for" />
-        <label>Address</label>
+        <h2 style={{ marginTop: 0 }}>{t("saveContactDialog.title")}</h2>
+        <label>{t("saveContactDialog.name")}</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("saveContactDialog.namePlaceholder")} autoFocus />
+        <label>{t("saveContactDialog.note")}</label>
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("saveContactDialog.notePlaceholder")} />
+        <label>{t("saveContactDialog.address")}</label>
         <div className="addr" style={{ fontSize: 12 }}>
           {address}
         </div>
-        <p className="muted small">Stored only on this device — a list of who you pay is exactly the metadata ZKas exists to protect.</p>
+        <p className="muted small">{t("saveContactDialog.storedOnDevice")}</p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
             className="btn"
             disabled={!name.trim()}
             onClick={() => {
               addContact(name, address, note);
-              toast.show("good", `Saved ${name.trim()}`);
+              toast.show("good", t("saveContactDialog.savedToast", { name: name.trim() }));
               onClose();
             }}
           >
-            Save
+            {t("saveContactDialog.save")}
           </button>
           <button className="btn ghost" onClick={onClose}>
-            Cancel
+            {t("saveContactDialog.cancel")}
           </button>
         </div>
       </div>
@@ -4706,6 +4727,7 @@ function SaveContactDialog({ address, initialName, onClose }: { address: string;
 
 /// The address book as a settings card: rename, re-address, remove.
 function ContactsCard() {
+  const { t } = useTranslation();
   const [, bump] = useState(0);
   const [editing, setEditing] = useState<Contact | null>(null);
   const [adding, setAdding] = useState(false);
@@ -4718,11 +4740,10 @@ function ContactsCard() {
   const list = sortedContacts();
   return (
     <div className="card">
-      <h2>Contacts</h2>
+      <h2>{t("contactsCard.title")}</h2>
       {list.length === 0 ? (
         <p className="muted small" style={{ marginTop: 0 }}>
-          Nobody saved yet. Naming an address here is the only way it will ever read as a person — the chain itself
-          knows nothing about who anyone is.
+          {t("contactsCard.empty")}
         </p>
       ) : (
         <div style={{ marginBottom: 10 }}>
@@ -4735,7 +4756,7 @@ function ContactsCard() {
                 {c.note && <div className="muted small">{c.note}</div>}
               </div>
               <button className="linkbtn" onClick={() => setEditing(c)}>
-                Edit
+                {t("contactsCard.edit")}
               </button>
             </div>
           ))}
@@ -4743,11 +4764,11 @@ function ContactsCard() {
       )}
       {adding ? (
         <>
-          <label>Address</label>
+          <label>{t("contactsCard.address")}</label>
           <input
             value={newAddr}
             onChange={(e) => setNewAddr(e.target.value)}
-            placeholder="zkas:…"
+            placeholder={t("contactsCard.addressPlaceholder")}
             className="mono"
             autoCapitalize="off"
             spellCheck={false}
@@ -4762,16 +4783,16 @@ function ContactsCard() {
                 setNewAddr("");
               }}
             >
-              Next
+              {t("contactsCard.next")}
             </button>
             <button className="btn ghost" onClick={() => setAdding(false)}>
-              Cancel
+              {t("contactsCard.cancel")}
             </button>
           </div>
         </>
       ) : (
         <button className="btn ghost" onClick={() => setAdding(true)}>
-          Add a contact
+          {t("contactsCard.addContact")}
         </button>
       )}
       {editing && <EditContact contact={editing} onClose={() => setEditing(null)} />}
@@ -4780,6 +4801,7 @@ function ContactsCard() {
 }
 
 function EditContact({ contact, onClose }: { contact: Contact; onClose: () => void }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(contact.name);
   const [note, setNote] = useState(contact.note ?? "");
   const [confirmDel, setConfirmDel] = useState(false);
@@ -4787,12 +4809,12 @@ function EditContact({ contact, onClose }: { contact: Contact; onClose: () => vo
   return createPortal(
     <div className="modalwrap" onClick={onClose}>
       <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ marginTop: 0 }}>{isNew ? "New contact" : "Edit contact"}</h2>
-        <label>Name</label>
+        <h2 style={{ marginTop: 0 }}>{isNew ? t("editContact.newContact") : t("editContact.editContact")}</h2>
+        <label>{t("editContact.name")}</label>
         <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-        <label>Note (optional)</label>
+        <label>{t("editContact.note")}</label>
         <input value={note} onChange={(e) => setNote(e.target.value)} />
-        <label>Address</label>
+        <label>{t("editContact.address")}</label>
         <div className="addr" style={{ fontSize: 12 }}>
           {contact.address}
         </div>
@@ -4806,22 +4828,22 @@ function EditContact({ contact, onClose }: { contact: Contact; onClose: () => vo
               onClose();
             }}
           >
-            Save
+            {t("editContact.save")}
           </button>
           <button className="btn ghost" onClick={onClose}>
-            Cancel
+            {t("editContact.cancel")}
           </button>
           {!isNew && (
             <button className="btn ghost" style={{ color: "var(--bad)" }} onClick={() => setConfirmDel(true)}>
-              Remove
+              {t("editContact.remove")}
             </button>
           )}
         </div>
         {confirmDel && (
           <ConfirmDialog
-            title={`Remove ${contact.name}?`}
-            body="Only the name is forgotten — any payments you made are untouched, and the address itself stays in your history."
-            confirmLabel="Remove"
+            title={t("editContact.removeTitle", { name: contact.name })}
+            body={t("editContact.removeBody")}
+            confirmLabel={t("editContact.removeConfirm")}
             danger
             onConfirm={() => {
               removeContact(contact.id);
@@ -4841,6 +4863,7 @@ function EditContact({ contact, onClose }: { contact: Contact; onClose: () => vo
 /// because it is the answer to the two things a user panics about: "my payment
 /// hasn't shown up" and "my balance/history is missing something".
 function RescanButton({ label, hint, daaScore }: { label: string; hint: string; daaScore?: number }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   // Whether history recording is on decides what a rescan can actually give
@@ -4893,22 +4916,22 @@ function RescanButton({ label, hint, daaScore }: { label: string; hint: string; 
         : "Rescan will re-read the chain from your wallet's birthday to rebuild history and recover anything missing.") +
     " Takes a minute or two — the balance shows as syncing meanwhile.";
 
-  const offHint = "Recovers your balance from the chain. History is off, so this rebuilds funds — not a transaction list.";
+  const offHint = t("rescanButton.offHint");
   return (
     <div className="rescanbox">
       <div>
         <b>{label}</b>
         <div className="muted small">
-          {done ? "Rescanning — this tab updates as it catches up." : historyOn === false ? offHint : hint}
+          {done ? t("rescanButton.rescanning") : historyOn === false ? offHint : hint}
         </div>
       </div>
       <div className="rescanbox-actions">
         <button className="btn ghost" onClick={() => setAsk(false)} disabled={busy}>
-          {busy ? "Starting…" : "↻ Rescan"}
+          {busy ? t("rescanButton.starting") : t("rescanButton.rescan")}
         </button>
         {historyOn === false && (
           <button className="btn ghost small" onClick={() => setAsk(true)} disabled={busy}>
-            Enable history & recover
+            {t("rescanButton.enableHistory")}
           </button>
         )}
       </div>
@@ -4933,6 +4956,7 @@ function RescanButton({ label, hint, daaScore }: { label: string; hint: string; 
 /// amount and note are a REQUEST — the payer can still change them. Rendered as a
 /// panel inside Receive's segmented toggle (no self-managed open state).
 function RequestAmount({ address }: { address: string }) {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState("");
   const [memo, setMemo] = useState("");
   const [qr, setQr] = useState("");
@@ -4956,10 +4980,10 @@ function RequestAmount({ address }: { address: string }) {
   const ready = !!amount.trim() && !!qr;
   return (
     <div className="request-amount">
-      <label>Amount to request</label>
+      <label>{t("requestAmount.amountLabel")}</label>
       <input value={amount} onChange={(e) => setAmount(sanitizeAmountInput(e.target.value))} placeholder="0.00" inputMode="decimal" autoFocus />
-      <label>What it's for (optional)</label>
-      <input value={memo} onChange={(e) => setMemo(e.target.value.slice(0, 400))} placeholder="Invoice 1042" maxLength={400} />
+      <label>{t("requestAmount.memoLabel")}</label>
+      <input value={memo} onChange={(e) => setMemo(e.target.value.slice(0, 400))} placeholder={t("requestAmount.memoPlaceholder")} maxLength={400} />
 
       <div className={"qr-vault" + (ready ? "" : " empty")}>
         <span className="qr-aura" aria-hidden="true" />
@@ -4969,30 +4993,31 @@ function RequestAmount({ address }: { address: string }) {
           <span className="qr-corner bl" aria-hidden="true" />
           <span className="qr-corner br" aria-hidden="true" />
           {ready
-            ? <img src={qr} alt="payment request QR" onClick={copy} style={{ cursor: "pointer" }} />
-            : <span className="qr-await" aria-hidden="true"><span className="shield-chip-mark" />Enter an amount</span>}
+            ? <img src={qr} alt={t("requestAmount.qrAlt")} onClick={copy} style={{ cursor: "pointer" }} />
+            : <span className="qr-await" aria-hidden="true"><span className="shield-chip-mark" />{t("requestAmount.enterAmount")}</span>}
         </div>
         {ready && (
-          <span className="shield-chip" aria-hidden="true"><span className="shield-chip-mark" />Shielded request</span>
+          <span className="shield-chip" aria-hidden="true"><span className="shield-chip-mark" />{t("requestAmount.shieldedRequest")}</span>
         )}
       </div>
 
       <div className="row" style={{ marginTop: 14 }}>
         <button className={"btn copybtn" + (copied ? " copied" : "")} disabled={!ready} onClick={copy}>
-          {copied ? "Copied ✓" : "Copy payment link"}
+          {copied ? t("requestAmount.copied") : t("requestAmount.copyLink")}
         </button>
         {typeof navigator !== "undefined" && typeof navigator.share === "function" && (
           <button className="btn ghost" disabled={!ready} onClick={() => { void navigator.share({ text: uri }).catch(() => {}); }}>
-            Share
+            {t("requestAmount.share")}
           </button>
         )}
       </div>
-      <div className="fieldhint muted">The payer's wallet fills in the amount and note — they can still change them.</div>
+      <div className="fieldhint muted">{t("requestAmount.hint")}</div>
     </div>
   );
 }
 
 function Receive({ status }: { status: Status }) {
+  const { t } = useTranslation();
   const addr = status.address || "";
   // The address QR never changes, so it's cached after the first render and shows
   // instantly on every later open — no beat where the card has a QR-shaped hole.
@@ -5024,14 +5049,14 @@ function Receive({ status }: { status: Status }) {
   };
   return (
     <div className="card">
-      <h2>Receive</h2>
+      <h2>{t("receive.title")}</h2>
 
-      <div className="rcv-toggle" role="tablist" aria-label="Receive mode">
+      <div className="rcv-toggle" role="tablist" aria-label={t("receive.modeAria")}>
         <button type="button" role="tab" aria-selected={mode === "address"} className={"rcv-seg" + (mode === "address" ? " on" : "")} onClick={() => setMode("address")}>
-          Address
+          {t("receive.modeAddress")}
         </button>
         <button type="button" role="tab" aria-selected={mode === "request"} className={"rcv-seg" + (mode === "request" ? " on" : "")} onClick={() => setMode("request")}>
-          Request amount
+          {t("receive.modeRequest")}
         </button>
         <span className="rcv-seg-ind" data-mode={mode} aria-hidden="true" />
       </div>
@@ -5045,29 +5070,29 @@ function Receive({ status }: { status: Status }) {
               <span className="qr-corner tr" aria-hidden="true" />
               <span className="qr-corner bl" aria-hidden="true" />
               <span className="qr-corner br" aria-hidden="true" />
-              {qr && <img src={qr} alt="address QR" onClick={copy} style={{ cursor: "pointer" }} />}
+              {qr && <img src={qr} alt={t("receive.qrAlt")} onClick={copy} style={{ cursor: "pointer" }} />}
             </div>
-            <span className="shield-chip" aria-hidden="true"><span className="shield-chip-mark" />Shielded</span>
+            <span className="shield-chip" aria-hidden="true"><span className="shield-chip-mark" />{t("receive.shielded")}</span>
           </div>
 
-          <label>Your shielded address</label>
-          <div className="addr" onClick={copy} style={{ cursor: "pointer" }} title="Tap to copy">
+          <label>{t("receive.yourAddress")}</label>
+          <div className="addr" onClick={copy} style={{ cursor: "pointer" }} title={t("receive.tapToCopy")}>
             {addr}
           </div>
           <div className="row" style={{ marginTop: 12 }}>
             <button className={"btn copybtn" + (copied ? " copied" : "")} onClick={copy}>
-              {copied ? "Copied ✓" : "Copy address"}
+              {copied ? t("receive.copied") : t("receive.copyAddress")}
             </button>
             {typeof navigator !== "undefined" && typeof navigator.share === "function" && (
               <button className="btn ghost" onClick={() => { void navigator.share({ text: addr }).catch(() => {}); }}>
-                Share
+                {t("receive.share")}
               </button>
             )}
           </div>
 
           <div className="privacy-terse" role="note">
             <span className="privacy-terse-mark" aria-hidden="true" />
-            Amounts, sender, recipient — sealed.
+            {t("receive.sealed")}
           </div>
         </>
       ) : (
@@ -5075,13 +5100,13 @@ function Receive({ status }: { status: Status }) {
       )}
 
       {!isWatchOnly() && (
-        <Collapsible title="Wallet view key" summary="Watch this wallet read-only">
+        <Collapsible title={t("receive.viewKeyTitle")} summary={t("receive.viewKeySummary")}>
           <WatchOnAnotherDevice status={status} />
         </Collapsible>
       )}
 
       <p className="muted small" style={{ marginTop: 18 }}>
-        Looking for your recovery seed? It moved to <b>Settings → Recovery seed</b>, behind your app lock.
+        <Trans i18nKey="receive.seedMoved" components={{ b: <b /> }} />
       </p>
     </div>
   );
@@ -5095,6 +5120,7 @@ function Receive({ status }: { status: Status }) {
 /// moment to re-prove it's the owner holding the phone); without one, an
 /// explicit are-you-somewhere-private confirmation stands in the way instead.
 function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<"idle" | "gate" | "shown">("idle");
   const [pass, setPass] = useState("");
   const [seed, setSeed] = useState("");
@@ -5112,7 +5138,7 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
         // Verify against the SAME sealed record the app lock uses; a wrong
         // entry reveals nothing.
         if (!(await unlock(pass))) {
-          setError(pin ? "Wrong PIN." : "Wrong passphrase.");
+          setError(pin ? t("revealSeedCard.wrongPin") : t("revealSeedCard.wrongPassphrase"));
           return;
         }
       }
@@ -5125,7 +5151,7 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
     } catch (e) {
       setError(
         (e as Error).message === SEED_REQUIRED
-          ? "This device doesn't hold this wallet's key — it is never sent to the server. Restore it with your recovery phrase or backup."
+          ? t("revealSeedCard.noKey")
           : (e as Error).message,
       );
     } finally {
@@ -5147,14 +5173,13 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
   // account); a legacy wallet has only its raw seed. Label what is actually shown,
   // so nobody writes down 64 hex characters believing it is their phrase.
   const showsPhrase = accountOf(activeToken() ?? "") !== null && !!masterMnemonic();
-  const noun = showsPhrase ? "recovery phrase" : "recovery seed";
   return (
     <div className="card">
-      <h2>{showsPhrase ? "Recovery phrase" : "Recovery seed"}</h2>
+      <h2>{showsPhrase ? t("revealSeedCard.titlePhrase") : t("revealSeedCard.titleSeed")}</h2>
       <p className="muted small" style={{ marginTop: 4 }}>
         {showsPhrase
-          ? "These words restore this wallet and every account under it. Reveal only somewhere private."
-          : "This seed is the only way to restore this wallet. Reveal only somewhere private."}
+          ? t("revealSeedCard.introPhrase")
+          : t("revealSeedCard.introSeed")}
       </p>
       {error && <div className="msg err">{error}</div>}
       {step === "idle" && (
@@ -5165,13 +5190,13 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
             setStep("gate");
           }}
         >
-          Reveal {noun}…
+          {showsPhrase ? t("revealSeedCard.revealPhrase") : t("revealSeedCard.revealSeed")}
         </button>
       )}
       {step === "gate" &&
         (locked ? (
           <>
-            <label>{pin ? "Enter your PIN to reveal" : "Enter your passphrase to reveal"}</label>
+            <label>{pin ? t("revealSeedCard.enterPin") : t("revealSeedCard.enterPassphrase")}</label>
             <div className="row">
               <input
                 type="password"
@@ -5182,31 +5207,31 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
                 onKeyDown={(e) => e.key === "Enter" && !busy && pass && reveal()}
               />
               <button className="btn small" style={{ flex: "0 0 auto" }} disabled={busy || !pass} onClick={reveal}>
-                {busy ? <span className="spin" /> : "Reveal"}
+                {busy ? <span className="spin" /> : t("revealSeedCard.reveal")}
               </button>
             </div>
             <button className="btn ghost small" style={{ marginTop: 10 }} onClick={() => setStep("idle")}>
-              Cancel
+              {t("revealSeedCard.cancel")}
             </button>
           </>
         ) : (
           <>
             <div className="msg warn small">
-              Make sure nobody can see your screen. The next tap puts your spending key on it.
+              {t("revealSeedCard.privateWarn")}
             </div>
             <div className="row" style={{ marginTop: 10 }}>
               <button className="btn small" disabled={busy} onClick={reveal}>
-                {busy ? <span className="spin" /> : "I'm somewhere private — reveal"}
+                {busy ? <span className="spin" /> : t("revealSeedCard.privateReveal")}
               </button>
               <button className="btn ghost small" onClick={() => setStep("idle")}>
-                Cancel
+                {t("revealSeedCard.cancel")}
               </button>
             </div>
           </>
         ))}
       {step === "shown" && (
         <>
-          <div className="msg warn small">Keep this private. Anyone with it controls your funds.</div>
+          <div className="msg warn small">{t("revealSeedCard.keepPrivate")}</div>
           {/* Same presentation as the first-run backup screen: a phrase is words in
               a fixed order, and reading it as one run-on line is how the order gets
               lost. A legacy hex seed stays a single blob. */}
@@ -5221,7 +5246,7 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
           )}
           <div className="row" style={{ marginTop: 12 }}>
             <button className="btn ghost small" onClick={copy}>
-              {copied ? "Copied ✓" : "Copy"}
+              {copied ? t("revealSeedCard.copied") : t("revealSeedCard.copy")}
             </button>
             <button
               className="btn ghost small"
@@ -5230,7 +5255,7 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
                 setStep("idle");
               }}
             >
-              Hide
+              {t("revealSeedCard.hide")}
             </button>
           </div>
         </>
@@ -5253,6 +5278,7 @@ const FEE_MAX_FC = 0.045; // worst-case single-tx fee — used for Max & validat
 // Fires `onResult` once with the decoded text, then the parent unmounts us and
 // our cleanup stops the camera.
 function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [err, setErr] = useState("");
 
@@ -5302,10 +5328,10 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
         const name = (e as Error).name || (e as Error).message;
         setErr(
           name === "NotAllowedError" || name === "SecurityError"
-            ? "Camera permission was denied. Allow camera access, or paste the address instead."
+            ? t("qrScanner.denied")
             : name === "NotFoundError"
-              ? "No camera found on this device — paste the address instead."
-              : "Couldn't start the camera. Paste the address instead.",
+              ? t("qrScanner.noCamera")
+              : t("qrScanner.failed"),
         );
       }
     })();
@@ -5314,7 +5340,7 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
   }, [onResult]);
 
   return (
-    <div className="scan-overlay" role="dialog" aria-modal="true" aria-label="Scan address QR code">
+    <div className="scan-overlay" role="dialog" aria-modal="true" aria-label={t("qrScanner.dialogAria")}>
       {/* Full-bleed camera, with the dimming and the frame drawn OVER it. The old
           layout put a 320px square of video in the middle of a black screen: the
           feed was cropped to a narrow slice of a 16:9 sensor so it was hard to aim,
@@ -5332,9 +5358,9 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
         </div>
       </div>
       <div className="scan-ui">
-        <p className="scan-hint">{err || "Point the camera at the recipient's address QR code"}</p>
+        <p className="scan-hint">{err || t("qrScanner.hint")}</p>
         <button type="button" className="btn ghost scan-cancel" onClick={onClose}>
-          {err ? "Close" : "Cancel"}
+          {err ? t("qrScanner.close") : t("qrScanner.cancel")}
         </button>
       </div>
     </div>
@@ -5357,6 +5383,7 @@ function Send({
   // an amount the daemon will reject (two balances on one screen).
   outflow: number;
 }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const price = useZkasPrice();
   const hide = useHideBalances();
@@ -5555,7 +5582,7 @@ function Send({
           if (!isSecretShaped(unlock.trim())) {
             setNeedSeed(true);
             setConfirming(false);
-            setError("This device doesn't hold this wallet's key yet. Enter your recovery phrase once to unlock sending here.");
+            setError(t("send.needSeed"));
             return;
           }
           const entered = unlock.trim();
@@ -5571,9 +5598,7 @@ function Send({
             const r = await keyForWallet(entered, status.address);
             if (!r) {
               setConfirming(false);
-              setError(
-                "That seed belongs to a different wallet — it does not unlock this one. Check which wallet you are restoring, or switch to the wallet that seed belongs to.",
-              );
+              setError(t("send.wrongSeed"));
               return;
             }
             seed = r.keyHex;
@@ -5593,7 +5618,7 @@ function Send({
       // than let the refusal land as an error on the form.
       const merge = mergeInFlight();
       if (merge) {
-        onStage("warming", { part: 1, parts: 1, sentFc: 0, totalFc: amt, note: "Finishing a background merge…" });
+        onStage("warming", { part: 1, parts: 1, sentFc: 0, totalFc: amt, note: t("send.finishingMerge") });
         await merge;
       }
       const sendStartedAt = Date.now();
@@ -5658,11 +5683,11 @@ function Send({
         // the confirmation visible and let the user choose consolidation or an
         // explicitly non-atomic multi-transaction payment.
         setFragmented(true);
-        setError(`${e.message} Nothing was signed or sent.`);
+        setError(t("send.fragmentedNothingSent", { message: e.message }));
         setConfirming(true);
       } else if (e instanceof PartialSendError && e.parts.length > 0) {
         onSent(buildRows(e.parts, to.trim()), { stay: true });
-        setError(`${(e as Error).message} The part already broadcast is recorded in History.`);
+        setError(t("send.partialRecorded", { message: (e as Error).message }));
         setConfirming(false);
       } else {
         setError((e as Error).message);
@@ -5682,32 +5707,31 @@ function Send({
   if (confirming) {
     return (
       <div className="card">
-        <h2>Confirm</h2>
+        <h2>{t("send.confirmTitle")}</h2>
         <div className="confirm-row">
-          <span className="muted">Amount</span>
-          <span className="mono">{trimFc(amount)} ZKAS{fmtFiat(amt, price) ? ` · ${fmtFiat(amt, price)}` : ""}</span>
+          <span className="muted">{t("send.amount")}</span>
+          <span className="mono">{t("send.zkasAmount", { amount: trimFc(amount) })}{fmtFiat(amt, price) ? ` · ${fmtFiat(amt, price)}` : ""}</span>
         </div>
         <div className="confirm-row">
-          <span className="muted">Network fee</span>
+          <span className="muted">{t("send.networkFee")}</span>
           <span className="mono">
-            {feeCustomSet ? `${feeCustom} ZKAS (custom)` : `${FEE_FC}–${FEE_MAX_FC} ZKAS`}
+            {feeCustomSet ? t("send.feeCustom", { fee: feeCustom }) : t("send.feeRange", { min: FEE_FC, max: FEE_MAX_FC })}
           </span>
         </div>
         <div className="confirm-row total">
-          <span>Total</span>
+          <span>{t("send.total")}</span>
           <span className="mono">
-            {feeCustomSet ? Number((amt + feeCustom).toFixed(8)) : `≤ ${Number((amt + FEE_MAX_FC).toFixed(8))}`} ZKAS
+            {feeCustomSet ? t("send.totalExact", { total: Number((amt + feeCustom).toFixed(8)) }) : t("send.totalUpTo", { total: Number((amt + FEE_MAX_FC).toFixed(8)) })}
           </span>
         </div>
         {/* Normal payments are atomic at the transaction boundary. If this many
             notes cannot fit, prepare stops before signing and offers a choice. */}
         {(status?.note_count ?? 0) > MAX_NOTES_PER_TX && !feeCustomSet && (
           <div className="muted small" style={{ marginTop: 2 }}>
-            Your balance sits in {status!.note_count} notes. If this amount cannot fit in one transaction, nothing is
-            sent and the wallet will offer consolidation or an explicit split payment.
+            {t("send.manyNotes", { n: status!.note_count })}
           </div>
         )}
-        <label>To</label>
+        <label>{t("send.to")}</label>
         {contact && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
             <div className="avatar" style={{ width: 30, height: 30, fontSize: 12 }}>
@@ -5719,44 +5743,42 @@ function Send({
         <div className="addr">{to.trim()}</div>
         {memo.trim() && (
           <>
-            <label>Private note</label>
+            <label>{t("send.privateNote")}</label>
             <div className="msg small" style={{ background: "transparent", border: "1px solid var(--border)" }}>
-              “{memo.trim()}” — sealed in the recipient's encrypted note; only they can read it.
+              {t("send.memoSealed", { memo: memo.trim() })}
             </div>
           </>
         )}
         {needSeed && (
           <>
-            <label>Recovery phrase · unlocks signing here</label>
-            <textarea value={unlock} onChange={(e) => setUnlock(e.target.value)} placeholder="Your 12-word recovery phrase" />
+            <label>{t("send.unlockLabel")}</label>
+            <textarea value={unlock} onChange={(e) => setUnlock(e.target.value)} placeholder={t("send.unlockPlaceholder")} />
           </>
         )}
         {busy ? (
           <SendScene stage={stage ?? undefined} estimateMs={sendEstimateMs} progress={sendProgress} />
         ) : status?.warming ? (
           <div className="msg warn small">
-            <b>⚡ This first payment will take a few minutes</b> — the wallet has to locate your coins in the chain
-            before it can spend them. It only does this once; later payments take seconds.
+            <Trans i18nKey="send.warmingNote" components={{ b: <b /> }} />
           </div>
         ) : (
           <div className="msg ok small">
-            Verified and signed <b>on your device</b>, then broadcast. Usually takes <b>a few seconds</b>.
+            <Trans i18nKey="send.signedOnDevice" components={{ b: <b /> }} />
           </div>
         )}
         {error && <div className="msg err">{error}</div>}
         {fragmented && (
           <div className="msg warn small">
-            <b>Choose safely:</b> consolidation is recommended. “Send in parts” broadcasts independent transactions;
-            accepted parts cannot be automatically reversed if a later part fails.
+            <Trans i18nKey="send.chooseSafely" components={{ b: <b /> }} />
           </div>
         )}
         <div className="row send-confirm-actions">
           <button className="btn ghost" disabled={busy} onClick={() => { setConfirming(false); setError(""); }}>
-            Back
+            {t("send.back")}
           </button>
           {fragmented && (
             <button className="btn" disabled={busy} onClick={() => setShowConsolidate(true)}>
-              Consolidate first
+              {t("send.consolidateFirst")}
             </button>
           )}
           <button className={fragmented ? "btn ghost" : "btn"} disabled={busy} onClick={() => void doSend(fragmented)}>
@@ -5764,18 +5786,20 @@ function Send({
               <>
                 <span className="spin" />{" "}
                 {stage === "warming"
-                  ? `Preparing${typeof sendProgress?.warmingPct === "number" ? ` ${sendProgress.warmingPct.toFixed(0)}%` : ""}…`
+                  ? typeof sendProgress?.warmingPct === "number"
+                    ? t("send.preparingPct", { pct: sendProgress.warmingPct.toFixed(0) })
+                    : t("send.preparing")
                   : stage === "signing"
-                    ? "Signing on device…"
+                    ? t("send.signingOnDevice")
                     : stage === "broadcasting"
-                      ? "Broadcasting…"
-                      : "Building private proof…"}
+                      ? t("send.broadcasting")
+                      : t("send.buildingProof")}
                 {/* A multi-transaction payment can run for minutes; without the part
                     counter a healthy send is indistinguishable from a hung one. */}
-                {sendProgress && sendProgress.parts > 1 && ` (${sendProgress.part} of ${sendProgress.parts})`}
+                {sendProgress && sendProgress.parts > 1 && ` ${t("send.partOf", { part: sendProgress.part, parts: sendProgress.parts })}`}
               </>
             ) : (
-              fragmented ? "Send in parts anyway" : "Confirm & send"
+              fragmented ? t("send.sendInParts") : t("send.confirmSend")
             )}
           </button>
         </div>
@@ -5788,15 +5812,13 @@ function Send({
               setFragmented(false);
               setConfirming(false);
               setError("");
-              toast.show("good", "Consolidation sent", "Wait for the new note to mature, then retry the full payment.");
+              toast.show("good", t("send.consolidationSentTitle"), t("send.consolidationSentBody"));
             }}
           />
         )}
         {busy && sendProgress && sendProgress.parts > 1 && (
           <p className="muted small" style={{ marginTop: 8 }}>
-            Your balance is spread across many small notes, so this payment is being sent as{" "}
-            {sendProgress.parts} transactions — {trimFc(sendProgress.sentFc.toFixed(8))} of{" "}
-            {trimFc(sendProgress.totalFc.toFixed(8))} ZKAS confirmed so far. Keep this page open until it finishes.
+            {t("send.splitProgress", { parts: sendProgress.parts, sent: trimFc(sendProgress.sentFc.toFixed(8)), total: trimFc(sendProgress.totalFc.toFixed(8)) })}
           </p>
         )}
       </div>
@@ -5806,25 +5828,25 @@ function Send({
   return (
     <div className="card">
       <div className="sendhead">
-        <h2 style={{ margin: 0 }}>Send</h2>
-        <span className="muted small">{hide ? MASK : trimFc(spendable.toFixed(8))} spendable{!hide && fmtFiat(spendable, price) ? ` · ${fmtFiat(spendable, price)}` : ""}</span>
+        <h2 style={{ margin: 0 }}>{t("send.title")}</h2>
+        <span className="muted small">{t("send.spendable", { amount: hide ? MASK : trimFc(spendable.toFixed(8)) })}{!hide && fmtFiat(spendable, price) ? ` · ${fmtFiat(spendable, price)}` : ""}</span>
       </div>
 
-      <label>Recipient shielded address</label>
+      <label>{t("send.recipientLabel")}</label>
       <div className="inputwrap">
         <input
           ref={toRef}
           value={to}
           onChange={(e) => setTo(e.target.value)}
-          placeholder="zkas:…"
+          placeholder={t("send.addrPlaceholder")}
           className="mono"
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
           style={to && !addrOk ? { borderColor: "var(--bad)" } : addrOk ? { borderColor: "var(--good)" } : undefined}
         />
-        <button type="button" className="inlinebtn" aria-label="Scan QR" onClick={() => setScanning(true)}>
-          Scan
+        <button type="button" className="inlinebtn" aria-label={t("send.scanAria")} onClick={() => setScanning(true)}>
+          {t("send.scan")}
         </button>
         <button
           type="button"
@@ -5840,37 +5862,37 @@ function Send({
             // put the cursor where they need it and tell them to use it.
             toRef.current?.focus();
             if (r.reason === "empty") {
-              toast.show("info", "Clipboard is empty", "Copy the address first, then tap Paste.");
+              toast.show("info", t("send.clipboardEmptyTitle"), t("send.clipboardEmptyBody"));
             } else {
               toast.show(
                 "bad",
-                "This browser won't share the clipboard",
-                "Press and hold the address field, then choose Paste.",
+                t("send.clipboardBlockedTitle"),
+                t("send.clipboardBlockedBody"),
               );
             }
           }}
         >
-          Paste
+          {t("send.paste")}
         </button>
       </div>
-      {to && !addrOk && <div className="fieldhint bad">That doesn't look like a zkas: address.</div>}
+      {to && !addrOk && <div className="fieldhint bad">{t("send.badAddress")}</div>}
       {contact && (
         <div className="fieldhint" style={{ color: "var(--good)" }}>
-          Paying <b>{contact.name}</b> from your contacts.
+          <Trans i18nKey="send.payingContact" values={{ name: contact.name }} components={{ b: <b /> }} />
         </div>
       )}
       {isSelf && (
         <div className="fieldhint" style={{ color: "var(--ember)" }}>
-          That's your own address. The payment works — it just returns to you, minus the fee.
+          {t("send.selfAddress")}
         </div>
       )}
       <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
         <button type="button" className="linkbtn" onClick={() => setPickContact(true)}>
-          Choose a contact
+          {t("send.chooseContact")}
         </button>
         {addrOk && !contact && (
           <button type="button" className="linkbtn" onClick={() => setSaveAddr(to.trim())}>
-            Save as contact
+            {t("send.saveAsContact")}
           </button>
         )}
       </div>
@@ -5896,9 +5918,9 @@ function Send({
       {scanning && <QrScanner onResult={onScan} onClose={() => setScanning(false)} />}
 
       <div className="amthead">
-        <label style={{ margin: 0 }}>Amount (ZKAS)</label>
+        <label style={{ margin: 0 }}>{t("send.amountLabel")}</label>
         <button type="button" className="linkbtn" onClick={setMax}>
-          Max
+          {t("send.max")}
         </button>
       </div>
       <input
@@ -5927,9 +5949,9 @@ function Send({
         aria-controls="fee-config"
         onClick={() => setShowFeeCfg(!showFeeCfg)}
       >
-        <span className="feerow-label">Network fee</span>
+        <span className="feerow-label">{t("send.networkFee")}</span>
         <span className="feerow-value">
-          {feeCustomSet ? `${feeCustom} ZKAS` : "Automatic"}
+          {feeCustomSet ? t("send.zkasAmount", { amount: feeCustom }) : t("send.automatic")}
           <span className={"feerow-chev" + (showFeeCfg ? " open" : "")} aria-hidden="true" />
         </span>
       </button>
@@ -5938,77 +5960,78 @@ function Send({
           <input
             value={customFee}
             onChange={(e) => setCustomFee(e.target.value.replace(/[^0-9.]/g, ""))}
-            placeholder={`Automatic (${FEE_FC}–${FEE_MAX_FC})`}
+            placeholder={t("send.feePlaceholder", { min: FEE_FC, max: FEE_MAX_FC })}
             inputMode="decimal"
             autoFocus
           />
           <div className="fieldhint muted">
-            Leave empty and the wallet picks the fee. Raise it only after a fee error.
+            {t("send.feeHint")}
           </div>
         </div>
       )}
 
       {!showMemo ? (
         <button type="button" className="linkbtn" style={{ marginTop: 14 }} onClick={() => setShowMemo(true)}>
-          + Add a private note
+          {t("send.addMemo")}
         </button>
       ) : (
         <>
-          <label>Private note (optional)</label>
+          <label>{t("send.memoLabel")}</label>
           <input
             value={memo}
             onChange={(e) => setMemo(e.target.value.slice(0, 400))}
-            placeholder="What is this payment for?"
+            placeholder={t("send.memoPlaceholder")}
             maxLength={400}
             autoFocus
           />
           <div className="fieldhint">
-            Sealed inside the recipient's encrypted note — only they can read it. Never appears on-chain or on the explorer.
+            {t("send.memoHint")}
           </div>
         </>
       )}
       {overspend && blockedByMaturing && (
         <div className="fieldhint bad">
-          Only {trimFc(spendable.toFixed(8))} is ready to spend right now — {trimFc(maturing.toFixed(8))} is still
-          arriving. Coins become spendable about 10 minutes after they land, including the change from a payment you
-          just made. It'll be ready shortly.
+          {t("send.maturingHint", { spendable: trimFc(spendable.toFixed(8)), maturing: trimFc(maturing.toFixed(8)) })}
         </div>
       )}
       {overspend && !blockedByMaturing && (
         <div className="fieldhint bad">
-          Not enough funds: {trimFc(spendable.toFixed(8))} spendable, need {trimFc((amt + FEE_MAX_FC).toFixed(8))} incl. up
-          to {FEE_MAX_FC} fee.
+          {t("send.notEnough", { spendable: trimFc(spendable.toFixed(8)), need: trimFc((amt + FEE_MAX_FC).toFixed(8)), maxFee: FEE_MAX_FC })}
         </div>
       )}
       {amtValid && !overspend && (
         <div className="fieldhint muted">
-          + {FEE_FC}–{FEE_MAX_FC} fee (scales with how many coins get combined) = up to{" "}
-          {Number((amt + FEE_MAX_FC).toFixed(8))} total
+          {t("send.feeSummary", { min: FEE_FC, max: FEE_MAX_FC, total: Number((amt + FEE_MAX_FC).toFixed(8)) })}
         </div>
       )}
 
       {!walletCanSpend({ online: !!status, synced: !!status?.synced, spendReady: status?.spend_ready }) && (
         <div className="msg warn small">
-          Still catching up with the chain — you can pay once it finishes, so the wallet knows about all your coins.
+          {t("send.catchingUp")}
         </div>
       )}
       {status?.synced && status?.warming && (
         <div className="msg warn warmbanner">
-          <b>⚡ Your first payment will take a few minutes.</b>
-          <br />
-          Locating your coins — this happens once. You can start the payment now.
+          <Trans
+            i18nKey="send.warmBanner"
+            components={{
+              b: <b />,
+              br: <br />,
+            }}
+          />
           </div>
       )}
       {error && <div className="msg err">{error}</div>}
 
       <button className="btn" disabled={!canProceed} onClick={() => { setError(""); setConfirming(true); }}>
-        Review send
+        {t("send.reviewSend")}
       </button>
     </div>
   );
 }
 
 function Sign({ status, embedded }: { status: Status | null; embedded?: boolean }) {
+  const { t } = useTranslation();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -6034,19 +6057,18 @@ function Sign({ status, embedded }: { status: Status | null; embedded?: boolean 
 
   return (
     <div className={embedded ? "" : "card"}>
-      {!embedded && <h2>Sign message</h2>}
+      {!embedded && <h2>{t("sign.title")}</h2>}
       <p className="muted small" style={{ marginTop: 0 }}>
-        Prove you control this wallet's address without spending. The signature discloses your viewing key (enables
-        note detection, never spend authority).
+        {t("sign.intro")}
       </p>
-      <label>Message</label>
-      <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Message to sign…" />
+      <label>{t("sign.message")}</label>
+      <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("sign.messagePlaceholder")} />
       {error && <div className="msg err">{error}</div>}
       {result && (
         <>
-          <label>Address</label>
+          <label>{t("sign.address")}</label>
           <div className="addr">{result.address}</div>
-          <label>Signature (fvk‖sig, hex)</label>
+          <label>{t("sign.signatureLabel")}</label>
           <div className="addr" style={{ maxHeight: 120, overflow: "auto" }}>
             {result.signature}
           </div>
@@ -6055,18 +6077,19 @@ function Sign({ status, embedded }: { status: Status | null; embedded?: boolean 
             style={{ marginTop: 12 }}
             onClick={() => copyText(result.signature)}
           >
-            Copy signature
+            {t("sign.copySignature")}
           </button>
         </>
       )}
       <button className="btn" disabled={busy || !message} onClick={submit}>
-        {busy ? <span className="spin" /> : "Sign"}
+        {busy ? <span className="spin" /> : t("sign.sign")}
       </button>
     </div>
   );
 }
 
 function Verify({ embedded }: { embedded?: boolean }) {
+  const { t } = useTranslation();
   const [address, setAddress] = useState("");
   const [message, setMessage] = useState("");
   const [signature, setSignature] = useState("");
@@ -6080,7 +6103,7 @@ function Verify({ embedded }: { embedded?: boolean }) {
     setResult(null);
     try {
       const valid = await verifyLocal(address.trim(), message, signature.trim());
-      setResult({ valid, reason: valid ? null : "signature does not verify for this address/message" });
+      setResult({ valid, reason: valid ? null : t("verify.reasonMismatch") });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -6090,24 +6113,24 @@ function Verify({ embedded }: { embedded?: boolean }) {
 
   return (
     <div className={embedded ? "" : "card"}>
-      {!embedded && <h2>Verify message</h2>}
+      {!embedded && <h2>{t("verify.title")}</h2>}
       <p className="muted small" style={{ marginTop: 0 }}>
-        Runs entirely in your browser — no server involved.
+        {t("verify.intro")}
       </p>
-      <label>Signer's address</label>
-      <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="zkas:…" className="mono" />
-      <label>Message</label>
-      <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="The signed message…" />
-      <label>Signature (hex)</label>
-      <textarea value={signature} onChange={(e) => setSignature(e.target.value)} placeholder="fvk‖sig hex…" />
+      <label>{t("verify.signerAddress")}</label>
+      <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("verify.addrPlaceholder")} className="mono" />
+      <label>{t("verify.message")}</label>
+      <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("verify.messagePlaceholder")} />
+      <label>{t("verify.signatureLabel")}</label>
+      <textarea value={signature} onChange={(e) => setSignature(e.target.value)} placeholder={t("verify.signaturePlaceholder")} />
       {error && <div className="msg err">{error}</div>}
       {result && (
         <div className={"msg " + (result.valid ? "ok" : "err")}>
-          {result.valid ? "✓ VALID — the signer controls this address." : `✗ INVALID — ${result.reason}`}
+          {result.valid ? t("verify.valid") : t("verify.invalid", { reason: result.reason })}
         </div>
       )}
       <button className="btn" disabled={busy || !address || !signature} onClick={submit}>
-        {busy ? <span className="spin" /> : "Verify"}
+        {busy ? <span className="spin" /> : t("verify.verify")}
       </button>
     </div>
   );
@@ -6178,6 +6201,7 @@ const History = memo(function History({
 }) {
   // Chain-derived history (mints, receives, and OVK-recovered sends): fetched
   // from the daemon, so it survives a seed restore and shows on every device.
+  const { t } = useTranslation();
   const toast = useToast();
   const price = useZkasPrice();
   const hide = useHideBalances();
@@ -6434,7 +6458,7 @@ const History = memo(function History({
   if (!historyOff && pending.length === 0 && chainRows.length === 0) {
     return (
       <div className="card">
-        <h2>History</h2>
+        <h2>{t("history.title")}</h2>
         {chain === null && (
           <div style={{ display: "grid", gap: 10 }}>
             {[0, 1, 2].map((i) => (
@@ -6446,12 +6470,12 @@ const History = memo(function History({
           {chain === null
             ? ""
             : recovering
-              ? "Recovering your history from the chain — a minute or two. You can leave this tab."
-              : "Nothing yet. Payments you receive and send show up here."}
+              ? t("history.recovering")
+              : t("history.empty")}
         </p>
         {chain !== null && (
           <button className="btn ghost small" onClick={() => setAskDisable(true)} disabled={busy}>
-            Turn history off
+            {t("history.turnOff")}
           </button>
         )}
       </div>
@@ -6460,40 +6484,40 @@ const History = memo(function History({
   return (
     <div className="card">
       <div className="history-heading">
-        <h2>History</h2>
+        <h2>{t("history.title")}</h2>
         {historyOff && (
           <button className="btn ghost small" onClick={() => setAskRecover(true)} disabled={busy}>
-            {busy ? "Starting…" : "Recover full history"}
+            {busy ? t("history.starting") : t("history.recoverFull")}
           </button>
         )}
       </div>
       {historyOff && (
         <div className="history-scope">
-          <b>On this device</b>
-          <span>{deviceCount === 0 ? "No saved payments" : `${deviceCount} saved payment${deviceCount === 1 ? "" : "s"}`}</span>
+          <b>{t("history.onThisDevice")}</b>
+          <span>{deviceCount === 0 ? t("history.noSavedPayments") : t("history.savedPayments", { count: deviceCount })}</span>
         </div>
       )}
       {fresh && (
         <div className="sentbanner appear">
           <span className="sent-check small">✓</span>
           <div>
-            <b>Sent privately.</b> Watch it confirm below — this updates live.
+            <Trans i18nKey="history.sentPrivately" components={{ b: <b /> }} />
           </div>
           {/* Explicit arrow, not the bare handler: passing it directly would hand
               the click event in as the "prefill address" argument. */}
           {onSendAnother && (
             <button className="btn ghost small" style={{ flex: "none" }} onClick={() => onSendAnother()}>
-              Send another
+              {t("history.sendAnother")}
             </button>
           )}
         </div>
       )}
       {(historyOff ? txs.length : allRows.length) > 3 && (
         <div className="filterbar">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, note or amount" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("history.searchPlaceholder")} />
           {(["all", "received", "sent", "coinbase"] as const).map((k) => (
             <button key={k} className={"chip" + (kindFilter === k ? " on" : "")} onClick={() => setKindFilter(k)}>
-              {k === "all" ? "All" : k === "coinbase" ? "Mined" : k === "sent" ? "Sent" : "Received"}
+              {k === "all" ? t("history.filterAll") : k === "coinbase" ? t("history.filterMined") : k === "sent" ? t("history.filterSent") : t("history.filterReceived")}
             </button>
           ))}
         </div>
@@ -6504,7 +6528,7 @@ const History = memo(function History({
           history off leaves `deviceRows` — sends — empty by definition, so the screen
           announced "nothing matches" directly above the arrivals it was showing. */}
       {(allRows.length > 0 || txs.length > 0 || (receipts?.length ?? 0) > 0) && merged.length === 0 && (
-        <p className="muted small">Nothing matches that filter.</p>
+        <p className="muted small">{t("history.nothingMatches")}</p>
       )}
       <div className="txlist">
         {/* Every send this device recorded, not only the unconfirmed ones. A confirmed
@@ -6520,37 +6544,37 @@ const History = memo(function History({
             if (row.t === "receipt") {
               const r = row.r;
               return (
-                <div key={`rcpt-${r.ts}-${ri}`} className="txrow" aria-label="Received">
+                <div key={`rcpt-${r.ts}-${ri}`} className="txrow" aria-label={t("history.receivedAria")}>
                   <div className="txrow-main">
-                    <span className="txrow-amt pos">{hide ? MASK : <>+ {trimFc(r.amountFc.toFixed(8))} ZKAS{fmtFiat(r.amountFc, price) ? <span className="fiat-sub small"> · {fmtFiat(r.amountFc, price)}</span> : null}</>}</span>
-                    <span className="txrow-badge recv">received</span>
+                    <span className="txrow-amt pos">{hide ? MASK : <>{t("history.plusZkas", { amount: trimFc(r.amountFc.toFixed(8)) })}{fmtFiat(r.amountFc, price) ? <span className="fiat-sub small"> · {fmtFiat(r.amountFc, price)}</span> : null}</>}</span>
+                    <span className="txrow-badge recv">{t("history.badgeReceived")}</span>
                   </div>
                   <div className="txrow-sub">
-                    <span>{r.whileAway ? "Noticed when you opened the app" : "Seen arriving"}</span>
+                    <span>{r.whileAway ? t("history.noticedOnOpen") : t("history.seenArriving")}</span>
                     <span>{fmtTime(r.ts)}</span>
                   </div>
                 </div>
               );
             }
             if (row.t === "device") {
-              const t = row.tx;
+              const tx = row.tx;
               return (
                 <button
-                  key={t.txid}
+                  key={tx.txid}
                   type="button"
-                  className={"txrow" + (t.txid === justSent ? " fresh" : "")}
+                  className={"txrow" + (tx.txid === justSent ? " fresh" : "")}
                   style={{ textAlign: "left", width: "100%", font: "inherit", color: "inherit" }}
-                  onClick={() => setDetail(localTxToRow(t))}
+                  onClick={() => setDetail(localTxToRow(tx))}
                 >
                   <div className="txrow-main">
-                    <span className="txrow-amt neg">{hide ? MASK : <>− {trimFc(t.amountFc.toFixed(8))} ZKAS{fmtFiat(t.amountFc, price) ? <span className="fiat-sub small"> · {fmtFiat(t.amountFc, price)}</span> : null}</>}</span>
-                    <span className={"txrow-badge " + ((t.confs ?? 0) >= 1 ? "done" : "pending")}>{confBadge(t)}</span>
+                    <span className="txrow-amt neg">{hide ? MASK : <>{t("history.minusZkas", { amount: trimFc(tx.amountFc.toFixed(8)) })}{fmtFiat(tx.amountFc, price) ? <span className="fiat-sub small"> · {fmtFiat(tx.amountFc, price)}</span> : null}</>}</span>
+                    <span className={"txrow-badge " + ((tx.confs ?? 0) >= 1 ? "done" : "pending")}>{confBadge(tx)}</span>
                   </div>
                   <div className="txrow-sub">
-                    <span className="mono">to {shortAddr(t.to)}</span>
-                    <span>{fmtTime(t.ts)}</span>
+                    <span className="mono">{t("history.toAddr", { addr: shortAddr(tx.to) })}</span>
+                    <span>{fmtTime(tx.ts)}</span>
                   </div>
-                  {lookups.label(t.txid) && <div className="txrow-label">{lookups.label(t.txid)}</div>}
+                  {lookups.label(tx.txid) && <div className="txrow-label">{lookups.label(tx.txid)}</div>}
                 </button>
               );
             }
@@ -6570,11 +6594,12 @@ const History = memo(function History({
                 <div className="txrow-main">
                   <span className={"txrow-amt " + (r.kind === "sent" ? "neg" : "pos")}>
                     {hide ? MASK : <>
-                    {r.kind === "sent" ? "− " : "+ "}
                     {/* A consolidation moves value to yourself, so what actually LEFT
                         the wallet is the fee, not the merged total. A normal send shows
                         the amount sent, unchanged. */}
-                    {trimFc((isConsolidationRow(r) ? r.feeSompi / 1e8 : r.amountZkas).toFixed(8))} ZKAS
+                    {r.kind === "sent"
+                      ? t("history.minusZkas", { amount: trimFc((isConsolidationRow(r) ? r.feeSompi / 1e8 : r.amountZkas).toFixed(8)) })
+                      : t("history.plusZkas", { amount: trimFc((isConsolidationRow(r) ? r.feeSompi / 1e8 : r.amountZkas).toFixed(8)) })}
                     {fmtFiat(isConsolidationRow(r) ? r.feeSompi / 1e8 : r.amountZkas, price) ? (
                       <span className="fiat-sub small"> · {fmtFiat(isConsolidationRow(r) ? r.feeSompi / 1e8 : r.amountZkas, price)}</span>
                     ) : null}
@@ -6582,31 +6607,31 @@ const History = memo(function History({
                   </span>
                   <span className={"txrow-badge " + (r.kind === "sent" ? "done" : "recv")}>
                     {r.kind === "coinbase"
-                      ? "mined"
+                      ? t("history.badgeMined")
                       : isConsolidationRow(r)
-                        ? "consolidated"
+                        ? t("history.badgeConsolidated")
                         : r.kind === "received"
-                          ? "received"
-                          : "sent"}
+                          ? t("history.badgeReceived")
+                          : t("history.badgeSent")}
                   </span>
                 </div>
                 <div className="txrow-sub">
                   {isConsolidationRow(r) ? (
-                    <span>merged notes in your wallet</span>
+                    <span>{t("history.mergedNotes")}</span>
                   ) : r.kind === "sent" && r.recipient ? (
                     <span className={lookups.contact(r.recipient) ? "" : "mono"}>
-                      to {lookups.name(r.recipient, shortAddr(r.recipient))}
+                      {t("history.toAddr", { addr: lookups.name(r.recipient, shortAddr(r.recipient)) })}
                     </span>
                   ) : r.memo ? (
-                    <span className="memo">“{r.memo}”</span>
+                    <span className="memo">{t("history.memoQuoted", { memo: r.memo })}</span>
                   ) : (
                     <span className="mono">{shortAddr(r.txid)}</span>
                   )}
-                  <span>{r.timestamp > 0 ? fmtTime(r.timestamp) : `DAA ${r.daaScore}`}</span>
+                  <span>{r.timestamp > 0 ? fmtTime(r.timestamp) : t("history.daa", { daa: r.daaScore })}</span>
                 </div>
                 {r.kind === "sent" && r.memo && (
                   <div className="txrow-sub">
-                    <span className="memo">“{r.memo}”</span>
+                    <span className="memo">{t("history.memoQuoted", { memo: r.memo })}</span>
                   </div>
                 )}
                 {lookups.label(r.txid) && <div className="txrow-label">{lookups.label(r.txid)}</div>}
@@ -6619,21 +6644,20 @@ const History = memo(function History({
           what it says it holds beyond them — not only what is on screen. */}
       {!showAll && (merged.length > HISTORY_PAGE || (chain?.total ?? 0) > allRows.length) && (
         <button className="btn ghost small" onClick={() => setShowAll(true)}>
-          {(chain?.total ?? 0) > allRows.length ? "Show all rows" : `Show all ${merged.length} rows`}
+          {(chain?.total ?? 0) > allRows.length ? t("history.showAllRows") : t("history.showAllN", { n: merged.length })}
         </button>
       )}
       {heldTxids > 0 && (
         <p className="muted small" style={{ marginTop: 14 }}>
-          {heldTxids} outgoing transaction{heldTxids === 1 ? "" : "s"} in flight — {trimFc(heldZkas.toFixed(8))} ZKAS
-          temporarily held until it confirms (returned automatically within ~1 hour if it never does).
+          {t("history.held", { count: heldTxids, amount: trimFc(heldZkas.toFixed(8)) })}
         </p>
       )}
       {!historyOff && (
         <>
-          <RescanButton label="Something missing?" hint="Re-read the chain to rebuild this history and recover any funds the local view lost." daaScore={daaScore} />
+          <RescanButton label={t("history.somethingMissing")} hint={t("history.rescanHint")} daaScore={daaScore} />
 
           <p className="muted small" style={{ marginTop: 14 }}>
-            Recovered from the chain by your viewing key. Tap a payment for details.{" "}
+            {t("history.recoveredNote")}{" "}
             <a
               href="#"
               onClick={(e) => {
@@ -6641,7 +6665,7 @@ const History = memo(function History({
                 setAskDisable(true);
               }}
             >
-              Turn history off & erase
+              {t("history.turnOffErase")}
             </a>
           </p>
         </>
@@ -6664,12 +6688,12 @@ const History = memo(function History({
                 const how = await exportFile(name, "text/csv", historyCsv(allRows));
                 toast.show("good", exportMessage(how, name));
               } catch {
-                toast.show("bad", "Could not export the CSV on this device.");
+                toast.show("bad", t("history.exportFailed"));
               }
             })();
           }}
         >
-          Export CSV
+          {t("history.exportCsv")}
         </button>
       )}
       {detail && (
@@ -6697,9 +6721,9 @@ const History = memo(function History({
       )}
       {askDisable && (
         <ConfirmDialog
-          title="Turn history off?"
-          body="Erases the stored transaction list only. Your balance and funds are unaffected."
-          confirmLabel="Turn off & erase"
+          title={t("history.turnOffTitle")}
+          body={t("history.turnOffBody")}
+          confirmLabel={t("history.turnOffConfirm")}
           danger
           onConfirm={() => setHistory(false)}
           onCancel={() => setAskDisable(false)}
@@ -6719,6 +6743,7 @@ const History = memo(function History({
 /// straight into "can't reach the wallet service" — the same wrong-address trap
 /// the desktop app had with custom nodes, just softer.
 function DaemonSetting() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [base, setB] = useState("");
   const [busy, setBusy] = useState(false);
@@ -6743,11 +6768,8 @@ function DaemonSetting() {
       setWalletdBearer(url ? accessToken : "");
       location.reload();
     } catch (e) {
-      const detail = (e as Error).name === "AbortError" ? "timed out after 5s" : (e as Error).message;
-      setError(
-        `Couldn't reach a wallet service at ${url} (${detail}). Make sure zkas-walletd is running there and the ` +
-          `port is open. Nothing was changed — still using ${current}.`,
-      );
+      const detail = (e as Error).name === "AbortError" ? t("daemonSetting.timedOut") : (e as Error).message;
+      setError(t("daemonSetting.unreachable", { url, detail, current }));
       setBusy(false);
     }
   };
@@ -6760,23 +6782,27 @@ function DaemonSetting() {
           style={{ width: "100%", justifyContent: "space-between", textTransform: "none", letterSpacing: 0 }}
           onClick={() => setOpen(!open)}
         >
-          <span className="daemon-url">Connect to your own node</span>
-          <span className="muted daemon-mode">{own ? "your own ✓" : "hosted"} {open ? "▲" : "▼"}</span>
+          <span className="daemon-url">{t("daemonSetting.title")}</span>
+          <span className="muted daemon-mode">{own ? t("daemonSetting.modeOwn") : t("daemonSetting.modeHosted")} {open ? "▲" : "▼"}</span>
         </button>
       </h2>
       {open && (
         <>
           <p className="muted small" style={{ marginTop: 14 }}>
-            Your seed always signs on this device. But the hosted service still sees your <b>viewing key</b> — it can
-            watch your balance and history. To keep even that private, run <code>zkas-walletd</code> on your own node
-            and connect this wallet straight to it.
+            <Trans
+              i18nKey="daemonSetting.intro"
+              components={{
+                b: <b />,
+                code: <code />,
+              }}
+            />
           </p>
           <p className="muted small">
-            Just enter your node's <b>IP address</b> — we add the rest. {isNative() ? "The installed app supports HTTPS and plain HTTP LAN connections." : "The web wallet requires HTTPS; use the installed app for plain HTTP on a LAN."} Currently using{" "}
-            <span className="mono">{current}</span>.
+            <Trans i18nKey="daemonSetting.enterIp" components={{ b: <b /> }} /> {isNative() ? t("daemonSetting.nativeTransports") : t("daemonSetting.webTransports")}{" "}
+            <Trans i18nKey="daemonSetting.currentlyUsing" values={{ current }} components={{ code: <span className="mono" /> }} />
           </p>
           {error && <div className="msg err">{error}</div>}
-          <label>{isNative() ? "Walletd IP address or hostname" : "HTTPS walletd URL"}</label>
+          <label>{isNative() ? t("daemonSetting.labelNative") : t("daemonSetting.labelWeb")}</label>
           <div className="row">
             <input
               value={base}
@@ -6789,18 +6815,18 @@ function DaemonSetting() {
               spellCheck={false}
             />
             <button className="btn small" style={{ flex: "0 0 auto" }} disabled={busy || !base.trim()} onClick={() => save(base)}>
-              {busy ? <span className="spin" /> : "Connect"}
+              {busy ? <span className="spin" /> : t("daemonSetting.connect")}
             </button>
           </div>
           {showAccessTokenField() && (
             <>
-              <label style={{ marginTop: 10 }}>Access token <span className="muted">(if required)</span></label>
+              <label style={{ marginTop: 10 }}>{t("daemonSetting.accessToken")} <span className="muted">{t("daemonSetting.ifRequired")}</span></label>
               <input
                 type="password"
                 value={bearer}
                 onChange={(e) => setBearer(e.target.value)}
                 className="mono"
-                placeholder="Access token"
+                placeholder={t("daemonSetting.accessTokenPlaceholder")}
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
@@ -6808,11 +6834,11 @@ function DaemonSetting() {
             </>
           )}
           <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
-            Uses port {DEFAULT_WALLETD_PORT} by default — add <span className="mono">:port</span> only if you changed it.
+            <Trans i18nKey="daemonSetting.portNote" values={{ port: DEFAULT_WALLETD_PORT }} components={{ code: <span className="mono" /> }} />
           </p>
           {!own && (
             <button className="btn ghost small" style={{ marginTop: 12 }} disabled={busy} onClick={() => save("", "")}>
-              Reset to hosted default
+              {t("daemonSetting.resetHosted")}
             </button>
           )}
         </>
@@ -6828,6 +6854,7 @@ function DaemonSetting() {
 /// into being encrypted. Locking stops the embedded daemon and drops the
 /// passphrase, so what stays on disk cannot be spent.
 function VaultSetting() {
+  const { t } = useTranslation();
   const [state, setState] = useState<string | null>(null);
   const [askLock, setAskLock] = useState(false);
   useEffect(() => {
@@ -6844,13 +6871,12 @@ function VaultSetting() {
 
   return (
     <div className="card">
-      <h2>Security &amp; backup</h2>
+      <h2>{t("vaultSetting.title")}</h2>
 
       {state === "plaintext" && (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            This wallet's seed is stored <b>unencrypted</b> on this computer — anyone who copies the file can spend your
-            funds. Set a passphrase to encrypt it; your balance and history are untouched.
+            <Trans i18nKey="vaultSetting.plaintextWarning" components={{ b: <b /> }} />
           </p>
           <button
             className="btn"
@@ -6862,7 +6888,7 @@ function VaultSetting() {
               location.reload();
             }}
           >
-            Set a passphrase
+            {t("vaultSetting.setPassphrase")}
           </button>
           <div style={{ height: 1, background: "var(--border)", margin: "18px 0" }} />
         </>
@@ -6871,10 +6897,10 @@ function VaultSetting() {
       {state === "encrypted" && (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Locking stops the daemon and forgets your passphrase until you re-enter it.
+            {t("vaultSetting.lockingNote")}
           </p>
           <button className="btn ghost" onClick={() => setAskLock(true)}>
-            Lock wallet
+            {t("vaultSetting.lockWallet")}
           </button>
           <div style={{ height: 1, background: "var(--border)", margin: "18px 0" }} />
         </>
@@ -6884,9 +6910,9 @@ function VaultSetting() {
 
       {askLock && (
         <ConfirmDialog
-          title="Lock wallet?"
-          body="The wallet daemon stops and your passphrase is forgotten. You will need it again to unlock. Your funds are not affected."
-          confirmLabel="Lock"
+          title={t("vaultSetting.lockTitle")}
+          body={t("vaultSetting.lockBody")}
+          confirmLabel={t("vaultSetting.lockConfirm")}
           onConfirm={async () => {
             await lockVault().catch(() => {});
             location.reload();
@@ -6915,6 +6941,7 @@ function VaultSetting() {
 /// occasional background fee. The switch is the same flag `useMaintenance` reads,
 /// so turning it off makes the next maintenance tick skip with `disabled`.
 function AutoConsolidationCard() {
+  const { t } = useTranslation();
   const [on, setOn] = useState(isMaintenanceEnabled());
   const toggle = () => {
     const next = !on;
@@ -6923,17 +6950,16 @@ function AutoConsolidationCard() {
   };
   return (
     <div className="card">
-      <h2>Automatic consolidation</h2>
+      <h2>{t("autoConsolidationCard.title")}</h2>
       <p className="muted small" style={{ marginTop: 0 }}>
-        Occasionally merges your oldest notes in the background so a payment always fits. Each merge
-        costs a small fee — turn it off to merge yourself with <b>Consolidate</b> instead.
+        <Trans i18nKey="autoConsolidationCard.intro" components={{ b: <b /> }} />
       </p>
       <button className={"btn small" + (on ? " ghost" : "")} onClick={toggle}>
-        {on ? "Turn automatic consolidation off" : "Turn automatic consolidation on"}
+        {on ? t("autoConsolidationCard.turnOff") : t("autoConsolidationCard.turnOn")}
       </button>
       {!on && (
         <p className="muted small" style={{ marginTop: 8 }}>
-          Off. A large payment may need splitting until you merge with <b>Consolidate</b>.
+          <Trans i18nKey="autoConsolidationCard.offNote" components={{ b: <b /> }} />
         </p>
       )}
     </div>
@@ -6942,11 +6968,11 @@ function AutoConsolidationCard() {
 
 /// Short state for the Network privacy row's collapsed summary.
 function networkPrivacyLabel(): string {
-  if (embeddedChosen()) return "On this phone";
+  if (embeddedChosen()) return i18n.t("networkPrivacyLabel.phone");
   const base = getBase();
-  if (isOnionAddress(base)) return "Tor (.onion)";
-  if (!base || /wallet\.zkas\.info/i.test(base) || base.endsWith("/daemon")) return "Public";
-  return "Custom";
+  if (isOnionAddress(base)) return i18n.t("networkPrivacyLabel.tor");
+  if (!base || /wallet\.zkas\.info/i.test(base) || base.endsWith("/daemon")) return i18n.t("networkPrivacyLabel.public");
+  return i18n.t("networkPrivacyLabel.custom");
 }
 
 /// Explains the network-level privacy choices and how to reach each. On a shielded
@@ -6954,6 +6980,7 @@ function networkPrivacyLabel(): string {
 /// service can still learn is that SOME IP is asking about a given viewing key. The
 /// choice of service is what controls that, so it belongs in plain sight.
 function DebugLogsCard() {
+  const { t } = useTranslation();
   const [on, setOn] = useState(embeddedDebugChosen());
   const [text, setText] = useState("");
   const [shown, setShown] = useState(false);
@@ -6961,18 +6988,18 @@ function DebugLogsCard() {
   const toggle = async (v: boolean) => { setOn(v); setEmbeddedDebug(v); await setEngineDebugLogs(v); };
   const show = async () => { setText(await engineLogs()); setShown(true); };
   return (
-    <Collapsible title="Debug logs" summary={on ? "Verbose" : "Normal"}>
+    <Collapsible title={t("debugLogsCard.title")} summary={on ? t("debugLogsCard.verbose") : t("debugLogsCard.normal")}>
       <div className="stack">
         <label className="row" style={{ gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
           <input type="checkbox" checked={on} style={{ marginTop: 3 }} onChange={(e) => void toggle(e.target.checked)} />
-          <span><b>Verbose engine logs</b><br /><span className="muted small">More detail from the on-device engine. Turn on when a wallet is stuck opening or a send fails, then Show engine logs.</span></span>
+          <span><b>{t("debugLogsCard.verboseLabel")}</b><br /><span className="muted small">{t("debugLogsCard.verboseHint")}</span></span>
         </label>
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-          <button className="btn small" onClick={() => void show()}>Show engine logs</button>
-          {text && <button className="btn ghost small" onClick={() => void copyText(text)}>Copy</button>}
+          <button className="btn small" onClick={() => void show()}>{t("debugLogsCard.showLogs")}</button>
+          {text && <button className="btn ghost small" onClick={() => void copyText(text)}>{t("debugLogsCard.copy")}</button>}
         </div>
         {shown && (
-          <pre className="mono small" style={{ maxHeight: 320, overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", padding: 8, borderRadius: 8, border: "1px solid var(--border)" }}>{text || "No logs yet — the engine may not be running."}</pre>
+          <pre className="mono small" style={{ maxHeight: 320, overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", padding: 8, borderRadius: 8, border: "1px solid var(--border)" }}>{text || t("debugLogsCard.noLogs")}</pre>
         )}
       </div>
     </Collapsible>
@@ -6980,6 +7007,7 @@ function DebugLogsCard() {
 }
 
 function NetworkPrivacyCard() {
+  const { t } = useTranslation();
   const base = getBase();
   const onion = isOnionAddress(base);
   const current: "phone" | "public" | "tor" | "custom" =
@@ -6999,10 +7027,9 @@ function NetworkPrivacyCard() {
   if (isDesktop()) {
     return (
       <div className="card">
-        <h2>Network privacy</h2>
+        <h2>{t("networkPrivacyCard.title")}</h2>
         <p className="muted small" style={{ marginTop: 0 }}>
-          Keys stay in this app. Strongest privacy: run your own node (Node page). You can also connect over
-          <b> Tor</b> if Tor is running on this computer — both from <b>Chain source</b> above.
+          <Trans i18nKey="networkPrivacyCard.desktopNote" components={{ b: <b /> }} />
         </p>
       </div>
     );
@@ -7019,13 +7046,13 @@ function NetworkPrivacyCard() {
         setBusy(null);
       });
   };
-  const usePhone = (node?: string, tor?: boolean) => run("phone", async () => { const u = await ensureEmbedded(node, tor); setEmbeddedChosen(true); setBase(u); setWalletdBearer(""); });
+  const startOnPhone = (node?: string, tor?: boolean) => run("phone", async () => { const u = await ensureEmbedded(node, tor); setEmbeddedChosen(true); setBase(u); setWalletdBearer(""); });
   const leaveEngine = async () => { if (embeddedChosen()) { setEmbeddedChosen(false); await stopEmbedded(); } };
   const usePublic = () => run("public", async () => { await leaveEngine(); setBase(""); setWalletdBearer(""); });
   const useTor = () => run("tor", async () => { await leaveEngine(); const u = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000); setBase(u); setWalletdBearer(""); });
   const useCustom = () => {
     const entered = addr.trim();
-    if (!entered) return setErr("Enter a wallet-service address (host:port or an .onion).");
+    if (!entered) return setErr(t("networkPrivacyCard.enterAddress"));
     run("custom", async () => {
       await leaveEngine();
       const u = await findReachableDaemon(entered, bearer);
@@ -7033,30 +7060,30 @@ function NetworkPrivacyCard() {
       walletdProfiles.save(entered.replace(/^https?:\/\//, "").split("/")[0], u, bearer.trim() || undefined);
     });
   };
-  const tag = (m: typeof current) => (busy === m ? "Connecting…" : current === m ? "On" : "Use");
+  const tag = (m: typeof current) => (busy === m ? t("networkPrivacyCard.connecting") : current === m ? t("networkPrivacyCard.on") : t("networkPrivacyCard.use"));
 
   return (
     <div className="card">
-      <h2>Network privacy</h2>
-      <p className="muted small" style={{ marginTop: 0 }}>What your wallet connects to. Tap to switch.</p>
+      <h2>{t("networkPrivacyCard.title")}</h2>
+      <p className="muted small" style={{ marginTop: 0 }}>{t("networkPrivacyCard.intro")}</p>
       <div className="connection-list">
         {embeddedAvailable() && (
-          <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n, t) => usePhone(n, t)} />
+          <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n, tor) => startOnPhone(n, tor)} />
         )}
         <button className={"connection-option" + (current === "public" ? " active" : "")} disabled={!!busy} onClick={usePublic}>
-          <span><b>Public service</b><small>Fast. The wallet daemon can see your transactions.</small></span><span>{tag("public")}</span>
+          <span><b>{t("networkPrivacyCard.publicTitle")}</b><small>{t("networkPrivacyCard.publicHint")}</small></span><span>{tag("public")}</span>
         </button>
         <button className={"connection-option" + (current === "tor" ? " active" : "")} disabled={!!busy} onClick={useTor}>
-          <span><b>Over Tor</b><small>Hides your IP. The daemon still sees your transactions. Needs Orbot.</small></span><span>{tag("tor")}</span>
+          <span><b>{t("networkPrivacyCard.torTitle")}</b><small>{t("networkPrivacyCard.torHint")}</small></span><span>{tag("tor")}</span>
         </button>
         <button className={"connection-option" + (current === "custom" ? " active" : "")} disabled={!!busy} onClick={() => { setShowCustom((v) => !v); setErr(""); }}>
-          <span><b>My own walletd</b><small>A wallet daemon you run yourself.</small></span><span>{current === "custom" ? "On" : showCustom ? "▲" : "▾"}</span>
+          <span><b>{t("networkPrivacyCard.customTitle")}</b><small>{t("networkPrivacyCard.customHint")}</small></span><span>{current === "custom" ? t("networkPrivacyCard.on") : showCustom ? "▲" : "▾"}</span>
         </button>
         {showCustom && (
           <div className="connection-add firstrun-custom">
-            <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="host:port, http://<lan-ip>:8501, or .onion" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />
-            {showAccessTokenField() && <input value={bearer} onChange={(e) => setBearer(e.target.value)} placeholder="Access token" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />}
-            <button className="btn small" disabled={busy === "custom"} onClick={useCustom}>{busy === "custom" ? "Connecting…" : "Connect"}</button>
+            <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder={t("networkPrivacyCard.addrPlaceholder")} autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />
+            {showAccessTokenField() && <input value={bearer} onChange={(e) => setBearer(e.target.value)} placeholder={t("networkPrivacyCard.accessTokenPlaceholder")} autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy === "custom"} />}
+            <button className="btn small" disabled={busy === "custom"} onClick={useCustom}>{busy === "custom" ? t("networkPrivacyCard.connecting") : t("networkPrivacyCard.connect")}</button>
           </div>
         )}
       </div>
@@ -7070,6 +7097,7 @@ function NetworkPrivacyCard() {
 /// while the app is closed (see bgsync.ts). Off by default — a convenience worth
 /// a little battery is the user's to choose, not ours to take.
 function BackgroundSyncCard() {
+  const { t } = useTranslation();
   const [on, setOn] = useState(bgSyncEnabled());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -7093,18 +7121,16 @@ function BackgroundSyncCard() {
   };
   return (
     <div className="card">
-      <h2>Background sync</h2>
+      <h2>{t("backgroundSyncCard.title")}</h2>
       <p className="muted small" style={{ marginTop: 0 }}>
-        While on, the phone wakes about every 15 min (even closed) to stay synced and notify you of payments.
-        Off, it catches up when you open the app. The seed stays on this device either way.
+        {t("backgroundSyncCard.intro")}
       </p>
       <button className={"btn small" + (on ? " ghost" : "")} disabled={busy} onClick={toggle}>
-        {busy ? "…" : on ? "Turn background sync off" : "Turn background sync on"}
+        {busy ? "…" : on ? t("backgroundSyncCard.turnOff") : t("backgroundSyncCard.turnOn")}
       </button>
       {on && (
         <p className="muted small" style={{ marginTop: 8 }}>
-          On. Android may delay the wake when the battery is low — payments are never lost, the notification is
-          simply later.
+          {t("backgroundSyncCard.onNote")}
         </p>
       )}
       {err && <div className="msg err">{err}</div>}
@@ -7116,6 +7142,7 @@ function BackgroundSyncCard() {
 // fingerprint, or unlink it. Renders nothing when there is no usable biometric hardware
 // (or on the web build), so the option only appears where it can actually work.
 function BiometricToggle() {
+  const { t } = useTranslation();
   const [available, setAvailable] = useState(false);
   const [on, setOn] = useState(isBiometricConfigured());
   const [mode, setMode] = useState<"idle" | "enable">("idle");
@@ -7146,7 +7173,7 @@ function BiometricToggle() {
         setMode("idle");
         setSecret("");
       } else {
-        setErr(`That ${pin ? "PIN" : "passphrase"} is not correct.`);
+        setErr(pin ? t("biometricToggle.wrongPin") : t("biometricToggle.wrongPassphrase"));
       }
     } finally {
       setBusy(false);
@@ -7168,20 +7195,19 @@ function BiometricToggle() {
       {mode === "enable" ? (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Enter your current {pin ? "PIN" : "passphrase"} once to link it to this device's fingerprint. It stays
-            sealed on the device; the fingerprint only releases it to open the app.
+            {pin ? t("biometricToggle.linkIntroPin") : t("biometricToggle.linkIntroPassphrase")}
           </p>
           <input
             type="password"
             inputMode={pin ? "numeric" : "text"}
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
-            placeholder={pin ? "Current PIN" : "Current passphrase"}
+            placeholder={pin ? t("biometricToggle.currentPin") : t("biometricToggle.currentPassphrase")}
           />
           {err && <div className="msg err">{err}</div>}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button className="btn" onClick={enable} disabled={busy || !secret}>
-              {busy ? "Linking…" : "Enable fingerprint"}
+              {busy ? t("biometricToggle.linking") : t("biometricToggle.enable")}
             </button>
             <button
               className="btn ghost"
@@ -7192,24 +7218,24 @@ function BiometricToggle() {
               }}
               disabled={busy}
             >
-              Cancel
+              {t("biometricToggle.cancel")}
             </button>
           </div>
         </>
       ) : on ? (
         <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <span className="small">
-            <b>Fingerprint unlock is on.</b> Open the app with a fingerprint instead of typing.
+            <Trans i18nKey="biometricToggle.isOn" components={{ b: <b /> }} />
           </span>
           <button className="btn ghost small" onClick={disable} disabled={busy}>
-            Turn off
+            {t("biometricToggle.turnOff")}
           </button>
         </div>
       ) : (
         <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-          <span className="small muted">Unlock with a fingerprint instead of typing your {pin ? "PIN" : "passphrase"}.</span>
+          <span className="small muted">{pin ? t("biometricToggle.offerPin") : t("biometricToggle.offerPassphrase")}</span>
           <button className="btn small" onClick={() => setMode("enable")}>
-            Enable fingerprint
+            {t("biometricToggle.enable")}
           </button>
         </div>
       )}
@@ -7218,6 +7244,7 @@ function BiometricToggle() {
 }
 
 function AppLockSetting() {
+  const { t } = useTranslation();
   const [enabled, setEnabled] = useState(isLockEnabled());
   const [kind, setKind] = useState<"pin" | "passphrase">("pin");
   const [secret, setSecret] = useState("");
@@ -7247,8 +7274,8 @@ function AppLockSetting() {
 
   const enable = async () => {
     setErr("");
-    if (secret.length < minLen) return setErr(`Use at least ${minLen} ${kind === "pin" ? "digits" : "characters"}.`);
-    if (secret !== confirmSecret) return setErr("The two entries do not match.");
+    if (secret.length < minLen) return setErr(kind === "pin" ? t("appLockSetting.minDigits", { n: minLen }) : t("appLockSetting.minChars", { n: minLen }));
+    if (secret !== confirmSecret) return setErr(t("appLockSetting.mismatch"));
     setBusy(true);
     try {
       // Seals EVERY wallet on this device, not just the active one.
@@ -7272,7 +7299,7 @@ function AppLockSetting() {
     setBusy(true);
     try {
       if (!(await disableLock(secret))) {
-        setErr("That passphrase does not unlock this device.");
+        setErr(t("appLockSetting.wrongSecret"));
         return;
       }
       // The stored fingerprint secret unsealed the lock we just removed — drop it too,
@@ -7290,110 +7317,106 @@ function AppLockSetting() {
 
   return (
     <div className="card">
-      <h2>App lock</h2>
+      <h2>{t("appLockSetting.title")}</h2>
       {mode === "enable" ? (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Choose what to unlock with. This encrypts the key of <b>every wallet</b> on this device and asks for it
-            when the app opens — while locked, this device holds nothing that can spend any of them.
+            <Trans i18nKey="appLockSetting.enableIntro" components={{ b: <b /> }} />
           </p>
           <div style={{ display: "flex", gap: 14, margin: "8px 0 4px" }}>
             <label className="choice" style={{ margin: 0 }}>
-              <input type="radio" checked={kind === "pin"} onChange={() => setKind("pin")} /> <span>PIN</span>
+              <input type="radio" checked={kind === "pin"} onChange={() => setKind("pin")} /> <span>{t("appLockSetting.pin")}</span>
             </label>
             <label className="choice" style={{ margin: 0 }}>
               <input type="radio" checked={kind === "passphrase"} onChange={() => setKind("passphrase")} />{" "}
-              <span>Passphrase</span>
+              <span>{t("appLockSetting.passphrase")}</span>
             </label>
           </div>
-          <label>{kind === "pin" ? "PIN" : "Passphrase"}</label>
+          <label>{kind === "pin" ? t("appLockSetting.pin") : t("appLockSetting.passphrase")}</label>
           <input
             type="password"
             inputMode={kind === "pin" ? "numeric" : "text"}
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
-            placeholder={kind === "pin" ? `At least ${minLen} digits` : `At least ${minLen} characters`}
+            placeholder={kind === "pin" ? t("appLockSetting.atLeastDigits", { n: minLen }) : t("appLockSetting.atLeastChars", { n: minLen })}
           />
-          <label>Confirm</label>
+          <label>{t("appLockSetting.confirm")}</label>
           <input
             type="password"
             inputMode={kind === "pin" ? "numeric" : "text"}
             value={confirmSecret}
             onChange={(e) => setConfirmSecret(e.target.value)}
-            placeholder="Enter it again"
+            placeholder={t("appLockSetting.enterAgain")}
           />
           {bioAvail && (
             <label className="choice" style={{ margin: "10px 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
               <input type="checkbox" checked={alsoBio} onChange={(e) => setAlsoBio(e.target.checked)} />
               <span className="small">
-                Also unlock with fingerprint (you'll scan it once to link). Your {kind === "pin" ? "PIN" : "passphrase"}{" "}
-                keeps working.
+                {kind === "pin" ? t("appLockSetting.alsoBioPin") : t("appLockSetting.alsoBioPassphrase")}
               </span>
             </label>
           )}
           {err && <div className="msg err">{err}</div>}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button className="btn" onClick={enable} disabled={busy || !secret}>
-              {busy ? "Encrypting…" : "Turn on app lock"}
+              {busy ? t("appLockSetting.encrypting") : t("appLockSetting.turnOn")}
             </button>
             <button className="btn ghost" onClick={() => setMode("idle")} disabled={busy}>
-              Cancel
+              {t("appLockSetting.cancel")}
             </button>
           </div>
           <p className="muted small" style={{ marginTop: 10 }}>
-            Back up your wallet first. Nothing stores this {kind === "pin" ? "PIN" : "passphrase"}, so if you forget it
-            the only way back in is your seed phrase or a backup file.
+            {kind === "pin" ? t("appLockSetting.backupFirstPin") : t("appLockSetting.backupFirstPassphrase")}
           </p>
           {kind === "pin" && (
             <p className="muted small">
-              A PIN stops someone who picks up your phone. Use a passphrase for stronger protection.
+              {t("appLockSetting.pinStrength")}
           </p>
           )}
         </>
       ) : mode === "disable" ? (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Enter your current {lockKind() === "pin" ? "PIN" : "passphrase"} to turn the lock off. Your key will be
-            stored unencrypted on this device again.
+            {lockKind() === "pin" ? t("appLockSetting.disableIntroPin") : t("appLockSetting.disableIntroPassphrase")}
           </p>
           <input
             type="password"
             inputMode={lockKind() === "pin" ? "numeric" : "text"}
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
-            placeholder={lockKind() === "pin" ? "Current PIN" : "Current passphrase"}
+            placeholder={lockKind() === "pin" ? t("appLockSetting.currentPin") : t("appLockSetting.currentPassphrase")}
           />
           {err && <div className="msg err">{err}</div>}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button className="btn ghost" onClick={disable} disabled={busy || !secret}>
-              {busy ? "Removing…" : "Turn off app lock"}
+              {busy ? t("appLockSetting.removing") : t("appLockSetting.turnOff")}
             </button>
             <button className="btn ghost" onClick={() => setMode("idle")} disabled={busy}>
-              Cancel
+              {t("appLockSetting.cancel")}
             </button>
           </div>
         </>
       ) : enabled ? (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            <b>On.</b> Every wallet's key on this device is encrypted, and the app asks for your{" "}
-            {lockKind() === "pin" ? "PIN" : "passphrase"} to open. It re-locks itself after a few minutes in the
-            background.
+            {lockKind() === "pin" ? (
+              <Trans i18nKey="appLockSetting.onNotePin" components={{ b: <b /> }} />
+            ) : (
+              <Trans i18nKey="appLockSetting.onNotePassphrase" components={{ b: <b /> }} />
+            )}
           </p>
           <BiometricToggle />
           <button className="btn ghost" onClick={() => setMode("disable")}>
-            Turn off app lock
+            {t("appLockSetting.turnOff")}
           </button>
         </>
       ) : (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            Your wallet keys are stored on this device <b>unencrypted</b>. Turn on a PIN or passphrase and every one
-            of them is encrypted at rest, and the app asks for it on open — so someone holding this device, or a
-            backup of its data, cannot spend from it.
+            <Trans i18nKey="appLockSetting.offIntro" components={{ b: <b /> }} />
           </p>
           <button className="btn" onClick={() => setMode("enable")}>
-            Set a PIN or passphrase
+            {t("appLockSetting.setSecret")}
           </button>
         </>
       )}
@@ -7410,6 +7433,7 @@ function AppLockSetting() {
 /// start. Guarded hard: without a backup or seed phrase, the funds in the
 /// forgotten wallet are unreachable from this machine.
 function SwitchWallet() {
+  const { t } = useTranslation();
   const [, bump] = useState(0);
   const [askRemove, setAskRemove] = useState<WalletRef | null>(null);
   const [renaming, setRenaming] = useState<WalletRef | null>(null);
@@ -7425,10 +7449,9 @@ function SwitchWallet() {
 
   return (
     <div className="card">
-      <h2>Wallets</h2>
+      <h2>{t("switchWallet.title")}</h2>
       <p className="muted small" style={{ marginTop: 0 }}>
-        This device can hold several wallets at once. Switching between them keeps every one of them — their keys,
-        history and contacts stay exactly where they are.
+        {t("switchWallet.intro")}
       </p>
 
       {wallets.map((w) => (
@@ -7438,16 +7461,16 @@ function SwitchWallet() {
           </div>
           <div className="contact-main">
             <div className="contact-name">
-              {w.label} {w.token === active && <span className="muted small">· active</span>}
+              {w.label} {w.token === active && <span className="muted small">{t("switchWallet.active")}</span>}
             </div>
             {accountOf(w.token) !== null && (
-                <div className="muted small">Account {accountOf(w.token)! + 1}</div>
+                <div className="muted small">{t("switchWallet.account", { n: accountOf(w.token)! + 1 })}</div>
               )}
               {w.address && <div className="contact-addr">{w.address}</div>}
           </div>
           {w.token === active ? (
             <button className="linkbtn" onClick={() => setRenaming(w)}>
-              Rename
+              {t("switchWallet.rename")}
             </button>
           ) : (
             <button
@@ -7457,7 +7480,7 @@ function SwitchWallet() {
                 location.reload();
               }}
             >
-              Switch
+              {t("switchWallet.switch")}
             </button>
           )}
         </div>
@@ -7481,11 +7504,11 @@ function SwitchWallet() {
               addAccountWallet().catch((e) => setErr((e as Error).message));
             }}
           >
-            Add account
+            {t("switchWallet.addAccount")}
           </button>
         )}
         <button className={hasMaster() ? "btn ghost" : "btn"} onClick={() => void addSeparateWallet()}>
-          Add separate wallet
+          {t("switchWallet.addSeparate")}
         </button>
         {wallets.length > 0 && (
           <button
@@ -7493,7 +7516,7 @@ function SwitchWallet() {
             style={{ color: "var(--bad)" }}
             onClick={() => setAskRemove(wallets.find((w) => w.token === active) ?? null)}
           >
-            Remove this wallet
+            {t("switchWallet.removeThis")}
           </button>
         )}
       </div>
@@ -7510,9 +7533,9 @@ function SwitchWallet() {
 
       {askRemove && (
         <ConfirmDialog
-          title={`Remove ${askRemove.label}?`}
-          body="This wallet's key and data are erased from this device. Your other wallets are not affected. The coins stay on-chain but are unreachable from here without a backup or seed phrase."
-          confirmLabel="Remove wallet"
+          title={t("switchWallet.removeTitle", { label: askRemove.label })}
+          body={t("switchWallet.removeBody")}
+          confirmLabel={t("switchWallet.removeConfirm")}
           danger
           onConfirm={async () => {
             const w = askRemove;
@@ -7555,11 +7578,12 @@ function SwitchWallet() {
 }
 
 function RenameWallet({ wallet, onClose }: { wallet: WalletRef; onClose: () => void }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(wallet.label);
   return createPortal(
     <div className="modalwrap" onClick={onClose}>
       <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ marginTop: 0 }}>Rename wallet</h2>
+        <h2 style={{ marginTop: 0 }}>{t("renameWallet.title")}</h2>
         <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         <div style={{ display: "flex", gap: 8 }}>
           <button
@@ -7570,10 +7594,10 @@ function RenameWallet({ wallet, onClose }: { wallet: WalletRef; onClose: () => v
               onClose();
             }}
           >
-            Save
+            {t("renameWallet.save")}
           </button>
           <button className="btn ghost" onClick={onClose}>
-            Cancel
+            {t("renameWallet.cancel")}
           </button>
         </div>
       </div>
@@ -7589,6 +7613,7 @@ function RenameWallet({ wallet, onClose }: { wallet: WalletRef; onClose: () => v
 /// storage. The encryption therefore has to happen here (see `backup.ts`), not
 /// in walletd.
 function DeviceSeedBackup() {
+  const { t } = useTranslation();
   const [pass, setPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [busy, setBusy] = useState(false);
@@ -7628,16 +7653,15 @@ function DeviceSeedBackup() {
   if (!seed) {
     return (
       <p className="muted small" style={{ marginTop: 0 }}>
-        This device holds no spending key for the wallet — it can watch the balance but not spend. Restore your seed
-        phrase on the Send tab to spend from here.
+        {t("deviceSeedBackup.noKey")}
       </p>
     );
   }
 
   const run = async () => {
     setErr("");
-    if (pass.length < 8) return setErr("Use at least 8 characters.");
-    if (pass !== confirmPass) return setErr("The two passphrases do not match.");
+    if (pass.length < 8) return setErr(t("deviceSeedBackup.minChars"));
+    if (pass !== confirmPass) return setErr(t("deviceSeedBackup.mismatch"));
     setBusy(true);
     try {
       // Carry the wallet's real scan birthday (remembered at watch/restore time):
@@ -7682,14 +7706,14 @@ function DeviceSeedBackup() {
       return (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>
-            <b>Your backup is copied.</b> Paste it somewhere safe now — a password manager or a note to yourself.
+            <Trans i18nKey="deviceSeedBackup.copied" components={{ b: <b /> }} />
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
             <button className="btn small" onClick={() => void copyText(lastDoc)}>
-              Copy again
+              {t("deviceSeedBackup.copyAgain")}
             </button>
             <button className="btn ghost small" onClick={() => setDone(null)}>
-              Done
+              {t("deviceSeedBackup.done")}
             </button>
           </div>
         </>
@@ -7698,7 +7722,7 @@ function DeviceSeedBackup() {
     return (
       <>
         <p className="muted small" style={{ marginTop: 0 }}>
-          <b>Backup written.</b> Keep it off this computer. It is encrypted, useless without the passphrase.
+          <Trans i18nKey="deviceSeedBackup.written" components={{ b: <b /> }} />
           </p>
         <div className="addr" style={{ fontSize: 12 }}>
           {done.path}
@@ -7706,11 +7730,11 @@ function DeviceSeedBackup() {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
           {done.folder && (
             <button className="btn ghost small" onClick={() => openPath(done.folder).catch(() => {})}>
-              Open folder
+              {t("deviceSeedBackup.openFolder")}
             </button>
           )}
           <button className="btn ghost small" onClick={() => setDone(null)}>
-            Done
+            {t("deviceSeedBackup.done")}
           </button>
         </div>
       </>
@@ -7722,26 +7746,25 @@ function DeviceSeedBackup() {
   return (
     <>
       <p className="muted small" style={{ marginTop: 0 }}>
-        <b>Back up your wallet.</b> Save an encrypted copy so you can restore this wallet if the machine is lost.
+        <Trans i18nKey="deviceSeedBackup.intro" components={{ b: <b /> }} />
           </p>
-      <label>Backup passphrase</label>
-      <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="At least 8 characters" />
-      <label>Confirm backup passphrase</label>
-      <input type="password" value={confirmPass} onChange={(e) => setConfirmPass(e.target.value)} placeholder="Type it again" />
+      <label>{t("deviceSeedBackup.passLabel")}</label>
+      <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder={t("deviceSeedBackup.passPlaceholder")} />
+      <label>{t("deviceSeedBackup.confirmLabel")}</label>
+      <input type="password" value={confirmPass} onChange={(e) => setConfirmPass(e.target.value)} placeholder={t("deviceSeedBackup.confirmPlaceholder")} />
       {err && <div className="msg err">{err}</div>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button className="btn" onClick={run} disabled={busy || !pass}>
-          {busy ? "Encrypting…" : isNative() ? "Copy encrypted backup" : "Create backup file"}
+          {busy ? t("deviceSeedBackup.encrypting") : isNative() ? t("deviceSeedBackup.copyEncrypted") : t("deviceSeedBackup.createFile")}
         </button>
         {isDesktop() && (
           <button className="btn ghost" onClick={() => setMode("restore")} disabled={busy}>
-            Restore from backup
+            {t("deviceSeedBackup.restore")}
           </button>
         )}
       </div>
       <p className="muted small" style={{ marginTop: 10 }}>
-        Lose the backup passphrase and the file cannot be opened — not by us, not by anyone. Your seed phrase remains
-        the other way back in.
+        {t("deviceSeedBackup.loseWarning")}
       </p>
     </>
   );
@@ -7749,6 +7772,7 @@ function DeviceSeedBackup() {
 
 /// Restore the device's spending key from an encrypted backup file.
 function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation();
   const [found, setFound] = useState<string[]>([]);
   const [path, setPath] = useState("");
   // A file chosen through the OS picker: read by the WebView like any browser
@@ -7771,7 +7795,7 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
 
   const run = async () => {
     setErr("");
-    if (!fileJson && !path.trim()) return setErr("Choose a backup file.");
+    if (!fileJson && !path.trim()) return setErr(t("restoreSeedBackup.chooseFile"));
     setBusy(true);
     try {
       const json = fileJson || (await readBackupFile(path.trim()));
@@ -7788,9 +7812,7 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
       if (expected) {
         resolved = await keyForWallet(seedHex, expected);
         if (!resolved) {
-          throw new Error(
-            "That backup belongs to a different wallet than the one open now, so it was not applied — restoring it here would overwrite this wallet's key. Use “Add separate wallet”, then restore the backup there.",
-          );
+          throw new Error(t("restoreSeedBackup.wrongWallet"));
         }
         keyHex = resolved.keyHex;
       }
@@ -7798,7 +7820,7 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
       // viewing key — the same shape as a freshly created wallet, so spending
       // works after this and no wallet is ever registered without its key.
       if (!(await persistDeviceSeed(keyHex))) {
-        throw new Error("This device could not store the wallet key — free up space and try again.");
+        throw new Error(t("restoreSeedBackup.storeFailed"));
       }
       const { address } = await api.watch(await fvkHex(keyHex), birthday);
       rememberBirthday(birthday, address);
@@ -7823,10 +7845,10 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
     return (
       <>
         <p className="muted small" style={{ marginTop: 0 }}>
-          <b>Wallet restored.</b> Your balance rebuilds from the chain — this takes a minute or two.
+          <Trans i18nKey="restoreSeedBackup.restored" components={{ b: <b /> }} />
         </p>
         <button className="btn" onClick={() => location.reload()}>
-          Reload wallet
+          {t("restoreSeedBackup.reload")}
         </button>
       </>
     );
@@ -7835,11 +7857,11 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
   return (
     <>
       <p className="muted small" style={{ marginTop: 0 }}>
-        <b>Restore from backup.</b> Open an encrypted backup file and put its wallet on this computer.
+        <Trans i18nKey="restoreSeedBackup.intro" components={{ b: <b /> }} />
       </p>
       {found.length > 0 && (
         <>
-          <label>Backups found on this computer</label>
+          <label>{t("restoreSeedBackup.foundLabel")}</label>
           <select value={path} onChange={(e) => { setPath(e.target.value); setFileJson(""); setFileName(""); }}>
             {found.map((f) => (
               <option key={f} value={f}>
@@ -7849,7 +7871,7 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
           </select>
         </>
       )}
-      <label>{found.length > 0 ? "…or open a backup file (.json)" : "Backup file (.json)"}</label>
+      <label>{found.length > 0 ? t("restoreSeedBackup.orOpenFile") : t("restoreSeedBackup.fileLabel")}</label>
       <input
         type="file"
         accept="application/json,.json"
@@ -7862,21 +7884,21 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
               setFileName(f.name);
               setErr("");
             })
-            .catch(() => setErr("Could not read that file."));
+            .catch(() => setErr(t("restoreSeedBackup.readFailed")));
         }}
       />
-      {fileName && <div className="muted" style={{ fontSize: "0.85em" }}>Selected: {fileName}</div>}
-      <label>…or paste a path</label>
-      <input value={path} onChange={(e) => { setPath(e.target.value); setFileJson(""); setFileName(""); }} placeholder="/path/to/zkas-wallet-backup-….json" />
-      <label>Backup passphrase</label>
-      <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="The passphrase you gave the file" />
+      {fileName && <div className="muted" style={{ fontSize: "0.85em" }}>{t("restoreSeedBackup.selected", { name: fileName })}</div>}
+      <label>{t("restoreSeedBackup.orPastePath")}</label>
+      <input value={path} onChange={(e) => { setPath(e.target.value); setFileJson(""); setFileName(""); }} placeholder={t("restoreSeedBackup.pathPlaceholder")} />
+      <label>{t("restoreSeedBackup.passLabel")}</label>
+      <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder={t("restoreSeedBackup.passPlaceholder")} />
       {err && <div className="msg err">{err}</div>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button className="btn" onClick={run} disabled={busy || !pass}>
-          {busy ? "Restoring…" : "Restore wallet"}
+          {busy ? t("restoreSeedBackup.restoring") : t("restoreSeedBackup.restoreWallet")}
         </button>
         <button className="btn ghost" onClick={onBack} disabled={busy}>
-          Back
+          {t("restoreSeedBackup.back")}
         </button>
       </div>
     </>
@@ -7891,6 +7913,7 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
 /// without that passphrase, so it is safe to keep where the seed phrase alone
 /// would not be.
 function BackupWallet() {
+  const { t } = useTranslation();
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -7899,8 +7922,8 @@ function BackupWallet() {
 
   const run = async () => {
     setErr("");
-    if (pass.length < 8) return setErr("Use at least 8 characters.");
-    if (pass !== confirm) return setErr("The two passphrases do not match.");
+    if (pass.length < 8) return setErr(t("backupWallet.minChars"));
+    if (pass !== confirm) return setErr(t("backupWallet.mismatch"));
     setBusy(true);
     try {
       const info = await backupWallet(pass);
@@ -7918,17 +7941,17 @@ function BackupWallet() {
     return (
       <>
         <p className="muted small" style={{ marginTop: 0 }}>
-          <b>Backup written.</b> Keep it off this computer — a USB stick or password manager. It is encrypted.
+          <Trans i18nKey="backupWallet.written" components={{ b: <b /> }} />
           </p>
         <div className="addr" style={{ fontSize: 12 }}>
           {done.path}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
           <button className="btn ghost small" onClick={() => openPath(done.folder).catch(() => {})}>
-            Open folder
+            {t("backupWallet.openFolder")}
           </button>
           <button className="btn ghost small" onClick={() => setDone(null)}>
-            Make another
+            {t("backupWallet.makeAnother")}
           </button>
         </div>
       </>
@@ -7938,26 +7961,25 @@ function BackupWallet() {
   return (
     <>
       <p className="muted small" style={{ marginTop: 0 }}>
-        <b>Backup</b> — save an encrypted copy of your wallet to a file. Restore it on any computer with this app. Give
-        it its own passphrase; do not reuse the one that unlocks this device.
+        <Trans i18nKey="backupWallet.intro" components={{ b: <b /> }} />
       </p>
-      <label>Backup passphrase</label>
-      <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="At least 8 characters" />
-      <label>Confirm backup passphrase</label>
-      <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Type it again" />
+      <label>{t("backupWallet.passLabel")}</label>
+      <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder={t("backupWallet.passPlaceholder")} />
+      <label>{t("backupWallet.confirmLabel")}</label>
+      <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={t("backupWallet.confirmPlaceholder")} />
       {err && <div className="msg err">{err}</div>}
       <button className="btn ghost" onClick={run} disabled={busy || !pass}>
-        {busy ? "Writing…" : "Create backup file"}
+        {busy ? t("backupWallet.writing") : t("backupWallet.createFile")}
       </button>
       <p className="muted small" style={{ marginTop: 10 }}>
-        Lose this passphrase and the file cannot be opened — not by us, not by anyone. Your seed phrase remains the
-        other way back in.
+        {t("backupWallet.loseWarning")}
       </p>
     </>
   );
 }
 
 function NodeSourceSetting() {
+  const { t } = useTranslation();
   const [cfg, setCfg] = useState<DesktopConfig | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -7976,16 +7998,16 @@ function NodeSourceSetting() {
       setBusy(false);
     }
   };
-  const source = cfg.mode === "local" ? "Managed local node" : cfg.mode === "custom" ? "Your node" : "ZKAS public node";
+  const source = cfg.mode === "local" ? t("nodeSourceSetting.sourceLocal") : cfg.mode === "custom" ? t("nodeSourceSetting.sourceCustom") : t("nodeSourceSetting.sourcePublic");
   return (
     <div className="card">
-      <h2>Wallet node</h2>
-      <div className="detail-row"><span className="k">Connected through</span><span className="v">{source}</span></div>
-      <div className="detail-row"><span className="k">gRPC</span><span className="v mono">{cfg.node_addr}</span></div>
-      <p className="muted small">The embedded wallet engine keeps your keys on this computer. Node changes are checked before the wallet switches.</p>
+      <h2>{t("nodeSourceSetting.title")}</h2>
+      <div className="detail-row"><span className="k">{t("nodeSourceSetting.connectedThrough")}</span><span className="v">{source}</span></div>
+      <div className="detail-row"><span className="k">{t("nodeSourceSetting.grpc")}</span><span className="v mono">{cfg.node_addr}</span></div>
+      <p className="muted small">{t("nodeSourceSetting.intro")}</p>
       <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-        <button className="btn small" onClick={() => { location.hash = "#/node"; }}>Manage local node</button>
-        {cfg.mode !== "remote" && <button className="btn small ghost" disabled={busy} onClick={() => void switchToPublic()}>{busy ? "Checking…" : "Use public node"}</button>}
+        <button className="btn small" onClick={() => { location.hash = "#/node"; }}>{t("nodeSourceSetting.manageLocal")}</button>
+        {cfg.mode !== "remote" && <button className="btn small ghost" disabled={busy} onClick={() => void switchToPublic()}>{busy ? t("nodeSourceSetting.checking") : t("nodeSourceSetting.usePublic")}</button>}
       </div>
       {err && <div className="msg warn">{err}</div>}
     </div>
@@ -7997,6 +8019,7 @@ function NodeSourceSetting() {
 /// escape hatch here for local bind/config/runtime failures, but never claim the
 /// public node is guaranteed to repair an unrelated engine problem.
 export function DesktopEngineDown({ requestError }: { requestError?: string | null }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(requestError ?? null);
   const [engineAlive, setEngineAlive] = useState<boolean | null>(null);
@@ -8035,30 +8058,28 @@ export function DesktopEngineDown({ requestError }: { requestError?: string | nu
   if (starting) {
     return (
       <div className="card setup">
-        <h2>Starting the wallet on this computer</h2>
+        <h2>{t("desktopEngineDown.startingTitle")}</h2>
         <div className="msg">
-          Loading your wallet and catching up to the chain. The first run takes a
-          few minutes; it keeps going if you close this.
+          {t("desktopEngineDown.startingBody")}
         </div>
-        <p className="muted small">Waiting {Math.floor(waited / 60)}m {waited % 60}s. This screen clears itself.</p>
+        <p className="muted small">{t("desktopEngineDown.waiting", { m: Math.floor(waited / 60), s: waited % 60 })}</p>
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-          <button className="btn ghost" onClick={() => setShowLogs(true)}>View wallet logs</button>
+          <button className="btn ghost" onClick={() => setShowLogs(true)}>{t("desktopEngineDown.viewLogs")}</button>
         </div>
-        <ServiceLogsDialog open={showLogs} onClose={() => setShowLogs(false)} service="wallet-engine" title="Wallet engine logs" />
+        <ServiceLogsDialog open={showLogs} onClose={() => setShowLogs(false)} service="wallet-engine" title={t("desktopEngineDown.logsTitle")} />
       </div>
     );
   }
   return (
     <div className="card setup">
-      <h2>{engineAlive ? "Lost the connection to the wallet on this computer" : "The wallet on this computer didn't start"}</h2>
+      <h2>{engineAlive ? t("desktopEngineDown.lostTitle") : t("desktopEngineDown.notStartedTitle")}</h2>
       <div className="msg warn">
         {engineAlive
-          ? "The wallet is running on this computer but stopped answering. Retry reconnects to it."
-          : "The wallet that runs on this computer isn't answering. Your coins are safe on the chain — this is only how the app is reading them."}
+          ? t("desktopEngineDown.lostBody")
+          : t("desktopEngineDown.notStartedBody")}
       </div>
       <p className="muted small">
-        You can use the public wallet service instead: it has already scanned the
-        chain, so nothing has to start or sync here.
+        {t("desktopEngineDown.publicHint")}
       </p>
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         {/* The remedy used to be "switch the node source", which RESTARTS the
@@ -8082,35 +8103,34 @@ export function DesktopEngineDown({ requestError }: { requestError?: string | nu
             }
           }}
         >
-          {busy ? "Connecting…" : "Use the public wallet service"}
+          {busy ? t("desktopEngineDown.connecting") : t("desktopEngineDown.usePublic")}
         </button>
         {/* A plain retry first: the engine also fails for transient reasons, and
             the only remedy used to discard the user's custom-node config just to
             find out. */}
         <button className="btn ghost" disabled={busy} onClick={() => location.reload()}>
-          Retry
+          {t("desktopEngineDown.retry")}
         </button>
         <button className="btn ghost" onClick={() => setShowLogs(true)}>
-          View wallet logs
+          {t("desktopEngineDown.viewLogs")}
         </button>
       </div>
       {err && <div className="msg warn">{err}</div>}
       <p className="muted small">
-        If retrying does not help, the public wallet service above needs nothing
-        running on this computer. You can switch back to running it here later,
-        from Chain source.
+        {t("desktopEngineDown.retryHint")}
       </p>
       <ServiceLogsDialog
         open={showLogs}
         onClose={() => setShowLogs(false)}
         service="wallet-engine"
-        title="Wallet engine logs"
+        title={t("desktopEngineDown.logsTitle")}
       />
     </div>
   );
 }
 
 function Setup({ error: requestError }: { error?: string | null }) {
+  const { t } = useTranslation();
   const [base, setB] = useState(getBase());
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -8124,20 +8144,24 @@ function Setup({ error: requestError }: { error?: string | null }) {
 
   return (
     <div className="card setup">
-      <h2>Can't reach the wallet service</h2>
+      <h2>{t("setup.title")}</h2>
       <div className="msg warn">
         {isNative()
-          ? "The wallet service isn't responding. Check your connection and try again shortly — your funds are safe on-chain."
-          : "The hosted wallet service isn't responding. Nothing for you to run — try again shortly."}
+          ? t("setup.nativeDown")
+          : t("setup.hostedDown")}
       </div>
       <p className="muted small">
-        Your spending key is on this device either way — it is never sent to the service. What running your own{" "}
-        <code>zkas-walletd</code> changes is <b>privacy</b>: the hosted service can see which wallet is asking about
-        which blocks, and your own daemon sees only what you already know.
+        <Trans
+          i18nKey="setup.privacyNote"
+          components={{
+            code: <code />,
+            b: <b />,
+          }}
+        />
       </p>
-      <p className="muted small">{isNative() ? "The installed app accepts HTTPS and plain HTTP LAN addresses." : "The web wallet requires an HTTPS wallet-service URL."}</p>
+      <p className="muted small">{isNative() ? t("setup.nativeTransports") : t("setup.webTransports")}</p>
       {error && <div className="msg err">{error}</div>}
-      <label>Daemon URL</label>
+      <label>{t("setup.daemonUrl")}</label>
       <div className="row">
         <input value={base} onChange={(e) => setB(e.target.value)} className="mono" placeholder={isNative() ? "http://192.168.1.20:8501" : "https://wallet.example.com"} />
         <button
@@ -8157,7 +8181,7 @@ function Setup({ error: requestError }: { error?: string | null }) {
             }
           })()}
         >
-          {busy ? "Checking…" : "Save"}
+          {busy ? t("setup.checking") : t("setup.save")}
         </button>
       </div>
     </div>

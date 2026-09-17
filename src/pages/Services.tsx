@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   BookOpen,
   Bot,
@@ -22,8 +23,10 @@ import {
   type DirectoryService,
   type ServiceCategory,
   type ServiceIcon,
+  type ServiceStatus,
 } from "../services-directory";
 import { isDesktop } from "../desktop";
+import i18n from "../i18n";
 
 type Category = ServiceCategory;
 
@@ -59,16 +62,37 @@ const DESKTOP_ROUTES: Record<string, string> = {
 /// Where the directory opens when the user has not asked for anything specific.
 const DEFAULT_CATEGORY: "all" | Category = "use";
 
-const CATEGORIES: { id: "all" | Category; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "store", label: "Store" },
-  { id: "use", label: "Use" },
-  { id: "earn", label: "Earn" },
-  { id: "verify", label: "Verify" },
-  { id: "build", label: "Build" },
+// Labels are functions: the catalogue for a non-English language arrives after
+// this module has loaded, so the text must be looked up at render time.
+const CATEGORIES: { id: "all" | Category; label: () => string }[] = [
+  { id: "all", label: () => i18n.t("services.catAll") },
+  { id: "store", label: () => i18n.t("services.catStore") },
+  { id: "use", label: () => i18n.t("services.catUse") },
+  { id: "earn", label: () => i18n.t("services.catEarn") },
+  { id: "verify", label: () => i18n.t("services.catVerify") },
+  { id: "build", label: () => i18n.t("services.catBuild") },
 ];
 
+// Status and category values are validated enum tokens (shared with the remote
+// directory), so they are looked up at render time, not translated where stored.
+const STATUS_LABELS: Record<ServiceStatus, () => string> = {
+  Live: () => i18n.t("services.statusLive"),
+  Testing: () => i18n.t("services.statusTesting"),
+  "Developer preview": () => i18n.t("services.statusDeveloperPreview"),
+  Available: () => i18n.t("services.statusAvailable"),
+  Published: () => i18n.t("services.statusPublished"),
+  Open: () => i18n.t("services.statusOpen"),
+};
+const CATEGORY_LABELS: Record<Category, () => string> = {
+  store: () => i18n.t("services.categoryStore"),
+  use: () => i18n.t("services.categoryUse"),
+  earn: () => i18n.t("services.categoryEarn"),
+  verify: () => i18n.t("services.categoryVerify"),
+  build: () => i18n.t("services.categoryBuild"),
+};
+
 export function Services() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [services, setServices] = useState<DirectoryService[]>(() => readCachedServices() ?? BUNDLED_SERVICES);
@@ -118,10 +142,10 @@ export function Services() {
   return (
     <main className="control-page services-page">
       <div className="services-controls">
-        <div className="services-filters" role="group" aria-label="Filter services">
+        <div className="services-filters" role="group" aria-label={t("services.filterAria")}>
           {CATEGORIES.map((item) => {
             const count = item.id === "all" ? services.length : services.filter((service) => service.categories.includes(item.id as Category)).length;
-            return <button key={item.id} className={effective === item.id ? "active" : ""} onClick={() => choose(item.id)}>{item.label} <span>{count}</span></button>;
+            return <button key={item.id} className={effective === item.id ? "active" : ""} onClick={() => choose(item.id)}>{item.label()} <span>{count}</span></button>;
           })}
         </div>
       </div>
@@ -132,7 +156,7 @@ export function Services() {
             <article className="service-card" key={service.id}>
               <div className="card-title-row">
                 <span className="service-icon" aria-hidden="true"><Icon size={21} strokeWidth={1.8} /></span>
-                <span className="service-meta"><span className={`service-status ${["Live", "Available", "Published", "Open"].includes(service.status) ? "live" : "testing"}`}>{service.status}</span><span className="service-category">{service.categories.join(" · ")}</span></span>
+                <span className="service-meta"><span className={`service-status ${["Live", "Available", "Published", "Open"].includes(service.status) ? "live" : "testing"}`}>{STATUS_LABELS[service.status]()}</span><span className="service-category">{service.categories.map((category) => CATEGORY_LABELS[category]()).join(" · ")}</span></span>
               </div>
               <h2>{service.name}</h2>
               <p>{service.description}</p>
@@ -143,7 +167,7 @@ export function Services() {
           );
         })}
       </div>
-      {shown.length === 0 && <div className="control-card empty-state">No matching services.</div>}
+      {shown.length === 0 && <div className="control-card empty-state">{t("services.noMatching")}</div>}
     </main>
   );
 }

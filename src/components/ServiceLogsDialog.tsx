@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { desktopServices, type ServiceLog } from "../desktop-services";
 import { ServiceLogs } from "./ServiceLogs";
 
@@ -33,6 +34,7 @@ function mergeLogs(current: ServiceLog[], incoming: ServiceLog[]): ServiceLog[] 
  * webview was suspended.
  */
 export function ServiceLogsDialog({ open, onClose, service, title }: Props) {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<ServiceLog[]>([]);
   const [pollError, setPollError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
@@ -107,20 +109,20 @@ export function ServiceLogsDialog({ open, onClose, service, title }: Props) {
     <div className="service-dialog-backdrop" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
     }}>
-      <section className="service-dialog service-logs-dialog" role="dialog" aria-modal="true" aria-label={`${title} diagnostics`}>
+      <section className="service-dialog service-logs-dialog" role="dialog" aria-modal="true" aria-label={t("serviceLogsDialog.diagnosticsAria", { title })}>
         <header className="service-dialog-header">
           <div>
-            <span className="eyebrow">Diagnostics</span>
+            <span className="eyebrow">{t("serviceLogsDialog.eyebrow")}</span>
             <h2>{title}</h2>
           </div>
           <div className="service-dialog-header-actions">
             <span className={`log-live-state ${pollError ? "retrying" : ""}`}>
-              <i />{pollError ? "Reconnecting" : lastUpdated ? "Live" : "Opening"}
+              <i />{pollError ? t("serviceLogsDialog.reconnecting") : lastUpdated ? t("serviceLogsDialog.live") : t("serviceLogsDialog.opening")}
             </span>
-            <button className="dialog-close" aria-label="Close logs" title="Close" autoFocus onClick={onClose}><X size={19} /></button>
+            <button className="dialog-close" aria-label={t("serviceLogsDialog.closeLogsAria")} title={t("serviceLogsDialog.closeTitle")} autoFocus onClick={onClose}><X size={19} /></button>
           </div>
         </header>
-        {pollError && <div className="dialog-inline-error">Live events were interrupted. Snapshot polling will keep retrying: {pollError}</div>}
+        {pollError && <div className="dialog-inline-error">{t("serviceLogsDialog.interrupted", { error: pollError })}</div>}
         <ServiceLogs logs={logs} onClear={clearView} preferredService={service} />
       </section>
     </div>,

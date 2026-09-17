@@ -17,6 +17,7 @@
 // afterwards under Settings → node source.
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import { findReachableDaemon, setBase, setWalletdBearer } from "./api";
 import { setDesktopRemoteBase, setNodeSource } from "./desktop";
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
@@ -52,6 +53,7 @@ const SKIP_AFTER_MS = 12_000;
 type Mode = "hosted" | "remote" | "tor" | "custom";
 
 export function FirstRunNode({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>("remote");
   const [addr, setAddr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -89,7 +91,7 @@ export function FirstRunNode({ onDone }: { onDone: () => void }) {
     e.preventDefault();
     setErr("");
     setTorFailed(false);
-    if (mode === "custom" && !addr.trim()) return setErr("Enter the address of your node (host:port).");
+    if (mode === "custom" && !addr.trim()) return setErr(t("firstRunNode.errEnterAddress"));
     setBusy(true);
     try {
       if (mode === "hosted" || mode === "tor") {
@@ -124,39 +126,36 @@ export function FirstRunNode({ onDone }: { onDone: () => void }) {
   return (
     <div className="lockwrap">
       <form className="card lockcard" onSubmit={submit}>
-        <h2 style={{ marginTop: 0 }}>Choose how to connect</h2>
+        <h2 style={{ marginTop: 0 }}>{t("firstRunNode.title")}</h2>
         <p className="muted small">
-          Your keys stay on this computer whichever you pick, and your payments stay shielded on the chain. What
-          differs is who can see your activity, and how soon your balance shows.
+          {t("firstRunNode.intro")}
         </p>
 
         <label className="choice">
           <input type="radio" checked={mode === "remote"} onChange={() => setMode("remote")} disabled={busy} />
           <span>
-            <b>This computer · public node</b> — runs the wallet here; nothing about your wallet leaves this
-            computer. First sync scans the chain and takes a while.
+            <Trans i18nKey="firstRunNode.optRemote" components={{ b: <b /> }} />
           </span>
         </label>
 
         <label className="choice">
           <input type="radio" checked={mode === "hosted"} onChange={() => setMode("hosted")} disabled={busy} />
           <span>
-            <b>Public service</b> — ready at once. The wallet service can see your transactions, not your keys.
+            <Trans i18nKey="firstRunNode.optHosted" components={{ b: <b /> }} />
           </span>
         </label>
 
         <label className="choice">
           <input type="radio" checked={mode === "tor"} onChange={() => setMode("tor")} disabled={busy} />
           <span>
-            <b>Over Tor</b> — the public service, with your IP hidden. It still sees your transactions. Needs Tor
-            running on this computer.
+            <Trans i18nKey="firstRunNode.optTor" components={{ b: <b /> }} />
           </span>
         </label>
 
         <label className="choice">
           <input type="radio" checked={mode === "custom"} onChange={() => setMode("custom")} disabled={busy} />
           <span>
-            <b>My own node</b> — a node you already run, anywhere on your network.
+            <Trans i18nKey="firstRunNode.optCustom" components={{ b: <b /> }} />
           </span>
         </label>
         {mode === "custom" && (
@@ -164,20 +163,20 @@ export function FirstRunNode({ onDone }: { onDone: () => void }) {
         )}
 
         {mode === "remote" && !busy && (
-          <p className="muted small">You can install and switch to a fully managed local node from the Node page later.</p>
+          <p className="muted small">{t("firstRunNode.managedLater")}</p>
         )}
 
         {err && <div className="msg err">{err}</div>}
         {torFailed && <OrbotHelp />}
 
         <button className="btn" type="submit" disabled={busy}>
-          {busy ? "Connecting…" : "Continue"}
+          {busy ? t("firstRunNode.connecting") : t("firstRunNode.continue")}
         </button>
 
         {busy && showSkip && (
           <div style={{ marginTop: 12, textAlign: "center" }}>
             <p className="muted small" style={{ marginBottom: 6 }}>
-              Still connecting — it may be slow or busy right now.
+              {t("firstRunNode.stillConnecting")}
             </p>
             <button
               type="button"
@@ -192,16 +191,16 @@ export function FirstRunNode({ onDone }: { onDone: () => void }) {
                 padding: 0,
               }}
             >
-              Continue without connecting
+              {t("firstRunNode.continueWithout")}
             </button>
             <p className="muted small" style={{ marginTop: 6 }}>
-              Your wallet opens now on the engine on this computer. You can change how it connects under Settings.
+              {t("firstRunNode.opensNow")}
             </p>
           </div>
         )}
 
         <p className="muted small" style={{ marginTop: 10 }}>
-          You can change this at any time under Settings, without touching your wallet or its balance.
+          {t("firstRunNode.changeLater")}
         </p>
       </form>
     </div>

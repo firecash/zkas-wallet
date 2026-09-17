@@ -5,6 +5,8 @@
 // gain recovery phrases, accounts and Tor and the user would never know. Shown
 // once per release that needs it, gated by the version key below.
 
+import { useTranslation } from "react-i18next";
+
 const SEEN_KEY = "whatsnew_seen_v1_0_17";
 
 /** Whether to show the update notice: an existing wallet that hasn't seen it.
@@ -19,6 +21,7 @@ export function shouldShowWhatsNew(_hasWalletHistory: boolean): boolean {
 }
 
 export function WhatsNew({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const dismiss = () => {
     try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
     onClose();
@@ -33,25 +36,25 @@ export function WhatsNew({ onClose }: { onClose: () => void }) {
   return (
     <div className="modalwrap" onClick={dismiss}>
       <div className="card modalcard" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
-        <span className="eyebrow">New in 1.0.17</span>
-        <h2 style={{ margin: "6px 0 12px" }}>Recovery phrases</h2>
+        <span className="eyebrow">{t("whatsNew.eyebrow")}</span>
+        <h2 style={{ margin: "6px 0 12px" }}>{t("whatsNew.title")}</h2>
         <div className="whatsnew-list">
           <div>
-            <b>🔑 12-word phrase (BIP-39)</b>
-            <span className="muted small">New wallets use a standard BIP-39 phrase instead of a 64-character seed. Your existing seed keeps working.</span>
+            <b>{t("whatsNew.phraseTitle")}</b>
+            <span className="muted small">{t("whatsNew.phraseDesc")}</span>
           </div>
           <div>
-            <b>🗂 Accounts</b>
-            <span className="muted small">Add accounts from one phrase — one backup covers them all.</span>
+            <b>{t("whatsNew.accountsTitle")}</b>
+            <span className="muted small">{t("whatsNew.accountsDesc")}</span>
           </div>
           <div>
-            <b>🧅 Tor</b>
-            <span className="muted small">Connect over an onion so the service never sees your IP.</span>
+            <b>{t("whatsNew.torTitle")}</b>
+            <span className="muted small">{t("whatsNew.torDesc")}</span>
           </div>
         </div>
         <div className="row" style={{ marginTop: 16, gap: 10 }}>
-          <button className="btn ghost" onClick={dismiss}>Got it</button>
-          <button className="btn" onClick={openSettings}>Open settings</button>
+          <button className="btn ghost" onClick={dismiss}>{t("whatsNew.gotIt")}</button>
+          <button className="btn" onClick={openSettings}>{t("whatsNew.openSettings")}</button>
         </div>
       </div>
     </div>

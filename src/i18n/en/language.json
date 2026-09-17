@@ -1,0 +1,9 @@
+{
+  "languagePicker": {
+    "label": "Language",
+    "hintEnglish": "Follows your device language unless you pick one here.",
+    "hint": "Machine-translated. Something reads wrong? Tell us.",
+    "autoNotice": "Showing in {{name}} (your device language).",
+    "keep": "OK"
+  }
+}

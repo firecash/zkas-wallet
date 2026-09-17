@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 import { api, type Status } from "../api";
 
 type ToolTab = "batch" | "maintenance";
@@ -24,6 +25,7 @@ function formatSompi(value: bigint): string {
 }
 
 function BatchSend({ status, onRefresh }: { status: Status | null; onRefresh: () => void }) {
+  const { t } = useTranslation();
   const [rows, setRows] = useState("");
   const [fee, setFee] = useState("");
   const [busy, setBusy] = useState(false);
@@ -46,32 +48,33 @@ function BatchSend({ status, onRefresh }: { status: Status | null; onRefresh: ()
         parsed.map(({ to, amount_sompi, memo }) => ({ to, amount_sompi: amount_sompi!.toString(), memo })),
         feeSompi?.toString(),
       );
-      setResult(`Paid ${response.payees} recipients in ${response.tx_count} transaction${response.tx_count === 1 ? "" : "s"}.`);
+      setResult(t("batchSend.paid", { payees: response.payees, count: response.tx_count }));
       onRefresh();
     } catch (e) {
       const message = (e as Error).message;
-      setError(message.includes("custodial") || message.includes("403") ? "Batch send needs a self-hosted walletd that holds this wallet's seed. This app will not upload your seed to enable it." : message);
+      setError(message.includes("custodial") || message.includes("403") ? t("batchSend.custodial") : message);
     } finally {
       setBusy(false);
     }
   };
   return (
     <section className="control-card">
-      <h2>Batch send</h2>
-      <p>One recipient per line: <code>address, amount, optional memo</code>. walletd packs recipients into as few proofs as consensus allows.</p>
-      <textarea className="control-input mono batch-input" rows={9} value={rows} onChange={(event) => setRows(event.target.value)} placeholder={"zkas:…, 1.25, Invoice 1042\nzkas:…, 0.5"} />
-      <div className="batch-summary"><span>{parsed.length} recipients</span><strong>{formatSompi(total)} ZKAS</strong></div>
-      {invalid && <div className="control-error">Line {invalid.line} has an invalid address or amount.</div>}
-      {fee && feeSompi == null && <div className="control-error">Enter a positive fee with at most 8 decimal places.</div>}
-      <details className="advanced-details"><summary>Advanced fee floor</summary><label className="field-label">ZKAS per transaction<input className="control-input short-field" inputMode="decimal" value={fee} onChange={(event) => setFee(cleanAmount(event.target.value))} placeholder="Automatic" /></label><p className="subtle">Automatic is recommended. The node raises a low value to the byte-proportional relay minimum; paying more does not buy a faster lane.</p></details>
+      <h2>{t("batchSend.title")}</h2>
+      <p><Trans i18nKey="batchSend.intro" components={{ code: <code /> }} /></p>
+      <textarea className="control-input mono batch-input" rows={9} value={rows} onChange={(event) => setRows(event.target.value)} placeholder={t("batchSend.placeholder")} />
+      <div className="batch-summary"><span>{t("batchSend.recipients", { n: parsed.length })}</span><strong>{t("batchSend.totalZkas", { amount: formatSompi(total) })}</strong></div>
+      {invalid && <div className="control-error">{t("batchSend.invalidLine", { line: invalid.line })}</div>}
+      {fee && feeSompi == null && <div className="control-error">{t("batchSend.feeError")}</div>}
+      <details className="advanced-details"><summary>{t("batchSend.advancedFee")}</summary><label className="field-label">{t("batchSend.feePerTx")}<input className="control-input short-field" inputMode="decimal" value={fee} onChange={(event) => setFee(cleanAmount(event.target.value))} placeholder={t("batchSend.automatic")} /></label><p className="subtle">{t("batchSend.feeNote")}</p></details>
       {error && <div className="control-error">{error}</div>}
       {result && <div className="msg ok">{result}</div>}
-      <button className="btn" disabled={busy || !status?.synced || !parsed.length || !!invalid || (fee ? feeSompi == null : false) || total <= 0n} onClick={() => void send()}>{busy ? "Building private payout…" : `Review & send ${parsed.length || ""}`}</button>
+      <button className="btn" disabled={busy || !status?.synced || !parsed.length || !!invalid || (fee ? feeSompi == null : false) || total <= 0n} onClick={() => void send()}>{busy ? t("batchSend.building") : t("batchSend.reviewSend", { n: parsed.length || "" })}</button>
     </section>
   );
 }
 
 function Maintenance({ status, onRefresh }: { status: Status | null; onRefresh: () => void }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -81,27 +84,28 @@ function Maintenance({ status, onRefresh }: { status: Status | null; onRefresh: 
     setError("");
     try {
       const response = await api.consolidate();
-      setMessage(`Combined ${response.consolidated} notes. ${response.notes_remaining} notes remain.`);
+      setMessage(t("walletMaintenance.combined", { consolidated: response.consolidated, remaining: response.notes_remaining }));
       onRefresh();
     } catch (e) {
       const text = (e as Error).message;
-      setError(text.includes("custodial") || text.includes("403") ? "Manual consolidation needs a self-hosted walletd that holds this wallet's seed. Automatic fee-safe consolidation remains a daemon setting; the app never uploads your seed." : text);
+      setError(text.includes("custodial") || text.includes("403") ? t("walletMaintenance.custodial") : text);
     } finally {
       setBusy(false);
     }
   };
   return (
     <section className="control-card">
-      <div className="card-title-row"><div><h2>Notes</h2><p>Fewer notes make large payments cheaper and faster to prove.</p></div><span className="status-pill">{status?.note_count ?? "—"} notes</span></div>
-      <p className="subtle">Do not consolidate a normal wallet just to make the count smaller: it costs a real fee and creates an on-chain transaction. It is useful for mining and payout wallets with hundreds of small matured notes.</p>
+      <div className="card-title-row"><div><h2>{t("walletMaintenance.title")}</h2><p>{t("walletMaintenance.intro")}</p></div><span className="status-pill">{t("walletMaintenance.notesCount", { n: status?.note_count ?? "—" })}</span></div>
+      <p className="subtle">{t("walletMaintenance.warning")}</p>
       {message && <div className="msg ok">{message}</div>}
       {error && <div className="control-error">{error}</div>}
-      <button className="btn ghost" disabled={busy || !status?.synced || (status?.note_count ?? 0) < 2} onClick={() => void run()}>{busy ? "Combining notes…" : "Consolidate once"}</button>
+      <button className="btn ghost" disabled={busy || !status?.synced || (status?.note_count ?? 0) < 2} onClick={() => void run()}>{busy ? t("walletMaintenance.combining") : t("walletMaintenance.consolidateOnce")}</button>
     </section>
   );
 }
 
 export function WalletTools() {
+  const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const requested = params.get("tab") as ToolTab | null;
   const [tab, setTabState] = useState<ToolTab>(requested && ["batch", "maintenance"].includes(requested) ? requested : "batch");
@@ -129,8 +133,8 @@ export function WalletTools() {
   };
   return (
     <main className="control-page tools-page">
-      <div className="control-heading"><div><span className="eyebrow">Wallet tools</span><h1>Wallet maintenance</h1><p>Batch payouts and note management.</p></div>{status?.watch_only && <span className="status-pill">Device-signed</span>}</div>
-      <div className="mode-tabs tool-tabs">{(["batch", "maintenance"] as ToolTab[]).map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => choose(item)}>{item === "batch" ? "Batch send" : "Maintenance"}</button>)}</div>
+      <div className="control-heading"><div><span className="eyebrow">{t("walletTools.eyebrow")}</span><h1>{t("walletTools.title")}</h1><p>{t("walletTools.intro")}</p></div>{status?.watch_only && <span className="status-pill">{t("walletTools.deviceSigned")}</span>}</div>
+      <div className="mode-tabs tool-tabs">{(["batch", "maintenance"] as ToolTab[]).map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => choose(item)}>{item === "batch" ? t("walletTools.tabBatch") : t("walletTools.tabMaintenance")}</button>)}</div>
       {tab === "batch" ? <BatchSend status={status} onRefresh={refresh} /> : <Maintenance status={status} onRefresh={refresh} />}
     </main>
   );

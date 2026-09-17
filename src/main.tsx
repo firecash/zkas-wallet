@@ -1,12 +1,17 @@
 import { Component, lazy, StrictMode, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Blocks, HardDrive, LayoutGrid, Pickaxe, Server, Settings, WalletCards } from "lucide-react";
 import { LockScreen } from "./LockScreen";
 import { AppLockScreen } from "./AppLockScreen";
 import { installAutoLock, isLockEnabled, isUnlocked } from "./applock";
 import { ToastHost } from "./toast";
 import { applyStoredTheme } from "./theme";
+// Importing the instance also initialises i18next with the merged English catalogue and
+// applies the stored/browser language before the first render. The instance itself is
+// for the class-based Boundary and the pre-React boot guard, which cannot use hooks.
+import i18n from "./i18n";
 import { initDesktop, isDesktop, vaultStatus } from "./desktop";
 import { FirstRunNode, needsNodeChoice, markNodeChoiceMade } from "./FirstRunNode";
 import { FirstRunConnect } from "./FirstRunConnect";
@@ -38,6 +43,7 @@ const SelfHost = lazy(() => import("./pages/SelfHost").then((module) => ({ defau
 // it is, and only mount the wallet once the daemon is up. In the browser there is
 // no vault and this resolves straight to the app.
 function Root({ locked, askNode, whatsNew }: { locked: boolean; askNode: boolean; whatsNew: boolean }) {
+  const { t } = useTranslation();
   const [unlocked, setUnlocked] = useState(!locked);
   const [nodeChosen, setNodeChosen] = useState(!askNode);
   const [showWhatsNew, setShowWhatsNew] = useState(whatsNew);
@@ -63,7 +69,7 @@ function Root({ locked, askNode, whatsNew }: { locked: boolean; askNode: boolean
     <>
       {showWhatsNew && <WhatsNew onClose={() => setShowWhatsNew(false)} />}
       <HashRouter>
-      <Suspense fallback={<BootLoader label="Opening…" />}>
+      <Suspense fallback={<BootLoader label={t("mainRoot.opening")} />}>
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<WalletRoute />} />
@@ -90,6 +96,7 @@ function Root({ locked, askNode, whatsNew }: { locked: boolean; askNode: boolean
 }
 
 function AppShell() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const desktop = isDesktop();
@@ -100,19 +107,19 @@ function AppShell() {
   // from Settings — which every user needs. The mobile bar is therefore
   // Wallet · Explore · Services · Settings.
   const pages = useMemo(() => [
-    { path: "/", label: "Wallet", icon: WalletCards },
+    { path: "/", label: t("mainNav.wallet"), icon: WalletCards },
     ...(desktop
       ? [
-          { path: "/node", label: "Node", icon: Server },
-          { path: "/mine", label: "Mine", icon: Pickaxe },
+          { path: "/node", label: t("mainNav.node"), icon: Server },
+          { path: "/mine", label: t("mainNav.mine"), icon: Pickaxe },
         ]
       : []),
-    { path: "/explore", label: "Explore", icon: Blocks },
-    { path: "/services", label: "Services", icon: LayoutGrid },
+    { path: "/explore", label: t("mainNav.explore"), icon: Blocks },
+    { path: "/services", label: t("mainNav.services"), icon: LayoutGrid },
     ...(desktop
-      ? [{ path: "/self-host", label: "Host", icon: HardDrive }]
-      : [{ path: "/settings", label: "Settings", icon: Settings }]),
-  ], [android, desktop]);
+      ? [{ path: "/self-host", label: t("mainNav.host"), icon: HardDrive }]
+      : [{ path: "/settings", label: t("mainNav.settings"), icon: Settings }]),
+  ], [android, desktop, t]);
   useHashRouterSync();
   // Reset scroll on every top-level route change (Wallet ↔ Explore ↔ Services ↔
   // Settings…) — a new screen otherwise keeps the previous one's scroll offset.
@@ -131,10 +138,10 @@ function AppShell() {
   }, [navigate, pages]);
   return (
     <div className={`app-shell${desktop ? " desktop-shell" : ""}${servicesTheme ? " services-theme" : ""}`}>
-      <nav className="app-switcher" aria-label="Main">
+      <nav className="app-switcher" aria-label={t("mainNav.mainAria")}>
         <div className="app-nav-bar">
-          <button className="app-wordmark" onClick={() => navigate("/")} aria-label="ZKAS wallet home">
-            <span>Z</span>KAS
+          <button className="app-wordmark" onClick={() => navigate("/")} aria-label={t("mainNav.homeAria")}>
+            <span>Z</span>KAS{/* i18n-ignore: logo wordmark */}
           </button>
           {/* Desktop has the room, so the version lives in the chrome where it is
               always visible — no digging through Settings to answer "what are you
@@ -149,7 +156,7 @@ function AppShell() {
             {pages.map((page, index) => {
               const active = location.pathname === page.path || (page.path === "/explore" && location.pathname.startsWith("/explore/"));
               const Icon = page.icon;
-              return <button key={page.path} title={`${page.label}${desktop ? ` · Ctrl+${index + 1}` : ""}`} aria-current={active ? "page" : undefined} className={active ? "active" : ""} onClick={() => navigate(page.path)}><Icon aria-hidden="true" size={18} strokeWidth={1.8} /><span className="app-nav-label">{page.label}</span></button>;
+              return <button key={page.path} title={desktop ? t("mainNav.tabShortcut", { label: page.label, n: index + 1 }) : page.label} aria-current={active ? "page" : undefined} className={active ? "active" : ""} onClick={() => navigate(page.path)}><Icon aria-hidden="true" size={18} strokeWidth={1.8} /><span className="app-nav-label">{page.label}</span></button>;
             })}
           </div>
         </div>
@@ -176,16 +183,15 @@ class Boundary extends Component<{ children: ReactNode }, { err: Error | null }>
     return (
       <div className="lockwrap">
         <div className="card lockcard">
-          <h2 style={{ marginTop: 0 }}>Something went wrong</h2>
+          <h2 style={{ marginTop: 0 }}>{i18n.t("errorBoundary.title")}</h2>
           <p className="muted small">
-            The wallet display hit an error. Your wallet and funds are not affected — reloading almost always fixes
-            this.
+            {i18n.t("errorBoundary.body")}
           </p>
           <p className="muted small mono" style={{ wordBreak: "break-all" }}>
             {String(this.state.err)}
           </p>
           <button className="btn" onClick={() => location.reload()}>
-            Reload wallet
+            {i18n.t("errorBoundary.reload")}
           </button>
         </div>
       </div>
@@ -423,9 +429,7 @@ boot().catch((err: unknown) => {
   mark.textContent = "ZKas";
   const what = document.createElement("p");
   what.style.cssText = "color:#b9b9c6;line-height:1.5;";
-  what.textContent =
-    "The wallet could not start. It needs site storage (cookies / site data) enabled for this site — " +
-    `your wallet and its settings live there. Allow it for ${location.hostname || "this site"}, then reload.`;
+  what.textContent = i18n.t("bootGuard.couldNotStart", { host: location.hostname || i18n.t("bootGuard.thisSite") });
   const why = document.createElement("p");
   why.style.cssText = "color:#7a7a8c;line-height:1.5;font-size:12px;word-break:break-all;";
   why.textContent = String((err as Error)?.message ?? err);

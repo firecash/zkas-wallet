@@ -2835,3 +2835,9 @@ input.mono, .host-token { font-size: 16px; }
 }
 .explorer-live-full:hover { border-color: var(--teal, #17d6be); color: var(--teal, #17d6be); }
 @media (max-width: 560px) { .explorer-live-frame { height: clamp(260px, 40vh, 380px); } }
+
+/* Language: inline switcher on the welcome screen, one-time "showing in …" bar. */
+.lang-inline { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin: -4px 0 8px; color: var(--muted); }
+.lang-inline select { width: auto; max-width: 60%; padding: 4px 8px; font-size: 13px; }
+.lang-notice-body { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.lang-notice-body select { width: auto; padding: 4px 8px; font-size: 13px; }

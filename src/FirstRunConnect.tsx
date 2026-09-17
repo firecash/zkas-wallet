@@ -11,6 +11,8 @@
 // It also carries the appearance choice (theme + accent) up front.
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "./i18n";
 import { markNodeChoiceMade } from "./FirstRunNode";
 import { findReachableDaemon, setBase, setWalletdBearer, normalizeDaemonInput, isNative } from "./api";
 import { walletdProfiles } from "./connection-profiles";
@@ -22,6 +24,7 @@ import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { showAccessTokenField } from "./lib/accesstoken";
 
 export function FirstRunConnect({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState<null | "public" | "tor" | "custom" | "phone">(null);
   const [showCustom, setShowCustom] = useState(false);
   const [addr, setAddr] = useState("");
@@ -52,7 +55,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
       finish();
     } catch (e) {
       setEmbeddedChosen(false);
-      setErr((e as Error).message || "The on-device engine could not start on this phone.");
+      setErr((e as Error).message || t("firstRunConnect.errEngine"));
       setBusy(null);
     }
   };
@@ -73,7 +76,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
   const connectCustom = async () => {
     if (busy) return;
     const entered = addr.trim();
-    if (!entered) return setErr("Enter the address of your wallet service (host:port, or an .onion).");
+    if (!entered) return setErr(t("firstRunConnect.errEnterAddress"));
     setErr(""); setBusy("custom");
     try {
       const url = await findReachableDaemon(entered, bearer);
@@ -89,28 +92,28 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
   return (
     <div className="lockwrap">
       <div className="card lockcard firstrun">
-        <h2 style={{ marginTop: 0 }}>Set up your wallet</h2>
+        <h2 style={{ marginTop: 0 }}>{t("firstRunConnect.title")}</h2>
         <p className="muted small">
-          Nothing leaves this device until you tap. Pick where your wallet connects.
+          {t("firstRunConnect.intro")}
         </p>
 
-        <span className="eyebrow">Connect</span>
+        <span className="eyebrow">{t("firstRunConnect.connectEyebrow")}</span>
         <div className="connection-list firstrun-conn">
           {embeddedAvailable() && (
-            <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} onStart={(n, t) => connectPhone(n, t)} />
+            <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} onStart={(n, useTor) => connectPhone(n, useTor)} />
           )}
           <button className="connection-option" disabled={!!busy} onClick={connectPublic}>
-            <span><b>Public service</b><small>Fast, nothing to install. The wallet daemon can see your transactions.</small></span>
-            <span>{busy === "public" ? "…" : "Use"}</span>
+            <span><b>{t("firstRunConnect.publicTitle")}</b><small>{t("firstRunConnect.publicDesc")}</small></span>
+            <span>{busy === "public" ? "…" : t("firstRunConnect.use")}</span>
           </button>
 
           <button className="connection-option" disabled={!!busy} onClick={() => void connectTor()}>
-            <span><b>Over Tor</b><small>Hides your IP. The daemon still sees your transactions. Needs Orbot.</small></span>
-            <span>{busy === "tor" ? "Connecting…" : "Use"}</span>
+            <span><b>{t("firstRunConnect.torTitle")}</b><small>{t("firstRunConnect.torDesc")}</small></span>
+            <span>{busy === "tor" ? t("firstRunConnect.connecting") : t("firstRunConnect.use")}</span>
           </button>
 
           <button className="connection-option" disabled={!!busy} onClick={() => { setShowCustom((v) => !v); setErr(""); }}>
-            <span><b>My own walletd</b><small>A wallet daemon you run yourself.</small></span>
+            <span><b>{t("firstRunConnect.customTitle")}</b><small>{t("firstRunConnect.customDesc")}</small></span>
             <span>{showCustom ? "▲" : "▾"}</span>
           </button>
 
@@ -119,7 +122,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
               <input
                 value={addr}
                 onChange={(e) => setAddr(e.target.value)}
-                placeholder={isNative() ? "host:port, http://<lan-ip>:8501, or an .onion" : "https://your-walletd or an .onion"}
+                placeholder={isNative() ? t("firstRunConnect.placeholderNative") : t("firstRunConnect.placeholderWeb")}
                 disabled={busy === "custom"}
                 autoCapitalize="none" autoCorrect="off" spellCheck={false}
               />
@@ -127,13 +130,13 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
                 <input
                   value={bearer}
                   onChange={(e) => setBearer(e.target.value)}
-                  placeholder="Access token"
+                  placeholder={t("firstRunConnect.accessToken")}
                   disabled={busy === "custom"}
                   autoCapitalize="none" autoCorrect="off" spellCheck={false}
                 />
               )}
               <button className="btn small" disabled={busy === "custom"} onClick={() => void connectCustom()}>
-                {busy === "custom" ? "Connecting…" : "Connect"}
+                {busy === "custom" ? t("firstRunConnect.connecting") : t("firstRunConnect.connect")}
               </button>
             </div>
           )}
@@ -142,7 +145,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
         {err && <div className="msg err">{err}</div>}
         {needTor && <OrbotHelp />}
 
-        <span className="eyebrow" style={{ marginTop: 14 }}>Accent color</span>
+        <span className="eyebrow" style={{ marginTop: 14 }}>{t("firstRunConnect.accentEyebrow")}</span>
         <div className="swatches">
           {(Object.keys(ACCENTS) as Accent[]).map((opt) => (
             <button
@@ -162,7 +165,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
         </div>
 
         <p className="muted small" style={{ marginTop: 12 }}>
-          You can change any of this later in Settings, without touching your wallet or its balance.
+          {t("firstRunConnect.changeLater")}
         </p>
       </div>
     </div>
@@ -173,8 +176,8 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
 function hostLabel(entered: string): string {
   try {
     const u = new URL(normalizeDaemonInput(entered) || entered);
-    return u.hostname || "My service";
+    return u.hostname || i18n.t("firstRunConnect.myService");
   } catch {
-    return entered.split("/")[0]?.split(":")[0] || "My service";
+    return entered.split("/")[0]?.split(":")[0] || i18n.t("firstRunConnect.myService");
   }
 }

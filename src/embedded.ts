@@ -11,6 +11,7 @@
 
 import { registerPlugin } from "@capacitor/core";
 import { isNative } from "./api";
+import i18n from "./i18n";
 
 interface EmbeddedEnginePlugin {
   start(opts: { nodeAddr?: string; secret?: string; socks?: string }): Promise<{ port: number }>;
@@ -117,7 +118,7 @@ export function setEngineBusy(v: boolean): void {
 /** Start the engine (idempotent) and return its loopback base URL, e.g.
  * http://127.0.0.1:54123. Throws if the engine cannot start. */
 export async function ensureEmbedded(nodeAddr?: string, tor?: boolean): Promise<string> {
-  if (!embeddedAvailable()) throw new Error("The on-device engine is not available on this device.");
+  if (!embeddedAvailable()) throw new Error(i18n.t("embedded.unavailable"));
   // Sync from the node the user chose (persisted), or the public default.
   const node = (nodeAddr && nodeAddr.trim()) || embeddedNode();
   const useTor = tor ?? embeddedTor();

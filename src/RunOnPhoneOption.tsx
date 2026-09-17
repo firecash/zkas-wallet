@@ -9,6 +9,7 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { embeddedNode, embeddedTor, DEFAULT_EMBEDDED_NODE } from "./embedded";
 
 export function RunOnPhoneOption({
@@ -24,6 +25,7 @@ export function RunOnPhoneOption({
   tag?: ReactNode;
   onStart: (node: string, tor: boolean) => void | Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [node, setNode] = useState(() => embeddedNode());
   const [tor, setTor] = useState(() => embeddedTor());
@@ -37,14 +39,14 @@ export function RunOnPhoneOption({
         onClick={() => (open ? go() : setOpen(true))}
       >
         <span>
-          <b>Run on this phone</b>
-          <small>Most private. No daemon ever sees your transactions. A bit more battery.</small>
+          <b>{t("runOnPhoneOption.title")}</b>
+          <small>{t("runOnPhoneOption.desc")}</small>
         </span>
         {tag != null && <span>{tag}</span>}
       </button>
       {open && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "10px 2px 4px" }}>
-          <label className="fieldhint muted">Node to sync from — host:port. The default is the public ZKas node.</label>
+          <label className="fieldhint muted">{t("runOnPhoneOption.nodeHint")}</label>
           <input
             value={node}
             onChange={(e) => setNode(e.target.value)}
@@ -59,13 +61,13 @@ export function RunOnPhoneOption({
           <label className="row" style={{ gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
             <input type="checkbox" checked={tor} style={{ marginTop: 3 }} disabled={!!busy} onChange={(e) => setTor(e.target.checked)} />
             <span>
-              <b>Reach the node over Tor</b>
+              <b>{t("runOnPhoneOption.torTitle")}</b>
               <br />
-              <span className="muted small">Hides your IP from the node. Requires the Orbot app (Tor) running on this phone.</span>
+              <span className="muted small">{t("runOnPhoneOption.torDesc")}</span>
             </span>
           </label>
           <button type="button" className="btn" disabled={!!busy} onClick={go}>
-            {starting ? "Starting…" : "Start on this phone"}
+            {starting ? t("runOnPhoneOption.starting") : t("runOnPhoneOption.start")}
           </button>
         </div>
       )}

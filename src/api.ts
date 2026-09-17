@@ -12,6 +12,7 @@
 import { WALLET_SERVICE_PORT } from "./ports";
 // desktop.ts imports nothing from here, so this cannot cycle.
 import { desktopRemoteBase } from "./desktop";
+import i18n from "./i18n";
 
 function defaultBase(): string {
   // Native mobile (Capacitor) loads the bundle from the device, so there is no
@@ -182,7 +183,7 @@ export function daemonEndpointCandidates(raw: string): string[] {
  * for a problem that does not exist. */
 export class WalletdUnauthorizedError extends Error {
   constructor(public url: string) {
-    super("That wallet service is reachable, but it rejected the access token. Copy the token from the Host screen of the computer running it.");
+    super(i18n.t("api.unauthorized"));
     this.name = "WalletdUnauthorizedError";
   }
 }
@@ -226,22 +227,22 @@ async function probe(url: string, path: string, headers: Record<string, string>,
  * consistent with a typo, a firewall, a sleeping machine and a wrong port. */
 export async function findReachableDaemon(raw: string, accessToken = "", timeoutMs = 5_000): Promise<string> {
   const candidates = daemonEndpointCandidates(raw);
-  if (!candidates.length) throw new Error("Enter a valid wallet-service address.");
+  if (!candidates.length) throw new Error(i18n.t("api.enterValidAddress"));
   const failures: string[] = [];
   const describe = (error: unknown) =>
-    (error as Error).name === "AbortError" ? `timed out after ${Math.round(timeoutMs / 1000)}s` : (error as Error).message;
+    (error as Error).name === "AbortError" ? i18n.t("api.timedOutAfter", { secs: Math.round(timeoutMs / 1000) }) : (error as Error).message;
 
   for (const url of candidates) {
     const transportError = walletdTransportError(url);
     if (transportError) {
-      failures.push(`${url}: ${transportError}`);
+      failures.push(i18n.t("api.triedFailure", { url, reason: transportError }));
       continue;
     }
     try {
       const health = await probe(url, "/health", {}, timeoutMs);
-      if (!health.ok) throw new Error(`answered ${health.status} on /health`);
+      if (!health.ok) throw new Error(i18n.t("api.answeredOnHealth", { status: health.status }));
     } catch (error) {
-      failures.push(`${url}: ${describe(error)}`);
+      failures.push(i18n.t("api.triedFailure", { url, reason: describe(error) }));
       continue;
     }
     // The service is definitely there. From here a failure is about THIS caller,
@@ -250,13 +251,13 @@ export async function findReachableDaemon(raw: string, accessToken = "", timeout
     const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
     if (accessToken.trim()) headers.Authorization = `Bearer ${accessToken.trim()}`;
     const response = await probe(url, "/api/status", headers, timeoutMs).catch((error: unknown) => {
-      throw new Error(`${url} is reachable but refused the wallet API request (${describe(error)}).`);
+      throw new Error(i18n.t("api.refusedApiRequest", { url, reason: describe(error) }));
     });
     if (response.status === 401 || response.status === 403) throw new WalletdUnauthorizedError(url);
-    if (!response.ok) throw new Error(`The wallet service at ${url} answered ${response.status}.`);
+    if (!response.ok) throw new Error(i18n.t("api.serviceAnswered", { url, status: response.status }));
     return url;
   }
-  throw new Error(`Could not reach a wallet service. Tried ${failures.join("; ")}`);
+  throw new Error(i18n.t("api.couldNotReach", { failures: failures.join("; ") }));
 }
 
 /** Explain a transport choice before fetch turns it into an opaque mixed-content
@@ -270,10 +271,10 @@ export function walletdTransportError(url: string): string | null {
     // Browser / the installed app do not impose it.)
     if (isOnionAddress(url)) return null;
     if (new URL(url).protocol !== "https:") {
-      return "The web wallet can connect only to an HTTPS wallet service. Use an HTTPS URL, an .onion address over Tor, or the installed desktop/mobile app for a plain HTTP LAN connection.";
+      return i18n.t("api.httpsOnly");
     }
   } catch {
-    return "Enter a valid HTTPS wallet-service URL.";
+    return i18n.t("api.enterValidHttpsUrl");
   }
   return null;
 }
@@ -540,7 +541,7 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
       text = response.body;
     } catch (e) {
       const detail = typeof e === "string" ? e : (e as Error)?.message || String(e);
-      throw new Error((viaTor ? "Cannot reach the Tor wallet service. (" : "Cannot reach the embedded wallet engine. (") + detail + ")");
+      throw new Error(viaTor ? i18n.t("api.cannotReachTor", { detail }) : i18n.t("api.cannotReachEmbedded", { detail }));
     }
   } else {
     let res: Response;
@@ -558,8 +559,8 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
         signal: ctl.signal,
       });
     } catch (e) {
-      if (ctl.signal.aborted) throw new Error("The wallet service is not responding (timed out).");
-      throw new Error("Cannot reach the wallet daemon. (" + (e as Error).message + ")");
+      if (ctl.signal.aborted) throw new Error(i18n.t("api.notResponding"));
+      throw new Error(i18n.t("api.cannotReachDaemon", { detail: (e as Error).message }));
     } finally {
       clearTimeout(timer);
     }
@@ -575,7 +576,7 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
     try {
       data = JSON.parse(text);
     } catch {
-      throw new Error(`The wallet service returned an invalid response (${status}).`);
+      throw new Error(i18n.t("api.invalidResponse", { status }));
     }
   }
   if (status < 200 || status >= 300) throw new Error(typeof data.error === "string" ? data.error : `${status} ${statusText}`.trim());

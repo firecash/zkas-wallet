@@ -1,4 +1,5 @@
 import { isDesktop } from "./desktop";
+import i18n from "./i18n";
 
 export interface ControlSettings {
   mode: "remote" | "custom" | "local";
@@ -162,7 +163,7 @@ export interface SelfHostStatus {
 }
 
 async function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
-  if (!isDesktop()) throw new Error("This control is available in the desktop app.");
+  if (!isDesktop()) throw new Error(i18n.t("desktopServices.desktopOnly"));
   const { invoke: tauriInvoke } = await import("@tauri-apps/api/core");
   try {
     return await tauriInvoke<T>(command, args);

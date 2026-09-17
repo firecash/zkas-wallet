@@ -21,6 +21,8 @@
 //     confirmations — the one thing that genuinely alarms people about a transaction —
 //     so a server answer below what is already displayed holds the display instead.
 
+import i18n from "./i18n";
+
 /// Assumed spacing between blocks for the local tick. Deliberately above the chain's
 /// ~1000ms so the interpolation under-counts and is corrected upward.
 const LOCAL_BLOCK_MS = 1_150;
@@ -70,6 +72,6 @@ export function tickedConfirmations({ serverConfs, serverAt, lastShown, now = Da
 export function confirmationLabel(confs: number | null, ageMs: number, settledAt = 10 * 60_000): string | null {
   if (confs === null) return null;
   if (confs <= 0) return null;
-  if (ageMs > settledAt) return "confirmed";
-  return `${confs} conf${confs === 1 ? "" : "s"}`;
+  if (ageMs > settledAt) return i18n.t("confirmations.confirmed");
+  return i18n.t("confirmations.confs", { count: confs });
 }

@@ -32,6 +32,8 @@
 // So samples now record whether the wallet was warm, estimates are drawn only from
 // the matching bucket, and the fit is affine whenever the samples can support one.
 
+import i18n from "./i18n";
+
 export type TimedOperation = "prepare" | "consolidate-pass";
 
 /// Samples kept per operation. Enough to shrug off one anomalous run without
@@ -215,9 +217,9 @@ function predictFromSameSized(samples: Sample[], notes: number): number | null {
 export function remainingLabel(estimateMs: number | null, elapsedMs: number): string | null {
   if (estimateMs === null) return null;
   const left = Math.round((estimateMs - elapsedMs) / 1000);
-  if (left <= 0) return "any moment now";
-  if (left < 60) return `about ${left}s left`;
+  if (left <= 0) return i18n.t("timing.anyMoment");
+  if (left < 60) return i18n.t("timing.secondsLeft", { s: left });
   const m = Math.floor(left / 60);
   const s = left % 60;
-  return s >= 10 ? `about ${m}m ${s}s left` : `about ${m}m left`;
+  return s >= 10 ? i18n.t("timing.minutesSecondsLeft", { m, s }) : i18n.t("timing.minutesLeft", { m });
 }

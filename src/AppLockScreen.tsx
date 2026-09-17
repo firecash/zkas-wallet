@@ -5,12 +5,14 @@
 // nothing to be tricked into revealing.
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import { lockKind, unlock } from "./applock";
 import { enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured, unlockWithBiometric } from "./biometric";
 import { listWallets } from "./wallets";
 import { wipeWalletState } from "./walletstate";
 
 export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
+  const { t } = useTranslation();
   const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -28,7 +30,10 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   const [showOffer, setShowOffer] = useState(false);
   const verifiedSecret = useRef<string | null>(null);
   const kind = lockKind();
-  const label = kind === "pin" ? "PIN" : "Passphrase";
+  const label = kind === "pin" ? t("appLockScreen.pin") : t("appLockScreen.passphrase");
+  // The in-sentence form ("pin" / "passphrase"): a separate catalogue entry rather
+  // than label.toLowerCase(), which is not how every language derives it.
+  const secretWord = kind === "pin" ? t("appLockScreen.pinLower") : t("appLockScreen.passphraseLower");
 
   const tryBiometric = async () => {
     setError("");
@@ -88,7 +93,7 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
       } else {
         // Deliberately not "wrong PIN, 3 tries left": there is no lockout to
         // count down to. The seal is the protection, and it does not weaken.
-        setError(`That ${label.toLowerCase()} does not unlock this wallet.`);
+        setError(t("appLockScreen.wrongSecret", { secret: secretWord }));
       }
     } finally {
       setBusy(false);
@@ -119,17 +124,15 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
     return (
       <div className="lockwrap">
         <div className="card lockcard">
-          <h2 style={{ marginTop: 0 }}>Unlock faster next time?</h2>
+          <h2 style={{ marginTop: 0 }}>{t("appLockScreen.offerTitle")}</h2>
           <p className="muted small">
-            Use your fingerprint to open ZKas instead of typing your {label.toLowerCase()}. Your {label.toLowerCase()}{" "}
-            still works and is what secures your keys — the fingerprint just unlocks the app on this device, and it never
-            leaves the phone.
+            {t("appLockScreen.offerBody", { secret: secretWord })}
           </p>
           <button className="btn" onClick={acceptOffer} disabled={busy}>
-            {busy ? "Setting up…" : "Enable fingerprint"}
+            {busy ? t("appLockScreen.settingUp") : t("appLockScreen.enableFingerprint")}
           </button>
           <button type="button" className="btn ghost" style={{ marginTop: 8 }} onClick={declineOffer} disabled={busy}>
-            Not now
+            {t("appLockScreen.notNow")}
           </button>
         </div>
       </div>
@@ -139,9 +142,9 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   return (
     <div className="lockwrap">
       <form className="card lockcard" onSubmit={submit}>
-        <h2 style={{ marginTop: 0 }}>Unlock ZKas</h2>
+        <h2 style={{ marginTop: 0 }}>{t("appLockScreen.title")}</h2>
         <p className="muted small">
-          Your wallet key is encrypted on this device. Enter your {label.toLowerCase()} to use it.
+          {t("appLockScreen.intro", { secret: secretWord })}
         </p>
         <label>{label}</label>
         <input
@@ -150,29 +153,27 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
           value={secret}
           autoFocus
           onChange={(e) => setSecret(e.target.value)}
-          placeholder={kind === "pin" ? "Your PIN" : "Your passphrase"}
+          placeholder={kind === "pin" ? t("appLockScreen.yourPin") : t("appLockScreen.yourPassphrase")}
         />
         {error && <div className="msg err">{error}</div>}
         <button className="btn" type="submit" disabled={busy || !secret}>
-          {busy ? "Unlocking…" : "Unlock"}
+          {busy ? t("appLockScreen.unlocking") : t("appLockScreen.unlock")}
         </button>
         {bioReady && (
           <button type="button" className="btn ghost" style={{ marginTop: 8 }} onClick={tryBiometric} disabled={busy}>
-            Use fingerprint
+            {t("appLockScreen.useFingerprint")}
           </button>
         )}
         <p className="muted small" style={{ marginTop: 12 }}>
-          Forgotten it? There is nothing to reset — the {label.toLowerCase()} is never stored or sent anywhere. The
-          only way back is restoring each wallet from its seed or a backup file.
+          {t("appLockScreen.forgotten", { secret: secretWord })}
         </p>
         {!askWipe ? (
           <button type="button" className="linkbtn" style={{ marginTop: 6 }} onClick={() => setAskWipe(true)}>
-            Forgot {label.toLowerCase()}?
+            {t("appLockScreen.forgotLink", { secret: secretWord })}
           </button>
         ) : (
           <div className="msg warn" style={{ marginTop: 10 }}>
-            This erases every wallet's data <b>from this device</b> — the coins stay on-chain, but each wallet comes
-            back only from its seed or backup file.
+            <Trans i18nKey="appLockScreen.wipeWarning" components={{ b: <b /> }} />
             <div className="row" style={{ marginTop: 8, gap: 8, flexWrap: "wrap" }}>
               <button
                 type="button"
@@ -192,10 +193,10 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
                   location.reload();
                 }}
               >
-                Erase this device &amp; start over
+                {t("appLockScreen.eraseDevice")}
               </button>
               <button type="button" className="btn ghost small" onClick={() => setAskWipe(false)}>
-                Cancel
+                {t("appLockScreen.cancel")}
               </button>
             </div>
           </div>

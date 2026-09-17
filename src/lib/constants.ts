@@ -1,16 +1,17 @@
 import { isDesktop } from "../desktop";
+import i18n from "../i18n";
 
 export const EXPLORER = "https://explorer.zkas.info";
 export const NET_LABEL = "mainnet";
 
 export type Tab = "receive" | "send" | "history" | "signatures" | "settings";
 
-export const TAB_LABEL: Record<Tab, string> = {
-  receive: "Receive",
-  send: "Send",
-  history: "History",
-  signatures: "Signatures",
-  settings: "⚙",
+export const TAB_LABEL: Record<Tab, () => string> = {
+  receive: () => i18n.t("libConstants.tabReceive"),
+  send: () => i18n.t("libConstants.tabSend"),
+  history: () => i18n.t("libConstants.tabHistory"),
+  signatures: () => i18n.t("libConstants.tabSignatures"),
+  settings: () => "⚙",
 };
 
 export const ROOMY = () => isDesktop() || (typeof window !== "undefined" && window.innerWidth >= 900);

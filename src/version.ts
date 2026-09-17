@@ -1,5 +1,6 @@
 import { isNative } from "./api";
 import { isDesktop } from "./desktop";
+import i18n from "./i18n";
 
 // Injected at build time by vite.config.ts.
 declare const __APP_VERSION__: string;
@@ -19,10 +20,10 @@ export const APP_BUILT: string = typeof __APP_BUILT__ === "string" ? __APP_BUILT
 export function platformName(): string {
   const cap = (globalThis as { Capacitor?: { getPlatform?: () => string } }).Capacitor;
   const native = isNative() ? cap?.getPlatform?.() : "";
-  if (native === "android") return "Android";
-  if (native === "ios") return "iOS";
-  if (isDesktop()) return "Desktop";
-  return "Web";
+  if (native === "android") return i18n.t("version.android");
+  if (native === "ios") return i18n.t("version.ios");
+  if (isDesktop()) return i18n.t("version.desktop");
+  return i18n.t("version.web");
 }
 
 /// Short form for a badge: "v1.0.22".
@@ -32,6 +33,7 @@ export function versionTag(): string {
 
 /// Everything worth pasting into a bug report, in one line.
 export function versionLine(): string {
-  const built = APP_BUILT ? ` · built ${APP_BUILT} UTC` : "";
-  return `ZKas Wallet ${APP_VERSION} · ${platformName()}${built}`;
+  return APP_BUILT
+    ? i18n.t("version.lineBuilt", { version: APP_VERSION, platform: platformName(), built: APP_BUILT })
+    : i18n.t("version.line", { version: APP_VERSION, platform: platformName() });
 }

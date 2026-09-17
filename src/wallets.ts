@@ -12,6 +12,8 @@
 // switching the active token separates them cleanly — no data is moved, and
 // nothing belonging to the other wallets is touched.
 
+import i18n from "./i18n";
+
 export interface WalletRef {
   token: string;
   /** User-facing name. Defaults to "Wallet 1", "Wallet 2", … */
@@ -56,7 +58,7 @@ export function ensureRegistered(token: string, address?: string): void {
     }
     return;
   }
-  list.push({ token, label: `Wallet ${list.length + 1}`, address });
+  list.push({ token, label: i18n.t("wallets.defaultLabel", { n: list.length + 1 }), address });
   save(list);
 }
 
@@ -79,7 +81,7 @@ export function addWallet(): string {
   crypto.getRandomValues(b);
   const token = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
   const list = listWallets();
-  list.push({ token, label: `Wallet ${list.length + 1}` });
+  list.push({ token, label: i18n.t("wallets.defaultLabel", { n: list.length + 1 }) });
   save(list);
   localStorage.setItem("wallet_token", token);
   return token;

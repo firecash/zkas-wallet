@@ -20,6 +20,7 @@
 import { api, type PrepareResp } from "./api";
 import { fvkHex, verifyAndSignPayment, type Network } from "./signer";
 import { feeReserveSompi, minRelayFeeForSpends } from "./fees";
+import i18n from "./i18n";
 
 /// One transaction of a payment. Normal payments are exactly one transaction;
 /// this list has several entries only after the user explicitly accepts split
@@ -48,7 +49,7 @@ export class PartialSendError extends Error {
 /** A normal payment did not fit in one consensus-standard transaction. No
  * transaction has been signed or broadcast when this is raised. */
 export class FragmentedWalletError extends Error {
-  constructor(message = "This payment needs more notes than one transaction can spend.") {
+  constructor(message = i18n.t("noncustodial.fragmentedDefault")) {
     super(message);
     this.name = "FragmentedWalletError";
   }
@@ -208,7 +209,7 @@ const BUSY_WALLET_WAIT_MS = 120_000;
 
 /// The one-line reason shown while waiting out a busy wallet.
 function busyWalletNote(message: string): string {
-  return /merging its own notes/i.test(message) ? "Finishing a background merge…" : "Waiting for the previous payment to finish preparing…";
+  return /merging its own notes/i.test(message) ? i18n.t("noncustodial.finishingMerge") : i18n.t("noncustodial.waitingPrevious");
 }
 
 /**
@@ -481,7 +482,7 @@ export async function sendNonCustodial(
           () => onStage?.("proving", progress()),
           // The wallet's own background merge (or an earlier payment) still proving:
           // wait it out on the same screen rather than bounce back to the form.
-          (note, waitedSecs) => onStage?.("warming", { ...progress(), note: waitedSecs >= 5 ? `${note} (${waitedSecs}s)` : note }),
+          (note, waitedSecs) => onStage?.("warming", { ...progress(), note: waitedSecs >= 5 ? i18n.t("noncustodial.noteWaited", { note, secs: waitedSecs }) : note }),
         );
       }
       // Exact integer figures; the plain-number fields are the fallback for a
@@ -492,11 +493,11 @@ export async function sendNonCustodial(
       // A daemon that pays less than asked must account for every missing sompi
       // in `remaining` — anything else is it silently rewriting the payment.
       if (chunkAmount + remaining !== owed) {
-        throw new Error("The daemon changed the requested amount. Refusing to sign.");
+        throw new Error(i18n.t("noncustodial.amountChanged"));
       }
       if (!allowMultipleTransactions && (remaining !== 0n || chunkAmount !== owed)) {
         throw new FragmentedWalletError(
-          "The wallet service could not prepare the complete amount in one transaction.",
+          i18n.t("noncustodial.couldNotPrepareComplete"),
         );
       }
       // Now that one chunk's capacity is known, estimate how many the payment needs.
@@ -508,8 +509,10 @@ export async function sendNonCustodial(
       // user a plain answer instead of a signer error.
       if (chunkFee > maxFee) {
         throw new Error(
-          `The daemon asked for a fee of ${Number(chunkFee) / Number(SOMPI_PER_ZKAS)} ZKAS — above the ` +
-            `${Number(maxFee) / Number(SOMPI_PER_ZKAS)} ZKAS this wallet allows. Refusing to sign.`,
+          i18n.t("noncustodial.feeAboveLimit", {
+            fee: Number(chunkFee) / Number(SOMPI_PER_ZKAS),
+            max: Number(maxFee) / Number(SOMPI_PER_ZKAS),
+          }),
         );
       }
       onStage?.("signing", progress());
@@ -543,9 +546,11 @@ export async function sendNonCustodial(
       owed = remaining;
       if (chunk === MAX_CHUNKS - 1) {
         throw new Error(
-          `Sent ${Number(sent) / Number(SOMPI_PER_ZKAS)} ZKAS in ${txids.length} transactions, but ` +
-            `${Number(owed) / Number(SOMPI_PER_ZKAS)} ZKAS could not be sent: this wallet's balance is split across ` +
-            `too many small notes. Consolidate the wallet and send the rest.`,
+          i18n.t("noncustodial.partialSent", {
+            sent: Number(sent) / Number(SOMPI_PER_ZKAS),
+            n: txids.length,
+            owed: Number(owed) / Number(SOMPI_PER_ZKAS),
+          }),
         );
       }
     }
@@ -557,7 +562,7 @@ export async function sendNonCustodial(
     if (sentParts.length > 0) throw new PartialSendError((e as Error).message, [...sentParts]);
     if (!allowMultipleTransactions && /needs more than .*input notes|send in smaller chunks/i.test((e as Error).message)) {
       throw new FragmentedWalletError(
-        "Nothing was sent. This wallet has too many small notes for that amount to fit in one transaction.",
+        i18n.t("noncustodial.nothingSent"),
       );
     }
     throw e;
@@ -649,7 +654,7 @@ export async function consolidateNonCustodial(
   grow = false,
 ): Promise<ConsolidationResult> {
   if (spendableSompi <= BigInt(feeReserveSompi(MAX_NOTES_PER_TX)))
-    throw new Error("There is not enough spendable balance to consolidate safely.");
+    throw new Error(i18n.t("noncustodial.notEnoughToConsolidate"));
   const fvk = await fvkHex(seedHex);
   const txids: string[] = [];
   let inputs = 0;
@@ -725,7 +730,7 @@ export async function consolidateNonCustodial(
     // small ceiling instead of the full-size one.
     if (roundAmount <= 0n || roundFee > BigInt(maxFeeForSpends(prep.spend_auth.length || MAX_NOTES_PER_TX))) {
       if (txids.length) break;
-      throw new Error("The wallet service returned an unsafe consolidation.");
+      throw new Error(i18n.t("noncustodial.unsafeConsolidation"));
     }
     // MERGE needs at least MIN_NOTES_PER_ROUND inputs, or the change note leaves the
     // count unchanged. GROW is the opposite: one input becoming two outputs is exactly
@@ -734,13 +739,13 @@ export async function consolidateNonCustodial(
     if (grow) {
       if (prep.spend_auth.length < 1) {
         if (txids.length) break;
-        throw new Error("No spendable note is available to split right now. Wait for recent funds to mature (about 10 minutes), then try again.");
+        throw new Error(i18n.t("noncustodial.noSpendableToSplit"));
       }
     } else if (prep.spend_auth.length < MIN_NOTES_PER_ROUND) {
       // Not a failure once work is already done — it is the natural end of the
       // loop, and reporting it as an error would hide rounds that succeeded.
       if (txids.length) break;
-      throw new Error("Fewer than three notes are spendable right now, so consolidating would not reduce the wallet's note count.");
+      throw new Error(i18n.t("noncustodial.fewerThanThree"));
     }
     onStage?.("signing");
     const signatures = await verifyAndSignPayment(

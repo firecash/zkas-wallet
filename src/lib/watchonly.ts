@@ -1,4 +1,5 @@
 import { getDeviceSeed } from "./deviceseed";
+import i18n from "../i18n";
 
 /// Watch-only wallets — a phone that can SEE the balance and never spend it.
 ///
@@ -33,7 +34,7 @@ export function watchKey(): string {
 
 export function setWatchKey(fvk: string): void {
   const clean = fvk.trim().toLowerCase();
-  if (!isViewKey(clean)) throw new Error("That is not a valid view key.");
+  if (!isViewKey(clean)) throw new Error(i18n.t("watchonly.invalidViewKey"));
   localStorage.setItem(watchKeyName(), clean);
 }
 
@@ -61,7 +62,7 @@ export function isWatchOnly(): boolean {
 /// It does land in that browser's history, which is why the app strips it from
 /// the address bar as soon as it has been adopted.
 export function watchLink(fvk: string, birthday = 0, origin = "https://wallet.zkas.info"): string {
-  if (!isViewKey(fvk)) throw new Error("That is not a valid view key.");
+  if (!isViewKey(fvk)) throw new Error(i18n.t("watchonly.invalidViewKey"));
   // Carry the wallet's birthday. Without it the viewer registers with birthday 0
   // and the service replays the chain from genesis for a wallet that cannot have
   // history before it existed — minutes of scanning on a phone, for nothing.

@@ -21,6 +21,8 @@
 //  3. No jargon. The user does not have a "commitment tree", they have coins. Words
 //     like rebuilding, warming, witness, anchor and 0-conf are ours, not theirs.
 
+import i18n from "./i18n";
+
 export interface StatusInput {
   /// Daemon reachable and answering at all.
   online: boolean;
@@ -115,13 +117,13 @@ export interface WalletStatusView {
 /// is trusted less than a rounded one that holds still.
 export function formatDuration(secs: number): string {
   if (!Number.isFinite(secs) || secs < 0) return "";
-  if (secs < 45) return "less than a minute";
+  if (secs < 45) return i18n.t("status.lessThanMinute");
   const m = Math.round(secs / 60);
-  if (m < 60) return `about ${m} minute${m === 1 ? "" : "s"}`;
+  if (m < 60) return i18n.t("status.aboutMinutes", { count: m });
   const h = Math.floor(m / 60);
   const rem = m % 60;
-  if (h >= 6) return `several hours`;
-  return rem ? `about ${h}h ${rem}m` : `about ${h} hour${h === 1 ? "" : "s"}`;
+  if (h >= 6) return i18n.t("status.severalHours");
+  return rem ? i18n.t("status.aboutHoursMinutes", { h, m: rem }) : i18n.t("status.aboutHours", { count: h });
 }
 
 /**
@@ -134,11 +136,9 @@ export function formatDuration(secs: number): string {
  * catches up, so this stays a note rather than a warning.
  */
 function behindDetail(behind?: number): string {
-  const window =
-    behind && behind > 0
-      ? `the newest ${behind.toLocaleString()} block${behind === 1 ? "" : "s"}`
-      : "the newest blocks";
-  return `You can send now — everything a payment needs is already in view. The wallet is still reading ${window}, so anything that arrived in them is not counted yet.`;
+  return behind && behind > 0
+    ? i18n.t("status.behindDetail", { count: behind, n: behind.toLocaleString() })
+    : i18n.t("status.behindDetailBare");
 }
 
 function pctOf(scanned: number, total: number): number | null {
@@ -159,13 +159,13 @@ export function walletStatus(s: StatusInput): WalletStatusView {
   const pct = pctOf(s.scannedBlocks, s.chainLen);
   const pctFine = pctFineOf(s.scannedBlocks, s.chainLen);
   const progress = s.chainLen > 0 ? { scanned: s.scannedBlocks, total: s.chainLen } : null;
-  const eta = s.etaSeconds != null ? `${formatDuration(s.etaSeconds)} left` : null;
+  const eta = s.etaSeconds != null ? i18n.t("status.etaLeft", { duration: formatDuration(s.etaSeconds) }) : null;
 
   if (!s.online) {
     return {
       phase: "offline",
-      label: "Can't reach the network",
-      detail: "Your coins are safe on the chain. The wallet will reconnect on its own.",
+      label: i18n.t("status.offlineLabel"),
+      detail: i18n.t("status.offlineDetail"),
       pct: null,
       pctFine: null,
       progress: null,
@@ -188,8 +188,8 @@ export function walletStatus(s: StatusInput): WalletStatusView {
   if (s.loading || (!s.synced && s.scannedBlocks === 0)) {
     return {
       phase: "opening",
-      label: "Opening your wallet",
-      detail: "Loading your wallet. This usually takes a few seconds.",
+      label: i18n.t("status.openingLabel"),
+      detail: i18n.t("status.openingDetail"),
       pct: null,
       pctFine: null,
       progress: null,
@@ -212,7 +212,7 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     if (walletCanSpend(s)) {
       return {
         phase: "catching-up",
-        label: "Ready to pay · still catching up",
+        label: i18n.t("status.readyToPayLabel"),
         detail: behindDetail(s.blocksBehind),
         pct,
         pctFine,
@@ -229,9 +229,8 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     if (!s.haveConfirmedBalance) {
       return {
         phase: "setting-up",
-        label: "Setting up your wallet",
-        detail:
-          "Reading the chain to find the coins that belong to you. The amount below is what it has found so far — it is not your final balance yet.",
+        label: i18n.t("status.settingUpLabel"),
+        detail: i18n.t("status.settingUpDetail"),
         pct,
         pctFine,
         progress,
@@ -244,8 +243,8 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     // Has a confirmed figure from before, and is checking the chain since then.
     return {
       phase: "catching-up",
-      label: "Catching up",
-      detail: "Checking the chain for new payments. Your balance is up to date as of the last check.",
+      label: i18n.t("status.catchingUpLabel"),
+      detail: i18n.t("status.catchingUpDetail"),
       pct,
       pctFine,
       progress,
@@ -265,8 +264,8 @@ export function walletStatus(s: StatusInput): WalletStatusView {
   if (!walletCanSpend(s)) {
     return {
       phase: "almost-ready",
-      label: "Finishing up",
-      detail: "Your balance is up to date. The wallet is doing the last of its bookkeeping before it can pay — a few seconds.",
+      label: i18n.t("status.finishingLabel"),
+      detail: i18n.t("status.finishingDetail"),
       pct: null,
       pctFine: null,
       progress: null,
@@ -285,15 +284,19 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     //
     // ...unless the daemon IS counting: while it builds the spend index it reports a
     // percentage and an ETA from the measured rate, and those are shown as-is.
-    const waited = s.warmingSeconds != null && s.warmingSeconds >= 5 ? ` (${formatDuration(s.warmingSeconds)} so far)` : "";
+    const waited = s.warmingSeconds != null && s.warmingSeconds >= 5 ? formatDuration(s.warmingSeconds) : "";
     const counted = typeof s.warmingPct === "number" ? s.warmingPct : null;
     return {
       phase: "almost-ready",
-      label: counted != null ? "Preparing to pay" : "Almost ready",
+      label: counted != null ? i18n.t("status.preparingToPayLabel") : i18n.t("status.almostReadyLabel"),
       detail:
         counted != null
-          ? `Your balance is up to date. The wallet is locating your coins in the chain (${counted.toFixed(1)}%)${waited} — done once, never again; later payments take seconds.`
-          : `Your balance is up to date. The wallet is getting ready to pay${waited} — the first payment is the slow one, later ones take seconds.`,
+          ? waited
+            ? i18n.t("status.warmingCountedDetailWaited", { pct: counted.toFixed(1), waited })
+            : i18n.t("status.warmingCountedDetail", { pct: counted.toFixed(1) })
+          : waited
+            ? i18n.t("status.warmingDetailWaited", { waited })
+            : i18n.t("status.warmingDetail"),
       pct: counted != null ? Math.max(0, Math.min(100, Math.floor(counted))) : null,
       pctFine: counted != null ? `${counted.toFixed(1)}%` : null,
       progress: null,
@@ -306,8 +309,8 @@ export function walletStatus(s: StatusInput): WalletStatusView {
 
   return {
     phase: "ready",
-    label: "Ready",
-    detail: "Your balance is up to date.",
+    label: i18n.t("status.readyLabel"),
+    detail: i18n.t("status.readyDetail"),
     pct: null,
     pctFine: null,
     progress: null,

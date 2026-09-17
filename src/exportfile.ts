@@ -28,6 +28,7 @@
 
 import { isNative } from "./api";
 import { isDesktop } from "./desktop";
+import i18n from "./i18n";
 
 export type ExportOutcome = "shared" | "copied" | "downloaded";
 
@@ -134,10 +135,10 @@ function download(filename: string, mime: string, content: string): ExportOutcom
 export function exportMessage(outcome: ExportOutcome, filename: string): string {
   switch (outcome) {
     case "shared":
-      return `${filename} is ready to save or send.`;
+      return i18n.t("exportfile.shared", { filename });
     case "copied":
-      return `${filename} copied to your clipboard — paste it into a file to keep it.`;
+      return i18n.t("exportfile.copied", { filename });
     case "downloaded":
-      return `${filename} saved to your downloads.`;
+      return i18n.t("exportfile.downloaded", { filename });
   }
 }

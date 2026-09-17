@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Copy, Cpu, ExternalLink, Globe2, Network, Server, Square, Zap } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { api, loadStatusCache } from "../api";
 import { kaspaNodeProfiles, miningNodeProfiles } from "../connection-profiles";
 import { isDesktop } from "../desktop";
@@ -46,6 +47,7 @@ async function copy(value: string) {
 }
 
 export function Mining() {
+  const { t } = useTranslation();
   const desktop = isDesktop();
   // The bridge serves its own dashboard on loopback. Opening it in a new tab drops
   // the user out of the app (and on desktop `target="_blank"` may open nothing at
@@ -149,14 +151,14 @@ export function Mining() {
     if (!config) return [] as string[];
     const result: string[] = [];
     if (zkasMode === "local" && (!config.components.zkas_node || config.components.zkas_node_update_available)) {
-      result.push(config.components.zkas_node ? "ZKAS node update" : "ZKAS node");
+      result.push(config.components.zkas_node ? t("mining.installZkasNodeUpdate") : t("mining.installZkasNode"));
     }
     if (!config.components.bridge || config.components.bridge_update_available) {
-      result.push(config.components.bridge ? "mining bridge update" : "mining bridge");
+      result.push(config.components.bridge ? t("mining.installBridgeUpdate") : t("mining.installBridge"));
     }
-    if (mode === "dual" && kaspaMode === "local" && !config.components.kaspa_node) result.push("Kaspa node");
+    if (mode === "dual" && kaspaMode === "local" && !config.components.kaspa_node) result.push(t("mining.installKaspaNode"));
     return result;
-  }, [config, kaspaMode, mode, zkasMode]);
+  }, [config, kaspaMode, mode, t, zkasMode]);
 
   const valid = walletAddress.startsWith("zkas:")
     && (mode === "solo" || kaspaAddress.startsWith("kaspa:"))
@@ -178,13 +180,13 @@ export function Mining() {
         kaspa: mode === "dual" && kaspaMode === "local" && !current.components.kaspa_node,
       };
       if (selection.zkas || selection.bridge || selection.kaspa) {
-        setStage("Installing verified releases");
+        setStage(t("mining.stageInstalling"));
         await desktopServices.install(selection);
         current = await desktopServices.config();
         setConfig(current);
       }
 
-      setStage(zkasMode === "local" ? "Starting your ZKAS node" : "Checking your ZKAS node");
+      setStage(zkasMode === "local" ? t("mining.stageStartingNode") : t("mining.stageCheckingNode"));
       if (zkasMode === "local") {
         await desktopServices.startNode(current.settings.node_preset || "shielded", current.settings.node_public_p2p);
         const deadline = Date.now() + 20_000;
@@ -195,12 +197,12 @@ export function Mining() {
           if (status.running && !status.error) { ready = true; break; }
           await new Promise((resolve) => window.setTimeout(resolve, 500));
         }
-        if (!ready) throw new Error("The ZKAS node started but its RPC is not ready yet. Keep it running and press Start mining again shortly.");
+        if (!ready) throw new Error(t("mining.nodeNotReady"));
       } else {
         if (!miningNodeProfiles.load().some((profile) => profile.address === zkasRpc.trim())) miningNodeProfiles.save("Mining node", zkasRpc.trim());
       }
 
-      setStage(mode === "dual" ? "Starting KAS + ZKAS mining" : "Starting ZKAS mining");
+      setStage(mode === "dual" ? t("mining.stageStartingDual") : t("mining.stageStartingSolo"));
       if (mode === "dual") {
         await desktopServices.startDual(stratumPort, walletAddress, kaspaAddress, kaspaMode, kaspaMode === "custom" ? kaspaRpc : undefined, shareDifficulty, zkasMode, zkasMode === "custom" ? zkasRpc : undefined);
         if (kaspaMode === "custom" && !kaspaNodeProfiles.load().some((profile) => profile.address === kaspaRpc.trim())) kaspaNodeProfiles.save("Kaspa mining node", kaspaRpc.trim());
@@ -247,13 +249,13 @@ export function Mining() {
   };
   const downloadPercent = progress?.total ? Math.round(progress.received / progress.total * 100) : null;
   const live = !!status?.bridge_running;
-  const nodeLabel = status?.zkas_rpc_connected ? status.zkas_synced ? "Synced" : "Syncing" : node?.running ? "Starting" : zkasMode === "custom" ? "Unavailable" : "Stopped";
+  const nodeLabel = status?.zkas_rpc_connected ? status.zkas_synced ? t("mining.nodeSynced") : t("mining.nodeSyncing") : node?.running ? t("mining.nodeStarting") : zkasMode === "custom" ? t("mining.nodeUnavailable") : t("mining.nodeStopped");
 
   if (!desktop) {
     return (
       <main className="control-page mining-page">
-        <header className="control-heading"><div><span className="eyebrow">Mining</span><h1>Direct mining</h1><p>The desktop app installs and supervises the nodes and Stratum bridge.</p></div></header>
-        <section className="control-card empty-state"><Server size={28} /><h2>Get the desktop app</h2><p>Browser and mobile wallets cannot run mining services in the background.</p><a className="btn" href="https://github.com/firecash/zkas-wallet/releases" target="_blank" rel="noreferrer">Download</a></section>
+        <header className="control-heading"><div><span className="eyebrow">{t("mining.webEyebrow")}</span><h1>{t("mining.webTitle")}</h1><p>{t("mining.webIntro")}</p></div></header>
+        <section className="control-card empty-state"><Server size={28} /><h2>{t("mining.webGetApp")}</h2><p>{t("mining.webNoBackground")}</p><a className="btn" href="https://github.com/firecash/zkas-wallet/releases" target="_blank" rel="noreferrer">{t("mining.webDownload")}</a></section>
       </main>
     );
   }
@@ -261,23 +263,22 @@ export function Mining() {
   return (
     <main className="control-page mining-page">
       <header className="control-heading">
-        <div><span className="eyebrow">Direct mining</span><h1>Mine to your wallet</h1><p>The app installs, connects, and keeps every required service running.</p></div>
-        <span className={`status-pill ${live ? "good" : ""}`}>{live ? "Listening" : "Stopped"}</span>
+        <div><span className="eyebrow">{t("mining.eyebrow")}</span><h1>{t("mining.title")}</h1><p>{t("mining.intro")}</p></div>
+        <span className={`status-pill ${live ? "good" : ""}`}>{live ? t("mining.listening") : t("mining.stopped")}</span>
       </header>
 
       {!live && (
         <section className="control-card mining-hero">
           <div>
-            <h2>Start mining</h2>
+            <h2>{t("mining.heroTitle")}</h2>
             <p>
-              Rewards go straight to this wallet — there is no pool account and no fee. The app installs
-              what is missing, starts the node, and keeps it running.
+              {t("mining.heroText")}
             </p>
           </div>
           <div className="mining-hero-action">
             <button className="btn mining-start" disabled={busy !== null || !config} onClick={() => setChooser(true)}>
               <Zap size={17} />
-              {busy === "start" ? stage || "Starting…" : "Start mining"}
+              {busy === "start" ? stage || t("mining.starting") : t("mining.startMining")}
             </button>
           </div>
           {busy === "start" && progress && (
@@ -290,53 +291,53 @@ export function Mining() {
       )}
       {live && (
         <div className="mode-tabs two" role="tablist">
-          <button className={mode === "solo" ? "active" : ""} disabled>ZKAS</button>
-          <button className={mode === "dual" ? "active" : ""} disabled>KAS + ZKAS</button>
+          <button className={mode === "solo" ? "active" : ""} disabled>{t("mining.tabZkas")}</button>
+          <button className={mode === "dual" ? "active" : ""} disabled>{t("mining.tabDual")}</button>
         </div>
       )}
-      {config?.dual_mining_supported === false && <p className="subtle mining-platform-note">No verified merged-mining bridge is published for this device. ZKAS-only mining remains available.</p>}
+      {config?.dual_mining_supported === false && <p className="subtle mining-platform-note">{t("mining.noDualBridge")}</p>}
       {error && <div className="control-error">{error}</div>}
 
       {live && <section className="control-card mining-setup-card">
         <div className="card-title-row">
-          <div><h2>{live ? "Mining service" : "Setup"}</h2><p>{live ? "Your ASIC can connect now." : "Recommended choices are ready. Change only what you need."}</p></div>
-          {missing.length > 0 && !live && <span className="status-pill">Installs {missing.length}</span>}
+          <div><h2>{live ? t("mining.serviceTitle") : t("mining.setupTitle")}</h2><p>{live ? t("mining.serviceIntro") : t("mining.setupIntro")}</p></div>
+          {missing.length > 0 && !live && <span className="status-pill">{t("mining.installs", { n: missing.length })}</span>}
         </div>
 
         <div className="setup-section">
-          <div className="setup-section-title"><span>1</span><div><b>Rewards</b><small>Paid directly; no pool account.</small></div></div>
-          <label className="field-label">ZKAS address<input className="control-input mono" value={walletAddress} onChange={(event) => setWalletAddress(event.target.value.trim())} placeholder="zkas:…" disabled={live} /></label>
-          {mode === "dual" && <label className="field-label">Kaspa address<input className="control-input mono" value={kaspaAddress} onChange={(event) => setKaspaAddress(event.target.value.trim())} placeholder="kaspa:…" disabled={live} /></label>}
+          <div className="setup-section-title"><span>1</span><div><b>{t("mining.rewards")}</b><small>{t("mining.rewardsNote")}</small></div></div>
+          <label className="field-label">{t("mining.zkasAddress")}<input className="control-input mono" value={walletAddress} onChange={(event) => setWalletAddress(event.target.value.trim())} placeholder={t("mining.zkasPlaceholder")} disabled={live} /></label>
+          {mode === "dual" && <label className="field-label">{t("mining.kaspaAddress")}<input className="control-input mono" value={kaspaAddress} onChange={(event) => setKaspaAddress(event.target.value.trim())} placeholder={t("mining.kaspaPlaceholder")} disabled={live} /></label>}
         </div>
 
         <div className="setup-section">
-          <div className="setup-section-title"><span>2</span><div><b>ZKAS node</b><small>Supplies work and receives solved blocks.</small></div></div>
+          <div className="setup-section-title"><span>2</span><div><b>{t("mining.zkasNode")}</b><small>{t("mining.zkasNodeNote")}</small></div></div>
           <div className="choice-row">
-            <button className={`choice-button ${zkasMode === "local" ? "selected" : ""}`} onClick={() => setZkasMode("local")} disabled={live}><strong>Automatic</strong><span>Install, run, and sync on this computer.</span></button>
-            <button className={`choice-button ${zkasMode === "custom" ? "selected" : ""}`} onClick={() => setZkasMode("custom")} disabled={live}><strong>Existing node</strong><span>Use mining gRPC on your LAN or server.</span></button>
+            <button className={`choice-button ${zkasMode === "local" ? "selected" : ""}`} onClick={() => setZkasMode("local")} disabled={live}><strong>{t("mining.automatic")}</strong><span>{t("mining.automaticNote")}</span></button>
+            <button className={`choice-button ${zkasMode === "custom" ? "selected" : ""}`} onClick={() => setZkasMode("custom")} disabled={live}><strong>{t("mining.existingNode")}</strong><span>{t("mining.existingNodeNote")}</span></button>
           </div>
-          {zkasMode === "custom" && <EndpointField label="ZKAS gRPC" value={zkasRpc} onChange={setZkasRpc} placeholder={STANDALONE_ZKAS_RPC_EXAMPLE} disabled={live} kind="zkas" />}
+          {zkasMode === "custom" && <EndpointField label={t("mining.zkasGrpc")} value={zkasRpc} onChange={setZkasRpc} placeholder={STANDALONE_ZKAS_RPC_EXAMPLE} disabled={live} kind="zkas" />}
         </div>
 
         {mode === "dual" && <div className="setup-section">
-          <div className="setup-section-title"><span>3</span><div><b>Kaspa node</b><small>The parent node for the same ASIC work.</small></div></div>
+          <div className="setup-section-title"><span>3</span><div><b>{t("mining.kaspaNode")}</b><small>{t("mining.kaspaNodeNote")}</small></div></div>
           <div className="choice-row">
-            <button className={`choice-button ${kaspaMode === "local" ? "selected" : ""}`} onClick={() => setKaspaMode("local")} disabled={live}><strong>Automatic</strong><span>Install and run Kaspa on this computer.</span></button>
-            <button className={`choice-button ${kaspaMode === "custom" ? "selected" : ""}`} onClick={() => setKaspaMode("custom")} disabled={live}><strong>Existing node</strong><span>Connect to a Kaspa mining gRPC endpoint.</span></button>
+            <button className={`choice-button ${kaspaMode === "local" ? "selected" : ""}`} onClick={() => setKaspaMode("local")} disabled={live}><strong>{t("mining.automatic")}</strong><span>{t("mining.kaspaAutomaticNote")}</span></button>
+            <button className={`choice-button ${kaspaMode === "custom" ? "selected" : ""}`} onClick={() => setKaspaMode("custom")} disabled={live}><strong>{t("mining.existingNode")}</strong><span>{t("mining.kaspaExistingNote")}</span></button>
           </div>
-          {kaspaMode === "custom" && <EndpointField label="Kaspa gRPC" value={kaspaRpc} onChange={setKaspaRpc} placeholder={DEFAULT_KASPA_RPC} disabled={live} kind="kaspa" />}
+          {kaspaMode === "custom" && <EndpointField label={t("mining.kaspaGrpc")} value={kaspaRpc} onChange={setKaspaRpc} placeholder={DEFAULT_KASPA_RPC} disabled={live} kind="kaspa" />}
         </div>}
 
         <button className="mining-advanced-toggle" onClick={() => setShowAdvanced((value) => !value)} aria-expanded={showAdvanced}>
           {/* Named for what it holds. It sits INSIDE "Advanced settings", and a
               second control called "Advanced" one level down says nothing about
               which of the two a person is looking for. */}
-          <span>Stratum &amp; difficulty</span><ChevronDown size={16} className={showAdvanced ? "open" : ""} />
+          <span>{t("mining.stratumDifficulty")}</span><ChevronDown size={16} className={showAdvanced ? "open" : ""} />
         </button>
         {showAdvanced && <div className="advanced-grid">
-          <label className="field-label">Stratum port<input className="control-input" type="number" min={1024} max={65535} value={stratumPort} onChange={(event) => setStratumPort(Number(event.target.value))} disabled={live} /></label>
-          <label className="field-label">Starting share difficulty<input className="control-input" type="number" min={1} step={1} value={shareDifficulty} onChange={(event) => setShareDifficulty(Number(event.target.value))} disabled={live} /></label>
-          <p>Vardiff adjusts after the ASIC connects. This starting value changes share reporting, not block probability or rewards.</p>
+          <label className="field-label">{t("mining.stratumPort")}<input className="control-input" type="number" min={1024} max={65535} value={stratumPort} onChange={(event) => setStratumPort(Number(event.target.value))} disabled={live} /></label>
+          <label className="field-label">{t("mining.startingShareDifficulty")}<input className="control-input" type="number" min={1} step={1} value={shareDifficulty} onChange={(event) => setShareDifficulty(Number(event.target.value))} disabled={live} /></label>
+          <p>{t("mining.vardiffNote")}</p>
         </div>}
 
         {/* Starting lives on the card above; this one only ever stops. Two Start
@@ -344,105 +345,105 @@ export function Mining() {
         {live && (
           <div className="mining-primary-action">
             <button className="btn ghost mining-start" disabled={busy !== null} onClick={() => void stop()}>
-              <Square size={15} />{busy === "stop" ? "Stopping…" : "Stop mining"}
+              <Square size={15} />{busy === "stop" ? t("mining.stopping") : t("mining.stopMining")}
             </button>
           </div>
         )}
       </section>}
 
       {(live || showConnect) && <section className="control-card connect-miner-card">
-        <div className="card-title-row"><div><h2>Connect your ASIC</h2><p>Use the address that reaches this computer.</p></div><span className={`status-pill ${live ? "good" : ""}`}>{live ? `Port ${stratumPort} open` : "Start first"}</span></div>
+        <div className="card-title-row"><div><h2>{t("mining.connectTitle")}</h2><p>{t("mining.connectIntro")}</p></div><span className={`status-pill ${live ? "good" : ""}`}>{live ? t("mining.portOpen", { port: stratumPort }) : t("mining.startFirst")}</span></div>
         <div className="endpoint-grid">
-          <EndpointCard icon={<Cpu size={18} />} title="This computer" note="Miner software running here" value={endpoint("127.0.0.1")} id="local" copied={copied} onCopy={copyEndpoint} />
+          <EndpointCard icon={<Cpu size={18} />} title={t("mining.thisComputer")} note={t("mining.thisComputerNote")} value={endpoint("127.0.0.1")} id="local" copied={copied} onCopy={copyEndpoint} />
           {lanIps.length ? lanIps.map((ip, index) => (
             <EndpointCard
               key={ip}
               icon={<Network size={18} />}
-              title={index === 0 ? "Local network" : `Local network ${index + 1}`}
-              note={index === 0 && lanIps.length > 1 ? "Preferred · try another if your ASIC uses it" : "ASIC on the same router or VPN"}
+              title={index === 0 ? t("mining.localNetwork") : t("mining.localNetworkN", { n: index + 1 })}
+              note={index === 0 && lanIps.length > 1 ? t("mining.lanPreferred") : t("mining.lanSameRouter")}
               value={endpoint(ip)}
               id={`lan-${index}`}
               copied={copied}
               onCopy={copyEndpoint}
             />
           )) : (
-            <EndpointCard icon={<Network size={18} />} title="Local network" note="LAN address not detected" value="" id="lan" copied={copied} onCopy={copyEndpoint} />
+            <EndpointCard icon={<Network size={18} />} title={t("mining.localNetwork")} note={t("mining.lanNotDetected")} value="" id="lan" copied={copied} onCopy={copyEndpoint} />
           )}
           <div className="endpoint-card external-endpoint">
-            <div className="endpoint-title"><Globe2 size={18} /><span><b>Remote ASIC</b><small>Public IP, DNS, or VPN hostname</small></span></div>
-            <input value={externalHost} onChange={(event) => { setExternalHost(event.target.value); localStorage.setItem("mining_external_host", event.target.value); }} placeholder="mine.example.com" />
+            <div className="endpoint-title"><Globe2 size={18} /><span><b>{t("mining.remoteAsic")}</b><small>{t("mining.remoteNote")}</small></span></div>
+            <input value={externalHost} onChange={(event) => { setExternalHost(event.target.value); localStorage.setItem("mining_external_host", event.target.value); }} placeholder="mine.example.com" />{/* i18n-ignore: example hostname */}
             {external && <button onClick={() => void copyEndpoint("external", endpoint(external))}><code>{endpoint(external)}</code>{copied === "external" ? <Check size={15} /> : <Copy size={15} />}</button>}
           </div>
         </div>
         <div className="asic-credentials">
-          <span>Username <code>{walletAddress || "zkas:your-address"}</code></span>
-          <span>Password <code>x</code></span>
+          <span>{t("mining.username")} <code>{walletAddress || t("mining.yourAddress")}</code></span>
+          <span>{t("mining.password")} <code>x</code></span>{/* i18n-ignore: literal Stratum password */}
           {live && (
             <button className="btn ghost compact" onClick={() => setDashboardOpen(true)}>
-              <ExternalLink size={14} />Miner dashboard
+              <ExternalLink size={14} />{t("mining.minerDashboard")}
             </button>
           )}
         </div>
-        <p className="subtle">LAN is ready automatically. For an internet ASIC, forward TCP {stratumPort} to this computer or use a VPN, and restrict the firewall to your miner’s IP. Never forward node RPC to the internet.</p>
+        <p className="subtle">{t("mining.lanReady", { port: stratumPort })}</p>
       </section>}
 
       <section className="control-card mining-live-card">
-        <div className="card-title-row"><div><h2>Live status</h2><p>{live ? "Updates every two seconds." : "Start mining to receive ASIC work."}</p></div><div className="mining-live-actions">{live && <button className="btn ghost compact" onClick={() => setDashboardOpen(true)}><ExternalLink size={14} />Full dashboard</button>}<span className={`status-dot ${live ? "on" : ""}`} /></div></div>
+        <div className="card-title-row"><div><h2>{t("mining.liveStatus")}</h2><p>{live ? t("mining.updatesEvery") : t("mining.startToReceive")}</p></div><div className="mining-live-actions">{live && <button className="btn ghost compact" onClick={() => setDashboardOpen(true)}><ExternalLink size={14} />{t("mining.fullDashboard")}</button>}<span className={`status-dot ${live ? "on" : ""}`} /></div></div>
         <div className="metric-grid mining-metrics">
-          <Metric label="Bridge" value={live ? "Running" : "Stopped"} />
-          <Metric label="ZKAS node" value={nodeLabel} />
-          <Metric label="ASICs" value={String(status?.active_workers ?? 0)} />
-          <Metric label="Accepted shares" value={(status?.shares_accepted ?? 0).toLocaleString()} />
-          <Metric label="ZKAS blocks" value={(status?.blocks_found ?? 0).toLocaleString()} />
-          {mode === "dual" && <Metric label="KAS blocks" value={(status?.kas_blocks_found ?? 0).toLocaleString()} />}
-          <Metric label="Kaspa parent" value={mode === "solo" ? "Off" : status?.kaspa_rpc_connected ? status.kaspa_synced ? "Synced" : "Syncing" : status?.kaspa_node_running ? "Starting" : "Stopped"} />
+          <Metric label={t("mining.metricBridge")} value={live ? t("mining.running") : t("mining.stopped")} />
+          <Metric label={t("mining.metricZkasNode")} value={nodeLabel} />
+          <Metric label={t("mining.metricAsics")} value={String(status?.active_workers ?? 0)} />
+          <Metric label={t("mining.metricAccepted")} value={(status?.shares_accepted ?? 0).toLocaleString()} />
+          <Metric label={t("mining.metricZkasBlocks")} value={(status?.blocks_found ?? 0).toLocaleString()} />
+          {mode === "dual" && <Metric label={t("mining.metricKasBlocks")} value={(status?.kas_blocks_found ?? 0).toLocaleString()} />}
+          <Metric label={t("mining.metricKaspaParent")} value={mode === "solo" ? t("mining.off") : status?.kaspa_rpc_connected ? status.kaspa_synced ? t("mining.nodeSynced") : t("mining.nodeSyncing") : status?.kaspa_node_running ? t("mining.nodeStarting") : t("mining.nodeStopped")} />
         </div>
-        {node?.running && node.is_synced === false && <p className="inline-warning">The ZKAS node is syncing. Keep the app running; the bridge is supervised and mining becomes ready when the node catches up.</p>}
-        {status?.zkas_rpc_error && <p className="inline-warning">ZKAS RPC: {status.zkas_rpc_error}</p>}
-        {mode === "dual" && status?.kaspa_rpc_error && <p className="inline-warning">Kaspa RPC: {status.kaspa_rpc_error}</p>}
-        {status?.bridge_error && <p className="inline-warning">Bridge stopped: {status.bridge_error}</p>}
-        <button className="text-button disclosure" onClick={() => setShowLogs(true)}>View bridge logs</button>
+        {node?.running && node.is_synced === false && <p className="inline-warning">{t("mining.nodeSyncingWarning")}</p>}
+        {status?.zkas_rpc_error && <p className="inline-warning">{t("mining.zkasRpcError", { error: status.zkas_rpc_error })}</p>}
+        {mode === "dual" && status?.kaspa_rpc_error && <p className="inline-warning">{t("mining.kaspaRpcError", { error: status.kaspa_rpc_error })}</p>}
+        {status?.bridge_error && <p className="inline-warning">{t("mining.bridgeStopped", { error: status.bridge_error })}</p>}
+        <button className="text-button disclosure" onClick={() => setShowLogs(true)}>{t("mining.viewBridgeLogs")}</button>
       </section>
 
       {mode === "solo" && <section className="control-card compact-card cpu-card">
-        <button className="text-button disclosure" onClick={() => setShowCpu((value) => !value)}>CPU test miner {status?.cpu_miner_running ? "· running" : ""}</button>
-        {showCpu && <div className="advanced-row"><p>For setup testing only; ASICs are vastly faster.</p><label>Threads <input className="control-input" type="number" min={1} max={256} value={cpuThreads} onChange={(event) => setCpuThreads(Number(event.target.value))} /></label><button className="btn ghost compact" disabled={busy !== null || !config?.components.zkas_miner || !walletAddress || !!status?.cpu_miner_running} onClick={() => { setBusy("cpu"); desktopServices.startCpuMiner(cpuThreads, walletAddress).then(refreshLocal).catch((e) => setError(e.message)).finally(() => setBusy(null)); }}>Start</button><button className="btn ghost compact" disabled={!status?.cpu_miner_running} onClick={() => { setBusy("cpu"); desktopServices.stopCpuMiner().then(refreshLocal).finally(() => setBusy(null)); }}>Stop</button></div>}
+        <button className="text-button disclosure" onClick={() => setShowCpu((value) => !value)}>{status?.cpu_miner_running ? t("mining.cpuTestMinerRunning") : t("mining.cpuTestMiner")}</button>
+        {showCpu && <div className="advanced-row"><p>{t("mining.cpuNote")}</p><label>{t("mining.threads")} <input className="control-input" type="number" min={1} max={256} value={cpuThreads} onChange={(event) => setCpuThreads(Number(event.target.value))} /></label><button className="btn ghost compact" disabled={busy !== null || !config?.components.zkas_miner || !walletAddress || !!status?.cpu_miner_running} onClick={() => { setBusy("cpu"); desktopServices.startCpuMiner(cpuThreads, walletAddress).then(refreshLocal).catch((e) => setError(e.message)).finally(() => setBusy(null)); }}>{t("mining.start")}</button><button className="btn ghost compact" disabled={!status?.cpu_miner_running} onClick={() => { setBusy("cpu"); desktopServices.stopCpuMiner().then(refreshLocal).finally(() => setBusy(null)); }}>{t("mining.stop")}</button></div>}
       </section>}
       {chooser && (
         <div className="modalwrap" onClick={() => busy === null && setChooser(false)}>
           <div className="card modalcard mining-chooser" onClick={(event) => event.stopPropagation()}>
-            <h2 style={{ marginTop: 0 }}>Start mining</h2>
+            <h2 style={{ marginTop: 0 }}>{t("mining.chooserTitle")}</h2>
             <p className="muted small">
-              Pick what to mine and where the work comes from. The same ASIC hashing can be paid on one chain or two.
+              {t("mining.chooserIntro")}
             </p>
 
             {/* 1 — what to mine */}
-            <div className="setup-section-title"><span>1</span><div><b>What to mine</b><small>Merged pays two chains from one ASIC.</small></div></div>
+            <div className="setup-section-title"><span>1</span><div><b>{t("mining.whatToMine")}</b><small>{t("mining.whatToMineNote")}</small></div></div>
             <div className="choice-grid">
               <button className={`choice-button ${mode === "solo" ? "selected" : ""}`} onClick={() => setMode("solo")} disabled={busy !== null}>
-                <strong>ZKAS only</strong>
-                <span>Paid to this wallet.</span>
+                <strong>{t("mining.zkasOnly")}</strong>
+                <span>{t("mining.zkasOnlyNote")}</span>
               </button>
               <button className={`choice-button ${mode === "dual" ? "selected" : ""}`} onClick={() => setMode("dual")} disabled={busy !== null || config?.dual_mining_supported === false}>
-                <strong>KAS + ZKAS</strong>
-                <span>One ASIC, both chains, paid separately.</span>
+                <strong>{t("mining.tabDual")}</strong>
+                <span>{t("mining.dualNote")}</span>
               </button>
             </div>
             {config?.dual_mining_supported === false && (
-              <p className="subtle">No verified merged-mining build for this device — ZKAS-only is available here.</p>
+              <p className="subtle">{t("mining.noDualBuild")}</p>
             )}
 
             {/* 2 — payouts */}
-            <div className="setup-section-title" style={{ marginTop: 16 }}><span>2</span><div><b>Payouts</b><small>Rewards go straight to you; no pool account.</small></div></div>
+            <div className="setup-section-title" style={{ marginTop: 16 }}><span>2</span><div><b>{t("mining.payouts")}</b><small>{t("mining.payoutsNote")}</small></div></div>
             <div className={mode === "dual" ? "pay-row" : undefined}>
               <label className="field-label">
-                ZKAS address
-                <input className="control-input mono" value={walletAddress} onChange={(event) => setWalletAddress(event.target.value.trim())} placeholder="zkas:…" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy !== null} />
+                {t("mining.zkasAddress")}
+                <input className="control-input mono" value={walletAddress} onChange={(event) => setWalletAddress(event.target.value.trim())} placeholder={t("mining.zkasPlaceholder")} autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy !== null} />
               </label>
               {mode === "dual" && (
                 <label className="field-label">
-                  Kaspa address
-                  <input className="control-input mono" value={kaspaAddress} onChange={(event) => setKaspaAddress(event.target.value.trim())} placeholder="kaspa:…" autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy !== null} />
+                  {t("mining.kaspaAddress")}
+                  <input className="control-input mono" value={kaspaAddress} onChange={(event) => setKaspaAddress(event.target.value.trim())} placeholder={t("mining.kaspaPlaceholder")} autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy !== null} />
                 </label>
               )}
             </div>
@@ -450,73 +451,73 @@ export function Mining() {
             {/* 3 & 4 — nodes, side by side when merged */}
             <div className={mode === "dual" ? "node-columns" : undefined} style={{ marginTop: 16 }}>
               <div>
-                <div className="setup-section-title"><span>3</span><div><b>ZKAS node</b><small>Supplies the work and receives ZKAS blocks.</small></div></div>
+                <div className="setup-section-title"><span>3</span><div><b>{t("mining.zkasNode")}</b><small>{t("mining.zkasNodeChooserNote")}</small></div></div>
                 <div className="choice-row">
-                  <button className={`choice-button ${zkasMode === "local" ? "selected" : ""}`} onClick={() => setZkasMode("local")} disabled={busy !== null}><strong>Run it for me</strong><span>Installed and synced here.</span></button>
-                  <button className={`choice-button ${zkasMode === "custom" ? "selected" : ""}`} onClick={() => setZkasMode("custom")} disabled={busy !== null}><strong>Connect to my node</strong><span>A ZKAS gRPC you run.</span></button>
+                  <button className={`choice-button ${zkasMode === "local" ? "selected" : ""}`} onClick={() => setZkasMode("local")} disabled={busy !== null}><strong>{t("mining.runForMe")}</strong><span>{t("mining.runForMeNote")}</span></button>
+                  <button className={`choice-button ${zkasMode === "custom" ? "selected" : ""}`} onClick={() => setZkasMode("custom")} disabled={busy !== null}><strong>{t("mining.connectMyNode")}</strong><span>{t("mining.connectMyNodeNote")}</span></button>
                 </div>
-                {zkasMode === "custom" && <EndpointField label="ZKAS gRPC host:port" value={zkasRpc} onChange={setZkasRpc} placeholder={STANDALONE_ZKAS_RPC_EXAMPLE} disabled={busy !== null} kind="zkas" />}
+                {zkasMode === "custom" && <EndpointField label={t("mining.zkasGrpcHostPort")} value={zkasRpc} onChange={setZkasRpc} placeholder={STANDALONE_ZKAS_RPC_EXAMPLE} disabled={busy !== null} kind="zkas" />}
               </div>
               {mode === "dual" && (
                 <div>
-                  <div className="setup-section-title"><span>4</span><div><b>Kaspa node</b><small>The parent chain for the same ASIC work.</small></div></div>
+                  <div className="setup-section-title"><span>4</span><div><b>{t("mining.kaspaNode")}</b><small>{t("mining.kaspaNodeChooserNote")}</small></div></div>
                   <div className="choice-row">
-                    <button className={`choice-button ${kaspaMode === "local" ? "selected" : ""}`} onClick={() => setKaspaMode("local")} disabled={busy !== null}><strong>Run it for me</strong><span>Installed and run here.</span></button>
-                    <button className={`choice-button ${kaspaMode === "custom" ? "selected" : ""}`} onClick={() => setKaspaMode("custom")} disabled={busy !== null}><strong>Connect to my node</strong><span>A Kaspa gRPC you run.</span></button>
+                    <button className={`choice-button ${kaspaMode === "local" ? "selected" : ""}`} onClick={() => setKaspaMode("local")} disabled={busy !== null}><strong>{t("mining.runForMe")}</strong><span>{t("mining.kaspaRunForMeNote")}</span></button>
+                    <button className={`choice-button ${kaspaMode === "custom" ? "selected" : ""}`} onClick={() => setKaspaMode("custom")} disabled={busy !== null}><strong>{t("mining.connectMyNode")}</strong><span>{t("mining.kaspaConnectNote")}</span></button>
                   </div>
-                  {kaspaMode === "custom" && <EndpointField label="Kaspa gRPC host:port" value={kaspaRpc} onChange={setKaspaRpc} placeholder={DEFAULT_KASPA_RPC} disabled={busy !== null} kind="kaspa" />}
+                  {kaspaMode === "custom" && <EndpointField label={t("mining.kaspaGrpcHostPort")} value={kaspaRpc} onChange={setKaspaRpc} placeholder={DEFAULT_KASPA_RPC} disabled={busy !== null} kind="kaspa" />}
                 </div>
               )}
             </div>
 
             {/* advanced — one inline disclosure, no separate screen */}
-            <button className="btn ghost compact" style={{ marginTop: 14 }} onClick={() => setAdvanced((on) => !on)}>{advanced ? "Hide advanced" : "Advanced"}</button>
+            <button className="btn ghost compact" style={{ marginTop: 14 }} onClick={() => setAdvanced((on) => !on)}>{advanced ? t("mining.hideAdvanced") : t("mining.advanced")}</button>
             {advanced && (
               <div className="setup-section" style={{ marginTop: 8 }}>
-                <label className="field-label">Stratum port<input className="control-input mono" type="number" value={stratumPort} onChange={(event) => setStratumPort(Number(event.target.value))} disabled={busy !== null} /></label>
-                <label className="field-label">Start difficulty<input className="control-input mono" type="number" value={shareDifficulty} onChange={(event) => setShareDifficulty(Number(event.target.value))} disabled={busy !== null} /></label>
+                <label className="field-label">{t("mining.stratumPort")}<input className="control-input mono" type="number" value={stratumPort} onChange={(event) => setStratumPort(Number(event.target.value))} disabled={busy !== null} /></label>
+                <label className="field-label">{t("mining.startDifficulty")}<input className="control-input mono" type="number" value={shareDifficulty} onChange={(event) => setShareDifficulty(Number(event.target.value))} disabled={busy !== null} /></label>
               </div>
             )}
             {missing.length > 0 && (
-              <p className="subtle">First run installs: {missing.join(", ")}. Verified downloads, then it starts.</p>
+              <p className="subtle">{t("mining.firstRunInstalls", { list: missing.join(", ") })}</p>
             )}
             {error && <div className="msg err">{error}</div>}
             <div className="row">
-              <button className="btn ghost" disabled={busy !== null} onClick={() => setChooser(false)}>Cancel</button>
+              <button className="btn ghost" disabled={busy !== null} onClick={() => setChooser(false)}>{t("mining.cancel")}</button>
               <button
                 className="btn"
                 disabled={busy !== null || !config || !valid}
                 onClick={() => void (async () => { await start(); setChooser(false); })()}
               >
                 <Zap size={16} />
-                {busy === "start" ? stage || "Starting…" : missing.length > 0 ? "Install & start" : "Start mining"}
+                {busy === "start" ? stage || t("mining.starting") : missing.length > 0 ? t("mining.installStart") : t("mining.startMining")}
               </button>
             </div>
           </div>
         </div>
       )}
-      <ServiceLogsDialog open={showLogs} onClose={() => setShowLogs(false)} service="stratum-bridge" title="Mining bridge logs" />
+      <ServiceLogsDialog open={showLogs} onClose={() => setShowLogs(false)} service="stratum-bridge" title={t("mining.bridgeLogsTitle")} />
       {dashboardOpen && (
         <div className="modalwrap" onClick={() => setDashboardOpen(false)}>
           <div className="card modalcard dashboard-modal" onClick={(event) => event.stopPropagation()}>
             <div className="card-title-row">
               <div>
-                <h2>Miner dashboard</h2>
+                <h2>{t("mining.dashboardTitle")}</h2>
                 <p className="mono">http://127.0.0.1:{BRIDGE_DASHBOARD_PORT}/</p>
               </div>
-              <button className="btn ghost compact" onClick={() => setDashboardOpen(false)}>Close</button>
+              <button className="btn ghost compact" onClick={() => setDashboardOpen(false)}>{t("mining.close")}</button>
             </div>
             {/* Served by the bridge on loopback. Sandboxed: it is a local service the
                 app supervises, not app code, and it has no business reaching this
                 page's storage or scripts. */}
             <iframe
               className="dashboard-frame"
-              title="Mining bridge dashboard"
+              title={t("mining.dashboardFrameTitle")}
               src={`http://127.0.0.1:${BRIDGE_DASHBOARD_PORT}/`}
               sandbox="allow-scripts allow-same-origin"
             />
             <p className="subtle">
-              Served by the mining bridge on this computer. It appears once mining is running.
+              {t("mining.dashboardNote")}
             </p>
           </div>
         </div>
@@ -526,6 +527,7 @@ export function Mining() {
 }
 
 function EndpointField({ label, value, onChange, placeholder, disabled, kind }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; disabled: boolean; kind: "zkas" | "kaspa" }) {
+  const { t } = useTranslation();
   const profiles = (kind === "zkas" ? miningNodeProfiles : kaspaNodeProfiles).load();
   return (
     <label className="field-label">
@@ -543,10 +545,10 @@ function EndpointField({ label, value, onChange, placeholder, disabled, kind }: 
         spellCheck={false}
         autoComplete="off"
       />
-      <span className="fieldhint muted">Any node's IP and port — it does not have to be on this computer. e.g. 203.0.113.5:16110</span>
+      <span className="fieldhint muted">{t("endpointField.hint")}</span>
       {profiles.length > 0 && (
         <div className="saved-chips">
-          <span className="saved-chips-label">Saved</span>
+          <span className="saved-chips-label">{t("endpointField.saved")}</span>
           {profiles.map((profile) => (
             <button type="button" key={profile.id} className="chip" disabled={disabled} onClick={() => onChange(profile.address)} title={profile.address}>
               {profile.name}
@@ -559,7 +561,8 @@ function EndpointField({ label, value, onChange, placeholder, disabled, kind }: 
 }
 
 function EndpointCard({ icon, title, note, value, id, copied, onCopy }: { icon: React.ReactNode; title: string; note: string; value: string; id: string; copied: string; onCopy: (id: string, value: string) => void }) {
-  return <div className="endpoint-card"><div className="endpoint-title">{icon}<span><b>{title}</b><small>{note}</small></span></div>{value ? <button onClick={() => void onCopy(id, value)}><code>{value}</code>{copied === id ? <Check size={15} /> : <Copy size={15} />}</button> : <span className="endpoint-unavailable">Unavailable</span>}</div>;
+  const { t } = useTranslation();
+  return <div className="endpoint-card"><div className="endpoint-title">{icon}<span><b>{title}</b><small>{note}</small></span></div>{value ? <button onClick={() => void onCopy(id, value)}><code>{value}</code>{copied === id ? <Check size={15} /> : <Copy size={15} />}</button> : <span className="endpoint-unavailable">{t("endpointCard.unavailable")}</span>}</div>;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

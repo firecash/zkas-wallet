@@ -1,3 +1,5 @@
+import i18n from "./i18n";
+
 const STORAGE_KEY = "zkas_tx_labels_v1";
 
 type Labels = Record<string, string>;
@@ -25,6 +27,6 @@ export function setTxLabel(txid: string, label: string): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
   } catch {
-    throw new Error("This device could not save the label.");
+    throw new Error(i18n.t("txlabels.saveFailed"));
   }
 }

@@ -5,6 +5,7 @@
 // by platform. Telling a desktop user to install an Android app (as this once
 // did) is worse than saying nothing: it reads as "this feature is not for you".
 
+import { useTranslation, Trans } from "react-i18next";
 import { isNative } from "./api";
 import { isDesktop } from "./desktop";
 import { ONION_WALLETD_URL, ORBOT_APPSTORE_URL, ORBOT_PLAY_URL } from "./lib/relay";
@@ -21,24 +22,25 @@ function isIos(): boolean {
 const ONION_SITE = ONION_WALLETD_URL.replace(/\/daemon\/?$/, "");
 
 export function OrbotHelp() {
+  const { t } = useTranslation();
   if (isNative()) {
     // Same app, two stores, and Android's "VPN mode" wording does not exist on
     // iOS — sending an iPhone to Google Play read as "not for you".
     const ios = isIos();
     return (
       <div className="orbot-help">
-        <b>Tor needs Orbot</b>
+        <b>{t("orbotHelp.nativeTitle")}</b>
         <p className="muted small" style={{ margin: "4px 0 8px" }}>
-          The wallet reaches the onion through Orbot, the free Tor app. It isn't running:
+          {t("orbotHelp.nativeIntro")}
         </p>
         <ol className="orbot-steps">
-          <li>Install Orbot{ios ? " from the App Store" : ""}.</li>
+          <li>{ios ? t("orbotHelp.stepInstallIos") : t("orbotHelp.stepInstall")}</li>
           {ios
-            ? <li>Open it and <b>connect</b> — Orbot runs as a VPN on iPhone, so allow the VPN configuration it asks for.</li>
-            : <li>Open it and turn on <b>VPN mode</b>.</li>}
-          <li>Come back and tap <b>Connect over Tor</b> again.</li>
+            ? <li><Trans i18nKey="orbotHelp.stepConnectIos" components={{ b: <b /> }} /></li>
+            : <li><Trans i18nKey="orbotHelp.stepVpnMode" components={{ b: <b /> }} /></li>}
+          <li><Trans i18nKey="orbotHelp.stepRetry" components={{ b: <b /> }} /></li>
         </ol>
-        <a className="btn small ghost" href={ios ? ORBOT_APPSTORE_URL : ORBOT_PLAY_URL} target="_blank" rel="noreferrer">Get Orbot</a>
+        <a className="btn small ghost" href={ios ? ORBOT_APPSTORE_URL : ORBOT_PLAY_URL} target="_blank" rel="noreferrer">{t("orbotHelp.getOrbot")}</a>
       </div>
     );
   }
@@ -46,23 +48,20 @@ export function OrbotHelp() {
   if (isDesktop()) {
     return (
       <div className="orbot-help">
-        <b>Tor isn't running on this computer</b>
+        <b>{t("orbotHelp.desktopTitle")}</b>
         {/* This used to say the app had no Tor client and needed the SYSTEM to
             route through Tor — which is a far bigger ask than it needs to be, and
             wrong since the shell started speaking SOCKS itself. Running Tor
             Browser is enough, and is how most people on Windows and macOS have
             Tor at all. */}
         <p className="muted small" style={{ margin: "4px 0 8px" }}>
-          The wallet connects through Tor's own SOCKS port, so nothing has to be
-          routed system-wide — Tor just has to be running. Start the Tor service,
-          or simply open Tor Browser and leave it open, then try again.
+          {t("orbotHelp.desktopIntro")}
         </p>
         <p className="muted small" style={{ margin: "0 0 8px" }}>
-          It looks on <code>127.0.0.1:9050</code> (Tor service) and{" "}
-          <code>127.0.0.1:9150</code> (Tor Browser).
+          <Trans i18nKey="orbotHelp.desktopPorts" components={{ code: <code /> }} />
         </p>
         <p className="muted small" style={{ margin: 0 }}>
-          For privacy without Tor, run your own node from the <b>Node</b> page — then nobody else sees what you ask.
+          <Trans i18nKey="orbotHelp.desktopOwnNode" components={{ b: <b /> }} />
         </p>
       </div>
     );
@@ -72,13 +71,12 @@ export function OrbotHelp() {
   // served on the onion, so they can just open it there.
   return (
     <div className="orbot-help">
-      <b>Open this wallet in Tor Browser</b>
+      <b>{t("orbotHelp.browserTitle")}</b>
       <p className="muted small" style={{ margin: "4px 0 8px" }}>
-        An ordinary browser cannot reach an <code>.onion</code> address. The whole wallet is served over Tor — open
-        it in Tor Browser at:
+        <Trans i18nKey="orbotHelp.browserIntro" components={{ code: <code /> }} />
       </p>
       <div className="addr" style={{ marginBottom: 8 }}>{ONION_SITE}</div>
-      <p className="muted small" style={{ margin: 0 }}>Your keys stay on your device either way.</p>
+      <p className="muted small" style={{ margin: 0 }}>{t("orbotHelp.browserKeys")}</p>
     </div>
   );
 }

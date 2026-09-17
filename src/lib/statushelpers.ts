@@ -1,6 +1,7 @@
 import type { Status, ChainHistoryRow } from "../api";
 import { type LocalTx, loadSnapshot } from "../localtx";
 import { CONF_MAX_TRIES, CONF_RECENT_RETRY_MS } from "./constants";
+import i18n from "../i18n";
 
 export function sameStatus(a: Status, b: Status): boolean {
   return (
@@ -59,10 +60,10 @@ export function pendingOutFc(status: Status | null): number {
 export function confBadge(t: LocalTx): string {
   const confs = t.confs ?? 0;
   if (confs >= 1) {
-    return Date.now() - t.ts > CONF_RECENT_RETRY_MS ? "confirmed" : `${confs} conf${confs === 1 ? "" : "s"}`;
+    return Date.now() - t.ts > CONF_RECENT_RETRY_MS ? i18n.t("confirmations.confirmed") : i18n.t("confirmations.confs", { count: confs });
   }
-  if (t.confs == null && (t.confTries ?? 0) >= CONF_MAX_TRIES) return "not seen on-chain";
-  return "sending…";
+  if (t.confs == null && (t.confTries ?? 0) >= CONF_MAX_TRIES) return i18n.t("statushelpers.notSeen");
+  return i18n.t("statushelpers.sending");
 }
 
 let lastSnapshotKey = "";

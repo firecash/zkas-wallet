@@ -3,10 +3,13 @@
 // `index.html` — the same drawing shield, teal aurora, wordmark and promise — so
 // the hand-off from the browser's first paint → this React screen → the app is
 // one continuous animation rather than three different loading states.
+import { useTranslation } from "react-i18next";
 
-export function BootLoader({ label = "Opening…" }: { label?: string }) {
+export function BootLoader({ label }: { label?: string }) {
+  const { t } = useTranslation();
+  const text = label ?? t("bootLoader.opening");
   return (
-    <div className="bootload" role="status" aria-live="polite" aria-label={label}>
+    <div className="bootload" role="status" aria-live="polite" aria-label={text}>
       <div className="bootload-aurora" aria-hidden="true" />
       <div className="bootload-stage">
         <div className="connect-shield bootload-shield" aria-hidden="true">
@@ -31,9 +34,9 @@ export function BootLoader({ label = "Opening…" }: { label?: string }) {
           </svg>
         </div>
         <div className="bootload-mark">
-          <span>Z</span>Kas
+          <span>Z</span>Kas{/* i18n-ignore: logo wordmark */}
         </div>
-        <div className="bootload-tag">{label}</div>
+        <div className="bootload-tag">{text}</div>
         <div className="bootload-bar" aria-hidden="true">
           <span />
         </div>

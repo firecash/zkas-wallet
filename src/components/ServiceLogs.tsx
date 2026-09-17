@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Clipboard, Download, Pause, Play, Search, WrapText } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { ServiceLog } from "../desktop-services";
 
 type Props = {
@@ -20,6 +21,7 @@ function output(lines: ServiceLog[]): string {
 }
 
 export function ServiceLogs({ logs, onClear, preferredService }: Props) {
+  const { t } = useTranslation();
   const services = useMemo(() => Array.from(new Set(logs.map((line) => line.service))).sort(), [logs]);
   const [service, setService] = useState(preferredService ?? "all");
   const [query, setQuery] = useState("");
@@ -66,24 +68,24 @@ export function ServiceLogs({ logs, onClear, preferredService }: Props) {
   return (
     <div className="service-console">
       <div className="service-console-tools">
-        <label className="service-log-search"><Search size={14} /><input aria-label="Search service logs" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find in logs" /></label>
-        <select aria-label="Service" value={service} onChange={(event) => setService(event.target.value)}>
-          <option value="all">All services</option>
+        <label className="service-log-search"><Search size={14} /><input aria-label={t("serviceLogs.searchAria")} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("serviceLogs.findPlaceholder")} /></label>
+        <select aria-label={t("serviceLogs.serviceAria")} value={service} onChange={(event) => setService(event.target.value)}>
+          <option value="all">{t("serviceLogs.allServices")}</option>
           {services.map((name) => <option key={name} value={name}>{name}</option>)}
         </select>
-        <button className={issuesOnly ? "active" : ""} onClick={() => setIssuesOnly((value) => !value)}>Issues</button>
-        <button className={follow ? "active" : ""} title={follow ? "Pause follow" : "Follow newest"} onClick={() => setFollow((value) => !value)}>{follow ? <Pause size={14} /> : <Play size={14} />}<span>Follow</span></button>
-        <button className={wrap ? "active" : ""} title="Wrap long lines" onClick={() => setWrap((value) => !value)}><WrapText size={14} /><span>Wrap</span></button>
-        <button disabled={!visible.length} onClick={() => void copy()}>{copied ? <Check size={14} /> : <Clipboard size={14} />}<span>{copied ? "Copied" : "Copy"}</span></button>
-        <button disabled={!visible.length} onClick={download}><Download size={14} /><span>Save</span></button>
-        <button onClick={onClear}>Clear view</button>
+        <button className={issuesOnly ? "active" : ""} onClick={() => setIssuesOnly((value) => !value)}>{t("serviceLogs.issues")}</button>
+        <button className={follow ? "active" : ""} title={follow ? t("serviceLogs.pauseFollow") : t("serviceLogs.followNewest")} onClick={() => setFollow((value) => !value)}>{follow ? <Pause size={14} /> : <Play size={14} />}<span>{t("serviceLogs.follow")}</span></button>
+        <button className={wrap ? "active" : ""} title={t("serviceLogs.wrapTitle")} onClick={() => setWrap((value) => !value)}><WrapText size={14} /><span>{t("serviceLogs.wrap")}</span></button>
+        <button disabled={!visible.length} onClick={() => void copy()}>{copied ? <Check size={14} /> : <Clipboard size={14} />}<span>{copied ? t("serviceLogs.copied") : t("serviceLogs.copy")}</span></button>
+        <button disabled={!visible.length} onClick={download}><Download size={14} /><span>{t("serviceLogs.save")}</span></button>
+        <button onClick={onClear}>{t("serviceLogs.clearView")}</button>
       </div>
       <div className={`log-view service-log-view ${wrap ? "wrap" : "nowrap"}`} ref={viewport} onScroll={(event) => {
         const element = event.currentTarget;
         const atBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 20;
         if (!atBottom && follow) setFollow(false);
       }}>
-        {visible.length === 0 ? <div className="service-log-empty">No matching logs.</div> : visible.map((line, index) => {
+        {visible.length === 0 ? <div className="service-log-empty">{t("serviceLogs.noMatching")}</div> : visible.map((line, index) => {
           const level = severity(line);
           return <div key={`${line.at_unix_ms}-${index}`} className={`service-log-line ${level}`}>
             <time>{new Date(line.at_unix_ms).toLocaleTimeString()}</time>
@@ -92,7 +94,7 @@ export function ServiceLogs({ logs, onClear, preferredService }: Props) {
           </div>;
         })}
       </div>
-      <div className="service-console-foot"><span>{visible.length.toLocaleString()} lines</span><span>{follow ? "Following newest" : "Paused"}</span></div>
+      <div className="service-console-foot"><span>{t("serviceLogs.lines", { n: visible.length.toLocaleString() })}</span><span>{follow ? t("serviceLogs.followingNewest") : t("serviceLogs.paused")}</span></div>
     </div>
   );
 }

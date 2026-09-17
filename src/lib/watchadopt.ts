@@ -2,6 +2,7 @@ import { api } from "../api";
 import { addWallet, ensureRegistered } from "../wallets";
 import { birthdayFromUrl, isViewKey, setWatchKey, viewKeyFromUrl } from "./watchonly";
 import { rememberBirthday } from "./deviceseed";
+import i18n from "../i18n";
 
 /// Turn this browser into a viewer of someone's wallet, from a link.
 ///
@@ -9,7 +10,7 @@ import { rememberBirthday } from "./deviceseed";
 /// wallet's notes, and records it locally. No seed is stored, so this device
 /// cannot spend — see `isWatchOnly`.
 export async function adoptViewKey(key: string, birthday = 0): Promise<string> {
-  if (!isViewKey(key)) throw new Error("That is not a valid view key.");
+  if (!isViewKey(key)) throw new Error(i18n.t("watchonly.invalidViewKey"));
   // A fresh token, always. Adopting into the ACTIVE wallet would point this
   // device's existing wallet at someone else's key, and on a device that already
   // has a spending wallet that would quietly replace what the user can spend

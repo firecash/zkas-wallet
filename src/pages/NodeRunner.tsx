@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Archive, Database, Pickaxe, X } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import { initDesktop, isDesktop, setNodeSource } from "../desktop";
 import { ServiceLogsDialog } from "../components/ServiceLogsDialog";
 import {
@@ -26,9 +28,9 @@ function formatCount(value: number | null): string {
 }
 
 function presetLabel(preset: NodePreset | undefined): string {
-  if (preset === "mining") return "Mining";
-  if (preset === "archival") return "Archive";
-  if (preset === "shielded") return "Shielded history";
+  if (preset === "mining") return i18n.t("nodeRunner.presetMining");
+  if (preset === "archival") return i18n.t("nodeRunner.presetArchival");
+  if (preset === "shielded") return i18n.t("nodeRunner.presetShielded");
   return "—";
 }
 
@@ -57,6 +59,7 @@ function NodeStartDialog({
   onClose: () => void;
   onRun: () => void;
 }) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
@@ -80,48 +83,48 @@ function NodeStartDialog({
     }}>
       <section className="service-dialog node-start-dialog" role="dialog" aria-modal="true" aria-labelledby="node-start-title">
         <header className="service-dialog-header">
-          <div><span className="eyebrow">Local node</span><h2 id="node-start-title">Choose how to run it</h2></div>
-          <button className="dialog-close" aria-label="Close node setup" title="Close" disabled={busy} onClick={onClose}><X size={19} /></button>
+          <div><span className="eyebrow">{t("nodeStartDialog.eyebrow")}</span><h2 id="node-start-title">{t("nodeStartDialog.title")}</h2></div>
+          <button className="dialog-close" aria-label={t("nodeStartDialog.closeAria")} title={t("nodeStartDialog.closeTitle")} disabled={busy} onClick={onClose}><X size={19} /></button>
         </header>
 
-        <div className="node-mode-list" role="radiogroup" aria-label="Node mode">
+        <div className="node-mode-list" role="radiogroup" aria-label={t("nodeStartDialog.modeAria")}>
           <button className={`node-mode-option ${preset === "mining" ? "selected" : ""}`} role="radio" aria-checked={preset === "mining"} autoFocus onClick={() => onPreset("mining")}>
             <span className="node-mode-icon"><Pickaxe size={20} /></span>
-            <span><strong>Mining</strong><small>Smallest. Validates the chain and serves miners, but does not keep old wallet notes.</small></span>
+            <span><strong>{t("nodeStartDialog.mining")}</strong><small>{t("nodeStartDialog.miningNote")}</small></span>
             <i aria-hidden="true" />
           </button>
           <button className={`node-mode-option ${preset === "shielded" ? "selected" : ""}`} role="radio" aria-checked={preset === "shielded"} onClick={() => onPreset("shielded")}>
             <span className="node-mode-icon"><Database size={20} /></span>
-            <span><strong>Shielded history</strong><small>Keeps complete wallet history while pruning old full block bodies.</small></span>
+            <span><strong>{t("nodeStartDialog.shielded")}</strong><small>{t("nodeStartDialog.shieldedNote")}</small></span>
             <i aria-hidden="true" />
           </button>
           <button className={`node-mode-option ${preset === "archival" ? "selected" : ""}`} role="radio" aria-checked={preset === "archival"} onClick={() => onPreset("archival")}>
             <span className="node-mode-icon"><Archive size={20} /></span>
-            <span><strong>Archive</strong><small>Keeps complete wallet history and every block body. Uses the most disk.</small></span>
+            <span><strong>{t("nodeStartDialog.archive")}</strong><small>{t("nodeStartDialog.archiveNote")}</small></span>
             <i aria-hidden="true" />
           </button>
         </div>
 
         <label className="check-row node-public-toggle">
           <input type="checkbox" checked={publicP2p} onChange={(event) => onPublicP2p(event.target.checked)} />
-          <span><strong>Accept inbound peers</strong><small>Optional. Other nodes can connect to this computer on TCP port {MANAGED_ZKAS_P2P_PORT}.</small></span>
+          <span><strong>{t("nodeStartDialog.inbound")}</strong><small>{t("nodeStartDialog.inboundNote", { port: MANAGED_ZKAS_P2P_PORT })}</small></span>
         </label>
 
         <div className={`node-network-note ${publicP2p ? "public" : "private"}`}>
-          <strong>{publicP2p ? "Firewall setup" : "No firewall changes needed"}</strong>
+          <strong>{publicP2p ? t("nodeStartDialog.firewallSetup") : t("nodeStartDialog.noFirewall")}</strong>
           <span>{publicP2p
-            ? `Allow inbound TCP ${MANAGED_ZKAS_P2P_PORT} in the operating-system firewall. If this machine is behind a router, forward ${MANAGED_ZKAS_P2P_PORT} only if you want public inbound peers.`
-            : "The node makes outbound peer connections and will sync normally. Its P2P listener stays on this device."}</span>
-          <small>Node RPC is private by default. Trusted-LAN access can be enabled in Host; never expose TCP {MANAGED_ZKAS_RPC_PORT} to the internet.</small>
+            ? t("nodeStartDialog.firewallPublic", { port: MANAGED_ZKAS_P2P_PORT })
+            : t("nodeStartDialog.firewallPrivate")}</span>
+          <small>{t("nodeStartDialog.rpcPrivate", { port: MANAGED_ZKAS_RPC_PORT })}</small>
         </div>
 
-        {miningConflict && <div className="dialog-inline-error">This wallet currently uses the local node. Switch the wallet to its public service before running the history-free Mining mode.</div>}
+        {miningConflict && <div className="dialog-inline-error">{t("nodeStartDialog.miningConflict")}</div>}
         {error && <div className="dialog-inline-error">{error}</div>}
-        {dataDir && <p className="node-data-path">Chain data: <code>{dataDir}/node</code></p>}
+        {dataDir && <p className="node-data-path"><Trans i18nKey="nodeStartDialog.chainData" values={{ dir: dataDir }} components={{ code: <code /> }} /></p>}
 
         <footer className="service-dialog-footer">
-          <button className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
-          <button className="btn" disabled={busy || miningConflict} onClick={onRun}>{busy ? "Starting…" : "Run node"}</button>
+          <button className="btn ghost" disabled={busy} onClick={onClose}>{t("nodeStartDialog.cancel")}</button>
+          <button className="btn" disabled={busy || miningConflict} onClick={onRun}>{busy ? t("nodeStartDialog.starting") : t("nodeStartDialog.runNode")}</button>
         </footer>
       </section>
     </div>,
@@ -130,6 +133,7 @@ function NodeStartDialog({
 }
 
 export function NodeRunner() {
+  const { t } = useTranslation();
   const desktop = isDesktop();
   const [config, setConfig] = useState<ControlConfig | null>(null);
   const [node, setNode] = useState<NodeStatus | null>(null);
@@ -200,17 +204,17 @@ export function NodeRunner() {
   }, [desktop, refresh]);
 
   const syncLabel = useMemo(() => {
-    if (!node) return "Checking…";
-    if (!node.running) return "Stopped";
+    if (!node) return t("nodeRunner.checking");
+    if (!node.running) return t("nodeRunner.stopped");
     // A node still filling in shielded history from peers is not done from the wallet's
     // point of view: on a first sync the block count does not move for the whole backfill
     // (bodies wait for it), so a bare percentage reads as a stuck sync.
     const filling = node.history_complete === false;
-    const from = node.history_from_daa != null ? ` · from DAA ${node.history_from_daa.toLocaleString()}` : "";
-    if (node.is_synced === true) return filling ? `Filling shielded history${from}` : "Synced";
-    if (node.sync_progress != null) return `Syncing · ${node.sync_progress.toFixed(1)}%${filling ? " · filling shielded history" : ""}`;
-    return filling ? `Filling shielded history${from}` : "Starting…";
-  }, [node]);
+    const fillingLabel = node.history_from_daa != null ? t("nodeRunner.fillingFrom", { daa: node.history_from_daa.toLocaleString() }) : t("nodeRunner.filling");
+    if (node.is_synced === true) return filling ? fillingLabel : t("nodeRunner.synced");
+    if (node.sync_progress != null) return filling ? t("nodeRunner.syncingPctFilling", { pct: node.sync_progress.toFixed(1) }) : t("nodeRunner.syncingPct", { pct: node.sync_progress.toFixed(1) });
+    return filling ? fillingLabel : t("nodeRunner.starting");
+  }, [node, t]);
   // `false` gates the attach; unknown (older backend / node did not answer) keeps
   // today's behaviour of trusting `is_synced` alone.
   const fillingHistory = node?.running === true && node.history_complete === false;
@@ -247,10 +251,10 @@ export function NodeRunner() {
   if (!desktop) {
     return (
       <main className="control-page">
-        <header className="control-heading"><div><span className="eyebrow">Node</span><h1>Run ZKAS yourself</h1></div></header>
+        <header className="control-heading"><div><span className="eyebrow">{t("nodeRunner.webEyebrow")}</span><h1>{t("nodeRunner.webTitle")}</h1></div></header>
         <section className="control-card empty-state">
-          <h2>Desktop app required</h2>
-          <p>A phone or browser cannot safely keep a full node running. The wallet still works through its selected node.</p>
+          <h2>{t("nodeRunner.webRequired")}</h2>
+          <p>{t("nodeRunner.webNote")}</p>
         </section>
       </main>
     );
@@ -259,13 +263,13 @@ export function NodeRunner() {
   const installed = !!config?.components.zkas_node;
   const updateAvailable = !!config?.components.zkas_node_update_available;
   const downloadPercent = progress?.total ? Math.round((progress.received / progress.total) * 100) : null;
-  const walletSource = walletd?.node_source === "local" ? "Local node" : walletd?.node_source === "custom" ? "My node" : "Public node";
-  const walletConnectionLabel = walletd?.node_connected === false ? `${walletSource} · reconnecting` : walletSource;
+  const walletSource = walletd?.node_source === "local" ? t("nodeRunner.sourceLocal") : walletd?.node_source === "custom" ? t("nodeRunner.sourceCustom") : t("nodeRunner.sourcePublic");
+  const walletConnectionLabel = walletd?.node_connected === false ? t("nodeRunner.reconnecting", { source: walletSource }) : walletSource;
 
   return (
     <main className="control-page">
       <header className="control-heading">
-        <div><span className="eyebrow">Node</span><h1>Your ZKAS node</h1><p>Private wallet access and direct mining, managed by this app.</p></div>
+        <div><span className="eyebrow">{t("nodeRunner.eyebrow")}</span><h1>{t("nodeRunner.title")}</h1><p>{t("nodeRunner.intro")}</p></div>
         <span className={`status-pill ${node?.running ? node.is_synced ? "good" : "warm" : "off"}`}>{syncLabel}</span>
       </header>
 
@@ -273,82 +277,90 @@ export function NodeRunner() {
 
       {!installed && (
         <section className="control-card install-card">
-          <div><span className="step-number">1</span><h2>Install node software</h2><p>The verified ZKAS release is downloaded into the app's private data folder.</p></div>
+          <div><span className="step-number">1</span><h2>{t("nodeRunner.installTitle")}</h2><p>{t("nodeRunner.installNote")}</p></div>
           <button className="btn" disabled={busy !== null} onClick={() => run("install", () => desktopServices.install({ zkas: true, bridge: false, kaspa: false }))}>
-            {busy === "install" ? progress ? `${progress.phase}${downloadPercent != null ? ` · ${downloadPercent}%` : ""}` : "Preparing…" : "Install ZKAS node"}
+            {busy === "install" ? progress ? downloadPercent != null ? t("nodeRunner.phasePercent", { phase: progress.phase, pct: downloadPercent }) : progress.phase : t("nodeRunner.preparing") : t("nodeRunner.installNode")}
           </button>
         </section>
       )}
 
       {installed && updateAvailable && (
         <section className="control-card install-card node-update-card">
-          <div><h2>Node update available</h2><p>{config?.zkas_release} fixes fresh-node synchronization and shielded-history transfer.</p></div>
+          <div><h2>{t("nodeRunner.updateTitle")}</h2><p>{t("nodeRunner.updateNote", { release: config?.zkas_release })}</p></div>
           <button className="btn" disabled={busy !== null || !!node?.running} onClick={() => run("install", () => desktopServices.install({ zkas: true, bridge: false, kaspa: false }))}>
             {node?.running
-              ? "Stop node to update"
+              ? t("nodeRunner.stopToUpdate")
               : busy === "install"
-                ? progress ? `${progress.phase}${downloadPercent != null ? ` · ${downloadPercent}%` : ""}` : "Preparing…"
-                : `Update to ${config?.zkas_release ?? "latest"}`}
+                ? progress ? downloadPercent != null ? t("nodeRunner.phasePercent", { phase: progress.phase, pct: downloadPercent }) : progress.phase : t("nodeRunner.preparing")
+                : t("nodeRunner.updateTo", { version: config?.zkas_release ?? t("nodeRunner.latest") })}
           </button>
         </section>
       )}
 
       <section className="control-card">
         <div className="card-title-row">
-          <div><span className="step-number">{installed ? "1" : "2"}</span><h2>Node</h2><p className="mono subtle">{node?.rpc_addr ?? MANAGED_ZKAS_RPC}</p></div>
-          <span className={`status-dot ${node?.running ? "on" : ""}`} aria-label={node?.running ? "running" : "stopped"} />
+          <div><span className="step-number">{installed ? "1" : "2"}</span><h2>{t("nodeRunner.nodeHeading")}</h2><p className="mono subtle">{node?.rpc_addr ?? MANAGED_ZKAS_RPC}</p></div>
+          <span className={`status-dot ${node?.running ? "on" : ""}`} aria-label={node?.running ? t("nodeRunner.ariaRunning") : t("nodeRunner.ariaStopped")} />
         </div>
         <div className="metric-grid">
-          <Metric label="Blocks" value={formatCount(node?.block_count ?? null)} />
-          <Metric label="DAA score" value={formatCount(node?.daa_score ?? null)} />
-          <Metric label="Peers" value={formatCount(node?.peer_count ?? null)} />
-          <Metric label="Mempool" value={formatCount(node?.mempool_size ?? null)} />
-          <Metric label="Chain data" value={formatBytes(node?.disk_bytes ?? 0)} />
-          <Metric label="Process" value={node?.pid ? `PID ${node.pid}` : "—"} />
+          <Metric label={t("nodeRunner.metricBlocks")} value={formatCount(node?.block_count ?? null)} />
+          <Metric label={t("nodeRunner.metricDaa")} value={formatCount(node?.daa_score ?? null)} />
+          <Metric label={t("nodeRunner.metricPeers")} value={formatCount(node?.peer_count ?? null)} />
+          <Metric label={t("nodeRunner.metricMempool")} value={formatCount(node?.mempool_size ?? null)} />
+          <Metric label={t("nodeRunner.metricChainData")} value={formatBytes(node?.disk_bytes ?? 0)} />
+          <Metric label={t("nodeRunner.metricProcess")} value={node?.pid ? t("nodeRunner.pid", { pid: node.pid }) : "—"} />
         </div>
         <div className="node-runtime-summary">
-          <span><small>Mode</small><strong>{presetLabel(config?.settings.node_preset)}</strong></span>
-          <span><small>Peer access</small><strong>{config?.settings.node_public_p2p ? `Public · TCP ${MANAGED_ZKAS_P2P_PORT}` : "Outbound only"}</strong></span>
-          <span><small>RPC</small><strong>{config?.settings.node_lan_rpc ? `Trusted LAN · TCP ${MANAGED_ZKAS_RPC_PORT}` : `Private · ${MANAGED_ZKAS_RPC}`}</strong></span>
+          <span><small>{t("nodeRunner.mode")}</small><strong>{presetLabel(config?.settings.node_preset)}</strong></span>
+          <span><small>{t("nodeRunner.peerAccess")}</small><strong>{config?.settings.node_public_p2p ? t("nodeRunner.publicTcp", { port: MANAGED_ZKAS_P2P_PORT }) : t("nodeRunner.outboundOnly")}</strong></span>
+          <span><small>{t("nodeRunner.rpc")}</small><strong>{config?.settings.node_lan_rpc ? t("nodeRunner.trustedLan", { port: MANAGED_ZKAS_RPC_PORT }) : t("nodeRunner.privateRpc", { addr: MANAGED_ZKAS_RPC })}</strong></span>
         </div>
-        {node?.error && node.running && <p className="inline-warning">The process is running but RPC is not ready yet: {node.error}</p>}
-        {!node?.running && node?.last_exit && <p className="inline-warning">Last run: {node.last_exit}</p>}
+        {node?.error && node.running && <p className="inline-warning">{t("nodeRunner.rpcNotReady", { error: node.error })}</p>}
+        {!node?.running && node?.last_exit && <p className="inline-warning">{t("nodeRunner.lastRun", { exit: node.last_exit })}</p>}
         <div className="control-actions">
           <button className="btn" disabled={!installed || updateAvailable || busy !== null || !!node?.running} onClick={openStartDialog}>
-            {updateAvailable ? "Update before running" : "Run node"}
+            {updateAvailable ? t("nodeRunner.updateBeforeRunning") : t("nodeRunner.runNode")}
           </button>
           <button className="btn ghost" disabled={busy !== null || !node?.running || !node.managed} onClick={() => run("stop", async () => { await desktopServices.stopNode(); await initDesktop(); location.reload(); })}>
-            {busy === "stop" ? "Stopping…" : "Stop"}
+            {busy === "stop" ? t("nodeRunner.stopping") : t("nodeRunner.stop")}
           </button>
-          <button className="btn ghost" onClick={() => setLogService("zkas-node")}>View node logs</button>
+          <button className="btn ghost" onClick={() => setLogService("zkas-node")}>{t("nodeRunner.viewNodeLogs")}</button>
         </div>
       </section>
 
       <section className="control-card compact-card">
-        <div className="card-title-row"><div><h2>Wallet connection</h2><p>The wallet is separate from the node process above.</p></div><span className={`status-pill ${walletd?.running && walletd.node_connected ? "good" : "off"}`}>{walletConnectionLabel}</span></div>
+        <div className="card-title-row"><div><h2>{t("nodeRunner.walletConnection")}</h2><p>{t("nodeRunner.walletSeparate")}</p></div><span className={`status-pill ${walletd?.running && walletd.node_connected ? "good" : "off"}`}>{walletConnectionLabel}</span></div>
         <div className="metric-grid three">
-          <Metric label="Wallet scan" value={walletd?.scanning_progress == null ? "—" : `${walletd.scanning_progress.toFixed(1)}%`} />
-          <Metric label="Balance" value={walletd?.balance == null ? "—" : `${walletd.balance} ZKAS`} />
-          <Metric label="RPC" value={walletd?.node_rpc ?? "—"} />
+          <Metric label={t("nodeRunner.metricWalletScan")} value={walletd?.scanning_progress == null ? "—" : `${walletd.scanning_progress.toFixed(1)}%`} />
+          <Metric label={t("nodeRunner.metricBalance")} value={walletd?.balance == null ? "—" : t("nodeRunner.balanceZkas", { balance: walletd.balance })} />
+          <Metric label={t("nodeRunner.metricRpc")} value={walletd?.node_rpc ?? "—"} />
         </div>
         <div className="control-actions">
           {walletd?.node_source !== "local" && config?.settings.node_preset !== "mining" && node?.is_synced === true && !fillingHistory && (
-            <button className="btn" disabled={busy !== null} onClick={() => run("attach", async () => { await setNodeSource("local"); location.reload(); })}>{busy === "attach" ? "Connecting…" : "Use this node for wallet"}</button>
+            <button className="btn" disabled={busy !== null} onClick={() => run("attach", async () => { await setNodeSource("local"); location.reload(); })}>{busy === "attach" ? t("nodeRunner.connecting") : t("nodeRunner.useThisNode")}</button>
           )}
           {walletd?.node_source === "local" && (
-            <button className="btn ghost" disabled={busy !== null} onClick={() => run("attach", async () => { await setNodeSource("remote"); location.reload(); })}>Use public node</button>
+            <button className="btn ghost" disabled={busy !== null} onClick={() => run("attach", async () => { await setNodeSource("remote"); location.reload(); })}>{t("nodeRunner.usePublicNode")}</button>
           )}
-          <button className="btn ghost" onClick={() => setLogService("wallet-engine")}>View wallet logs</button>
+          <button className="btn ghost" onClick={() => setLogService("wallet-engine")}>{t("nodeRunner.viewWalletLogs")}</button>
         </div>
-        {node?.running && node.is_synced !== true && !fillingHistory && <p className="inline-warning">Local node is syncing. Your wallet stays on {walletd?.node_source === "custom" ? "your existing node" : "the public node"} with its current balance until the local node is complete.</p>}
+        {node?.running && node.is_synced !== true && !fillingHistory && <p className="inline-warning">{t("nodeRunner.localSyncing", { source: walletd?.node_source === "custom" ? t("nodeRunner.yourExistingNode") : t("nodeRunner.thePublicNode") })}</p>}
         {fillingHistory && (
           <p className="inline-warning">
-            {node?.is_synced === true ? "Synced, but still" : "Local node is syncing and still"} filling in shielded history from peers{node?.history_from_daa != null ? ` (currently from DAA ${node.history_from_daa.toLocaleString()})` : ""}. Block sync waits for this, so the block count can sit still for a while — it is working, not stuck. The wallet can attach once the node log says &quot;shielded history: VERIFIED&quot; (or the floor drops below your wallet&apos;s birthday). Your wallet stays on {walletd?.node_source === "custom" ? "your existing node" : "the public node"} until then.
+            {node?.is_synced === true
+              ? t("nodeRunner.fillingSynced", {
+                from: node?.history_from_daa != null ? t("nodeRunner.currentlyFromDaa", { daa: node.history_from_daa.toLocaleString() }) : "",
+                source: walletd?.node_source === "custom" ? t("nodeRunner.yourExistingNode") : t("nodeRunner.thePublicNode"),
+              })
+              : t("nodeRunner.fillingSyncing", {
+                from: node?.history_from_daa != null ? t("nodeRunner.currentlyFromDaa", { daa: node.history_from_daa.toLocaleString() }) : "",
+                source: walletd?.node_source === "custom" ? t("nodeRunner.yourExistingNode") : t("nodeRunner.thePublicNode"),
+              })}
           </p>
         )}
-        {walletd?.running && walletd.node_connected === false && <p className="inline-warning">The wallet is open, but its selected node is not answering yet. It retries automatically and keeps the last confirmed wallet state visible.</p>}
-        {walletd?.error && <p className="inline-warning">Wallet engine: {walletd.error}</p>}
-        {config?.settings.node_preset === "mining" && <p className="inline-warning">Mining mode is never offered to the wallet because it does not retain complete historical notes.</p>}
+        {walletd?.running && walletd.node_connected === false && <p className="inline-warning">{t("nodeRunner.walletNotAnswering")}</p>}
+        {walletd?.error && <p className="inline-warning">{t("nodeRunner.walletEngineError", { error: walletd.error })}</p>}
+        {config?.settings.node_preset === "mining" && <p className="inline-warning">{t("nodeRunner.miningNeverOffered")}</p>}
       </section>
 
       <NodeStartDialog
@@ -368,7 +380,7 @@ export function NodeRunner() {
         open={logService !== null}
         onClose={closeLogsDialog}
         service={logService ?? "wallet-engine"}
-        title={logService === "zkas-node" ? "ZKAS node logs" : "Wallet engine logs"}
+        title={logService === "zkas-node" ? t("nodeRunner.nodeLogsTitle") : t("nodeRunner.walletLogsTitle")}
       />
     </main>
   );

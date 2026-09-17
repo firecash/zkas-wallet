@@ -17,6 +17,7 @@
 import landDots from "../assets/landdots.json";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import i18n from "../i18n";
 
 const TEAL = "#17d6be";
 const BRIGHT = "#7ef7e4";
@@ -116,12 +117,12 @@ function hashDisplay(id: string, t: number): string {
 // from the last block the globe actually saw, so even the filler is true: at
 // 1 BPS every block mints one coinbase note and carries a fresh state root.
 const AMBIENT: ((b: GlobeBlock | null) => string)[] = [
-  (b) => (b ? `note commitment ⊕ #${b.blue.toLocaleString("en-US")}` : "note commitment ⊕"),
-  () => "sinsemilla · anchor ✓",
-  () => "kHeavyHash · live work",
-  () => "private transaction relay",
-  (b) => (b ? `${b.txs} tx · amounts sealed` : "amounts sealed"),
-  () => "peers: relaying ✓",
+  (b) => (b ? i18n.t("networkGlobe.ambientCommitment", { blue: b.blue.toLocaleString("en-US") }) : i18n.t("networkGlobe.ambientCommitmentBare")),
+  () => i18n.t("networkGlobe.ambientAnchor"),
+  () => i18n.t("networkGlobe.ambientWork"),
+  () => i18n.t("networkGlobe.ambientRelay"),
+  (b) => (b ? i18n.t("networkGlobe.ambientSealed", { txs: b.txs }) : i18n.t("networkGlobe.ambientSealedBare")),
+  () => i18n.t("networkGlobe.ambientPeers"),
 ];
 
 /** ISO-3166-1 alpha-2 → regional-indicator flag emoji. */
@@ -778,7 +779,7 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
       spawnTag("meshtag", short, at.x, at.y - 6, {
         id: short,
         href: `/transactions/${tx.id}`,
-        info: `${tx.actions} orchard action${tx.actions === 1 ? "" : "s"} · halo2 proof verified · relayed`,
+        info: i18n.t("networkGlobe.txInfo", { count: tx.actions }),
       });
     };
 
@@ -793,10 +794,10 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
       lastBlockTag = now;
       spawnTag(
         "meshtag--block",
-        `⬢ ${b.blue.toLocaleString("en-US")} · ${b.txs} tx`,
+        i18n.t("networkGlobe.blockTag", { blue: b.blue.toLocaleString("en-US"), txs: b.txs }),
         8 + Math.random() * 60,
         12 + Math.random() * 62,
-        { href: `/blocks/${b.hash}`, info: "accepted block" },
+        { href: `/blocks/${b.hash}`, info: i18n.t("networkGlobe.blockInfo") },
       );
     };
 

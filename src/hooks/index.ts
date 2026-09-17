@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import i18n from "../i18n";
 
 export function prefersReducedMotion(): boolean {
   return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -113,12 +114,12 @@ export function useScanEta(scanned: number, total: number, active: boolean): num
 }
 
 export function fmtEta(secs: number): string {
-  if (secs < 45) return "under a minute left";
+  if (secs < 45) return i18n.t("hooks.underMinuteLeft");
   const m = Math.round(secs / 60);
-  if (m < 60) return `~${m} min left`;
+  if (m < 60) return i18n.t("hooks.minutesLeft", { m });
   const h = Math.floor(m / 60);
   const rem = m % 60;
-  return rem ? `~${h}h ${rem}m left` : `~${h}h left`;
+  return rem ? i18n.t("hooks.hoursMinutesLeft", { h, m: rem }) : i18n.t("hooks.hoursLeft", { h });
 }
 
 export function useElapsedWhile(on: boolean): number | null {
