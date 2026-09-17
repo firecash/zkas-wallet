@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Languages } from "lucide-react";
 import { LANGUAGES, currentLanguage, hasChosenLanguage, languageName, setLanguage } from "./i18n";
@@ -73,5 +74,53 @@ export function LanguageNotice() {
         </button>
       </div>
     </div>
+  );
+}
+
+/// The globe. Always visible — top line of the wallet, first-run screens, lock screens —
+/// so nobody has to know that the language lives under Settings → Appearance. Opens a
+/// list of native names; one tap switches and remembers.
+export function LanguageButton({ compact = false }: { compact?: boolean }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const current = currentLanguage();
+  const pick = (code: string) => {
+    void setLanguage(code);
+    setOpen(false);
+  };
+  return (
+    <>
+      <button
+        className={"lang-button" + (compact ? " compact" : "")}
+        onClick={() => setOpen(true)}
+        aria-label={t("languagePicker.label")}
+        title={t("languagePicker.label")}
+      >
+        <Languages aria-hidden="true" size={17} strokeWidth={2.2} />
+        {!compact && <span>{current.toUpperCase()}</span>}
+      </button>
+      {open &&
+        createPortal(
+          <div className="modalwrap" onClick={() => setOpen(false)}>
+            <div className="card modalcard lang-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("languagePicker.label")}>
+              <h2 style={{ marginTop: 0 }}>{t("languagePicker.label")}</h2>
+              <div className="lang-list">
+                {LANGUAGES.map((l) => (
+                  <button
+                    key={l.code}
+                    className={"lang-item" + (l.code === current ? " on" : "")}
+                    lang={l.code}
+                    onClick={() => pick(l.code)}
+                    aria-pressed={l.code === current}
+                  >
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }

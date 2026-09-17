@@ -1,6 +1,6 @@
 import { useTranslation, Trans } from "react-i18next";
 import i18n from "./i18n";
-import { LanguagePicker, LanguageInline, LanguageNotice } from "./LanguagePicker";
+import { LanguagePicker, LanguageInline, LanguageNotice, LanguageButton } from "./LanguagePicker";
 import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo, memo } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
@@ -1184,6 +1184,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             the corner to be noticed or missed — it is the thing being decided, and
             it belongs in the disclosure on the screen that decides it. */}
         {status?.has_wallet && <ConnectionButton />}
+        <LanguageButton compact />
         <HostedNotice />
         <LanguageNotice />
         {status && <IosInstallNotice hasWallet={!!status.has_wallet} />}

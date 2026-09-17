@@ -17,6 +17,7 @@
 // afterwards under Settings → node source.
 
 import { useEffect, useRef, useState } from "react";
+import { LanguageButton } from "./LanguagePicker";
 import { useTranslation, Trans } from "react-i18next";
 import { findReachableDaemon, setBase, setWalletdBearer } from "./api";
 import { setDesktopRemoteBase, setNodeSource } from "./desktop";
@@ -125,6 +126,7 @@ export function FirstRunNode({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="lockwrap">
+      <LanguageButton compact />
       <form className="card lockcard" onSubmit={submit}>
         <h2 style={{ marginTop: 0 }}>{t("firstRunNode.title")}</h2>
         <p className="muted small">

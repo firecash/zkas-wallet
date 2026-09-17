@@ -5,6 +5,7 @@
 // nothing to be tricked into revealing.
 
 import { useEffect, useRef, useState } from "react";
+import { LanguageButton } from "./LanguagePicker";
 import { useTranslation, Trans } from "react-i18next";
 import { lockKind, unlock } from "./applock";
 import { enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured, unlockWithBiometric } from "./biometric";
@@ -123,6 +124,7 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   if (showOffer) {
     return (
       <div className="lockwrap">
+      <LanguageButton compact />
         <div className="card lockcard">
           <h2 style={{ marginTop: 0 }}>{t("appLockScreen.offerTitle")}</h2>
           <p className="muted small">
@@ -141,6 +143,7 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
 
   return (
     <div className="lockwrap">
+      <LanguageButton compact />
       <form className="card lockcard" onSubmit={submit}>
         <h2 style={{ marginTop: 0 }}>{t("appLockScreen.title")}</h2>
         <p className="muted small">

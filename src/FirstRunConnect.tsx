@@ -11,6 +11,7 @@
 // It also carries the appearance choice (theme + accent) up front.
 
 import { useState } from "react";
+import { LanguageButton } from "./LanguagePicker";
 import { useTranslation } from "react-i18next";
 import i18n from "./i18n";
 import { markNodeChoiceMade } from "./FirstRunNode";
@@ -91,6 +92,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="lockwrap">
+      <LanguageButton compact />
       <div className="card lockcard firstrun">
         <h2 style={{ marginTop: 0 }}>{t("firstRunConnect.title")}</h2>
         <p className="muted small">

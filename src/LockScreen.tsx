@@ -11,6 +11,7 @@
 // the only way back in, which is exactly what the copy here has to say plainly.
 
 import { useEffect, useState } from "react";
+import { LanguageButton } from "./LanguagePicker";
 import { useTranslation, Trans } from "react-i18next";
 import { listBackups, restoreBackup, setPassphrase, unlockVault, vaultStatus, type VaultState } from "./desktop";
 
@@ -63,6 +64,7 @@ export function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   if (state === null) {
     return (
       <div className="lockwrap">
+      <LanguageButton compact />
         <div className="card lockcard">
           <p className="muted small">{t("lockScreen.starting")}</p>
         </div>
@@ -72,6 +74,7 @@ export function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
 
   return (
     <div className="lockwrap">
+      <LanguageButton compact />
       <form className="card lockcard" onSubmit={submit}>
         <h2>{unlocking ? t("lockScreen.unlockTitle") : t("lockScreen.protectTitle")}</h2>
 
@@ -181,6 +184,7 @@ function RestoreFromBackup({ onDone, onCancel }: { onDone: () => void; onCancel:
 
   return (
     <div className="lockwrap">
+      <LanguageButton compact />
       <form className="card lockcard" onSubmit={submit}>
         <h2>{t("restoreFromBackup.title")}</h2>
         <p className="muted small" style={{ marginTop: 0 }}>

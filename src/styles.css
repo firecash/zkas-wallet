@@ -2841,3 +2841,16 @@ input.mono, .host-token { font-size: 16px; }
 .lang-inline select { width: auto; max-width: 60%; padding: 4px 8px; font-size: 13px; }
 .lang-notice-body { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
 .lang-notice-body select { width: auto; padding: 4px 8px; font-size: 13px; }
+
+/* Globe button + language list. */
+.lang-button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 7px 11px; border: 1px solid rgb(var(--ember-rgb) / 0.5); border-radius: 14px; background: rgb(var(--ember-rgb) / 0.08); color: var(--fg); font-size: 12px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; flex: 0 0 auto; }
+.lang-button:hover { border-color: var(--ember); background: rgb(var(--ember-rgb) / 0.16); }
+.lang-button.compact { padding: 7px 9px; }
+.lockwrap .lang-button, .firstrun .lang-button { position: absolute; top: 14px; right: 14px; }
+[dir="rtl"] .lockwrap .lang-button, [dir="rtl"] .firstrun .lang-button { right: auto; left: 14px; }
+.lockwrap { position: relative; }
+.lang-modal { max-width: 420px; }
+.lang-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-height: 60vh; overflow: auto; }
+.lang-item { min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--fg); font-size: 14px; text-align: start; cursor: pointer; }
+.lang-item:hover { border-color: var(--ember); }
+.lang-item.on { border-color: var(--ember); background: rgb(var(--ember-rgb) / 0.14); font-weight: 600; }
