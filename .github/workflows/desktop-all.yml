@@ -106,13 +106,16 @@ jobs:
           version: "27.3"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Tauri's Linux bundler needs the webkit/gtk stack and patchelf.
+      # Tauri's Linux bundler needs the webkit/gtk stack and patchelf. xdg-utils: the
+      # opener plugin makes the AppImage bundler look for /usr/bin/xdg-open on the
+      # build machine; the arm64 runner image does not ship it (v1.0.35-rc7 failed
+      # only there with "xdg-open binary not found").
       - name: Tauri system deps (linux)
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
-            build-essential curl wget file libssl-dev libxdo-dev \
+            build-essential curl wget file libssl-dev libxdo-dev xdg-utils \
             libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
 
       - uses: Swatinem/rust-cache@v2
