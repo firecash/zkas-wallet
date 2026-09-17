@@ -7,7 +7,9 @@
 //   … de ja                                                      # only these languages
 //   … --force                                                    # retranslate everything
 //   … --dry-run                                                  # show what would be sent
-//   … --review                                                   # stronger model re-reads every translation and fixes the bad ones
+//   … --review                                                   # a model re-reads every translation and fixes the bad ones
+//   … --review --flagged [--stats]                                # only strings a local screen flags (terms, register, abbreviations, untranslated, length); --stats just counts
+//   TRANSLATE_BUDGET_USD=3 REVIEW_MODEL=deepseek-v4-flash …       # spend cap and model
 //
 // Incremental: src/i18n/locales/<lang>.json carries every key; src/i18n/locales/.source.json
 // remembers the English text each translation was made from, so only keys whose English
@@ -158,6 +160,9 @@ ${terms}`;
 }
 
 const REVIEW = args.includes("--review");
+const FLAGGED = args.includes("--flagged");
+const STATS = args.includes("--stats");
+const REVIEW_BATCH = Number(process.env.REVIEW_BATCH || 80);
 const REVIEW_MODEL = process.env.REVIEW_MODEL || (VENICE ? "gemini-3-8-flash" : "deepseek-reasoner");
 
 /// Review pass: send English + current translation, get back ONLY the keys that need a
@@ -170,12 +175,9 @@ async function reviewBatch(lang, batch, current, termBank) {
     ...(VENICE ? { venice_parameters: { include_venice_system_prompt: false, disable_thinking: true } } : {}),
     messages: [
       { role: "system", content: systemPrompt(lang, termBank) + `
-REVIEW MODE. You receive {strings: {key: English}, current: {key: current translation}, kind, maxChars}. Judge every current translation as the app's ${NAMES[lang] || lang} localisation lead would. Return a JSON object containing ONLY the keys whose translation must change, each mapped to the corrected translation. Change a translation when it is: wrong in meaning; an unnatural, literal or bureaucratic rendering a native speaker would not write; the wrong sense of a word (e.g. musical/written 'note' for a coin, 'phrase' for a password); inconsistent with the established terminology or the required register; a noun/description where a button needs a verb; grammatically off; clumsily over-abbreviated; or clearly longer than needed; also fix abbreviations cut with a period on buttons/labels ("Подключ.", "Einst.") — use the full word or a shorter synonym; a label may exceed maxChars by a few characters rather than be mangled. Keep good translations out of the answer. If everything is fine, answer {}.` },
-      { role: "user", content: JSON.stringify({
-        strings: batch, current,
-        kind: Object.fromEntries(Object.entries(batch).map(([k, v]) => [k, kindOf(k, v)])),
-        maxChars: Object.fromEntries(Object.entries(batch).map(([k, v]) => [k, budget(v)])),
-      }) },
+REVIEW MODE. You receive {strings: {key: English}, current: {key: current translation}}. A string of 24 characters or fewer is a button/label and must stay no longer than the English; longer strings may run up to ~30% longer. Judge every current translation as the app's ${NAMES[lang] || lang} localisation lead would. Return a JSON object containing ONLY the keys whose translation must change, each mapped to the corrected translation. Change a translation when it is: wrong in meaning; an unnatural, literal or bureaucratic rendering a native speaker would not write; the wrong sense of a word (e.g. musical/written 'note' for a coin, 'phrase' for a password); inconsistent with the established terminology or the required register; a noun/description where a button needs a verb; grammatically off; clumsily over-abbreviated; or clearly longer than needed; also fix abbreviations cut with a period on buttons/labels ("Подключ.", "Einst.") — use the full word or a shorter synonym; a label may exceed maxChars by a few characters rather than be mangled. Keep good translations out of the answer. If everything is fine, answer {}.` },
+      // No per-key kind/maxChars here (they cost ~10 tokens a key): the rule is stated once.
+      { role: "user", content: JSON.stringify({ strings: batch, current }) },
     ],
   };
   let res;
@@ -201,18 +203,62 @@ async function printTermBank(lang) {
   console.log(`${lang}: ${JSON.stringify(bank)}`);
 }
 
+// Cheap local screen: which translations look wrong without asking a model. Used by
+// `--review --flagged` to send only suspects (typically 15-30% of keys) instead of all.
+const BRAND_RE = /\b(ZKAS|ZKas|zkas|Kaspa|KAS|Tor|Orbot|Orchard|walletd|DAA|QR|PIN|USB|TCP|CPU|GPU|RPC|API|URL|OK|Halo|BIP|ZIP|CSV|JSON|ID|IP)\b/g;
+const REGISTER_BAD = {
+  de: /\b(Sie|Ihre?[nrms]?|Ihnen)\b/, es: /\busted(es)?\b/i, "pt-BR": /\b(tu|teu|tua)\b/i, it: /\bLei\b/, fr: /\b(tu|ton|ta|tes|toi)\b/i,
+  ru: /\b(ты|тебе|тебя|твой|твоя|твои|твоё)\b/i, uk: /\b(ти|тебе|тобі|твій|твоя|твої)\b/i, pl: /\b(Pan|Pani|Państwo)\b/, nl: /\b(u|uw)\b/,
+};
+// Everyday English words that must not survive in a non-Latin-script translation
+// (technical tokens like gRPC, ASIC, HTTPS, .onion, Stratum legitimately do).
+const ENGLISH_WORDS = /\b(shielded|history|wallet|wallets|backup|notes?|send|sending|sent|receive|received|balance|address|settings|node|nodes|sync|syncing|synced|restore|import|key|keys|phrase|password|passphrase|amount|fee|fees|memo|pending|confirmed|connect|connected|continue|cancel|close|copy|copied|paste|done|error|loading|network|private|public|service|phone|desktop|computer|device|file|folder|download|install|update|version|help|learn|more|about|mining|miner|explorer|block|blocks|transaction|transactions|chain|seed|view|watch|only|again|later|now|off|on|enable|disable|enabled|disabled|show|hide|search|scan|rescan|birthday|create|new|open|save|delete|remove|edit|name|label|contact|contacts|share|unlock|lock|locked|retry|waiting|ready|failed|success|warning|please|your|this|that|with|from|when|will|can|the|and|for)\b/i;
+const NONLATIN = new Set(["ru", "uk", "ar", "fa", "ur", "hi", "bn", "th", "ja", "ko", "zh-CN", "zh-TW"]);
+function suspicious(lang, key, en, cur, termBank) {
+  const reasons = [];
+  const short = en.length <= 24;
+  const bare = (t) => t.replace(/\{\{[^}]+\}\}|<[^>]+>/g, "").replace(BRAND_RE, "");
+  if (cur.trim() === en.trim() && ENGLISH_WORDS.test(bare(en))) reasons.push("identical-to-english");
+  if (placeholders(cur) !== placeholders(en)) reasons.push("placeholders");
+  if ([...cur].length > [...en].length * (short ? 1.6 : 1.7) + 4) reasons.push("too-long");
+  if (short && /[A-Za-zÀ-ÿА-яЁё]\.$/.test(cur) && !/\.$/.test(en)) reasons.push("abbreviated");
+  if (lang !== "th" && /[.!?]$/.test(en.trim()) !== /[.!?。！？।۔]$/.test(cur.trim()) && !short) reasons.push("punctuation"); // Thai has no full stop
+  if (REGISTER_BAD[lang] && REGISTER_BAD[lang].test(cur)) reasons.push("register");
+  if (NONLATIN.has(lang)) {
+    const m = bare(cur).match(ENGLISH_WORDS);
+    if (m) reasons.push("untranslated:" + m[0]);
+  }
+  if (termBank) {
+    for (const [term, rendering] of Object.entries(termBank)) {
+      const head = term.split(/\s*\/\s*/)[0];
+      if (!new RegExp(`\\b${head}s?\\b`, "i").test(en)) continue;
+      const stem = rendering.split(/\s|\//)[0].slice(0, Math.min(4, rendering.length)).toLowerCase();
+      if (stem.length >= 3 && !cur.toLowerCase().includes(stem)) reasons.push(`term:${head}`);
+    }
+  }
+  return reasons;
+}
+
 async function reviewLanguage(lang, en, source) {
   const file = join(OUT_DIR, `${lang}.json`);
   if (!existsSync(file)) { console.log(`${lang}: nothing to review`); return; }
   const cur = flatten(JSON.parse(readFileSync(file, "utf8")));
-  const keys = Object.keys(en).filter((k) => k in cur);
+  let keys = Object.keys(en).filter((k) => k in cur);
   const termBank = await termBankFor(lang);
+  if (FLAGGED) {
+    const flagged = keys.map((k) => [k, suspicious(lang, k, en[k], cur[k], termBank)]).filter(([, r]) => r.length);
+    const why = {};
+    for (const [, r] of flagged) for (const x of r) why[x.split(":")[0]] = (why[x.split(":")[0]] || 0) + 1;
+    console.log(`${lang}: ${flagged.length}/${keys.length} flagged ${JSON.stringify(why)}`);
+    keys = flagged.map(([k]) => k);
+    if (STATS) return;
+  }
   let changed = 0, rejected = 0;
-  const starts = []; for (let i = 0; i < keys.length; i += BATCH) starts.push(i);
+  const starts = []; for (let i = 0; i < keys.length; i += REVIEW_BATCH) starts.push(i);
   const INFLIGHT = Number(process.env.TRANSLATE_BATCHES || 3);
   await Promise.all(Array.from({ length: INFLIGHT }, async () => {
     for (let i = starts.shift(); i !== undefined; i = starts.shift()) {
-      const slice = keys.slice(i, i + BATCH);
+      const slice = keys.slice(i, i + REVIEW_BATCH);
       const batch = Object.fromEntries(slice.map((k) => [k, en[k]]));
       const current = Object.fromEntries(slice.map((k) => [k, cur[k]]));
       let a;
@@ -224,7 +270,7 @@ async function reviewLanguage(lang, en, source) {
       }
       writeFileSync(file, JSON.stringify(unflatten(cur), null, 2) + "\n");
       writeFileSync(SOURCE_FILE, JSON.stringify(source, null, 0) + "\n");
-      console.log(`  ${lang}: reviewed ${Math.min(i + BATCH, keys.length)}/${keys.length}, ${changed} changed`);
+      console.log(`  ${lang}: reviewed ${Math.min(i + REVIEW_BATCH, keys.length)}/${keys.length}, ${changed} changed, $${spentUsd.toFixed(2)}`);
     }
   }));
   console.log(`  ${lang}: review done — ${changed} improved, ${rejected} rejected (placeholders); spent so far $${spentUsd.toFixed(2)}`);
@@ -303,7 +349,17 @@ function validate(batch, answer) {
 }
 
 /// Translate the core vocabulary once; the result is pinned into every batch prompt.
+const TERMS_FILE = join(OUT_DIR, ".terms.json");
 async function termBankFor(lang) {
+  // Cached per language: one call per run per language otherwise, and the bank must not
+  // drift between runs (the rendering it fixes is the consistency of the whole catalogue).
+  const cache = existsSync(TERMS_FILE) ? JSON.parse(readFileSync(TERMS_FILE, "utf8")) : {};
+  if (cache[lang] && !force) return cache[lang];
+  const fresh = await termBankFetch(lang);
+  if (fresh) { cache[lang] = fresh; writeFileSync(TERMS_FILE, JSON.stringify(cache, null, 1) + "\n"); }
+  return fresh;
+}
+async function termBankFetch(lang) {
   const req = Object.fromEntries(Object.entries(TERMS).map(([term, gloss]) => [term, gloss ? `${term} — ${gloss}` : term]));
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
