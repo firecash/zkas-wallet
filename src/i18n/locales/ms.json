@@ -42,7 +42,7 @@
     "noticedOnOpen": "Dikesan semasa buka aplikasi",
     "seenArriving": "Tiba dilihat",
     "toAddr": "ke {{addr}}",
-    "mergedNotes": "nota digabung dalam dompet anda",
+    "mergedNotes": "syiling digabungkan dalam dompet anda",
     "memoQuoted": "“{{memo}}”",
     "daa": "DAA {{daa}}",
     "showAllRows": "Tunjuk semua baris",
@@ -91,7 +91,7 @@
   },
   "autoConsolidationCard": {
     "title": "Penyatuan automatik",
-    "intro": "Kadangkala menggabungkan syiling tertua anda di latar belakang supaya bayaran sentiasa muat. Setiap gabungan dikenakan yuran kecil — matikan untuk menggabung sendiri dengan <b>Gabung</b>.",
+    "intro": "Sekali-sekala menggabungkan syiling tertua anda di latar belakang supaya pembayaran sentiasa muat. Setiap gabungan dikenakan fi kecil — matikan untuk gabung sendiri dengan <b>Gabung</b>.",
     "turnOff": "Matikan penyatuan automatik",
     "turnOn": "Hidupkan penggabungan automatik",
     "offNote": "Mati. Bayaran besar mungkin perlu dipecah sehingga anda gabung dengan <b>Gabung</b>."
@@ -111,10 +111,10 @@
     "total": "Jumlah",
     "totalExact": "{{total}} ZKAS",
     "totalUpTo": "≤ {{total}} ZKAS",
-    "manyNotes": "Baki anda berada dalam {{n}} syiling. Jika jumlah ini tidak muat dalam satu transaksi, tiada yang dihantar dan dompet akan menawarkan penggabungan atau pembayaran berasingan.",
+    "manyNotes": "Baki anda tersimpan dalam {{n}} syiling. Jika jumlah ini tidak muat dalam satu transaksi, tiada apa dihantar dan dompet akan tawarkan penggabungan atau pembayaran berpecah eksplisit. (max 215)",
     "to": "Kepada",
     "privateNote": "Nota peribadi",
-    "memoSealed": "“{{memo}}” — dimeterai dalam syiling terlindung penerima; hanya mereka boleh membacanya.",
+    "memoSealed": "\"{{memo}}\" — dimeterai dalam syiling terenkripsi penerima; hanya mereka boleh membacanya.",
     "unlockLabel": "Frasa pemulihan · buka kunci tandatangan di sini",
     "unlockPlaceholder": "Frasa pemulihan 12 patah perkataan",
     "warmingNote": "<b>⚡ Pembayaran pertama ini akan mengambil masa beberapa minit</b> — dompet perlu mencari syiling anda dalam rantai sebelum boleh membelanjakannya. Ini hanya sekali; pembayaran seterusnya mengambil masa beberapa saat.",
@@ -132,7 +132,7 @@
     "confirmSend": "Sahkan & hantar",
     "consolidationSentTitle": "Penggabungan dihantar",
     "consolidationSentBody": "Tunggu syiling baharu matang, kemudian cuba semula pembayaran penuh.",
-    "splitProgress": "Baki anda tersebar dalam banyak syiling kecil, jadi pembayaran ini dihantar sebagai {{parts}} transaksi — {{sent}} daripada {{total}} ZKAS telah disahkan setakat ini. Biarkan halaman ini terbuka sehingga selesai.",
+    "splitProgress": "Baki anda tersebar merentasi banyak syiling kecil, jadi pembayaran ini dihantar sebagai {{parts}} transaksi — {{sent}} daripada {{total}} ZKAS disahkan setakat ini. Biarkan halaman ini terbuka sehingga selesai.",
     "title": "Hantar",
     "spendable": "{{amount}} boleh belanja",
     "recipientLabel": "Alamat terlindung penerima",
@@ -157,7 +157,7 @@
     "addMemo": "+ Tambah nota peribadi",
     "memoLabel": "Nota peribadi (pilihan)",
     "memoPlaceholder": "Untuk apa bayaran ini?",
-    "memoHint": "Dimeterai dalam syiling disulitkan penerima — hanya mereka boleh membacanya. Tidak pernah muncul pada rantaian atau penjelajah.",
+    "memoHint": "Dimeterai dalam syiling terenkripsi penerima — hanya mereka boleh membacanya. Tidak kelihatan pada rantaian atau penjelajah.",
     "maturingHint": "Hanya {{spendable}} sedia dibelanjakan sekarang — {{maturing}} masih dalam perjalanan. Syiling boleh dibelanjakan kira-kira 10 minit selepas tiba, termasuk baki daripada bayaran yang baru anda buat. Ia akan sedia sebentar lagi.",
     "notEnough": "Dana tidak cukup: {{spendable}} boleh belanja, perlukan {{need}} termasuk yuran sehingga {{maxFee}}.",
     "feeSummary": "+ yuran {{min}}–{{max}} (mengikut bilangan syiling digabungkan) = sehingga {{total}} jumlah",
@@ -167,7 +167,7 @@
   },
   "sign": {
     "title": "Tandatangan mesej",
-    "intro": "Buktikan anda mengawal alamat dompet ini tanpa berbelanja. Tandatangan ini mendedahkan kunci tontonan anda (membolehkan pengesanan syiling, bukan kuasa belanja).",
+    "intro": "Buktikan anda mengawal alamat dompet ini tanpa berbelanja. Tandatangan mendedahkan kunci lihat anda (membolehkan pengesanan syiling, bukan kuasa belanja).",
     "message": "Mesej",
     "messagePlaceholder": "Mesej ditandatangan…",
     "address": "Alamat",
@@ -254,7 +254,7 @@
     "noKey": "Peranti ini tiada kunci perbelanjaan untuk dompet — ia boleh melihat baki tetapi tidak boleh berbelanja. Pulihkan frasa pemulihan anda pada tab Hantar untuk berbelanja dari sini.",
     "minChars": "Guna sekurang-kurangnya 8 aksara.",
     "mismatch": "Kedua-dua kata laluan tidak sepadan.",
-    "copied": "<b>Sandaran disalin.</b> Tampalkannya di tempat selamat sekarang — pengurus kata laluan atau nota peribadi.",
+    "copied": "<b>Sandaran anda disalin.</b> Tampalkannya di tempat selamat sekarang — pengurus kata laluan atau nota untuk diri sendiri.",
     "copyAgain": "Salin semula",
     "done": "Siap",
     "written": "<b>Sandaran ditulis.</b> Simpan di luar komputer ini. Ia disulitkan, tidak berguna tanpa kata laluan.",
@@ -553,7 +553,7 @@
     "copied": "Disalin ✓",
     "copyLink": "Salin pautan bayaran",
     "share": "Kongsi",
-    "hint": "Dompet pembayar mengisi jumlah dan memo — mereka masih boleh mengubahnya."
+    "hint": "Dompet pembayar mengisi jumlah dan nota — mereka masih boleh mengubahnya."
   },
   "receive": {
     "title": "Terima",
@@ -744,13 +744,13 @@
     "fee": "Yuran: {{fee}} ZKAS.",
     "more": "Buka semula selepas selesai untuk teruskan.",
     "doneBtn": "Selesai",
-    "split_one": "Baki anda terbahagi kepada <b>{{count}}</b> syiling — kepingan yang membentuknya. Kurang syiling lebih murah dihantar; lebih banyak membolehkan bayaran beberapa kali berturut-turut.",
-    "split_other": "Baki anda terbahagi kepada <b>{{count}}</b> syiling — kepingan yang membentuknya. Kurang syiling lebih murah dihantar; lebih banyak membolehkan bayaran beberapa kali berturut-turut.",
+    "split_one": "Baki anda dipecahkan kepada <b>{{count}}</b> syiling — unit-unit yang membentuknya. Lebih sedikit lebih murah untuk dihantar; lebih banyak membolehkan anda membayar beberapa kali berturut-turut.",
+    "split_other": "Baki anda dipecahkan kepada <b>{{count}}</b> syiling — unit-unit yang membentuknya. Lebih sedikit lebih murah untuk dihantar; lebih banyak membolehkan anda membayar beberapa kali berturut-turut.",
     "holdMany": "Simpan sebanyak ini",
     "seedLabel": "Frasa pemulihan · kekal pada peranti ini",
     "seedPlaceholder": "Frasa pemulihan 12 patah perkataan",
-    "merged_one": "Digabung {{notes}} syiling dalam {{round}} daripada ~{{count}} laluan",
-    "merged_other": "Digabung {{notes}} syiling dalam {{round}} daripada ~{{count}} laluan",
+    "merged_one": "Menggabungkan {{notes}} syiling dalam {{round}} daripada kira-kira {{count}} laluan",
+    "merged_other": "Menggabungkan {{notes}} syiling dalam {{round}} daripada kira-kira {{count}} laluan",
     "passOne": "Laluan 1 daripada ~{{passes}}",
     "elapsed": "{{elapsed}} berlalu",
     "left": "~{{remaining}} lagi",
@@ -791,8 +791,8 @@
     "arrivingOnly": "<em>{{maturing}} tiba</em> — anda boleh bayar selepas dompet selesai memeriksa rantaian.",
     "ariaSync": "Kemajuan segerak dompet",
     "scanning": "Baki muncul semasa dompet mengimbas rantaian — dana anda selamat.",
-    "lowerBound": "Baki ini adalah <b>had bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama, jadi syiling lama mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (bina semula melaluinya tetap akan buta). Jika ini nod anda dan ia masih mengisi sejarah terlindung, tunggu lognya memaparkan \"shielded history: VERIFIED\" dan imbas semula kemudian.",
-    "lowerBoundFrom": "Baki ini adalah <b>had bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama (tersedia dari blok {{block}}), jadi syiling lama mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (bina semula melaluinya tetap akan buta). Jika ini nod anda dan ia masih mengisi sejarah terlindung, tunggu lognya memaparkan \"shielded history: VERIFIED\" dan imbas semula kemudian."
+    "lowerBound": "Baki ini adalah <b>batas bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama, jadi syiling yang dicipta lama dahulu mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (membina semula melalui yang ini akan sama butanya). Jika ini nod anda sendiri dan ia masih mengisi sejarah terlindung, tunggu lognya menyatakan \"shielded history: VERIFIED\" dan imbas semula kemudian.",
+    "lowerBoundFrom": "Baki ini adalah <b>batas bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama (tersedia dari blok {{block}}), jadi syiling yang dicipta lama dahulu mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (membina semula melalui yang ini akan sama butanya). Jika ini nod anda sendiri dan ia masih mengisi sejarah terlindung, tunggu lognya menyatakan \"shielded history: VERIFIED\" dan imbas semula kemudian."
   },
   "addAccountWallet": {
     "noPhrase": "Dompet ini tiada frasa pemulihan, jadi akaun tidak boleh diterbitkan daripadanya. Guna “Tambah dompet berasingan” — ia ada frasa pemulihan sendiri, yang mesti anda sandarkan.",
@@ -1172,13 +1172,13 @@
     "custodial": "Hantar kelompok perlukan walletd sendiri yang pegang benih dompet ini. Aplikasi ini tak akan muat naik benih anda untuk mengaktifkannya."
   },
   "walletMaintenance": {
-    "title": "Nota",
-    "intro": "Kurang nota menjadikan pembayaran besar lebih murah dan lebih cepat dibuktikan.",
-    "notesCount": "{{n}} nota",
-    "warning": "Jangan satukan dompet biasa hanya untuk kurangkan kiraan: ia dikenakan yuran sebenar dan cipta transaksi atas rantai. Ia berguna untuk dompet perlombongan dan pembayaran dengan ratusan nota matang kecil.",
-    "combining": "Gabung nota…",
+    "title": "Syiling",
+    "intro": "Kurang syiling menjadikan bayaran besar lebih murah dan pantas untuk dibuktikan.",
+    "notesCount": "{{n}} syiling",
+    "warning": "Jangan gabungkan dompet biasa hanya untuk mengurangkan kiraan: ia dikenakan fi sebenar dan mencipta transaksi rantaian. Ia berguna untuk dompet perlombongan dan pembayaran dengan ratusan syiling kecil matang.",
+    "combining": "Menggabungkan syiling…",
     "consolidateOnce": "Gabung sekali",
-    "combined": "Digabung {{consolidated}} nota. {{remaining}} nota lagi.",
+    "combined": "Menggabungkan {{consolidated}} syiling. {{remaining}} syiling kekal.",
     "custodial": "Gabungan manual perlukan walletd sendiri yang pegang benih dompet ini. Gabungan automatik selamat yuran tetap tetapan daemon; aplikasi tidak muat naik benih anda."
   },
   "mining": {
@@ -1322,7 +1322,7 @@
   "walletTools": {
     "eyebrow": "Alat dompet",
     "title": "Penyelenggaraan dompet",
-    "intro": "Urusan bayaran pukal dan nota.",
+    "intro": "Pembayaran kelompok dan pengurusan syiling.",
     "deviceSigned": "Tandatangan peranti",
     "tabBatch": "Hantar pukal",
     "tabMaintenance": "Selenggara"
@@ -1341,7 +1341,7 @@
     "closeTitle": "Tutup",
     "modeAria": "Mod nod",
     "mining": "Perlombongan",
-    "miningNote": "Paling kecil. Mengesahkan rantai dan melayani pelombong, tetapi tidak menyimpan nota dompet lama.",
+    "miningNote": "Paling kecil. Mengesahkan rantaian dan melayani pelombong, tetapi tidak menyimpan syiling dompet lama.",
     "shielded": "Sejarah terlindung",
     "shieldedNote": "Menyimpan sejarah dompet lengkap sambil memangkas badan blok penuh lama.",
     "archive": "Arkib",
@@ -1433,7 +1433,7 @@
     "fillingSyncing": "Nod tempatan sedang menyelaras dan masih mengisi sejarah terlindung dari rakan sebaya{{from}}. Segerak blok menunggu ini, jadi kiraan blok mungkin terhenti seketika — ia berfungsi, tidak tersekat. Dompet boleh dilampirkan sebaik log nod berkata \"shielded history: VERIFIED\" (atau lantai jatuh di bawah hari lahir dompet anda). Dompet kekal di {{source}} sehingga itu.",
     "walletNotAnswering": "Dompet dibuka, tetapi nod yang dipilih belum menjawab. Ia mencuba semula secara automatik dan mengekalkan keadaan dompet terakhir yang disahkan kelihatan.",
     "walletEngineError": "Enjin dompet: {{error}}",
-    "miningNeverOffered": "Mod perlombongan tidak ditawarkan kepada dompet kerana ia tidak menyimpan nota sejarah yang lengkap.",
+    "miningNeverOffered": "Mod perlombongan tidak ditawarkan kepada dompet kerana ia tidak menyimpan syiling sejarah yang lengkap.",
     "nodeLogsTitle": "Log nod ZKAS",
     "walletLogsTitle": "Log enjin dompet",
     "movingWalletToPublic": "Memindahkan dompet ke nod awam…",
@@ -1581,7 +1581,7 @@
     "blueScore": "Skor biru {{score}}",
     "txCount": "{{n}} tx",
     "mandatoryPrivacy": "Privasi wajib",
-    "shieldedNotes": "Nota terlindung",
+    "shieldedNotes": "Syiling Terlindung",
     "privateSpends": "Perbelanjaan peribadi",
     "currentAnchor": "Sauh semasa",
     "building": "membina",
@@ -1821,18 +1821,18 @@
     "invalidResponse": "Perkhidmatan dompet mengembalikan respons tidak sah ({{status}})."
   },
   "noncustodial": {
-    "fragmentedDefault": "Pembayaran ini memerlukan lebih banyak nota daripada satu transaksi boleh belanja.",
+    "fragmentedDefault": "Bayaran ini memerlukan lebih banyak syiling daripada yang boleh dibelanjakan dalam satu transaksi.",
     "finishingMerge": "Menyelesaikan gabungan latar belakang…",
     "waitingPrevious": "Menunggu pembayaran sebelumnya selesai bersedia…",
     "noteWaited": "{{note}} ({{secs}}s)",
     "amountChanged": "Daemon menukar jumlah yang diminta. Enggan menandatangani.",
     "couldNotPrepareComplete": "Perkhidmatan dompet tidak dapat menyediakan jumlah penuh dalam satu transaksi.",
     "feeAboveLimit": "Daemon meminta yuran {{fee}} ZKAS — melebihi {{max}} ZKAS yang dibenarkan dompet ini. Enggan menandatangani.",
-    "partialSent": "Dihantar {{sent}} ZKAS dalam {{n}} transaksi, tetapi {{owed}} ZKAS tidak dapat dihantar: baki dompet ini terpecah merentas terlalu banyak nota kecil. Satukan dompet dan hantar bakinya.",
-    "nothingSent": "Tiada apa-apa dihantar. Dompet ini mempunyai terlalu banyak nota kecil untuk jumlah itu muat dalam satu transaksi.",
+    "partialSent": "Menghantar {{sent}} ZKAS dalam {{n}} transaksi, tetapi {{owed}} ZKAS tidak dapat dihantar: baki dompet ini terpecah merentasi terlalu banyak syiling kecil. Gabungkan dompet dan hantar bakinya.",
+    "nothingSent": "Tiada apa-apa dihantar. Dompet ini mempunyai terlalu banyak syiling kecil untuk jumlah itu muat dalam satu transaksi.",
     "notEnoughToConsolidate": "Tidak cukup baki boleh belanja untuk menyatukan dengan selamat.",
     "unsafeConsolidation": "Perkhidmatan dompet mengembalikan penyatuan yang tidak selamat.",
-    "noSpendableToSplit": "Tiada nota boleh belanja tersedia untuk dipecah sekarang. Tunggu dana terkini matang (kira-kira 10 minit), kemudian cuba lagi.",
-    "fewerThanThree": "Kurang daripada tiga nota boleh dibelanjakan sekarang, jadi penyatuan tidak akan mengurangkan jumlah nota dompet."
+    "noSpendableToSplit": "Tiada syiling boleh belanja tersedia untuk dipecahkan sekarang. Tunggu dana terkini matang (kira-kira 10 minit), kemudian cuba lagi.",
+    "fewerThanThree": "Kurang daripada tiga syiling boleh dibelanjakan sekarang, jadi penggabungan tidak akan mengurangkan kiraan syiling dompet."
   }
 }
