@@ -413,28 +413,28 @@
     "to": "Kwa",
     "receivedAt": "Imepokelewa",
     "transaction": "Muamala",
-    "copied": "Nakili ✓",
+    "copied": "Imenakiliwa ✓",
     "copyTxid": "Nakili ID ya muamala",
     "copyAddress": "Nakili anwani",
-    "saveAsContact": "Hifadhi kama mwasiliani",
+    "saveAsContact": "Hifadhi mwasiliani",
     "sendAgain": "Tuma tena",
-    "viewOnExplorer": "Tazama kwenye mchunguzi",
-    "explorerNote": "Mchunguzi anaonyesha tu kwamba muamala uliofichwa ulitokea — kamwe maelezo yake.",
+    "viewOnExplorer": "Tazama kwenye kivinjari",
+    "explorerNote": "Kivinjari kinaonyesha tu kwamba muamala uliolindwa ulifanyika — kamwe si maelezo yake.",
     "close": "Funga"
   },
   "settingsPane": {
-    "viewOnlyWallet": "Tazama tu",
-    "noSpendingKey": "Hakuna ufunguo",
-    "recoverySeed": "Mbegu ya kurejesha",
-    "backUp": "Hifadhi",
+    "viewOnlyWallet": "Mkoba wa kutazama tu",
+    "noSpendingKey": "Hakuna ufunguo wa kutumia",
+    "recoverySeed": "Mbegu ya urejeshaji",
+    "backUp": "Hifadhi nakala",
     "sectionWallet": "Mkoba",
     "wallets": "Mikoba",
-    "contacts": "Mawasiliano",
-    "securityBackup": "Usalama & hifadhi",
+    "contacts": "Wasiliani",
+    "securityBackup": "Usalama & nakala rudufu",
     "walletNode": "Nodi ya mkoba",
     "sectionPreferences": "Mapendeleo",
-    "accentColor": "Rangi ya lafudhi",
-    "backgroundSync": "Sawazisha nyuma",
+    "accentColor": "Rangi ya msisitizo",
+    "backgroundSync": "Sawazisha chinichini",
     "autoConsolidation": "Ujumuishaji otomatiki",
     "networkPrivacy": "Faragha ya mtandao",
     "accessTokenField": "Sehemu ya tokeni",
@@ -444,14 +444,14 @@
     "sectionAbout": "Kuhusu",
     "aboutZkas": "Kuhusu ZKas",
     "sectionSecurity": "Usalama",
-    "appLock": "Funga programu",
+    "appLock": "Kufuli ya programu",
     "fingerprint": "Alama ya kidole",
     "on": "Washa",
     "off": "Zima"
   },
   "appearanceCard": {
-    "title": "Rangi ya lafudhi",
-    "intro": "Salio, vitufe na vivutio. Teal ni sahihi ya ZKas."
+    "title": "Rangi ya msisitizo",
+    "intro": "Salio, vitufe na vivutio. Teal ndiyo alama mahususi ya ZKas."
   },
   "signatures": {
     "title": "Sahihi",
@@ -464,13 +464,13 @@
     "copied": "Imenakiliwa",
     "copyVersion": "Nakili toleo",
     "built": "Imejengwa {{built}} UTC",
-    "blurb": "ZKas Wallet — kila salio na malipo yamefichwa na uthibitisho wa Orchard zero-knowledge. Ufunguo wako wa kutumia unashikiliwa kwenye kifaa hiki na hautumwi popote.",
+    "blurb": "ZKas Wallet — kila salio na malipo yamelindwa na uthibitisho wa Orchard zero-knowledge. Ufunguo wako wa kutumia unashikiliwa kwenye kifaa hiki na hautumwi popote.",
     "sourceCode": "Msimbo chanzo",
-    "explorer": "Mchunguzi"
+    "explorer": "Kivinjari"
   },
   "contactPicker": {
-    "title": "Chagua mawasiliano",
-    "empty": "Hakuna mawasiliano bado. Hifadhi baada ya malipo, au kutoka kwa anwani iliyopokelewa — kwenye mnyororo uliofichwa, mkoba ndio mahali pekee anwani inaweza kuwa na jina.",
+    "title": "Chagua mwasiliani",
+    "empty": "Hakuna wasiliani bado. Hifadhi mmoja baada ya malipo, au kutoka kwa anwani iliyopokelewa — kwenye mnyororo uliolindwa, mkoba ndio mahali pekee anwani inaweza kuwa na jina.",
     "searchPlaceholder": "Tafuta jina au anwani",
     "noMatch": "Hakuna anayelingana.",
     "close": "Funga"
@@ -479,10 +479,10 @@
     "title": "Hifadhi mwasiliani",
     "name": "Jina",
     "namePlaceholder": "mf. Alice",
-    "note": "Ujumbe (si lazima)",
+    "note": "Maelezo (si lazima)",
     "notePlaceholder": "Anwani hii ni ya nini",
     "address": "Anwani",
-    "storedOnDevice": "Imehifadhiwa kwenye kifaa hiki pekee — orodha ya wanaolipwa ni data ya siri ambayo ZKas inalinda.",
+    "storedOnDevice": "Imehifadhiwa kwenye kifaa hiki pekee — orodha ya unaowalipa ndiyo data ambayo ZKas ipo kuilinda.",
     "savedToast": "Imehifadhi {{name}}",
     "save": "Hifadhi",
     "cancel": "Ghairi"
@@ -493,18 +493,18 @@
   },
   "accessTokenSetting": {
     "title": "Onyesha sehemu ya tokeni",
-    "detail": "Inaongeza kisanduku cha tokeni kwenye usanidi wa seva ya mkoba. Inahitajika tu kwa seva ya mkoba inayolindwa na tokeni."
+    "detail": "Inaongeza kisanduku cha tokeni kwenye usanidi wa seva ya mkoba. Inahitajika tu kwa seva inayolindwa na tokeni."
   },
   "watchOnAnotherDevice": {
     "noKey": "Kifaa hiki hakina ufunguo wa mkoba huu.",
     "intro": "Ufunguo wako wa kutazama unaruhusu kifaa kingine kutazama mkoba huu — salio na historia, kusoma tu. Kamwe hauwezi kutuma.",
-    "warn": "Mtu yeyote aliye na ufunguo huu anaona kila kiasi na kumbukumbu ambazo mkoba huu umewahi kuwa nazo, na kila kitu anachopokea kuanzia sasa — huwezi kutengua hilo bila kuhamisha sarafu zako.",
+    "warn": "Mtu yeyote aliye na ufunguo huu anaona kila kiasi na memo ambazo mkoba huu umewahi kuwa nazo, na kila kitu unachopokea kuanzia sasa — huwezi kutengua hilo bila kuhamisha sarafu zako.",
     "preparing": "Inatayarisha…",
-    "showViewKey": "Onyesha ufunguo wa kutazama",
+    "showViewKey": "Onyesha ufunguo",
     "qrAlt": "QR ya ufunguo",
-    "copied": "Nakili ✓",
-    "copyViewKey": "Nakili ufunguo wa kutazama",
-    "otherDevice": "Kwenye kifaa kingine: fungua mkoba → <b>Tazama mkoba</b>, kisha bandika ufunguo huu (au skanishi QR)."
+    "copied": "Imenakiliwa ✓",
+    "copyViewKey": "Nakili ufunguo",
+    "otherDevice": "Kwenye kifaa kingine: fungua mkoba → <b>Tazama mkoba</b>, kisha bandika ufunguo huu (au changanua QR)."
   },
   "stopWatching": {
     "intro": "Kifaa hiki kina ufunguo wa kutazama na hakina ufunguo wa kutumia, kwa hivyo kinaweza kuonyesha salio na historia na hakiwezi kutuma. Hakuna chochote hapa kinachoweza kuhamisha sarafu.",
@@ -514,8 +514,8 @@
     "cancel": "Ghairi"
   },
   "contactsCard": {
-    "title": "Mawasiliano",
-    "empty": "Hakuna aliyohifadhiwa. Kutaja anwani hapa ndiyo njia pekee ya kusoma kama mtu — mnyororo wenyewe haujui mtu yeyote.",
+    "title": "Wasiliani",
+    "empty": "Bado hakuna aliyehifadhiwa. Kuipa anwani jina hapa ndiyo njia pekee ya kuifanya ionekane kama mtu — mnyororo wenyewe haumjui mtu yeyote.",
     "edit": "Hariri",
     "address": "Anwani",
     "addressPlaceholder": "zkas:…",
@@ -527,7 +527,7 @@
     "newContact": "Mwasiliani mpya",
     "editContact": "Hariri mwasiliani",
     "name": "Jina",
-    "note": "Ujumbe (si lazima)",
+    "note": "Maelezo (si lazima)",
     "address": "Anwani",
     "save": "Hifadhi",
     "cancel": "Ghairi",
@@ -538,9 +538,9 @@
   },
   "rescanButton": {
     "offHint": "Hurejesha salio lako kutoka kwenye mnyororo. Historia imezimwa, kwa hivyo hii hujenga fedha — si orodha ya miamala.",
-    "rescanning": "Inachanganua upya — kichupo hiki kinasasishwa kinapokamata.",
+    "rescanning": "Inachanganua tena — kichupo hiki husasishwa kinapoendelea.",
     "starting": "Inaanza…",
-    "rescan": "↻ Changanua",
+    "rescan": "↻ Changanua tena",
     "enableHistory": "Washa historia & rejesha"
   },
   "requestAmount": {
@@ -549,8 +549,8 @@
     "memoPlaceholder": "Ankara 1042",
     "qrAlt": "QR ya ombi la malipo",
     "enterAmount": "Weka kiasi",
-    "shieldedRequest": "Ombi lililofichwa",
-    "copied": "Nakili ✓",
+    "shieldedRequest": "Ombi lililolindwa",
+    "copied": "Imenakiliwa ✓",
     "copyLink": "Nakili kiungo cha malipo",
     "share": "Shiriki",
     "hint": "Pochi ya mlipaji inajaza kiasi na ujumbe — bado wanaweza kuvibadilisha."
@@ -692,7 +692,9 @@
     "torDescMobile": "Huficha IP yako. Programu bado inaona miamala yako. Inahitaji Orbot.",
     "thisComputerOwn": "Kompyuta hii · nodi yako mwenyewe",
     "managedHere": "Inasimamiwa hapa · gRPC {{port}}",
-    "removeAria": "Ondoa {{name}}"
+    "removeAria": "Ondoa {{name}}",
+    "stageRestarting": "Inaanzisha upya injini ya pochi · {{s}}s",
+    "stageLoadingScan": "Inapakia hali ya uchunguzi…"
   },
   "walletSwitcher": {
     "defaultLabel": "Mkoba 1",
@@ -1465,7 +1467,9 @@
     "walletEngineError": "Injini ya mkoba: {{error}}",
     "miningNeverOffered": "Hali ya uchimbaji haitolewi kwa pochi kwa sababu haihifadhi sarafu kamili za kihistoria.",
     "nodeLogsTitle": "Kumbukumbu za nodi ZKAS",
-    "walletLogsTitle": "Kumbukumbu za injini ya mkoba"
+    "walletLogsTitle": "Kumbukumbu za injini ya mkoba",
+    "movingWalletToPublic": "Inahamisha pochi kwenye nodi ya umma…",
+    "stoppingNode": "Inasimamisha nodi…"
   },
   "selfHost": {
     "copied": "Imenakiliwa",
