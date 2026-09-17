@@ -30,6 +30,25 @@ const API = process.env.TRANSLATE_API_URL || (VENICE ? "https://api.venice.ai/ap
 const MODEL = process.env.TRANSLATE_MODEL || (VENICE ? "deepseek-v4-flash" : "deepseek-chat");
 const KEY = process.env.VENICE_API_KEY || process.env.DEEPSEEK_API_KEY;
 const BATCH = 40;
+// Hard spend cap. Every response's `usage` is priced from the table below and summed;
+// the run aborts when the cap is reached. Learned the hard way: a review pass priced
+// off the list price without measuring one batch first burned $25 on 7 languages.
+const BUDGET_USD = Number(process.env.TRANSLATE_BUDGET_USD || 5);
+const PRICES = { // $ per 1M tokens, input / output, as listed by Venice 2026-09
+  "deepseek-v4-flash": [0.138, 0.275], "deepseek-v4-pro": [1.65, 3.301], "gemini-3-8-flash": [0.9375, 4.6875],
+  "qwen-3-7-plus": [0.5, 2], "claude-sonnet-5": [3, 15],
+};
+let spentUsd = 0;
+function charge(model, usage) {
+  if (!usage) return;
+  const [pin, pout] = PRICES[model] || [2, 6];
+  const cost = ((usage.prompt_tokens || 0) * pin + (usage.completion_tokens || 0) * pout) / 1e6;
+  spentUsd += cost;
+  if (spentUsd >= BUDGET_USD) {
+    console.error(`\nSPEND CAP: $${spentUsd.toFixed(2)} >= $${BUDGET_USD} (TRANSLATE_BUDGET_USD). Stopping.`);
+    process.exit(3);
+  }
+}
 
 const args = process.argv.slice(2);
 const force = args.includes("--force");
@@ -168,6 +187,7 @@ REVIEW MODE. You receive {strings: {key: English}, current: {key: current transl
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
   const data = await res.json();
+  charge(REVIEW_MODEL, data.usage);
   let parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
   if (parsed && typeof parsed === "object" && !Object.keys(batch).some((k) => k in parsed)) {
     const inner = Object.values(parsed).find((v) => v && typeof v === "object" && Object.keys(batch).some((k) => k in v));
@@ -207,7 +227,7 @@ async function reviewLanguage(lang, en, source) {
       console.log(`  ${lang}: reviewed ${Math.min(i + BATCH, keys.length)}/${keys.length}, ${changed} changed`);
     }
   }));
-  console.log(`  ${lang}: review done — ${changed} improved, ${rejected} rejected (placeholders)`);
+  console.log(`  ${lang}: review done — ${changed} improved, ${rejected} rejected (placeholders); spent so far $${spentUsd.toFixed(2)}`);
 }
 
 async function callDeepSeek(lang, batch, termBank) {
@@ -252,6 +272,7 @@ async function callDeepSeek(lang, batch, termBank) {
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
   const data = await res.json();
+  charge(MODEL, data.usage);
   const text = data.choices?.[0]?.message?.content ?? "";
   let parsed = JSON.parse(text);
   // The model sometimes mirrors the request shape and answers {strings: {...}} (or any
@@ -302,6 +323,7 @@ async function termBankFor(lang) {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      charge(REVIEW ? REVIEW_MODEL : MODEL, data.usage);
       let parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
       if (!Object.keys(TERMS).some((k) => k in parsed)) parsed = Object.values(parsed).find((v) => v && typeof v === "object") ?? parsed;
       const bank = {};
@@ -368,7 +390,7 @@ async function translateLanguage(lang, en, source) {
   await Promise.all(Array.from({ length: INFLIGHT }, async () => {
     for (let i = starts.shift(); i !== undefined; i = starts.shift()) await runBatch(i);
   }));
-  console.log(`  ${lang}: done (${Object.keys(out).length} keys)`);
+  console.log(`  ${lang}: done (${Object.keys(out).length} keys); spent so far $${spentUsd.toFixed(2)}`);
 }
 
 async function main() {
