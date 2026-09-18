@@ -95,7 +95,7 @@ function Maintenance({ status, onRefresh }: { status: Status | null; onRefresh: 
   };
   return (
     <section className="control-card">
-      <div className="card-title-row"><div><h2>{t("walletMaintenance.title")}</h2><p>{t("walletMaintenance.intro")}</p></div><span className="status-pill">{t("walletMaintenance.notesCount", { n: status?.note_count ?? "—" })}</span></div>
+      <div className="card-title-row"><div><h2>{t("walletMaintenance.title")}</h2><p>{t("walletMaintenance.intro")}</p></div><span className="status-pill" title={t("walletMaintenance.notesCount", { n: status?.note_count ?? "—" })}>{t("walletMaintenance.notesCount", { n: status?.note_count ?? "—" })}</span></div>
       <p className="subtle">{t("walletMaintenance.warning")}</p>
       {message && <div className="msg ok">{message}</div>}
       {error && <div className="control-error">{error}</div>}
@@ -139,7 +139,7 @@ export function WalletTools({ status: shared }: { status?: Status | null } = {})
   };
   return (
     <main className="control-page tools-page">
-      <div className="control-heading"><div><span className="eyebrow">{t("walletTools.eyebrow")}</span><h1>{t("walletTools.title")}</h1><p>{t("walletTools.intro")}</p></div>{status?.watch_only && <span className="status-pill">{t("walletTools.deviceSigned")}</span>}</div>
+      <div className="control-heading"><div><span className="eyebrow">{t("walletTools.eyebrow")}</span><h1>{t("walletTools.title")}</h1><p>{t("walletTools.intro")}</p></div>{status?.watch_only && <span className="status-pill" title={t("walletTools.deviceSigned")}>{t("walletTools.deviceSigned")}</span>}</div>
       <div className="mode-tabs tool-tabs">{(["batch", "maintenance"] as ToolTab[]).map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => choose(item)}>{item === "batch" ? t("walletTools.tabBatch") : t("walletTools.tabMaintenance")}</button>)}</div>
       {tab === "batch" ? <BatchSend status={status} onRefresh={refresh} /> : <Maintenance status={status} onRefresh={refresh} />}
     </main>

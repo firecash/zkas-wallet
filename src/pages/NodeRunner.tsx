@@ -303,7 +303,7 @@ export function NodeRunner() {
     <main className="control-page">
       <header className="control-heading">
         <div><span className="eyebrow">{t("nodeRunner.eyebrow")}</span><h1>{t("nodeRunner.title")}</h1><p>{t("nodeRunner.intro")}</p></div>
-        <span className={`status-pill ${node?.running ? node.is_synced ? "good" : "warm" : "off"}`}>{syncLabel}</span>
+        <span className={`status-pill ${node?.running ? node.is_synced ? "good" : "warm" : "off"}`} title={syncLabel}>{syncLabel}</span>
       </header>
 
       {error && <div className="control-error">{error}</div>}
@@ -362,7 +362,7 @@ export function NodeRunner() {
       </section>
 
       <section className="control-card compact-card">
-        <div className="card-title-row"><div><h2>{t("nodeRunner.walletConnection")}</h2><p>{t("nodeRunner.walletSeparate")}</p></div><span className={`status-pill ${walletd?.running && walletd.node_connected ? "good" : "off"}`}>{walletConnectionLabel}</span></div>
+        <div className="card-title-row"><div><h2>{t("nodeRunner.walletConnection")}</h2><p>{t("nodeRunner.walletSeparate")}</p></div><span className={`status-pill ${walletd?.running && walletd.node_connected ? "good" : "off"}`} title={walletConnectionLabel}>{walletConnectionLabel}</span></div>
         <div className="metric-grid three">
           <Metric label={t("nodeRunner.metricWalletScan")} value={walletd?.scanning_progress == null ? "—" : `${walletd.scanning_progress.toFixed(1)}%`} />
           <Metric label={t("nodeRunner.metricBalance")} value={walletd?.balance == null ? "—" : t("nodeRunner.balanceZkas", { balance: walletd.balance })} />
@@ -420,5 +420,5 @@ export function NodeRunner() {
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="metric"><span>{label}</span><strong>{value}</strong></div>;
+  return <div className="metric"><span title={label}>{label}</span><strong>{value}</strong></div>;
 }

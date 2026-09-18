@@ -333,7 +333,9 @@ a { color: var(--ember-text); }
 .rcv-toggle {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* minmax(0, …): a plain 1fr floors at the label's min-content, so a long
+     translation ("Solicitar importe") pushed the track past the card. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 2px 0 18px;
   padding: 4px;
   background: var(--surface-2);
@@ -343,10 +345,16 @@ a { color: var(--ember-text); }
 .rcv-seg {
   position: relative; z-index: 1;
   min-height: 40px;
+  min-width: 0;
+  padding: 4px 8px;
   border: 0; border-radius: 999px;
   background: transparent;
   color: var(--muted);
   font-family: inherit; font-size: 13px; font-weight: 600;
+  /* Long labels wrap to a second line inside the segment rather than overflow. */
+  line-height: 1.15;
+  white-space: normal;
+  overflow-wrap: anywhere;
   cursor: pointer;
   transition: color 0.2s ease;
 }
@@ -702,11 +710,13 @@ a { color: var(--ember-text); }
 }
 
 /* Tabs */
-/* The pill bar has to hold five labels on a 360px phone. `flex: 1` + `nowrap` squeezed
-   each button below its text width, so "Receive" and "History" were clipped. Let every
-   button keep its natural width instead, and let the bar scroll horizontally on the
-   narrowest screens — the scrollbar is hidden and the pills snap, so it still reads as a
-   segmented control rather than a scroll area. On roomy screens they simply share the row. */
+/* The pill bar has to hold its labels on a 360px phone in 25 languages, where a label
+   can be three times its English width ("Einstellungen", "Handtekeningen"). `flex: 1`
+   + `nowrap` clipped them. Now each text tab shares the row equally (`flex: 1 1 0`,
+   `min-width: 0`) and its label may wrap onto a SECOND line inside the fixed 44px
+   pill, at a size that eases down on narrow screens. The horizontal scroll stays as
+   the last resort should a bar ever still not fit; the scrollbar is hidden and the
+   pills snap, so it still reads as a segmented control rather than a scroll area. */
 .tabs {
   display: flex;
   gap: 4px;
@@ -730,8 +740,12 @@ a { color: var(--ember-text); }
 }
 .tabs::-webkit-scrollbar { display: none; }   /* WebKit */
 .tabs button {
-  flex: 1 0 auto;                      /* share the row, but never below the text width */
+  flex: 1 1 0;                         /* share the row equally … */
+  min-width: 0;                        /* … and shrink below the label's width; the label wraps */
   scroll-snap-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: var(--muted);
@@ -739,13 +753,17 @@ a { color: var(--ember-text); }
      9px/13px — fine with a mouse, a coin-toss on a phone, and this row is now the
      only way to reach History and Settings. */
   min-height: 44px;
-  padding: 11px 14px;
+  padding: 6px 12px;
   border-radius: 999px;
   cursor: pointer;
-  font-size: 14px;
+  /* Eases from 14px down to 12px on the narrowest phones before a label wraps. */
+  font-size: clamp(12px, 3.4vw, 14px);
   font-weight: 550;
   font-family: inherit;
-  white-space: nowrap;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
   transition: background 0.15s ease, color 0.15s ease;
 }
 .tabs button:hover:not(.active) { color: var(--ink); background: var(--ember-soft); }
@@ -792,7 +810,7 @@ a { color: var(--ember-text); }
 
 /* Very narrow phones: shave the padding before anything is allowed to clip. */
 @media (max-width: 380px) {
-  .tabs button { padding: 9px 9px; font-size: 12.5px; }
+  .tabs button { padding: 6px 8px; }
 }
 
 /* Forms */
@@ -830,6 +848,14 @@ select { appearance: none; cursor: pointer; }
   cursor: pointer;
   font-family: inherit;
   margin-top: 18px;
+  /* A label that does not fit ("Enregistrer les modifications") wraps to a second
+     line, centred, instead of running out of the pill. min-width:0 lets the button
+     shrink inside a flex row; the label then wraps rather than the row overflowing. */
+  min-width: 0;
+  white-space: normal;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
   transition: background 0.12s ease, transform 0.08s ease, box-shadow 0.18s ease;
 }
 .btn:hover { background: var(--ember-hover); box-shadow: 0 6px 20px rgb(var(--ember-rgb) / 0.28); }
@@ -847,15 +873,27 @@ select { appearance: none; cursor: pointer; }
 /* In a dialog action row both buttons are `.btn`, whose default 18px top margin
    double-stacks under the row's own gap. Zero it so the row spaces evenly. */
 .dialog-actions .btn { margin-top: 0; }
+/* Dialog button pairs (Cancel / Confirm) follow the same rule as `.row` below: side
+   by side while both labels fit on one line, stacked full-width when they do not. */
+.dialog-actions .btn { flex: 1 1 0; }
+.dialog-actions .btn { flex: 1 1 max-content; }
 .btn.small { width: auto; padding: 8px 16px; font-size: 13px; margin-top: 0; }
 @media (prefers-reduced-motion: reduce) {
   .btn:active:not(:disabled) { transform: none; }
 }
 
-.row { display: flex; gap: 10px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; }
 /* min-width:0 lets a flex child (e.g. a mono input holding a long URL) shrink
    below its content width instead of forcing the row past the card edge. */
 .row > * { flex: 1; min-width: 0; }
+/* Side-by-side buttons (Cancel / Confirm, Back / Import): their basis is the label's
+   own single-line width, so a pair that fits shares the row, and a pair whose
+   translations do not ("Zurück" / "Wallet wiederherstellen" on a 360px phone) breaks
+   into stacked full-width buttons instead of squeezing the text out of the pills.
+   An input keeps its zero basis and never triggers the wrap. (The first line is the
+   fallback for an engine without intrinsic flex-basis keywords: the old equal split.) */
+.row > .btn { flex: 1 1 0; }
+.row > .btn { flex: 1 1 max-content; }
 
 /* Daemon toggle button: the URL can be long (hosted mobile default is an absolute
    https URL). Truncate it with an ellipsis so the button never outgrows the card. */
@@ -883,8 +921,8 @@ select { appearance: none; cursor: pointer; }
 .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: sp 0.7s linear infinite; }
 @keyframes sp { to { transform: rotate(360deg); } }
 
-.notegrid { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 13px; }
-.notegrid .k { color: var(--muted); font-family: var(--mono); }
+.notegrid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; font-size: 13px; }
+.notegrid .k { color: var(--muted); font-family: var(--mono); min-width: 0; overflow-wrap: anywhere; }
 .notegrid .v { text-align: end; font-family: var(--mono); }
 
 .setup ol { line-height: 1.8; padding-inline-start: 20px; }
@@ -933,11 +971,21 @@ select { appearance: none; cursor: pointer; }
   margin-bottom: 14px;
 }
 .wallet-topline:empty { display: none; }
+.wallet-topline > * { min-width: 0; }
 /* The hosted warning takes its own full-width line under the two chips. */
 .wallet-topline .warnbar { flex: 1 1 100%; min-width: 0; }
-/* Wallet name = quiet, compact; wallet service = prominent, takes the rest of the row. */
-.walletbar { flex: 0 1 auto; }
-.wallet-topline .connection-button { flex: 1 1 auto; }
+/* Wallet name = quiet, compact; wallet service = prominent, takes the rest of the row;
+   the language button keeps its natural width. A wrapping flex row places items by
+   their flex-basis, not by what they can shrink to — with `auto` the service chip's
+   basis was the full width of "Servicio de billetera" + the node name, so in Spanish
+   the language button was pushed onto a second line. Both chips now have a ZERO
+   basis: the first line always holds wallet chip + service chip + language button,
+   and the two chips split what is left (the wallet chip capped at its own content,
+   so a short name does not hoard space). The labels inside truncate with an ellipsis
+   when squeezed; the full text stays in the `title`/aria-label. */
+.walletbar { flex: 1 1 0; max-width: max-content; }
+.wallet-topline .connection-button { flex: 1 1 0; }
+.wallet-topline .lang-button { flex: 0 0 auto; }
 
 /* The wallet service is the thing people most need to SEE (it's who can see your
    transactions), so it wears the accent: tinted fill, accent border, accent icon
@@ -960,7 +1008,9 @@ select { appearance: none; cursor: pointer; }
 }
 .connection-button:hover { border-color: var(--ember); background: rgb(var(--ember-rgb) / 0.16); }
 .connection-button > span { display: flex; min-width: 0; flex: 1; flex-direction: column; line-height: 1.1; }
-.connection-button small { margin-bottom: 3px; color: var(--ember-text); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+/* Both lines truncate rather than wrap: "Servicio de billetera" / "Serviço de carteira"
+   are wider than the chip gets on a phone with a wallet chip beside it. */
+.connection-button small { margin-bottom: 3px; overflow: hidden; color: var(--ember-text); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 .connection-button b { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .connection-button > svg:first-child { color: var(--ember); flex: none; }
 .connection-button > svg:last-child { color: var(--muted); }
@@ -972,7 +1022,8 @@ select { appearance: none; cursor: pointer; }
   overflow-y: auto;
 }
 .connection-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
-.connection-modal-head h2 { margin: 3px 0 0; }
+.connection-modal-head > div { min-width: 0; flex: 1 1 auto; }
+.connection-modal-head h2 { margin: 3px 0 0; overflow-wrap: anywhere; }
 .connection-list { display: grid; gap: 8px; margin: 16px 0; }
 .connection-option {
   display: flex;
@@ -1002,8 +1053,10 @@ select { appearance: none; cursor: pointer; }
 .connection-add-own > .connection-add { margin: 8px 0 0; padding: 0; border: 0; }
 .run-on-phone { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .run-on-phone > button { width: 100%; }
+/* The trailing action word ("Use" / "Connecting…") keeps its width and never wraps
+   mid-word; the title/caption column beside it is the one that gives. */
 .connection-option > span:last-child,
-.connection-option.saved > button:first-child > span:last-child { color: var(--ember-text); font-size: 11px; font-weight: 700; }
+.connection-option.saved > button:first-child > span:last-child { flex: 0 0 auto; max-width: 38%; color: var(--ember-text); font-size: 11px; font-weight: 700; text-align: end; overflow-wrap: anywhere; }
 .connection-option.saved { padding: 0; }
 .connection-option.saved > button:first-child { display: flex; min-width: 0; min-height: 56px; flex: 1; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 0; background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
 .connection-remove { display: grid; width: 42px; align-self: stretch; place-items: center; border: 0; border-inline-start: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; }
@@ -1015,16 +1068,19 @@ select { appearance: none; cursor: pointer; }
 .connection-add-grid.walletd { grid-template-columns: minmax(120px, .7fr) minmax(210px, 1.3fr); }
 .connection-add-grid.walletd .btn { justify-self: start; }
 .connection-add-grid input { min-width: 0; margin: 0; }
-.connection-add-grid .btn { min-width: 0; white-space: nowrap; }
+.connection-add-grid .btn { min-width: 0; white-space: normal; }
 
 /* Send card: header row ("Send" + available balance) */
 .sendhead {
   display: flex;
+  flex-wrap: wrap;           /* the balance drops under the title when both do not fit */
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
   margin-bottom: 4px;
 }
+.sendhead > * { min-width: 0; }
+.sendhead > :last-child { margin-inline-start: auto; text-align: end; }
 
 /* Input + inline action (e.g. the address field with a Paste button). The input
    flexes to fill the row; min-width:0 lets it shrink instead of pushing the row
@@ -1041,6 +1097,10 @@ select { appearance: none; cursor: pointer; }
 }
 .inlinebtn {
   flex: 0 0 auto;
+  max-width: 45%;            /* the field beside it always keeps most of the row */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   background: var(--surface-2);
   color: var(--ink);
   border: 1px solid var(--border);
@@ -1070,10 +1130,13 @@ select { appearance: none; cursor: pointer; }
    the label's normal top spacing so the inline label can zero its own margin. */
 .amthead {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 4px 12px;
   margin: 14px 0 6px;
 }
+.amthead > * { min-width: 0; }
 .linkbtn {
   background: none;
   border: none;
@@ -1094,13 +1157,16 @@ select { appearance: none; cursor: pointer; }
 /* Confirm screen: label/value rows, with a divided, emphasized total. */
 .confirm-row {
   display: flex;
+  flex-wrap: wrap;           /* a long label ("Frais de réseau") keeps its line; the value drops under it, end-aligned */
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 2px 12px;
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
   font-size: 14px;
 }
+.confirm-row > * { min-width: 0; overflow-wrap: anywhere; }
+.confirm-row > :last-child { margin-inline-start: auto; text-align: end; }
 .confirm-row.total {
   border-bottom: none;
   margin-top: 2px;
@@ -1525,11 +1591,16 @@ select { appearance: none; cursor: pointer; }
 /* Step labels under the scene. */
 .sendscene-steps {
   display: flex;
+  flex-wrap: wrap;           /* "Доказательство · Подпись · Отправка" is wider than a phone; a pill may drop to a second row */
   justify-content: center;
-  gap: 8px;
+  gap: 6px 8px;
   margin-bottom: 8px;
 }
 .ss-step {
+  min-width: 0;
+  max-width: 100%;
+  text-align: center;
+  overflow-wrap: anywhere;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -1594,15 +1665,21 @@ select { appearance: none; cursor: pointer; }
 .rescanbox .muted.small {
   max-width: 46ch;
 }
+.rescanbox > div:first-child { min-width: 0; flex: 1 1 200px; }
 .rescanbox-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   flex: none;
+  min-width: 0;
+  max-width: 100%;
 }
+/* Sized to its label, but never wider than the box: a long translation wraps
+   inside the pill instead of running out of the card. */
 .rescanbox .btn {
-  flex: none;
-  white-space: nowrap;
+  flex: 0 1 auto;
+  max-width: 100%;
+  white-space: normal;
 }
 
 /* Lock screen — the desktop front door. Centred, nothing else on screen: the
@@ -1649,7 +1726,11 @@ select { appearance: none; cursor: pointer; }
   max-height: 90vh;
   max-height: 90dvh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
+/* Dialog titles are one uppercase, letter-spaced line in English; a German or
+   Finnish compound must be allowed to break rather than widen the dialog. */
+.modalcard h2 { overflow-wrap: anywhere; }
 /* Wider, horizontal layout for the mining setup: the two node choices sit
    side by side so the modal stays short enough to fit without scrolling. */
 .modalcard.mining-chooser { max-width: 660px; }
@@ -1768,17 +1849,20 @@ select { appearance: none; cursor: pointer; }
 /* --- Detail sheet ---------------------------------------------------------- */
 .detail-row {
   display: flex;
+  flex-wrap: wrap;           /* label + value side by side; the value drops under a long label on a phone */
   justify-content: space-between;
-  gap: 14px;
+  gap: 2px 14px;
   padding: 9px 0;
   border-bottom: 1px solid var(--border);
   font-size: 14px;
 }
 .detail-row:last-child { border-bottom: none; }
-.detail-row .k { color: var(--muted); flex: none; }
+.detail-row .k { color: var(--muted); flex: none; max-width: 100%; }
 .detail-row .v {
   text-align: end;
   min-width: 0;
+  flex: 1 1 auto;
+  margin-inline-start: auto;
   overflow-wrap: anywhere;
 }
 .modalcard.wide { max-width: 520px; max-height: 84vh; max-height: 84dvh; overflow-y: auto; }
@@ -1800,6 +1884,13 @@ select { appearance: none; cursor: pointer; }
   padding: 6px 12px;
   font-size: 13px;
   cursor: pointer;
+  /* A chip is one line. When it is squeezed (four across a 360px phone) the label
+     truncates; the full text is in its title attribute. */
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .chip.on {
   color: var(--ink);
@@ -1817,13 +1908,14 @@ select { appearance: none; cursor: pointer; }
   gap: 12px;
   margin-bottom: 12px;
 }
-.history-heading h2 { margin: 0; }
-.history-heading .btn { flex: none; white-space: nowrap; }
+.history-heading h2 { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.history-heading .btn { flex: 0 1 auto; max-width: 60%; white-space: normal; }
 .history-scope {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 2px 12px;
   margin-bottom: 10px;
   color: var(--muted);
   font-size: 12px;
@@ -1862,7 +1954,7 @@ select { appearance: none; cursor: pointer; }
   transition: border-color 0.15s ease;
 }
 .walletbar:hover { border-color: var(--ember); }
-.walletbar-name { flex: 1; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: start; }
+.walletbar-name { flex: 1; min-width: 0; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: start; }
 .walletbar-chev { display: flex; margin-inline-start: auto; color: var(--muted); }
 .avatar.sm { width: 26px; height: 26px; font-size: 12px; }
 
@@ -1891,11 +1983,14 @@ select { appearance: none; cursor: pointer; }
 }
 .feerow:hover { border-color: var(--ember); }
 .feerow:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
-.feerow-label { color: var(--muted); }
+.feerow-label { color: var(--muted); min-width: 0; flex: 1 1 auto; }
 .feerow-value {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  flex: 0 1 auto;
+  text-align: end;
   color: var(--ink);
   font-weight: 600;
 }
@@ -1925,7 +2020,7 @@ select { appearance: none; cursor: pointer; }
    outlined so the destructive-ish one takes a fraction more deliberation. */
 .quick-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
@@ -1935,11 +2030,18 @@ select { appearance: none; cursor: pointer; }
   justify-content: center;
   gap: 9px;
   min-height: 56px;                 /* comfortably above the 44px touch minimum */
+  min-width: 0;
+  padding: 8px 10px;
   border-radius: 16px;
   font-family: inherit;
-  font-size: 16px;
+  /* "Получить" / "Recevoir" beside an icon in half a 360px screen: ease the size
+     down a step before letting the word wrap. */
+  font-size: clamp(14px, 4.2vw, 16px);
   font-weight: 650;
   letter-spacing: 0.01em;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
   cursor: pointer;
   border: 1px solid transparent;
   transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
@@ -1985,7 +2087,9 @@ select { appearance: none; cursor: pointer; }
 .consolidate-dialog { max-width: 520px; }
 .host-url-list { display: grid; gap: 5px; overflow-wrap: anywhere; }
 .send-confirm-actions { align-items: stretch; }
-.send-confirm-actions > .btn { flex: 1 1 auto; }
+/* Same rule as `.row > .btn`: labels that fit share the row, otherwise stack. */
+.send-confirm-actions > .btn { flex: 1 1 0; }
+.send-confirm-actions > .btn { flex: 1 1 max-content; }
 
 /* A way out of Receive/Send, which no tab lights up any more. Quiet by design — it is
    an escape hatch, not a call to action, and it must not compete with the primary
@@ -2060,21 +2164,29 @@ select { appearance: none; cursor: pointer; }
   display: flex;
   min-width: 0;
   flex: 1;
-  justify-content: flex-end;
+  /* End-aligned via an auto margin on the first pill, NOT `justify-content: flex-end`:
+     a scroll container can only reach overflow on its END side, and flex-end would
+     have parked the overflow (the Wallet pill) off the start edge, unreachable, once
+     six no-wrap pills outgrow a narrow window. The auto margin collapses to zero
+     when the row overflows, so the extra width scrolls into view instead. */
+  justify-content: flex-start;
   gap: 4px;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
 }
+.app-page-links > button:first-child { margin-inline-start: auto; }
 .app-page-links::-webkit-scrollbar { display: none; }
 .app-page-links > button {
   min-width: 82px;
+  flex: 0 0 auto;            /* the row scrolls; a label never wraps inside a 1-line pill */
   border: 0;
   border-radius: 999px;
   padding: 9px 13px;
   background: transparent;
   color: var(--muted);
   font: 600 13px/1 var(--sans);
+  white-space: nowrap;
   cursor: pointer;
   transition: color .15s ease, background .15s ease, transform .1s ease;
 }
@@ -2138,7 +2250,11 @@ select { appearance: none; cursor: pointer; }
     border-radius: 12px;
     padding: 11px 13px;
     text-align: start;
+    white-space: normal;     /* the rail has a fixed width: a long label wraps here */
+    line-height: 1.2;
   }
+  .app-page-links > button .app-nav-label { min-width: 0; overflow-wrap: anywhere; }
+  .app-page-links > button:first-child { margin-inline-start: 0; }   /* a column rail: nothing to end-align */
   .app-page-links > button.active {
     background: var(--ember-soft);
     color: var(--ember-text);
@@ -2186,6 +2302,9 @@ select { appearance: none; cursor: pointer; }
   justify-content: space-between;
   gap: 20px;
 }
+/* The text column gives way; the status pill beside it keeps its (capped) width. */
+.control-heading > div:first-child, .card-title-row > div:first-child { min-width: 0; flex: 1 1 auto; }
+.control-heading h1, .control-card h2 { overflow-wrap: anywhere; }
 .control-heading { margin-bottom: 18px; }
 .control-heading h1 { margin: 3px 0 5px; font-size: clamp(25px, 4vw, 34px); letter-spacing: -.035em; }
 .control-heading p, .control-card p { margin: 0; color: var(--muted); line-height: 1.5; }
@@ -2203,7 +2322,9 @@ select { appearance: none; cursor: pointer; }
 .install-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-color: color-mix(in srgb, var(--ember) 45%, var(--border)); }
 .install-card > div { min-width: 0; }
 .step-number { float: left; display: grid; place-items: center; width: 25px; height: 25px; margin-inline-end: 10px; border-radius: 50%; color: var(--ember-ink); background: var(--ember); font-size: 12px; font-weight: 800; }
-.status-pill { flex: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 10px; color: var(--muted); background: var(--surface); font-size: 12px; font-weight: 650; }
+/* One line, never more than half the row: "Escuchando en el puerto 5555" truncates
+   with an ellipsis rather than pushing the heading beside it out of the card. */
+.status-pill { display: inline-block; vertical-align: middle; flex: none; max-width: 50%; min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 999px; padding: 6px 10px; color: var(--muted); background: var(--surface); font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .status-pill.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--border)); }
 .status-pill.warm { color: #e5ae38; border-color: color-mix(in srgb, #e5ae38 45%, var(--border)); }
 .control-page .status-dot { width: 10px; height: 10px; margin: 7px; background: var(--border); box-shadow: none; }
@@ -2264,7 +2385,8 @@ select { appearance: none; cursor: pointer; }
 .service-dialog-backdrop { position: fixed; inset: 0; z-index: 230; display: grid; place-items: center; overflow: auto; padding: calc(18px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left)); background: rgba(2, 5, 7, .68); backdrop-filter: blur(6px); }
 .service-dialog { width: min(620px, 100%); max-height: min(92vh, 820px); max-height: min(92dvh, 820px); overflow: auto; border: 1px solid color-mix(in srgb, var(--border) 75%, var(--ember) 25%); border-radius: 18px; background: var(--surface); color: var(--ink); box-shadow: 0 28px 90px rgba(0, 0, 0, .42); }
 .service-dialog-header { display: flex; min-height: 72px; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 94%, var(--ember) 6%); }
-.service-dialog-header h2 { margin: 3px 0 0; font-size: 19px; letter-spacing: -.02em; }
+.service-dialog-header > div { min-width: 0; flex: 1 1 auto; }
+.service-dialog-header h2 { margin: 3px 0 0; font-size: 19px; letter-spacing: -.02em; overflow-wrap: anywhere; }
 .service-dialog-header-actions { display: flex; flex: none; align-items: center; gap: 10px; }
 .dialog-close { display: grid; width: 36px; height: 36px; flex: none; place-items: center; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--muted); cursor: pointer; }
 .dialog-close:hover { border-color: var(--ember); color: var(--ink); }
@@ -2296,9 +2418,9 @@ select { appearance: none; cursor: pointer; }
 .log-live-state i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 15%, transparent); }
 .log-live-state.retrying { color: #e5ae38; }
 .empty-state { padding: 38px 22px; text-align: center; }
-.mode-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 5px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
-.mode-tabs.two { grid-template-columns: repeat(2, 1fr); }
-.mode-tabs button { border: 0; border-radius: 999px; padding: 10px; color: var(--muted); background: transparent; font: 650 13px var(--sans); cursor: pointer; }
+.mode-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; padding: 5px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+.mode-tabs.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mode-tabs button { min-width: 0; min-height: 40px; border: 0; border-radius: 999px; padding: 6px 10px; color: var(--muted); background: transparent; font: 650 clamp(12px, 3.4vw, 13px)/1.15 var(--sans); text-align: center; overflow-wrap: anywhere; cursor: pointer; }
 .mode-tabs button.active { color: var(--ember-ink); background: var(--ember); }
 .mode-tabs button:disabled { opacity: .38; cursor: not-allowed; }
 .field-label { display: block; margin-top: 15px; color: var(--muted); font-size: 12px; font-weight: 600; }
@@ -2314,7 +2436,8 @@ select { appearance: none; cursor: pointer; }
 .asic-inline span { color: var(--muted); font-size: 12px; }
 .address-line { overflow-wrap: anywhere; }
 .worker-list { margin-top: 12px; border-top: 1px solid var(--border); }
-.worker-list > div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.worker-list > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; padding: 10px 2px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.worker-list > div > * { min-width: 0; overflow-wrap: anywhere; }
 .worker-list span { color: var(--muted); }
 .disclosure { width: 100%; text-align: start; font-size: 14px; }
 .advanced-row { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin-top: 12px; }
@@ -2345,7 +2468,8 @@ select { appearance: none; cursor: pointer; }
 .advanced-grid > p { grid-column: 1 / -1; margin-top: 9px; font-size: 11px; }
 .mining-primary-action { padding: 17px 20px 20px; border-top: 1px solid var(--border); }
 .mining-start { display: inline-flex; min-width: 180px; align-items: center; justify-content: center; gap: 8px; }
-.download-line { display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; margin-top: 12px; color: var(--muted); font-size: 11px; }
+.download-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; margin-top: 12px; color: var(--muted); font-size: 11px; }
+.download-line > * { min-width: 0; overflow-wrap: anywhere; }
 .download-line b { color: var(--ink); }
 .download-line i { grid-column: 1 / -1; height: 5px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
 .download-line i span { display: block; height: 100%; border-radius: inherit; background: var(--ember); transition: width .2s ease; }
@@ -2367,7 +2491,7 @@ select { appearance: none; cursor: pointer; }
 .asic-credentials span:first-child { flex: 1; }
 .asic-credentials code { display: block; overflow: hidden; margin-top: 3px; color: var(--ink); font: 10px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
 .mining-metrics { grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); margin-bottom: 12px; }
-.mining-live-actions { display: flex; flex: none; align-items: center; gap: 8px; }
+.mining-live-actions { display: flex; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; min-width: 0; align-items: center; gap: 8px; }
 .mining-live-actions .btn { display: inline-flex; align-items: center; gap: 6px; margin: 0; text-decoration: none; }
 .mining-live-card .disclosure { margin-top: 7px; }
 .mining-logs { margin-top: 12px; }
@@ -2405,8 +2529,8 @@ select { appearance: none; cursor: pointer; }
 .explorer-list { margin-top: 12px; border-top: 1px solid var(--border); }
 .explorer-list button { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 12px; min-height: 55px; padding: 9px 2px; border: 0; border-bottom: 1px solid var(--border); background: none; color: var(--ink); text-align: start; font: inherit; cursor: pointer; }
 .explorer-list button:hover { color: var(--ember-text); }
-.explorer-list button > span { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
-.explorer-list button > span:last-child { align-items: flex-end; text-align: end; }
+.explorer-list button > span { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
+.explorer-list button > span:last-child { flex: 0 1 auto; align-items: flex-end; text-align: end; }
 .explorer-list small { color: var(--muted); }
 .live-dot { color: var(--good); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
 .live-dot::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-inline-end: 6px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 15%, transparent); }
@@ -2453,7 +2577,7 @@ select { appearance: none; cursor: pointer; }
 .services-page { width: min(1080px, calc(100% - 28px)); }
 .services-controls { margin-bottom: 18px; }
 .services-filters { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
-.services-filters button { min-width: 0; min-height: 46px; border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; background: rgba(13, 24, 21, .84); color: var(--muted); font: 650 12px var(--sans); cursor: pointer; }
+.services-filters button { min-width: 0; min-height: 46px; border: 1px solid var(--border); border-radius: 12px; padding: 6px 8px; background: rgba(13, 24, 21, .84); color: var(--muted); font: 650 12px/1.2 var(--sans); overflow-wrap: anywhere; cursor: pointer; }
 .services-filters button:hover { color: var(--ink); border-color: color-mix(in srgb, var(--muted) 55%, var(--border)); }
 .services-filters button span { margin-inline-start: 3px; opacity: .6; }
 .services-filters button.active { border-color: var(--ember); background: var(--ember); color: var(--ember-ink); font-weight: 750; }
@@ -2486,7 +2610,8 @@ select { appearance: none; cursor: pointer; }
 .tool-tabs { margin-bottom: 12px; }
 .service-runtime-card code { display: block; overflow-wrap: anywhere; padding: 10px; border-radius: 9px; background: var(--surface-2); color: var(--muted); font: 11px/1.5 var(--mono); }
 .batch-input { resize: vertical; line-height: 1.65; }
-.batch-summary { display: flex; justify-content: space-between; gap: 12px; margin: 10px 0; color: var(--muted); font-size: 13px; }
+.batch-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; margin: 10px 0; color: var(--muted); font-size: 13px; }
+.batch-summary > * { min-width: 0; overflow-wrap: anywhere; }
 .batch-summary strong { color: var(--ink); }
 .advanced-details { margin: 12px 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
 .advanced-details summary { color: var(--muted); cursor: pointer; font-size: 12px; }
@@ -2524,10 +2649,14 @@ select { appearance: none; cursor: pointer; }
   .connection-add-grid { grid-template-columns: 1fr; }
   .host-mode-list.choice-row.three { grid-template-columns: 1fr; }
   .history-heading { align-items: stretch; flex-direction: column; gap: 9px; }
-  .history-heading .btn { width: 100%; }
+  .history-heading .btn { width: 100%; max-width: 100%; }
+  /* Search box on its own line, then the four kind filters share ONE row at equal
+     widths — never a second row of chips. The chip label eases down to 11px on the
+     narrowest phones and, if still too wide ("Empfangen"), truncates with an
+     ellipsis; the full word is in the chip's title. */
   .filterbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
   .filterbar input { grid-column: 1 / -1; width: 100%; min-width: 0; }
-  .filterbar .chip { width: 100%; padding: 7px 3px; }
+  .filterbar .chip { width: 100%; padding: 7px 3px; font-size: clamp(11px, 3.3vw, 13px); }
   .desktop-shell .app-wordmark { display: none; }
   .desktop-shell .app-nav-bar { gap: 0; }
   .desktop-shell .app-page-links {
@@ -2535,6 +2664,7 @@ select { appearance: none; cursor: pointer; }
     scrollbar-width: thin;
     scrollbar-color: var(--ember) var(--surface-2);
   }
+  .desktop-shell .app-page-links > button:first-child { margin-inline-start: 0; }   /* start-aligned here */
   .desktop-shell .app-page-links::-webkit-scrollbar { display: block; height: 4px; }
   .desktop-shell .app-page-links::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--ember); }
   .app-shell:not(.desktop-shell) .app-switcher {
@@ -2549,9 +2679,13 @@ select { appearance: none; cursor: pointer; }
   .app-shell:not(.desktop-shell) .app-nav-bar { width: 100%; gap: 0; }
   .app-shell:not(.desktop-shell) .app-wordmark { display: none; }
   .app-shell:not(.desktop-shell) .app-page-links { width: 100%; justify-content: stretch; gap: 0; overflow: visible; }
-  .app-shell:not(.desktop-shell) .app-page-links > button { display: flex; min-width: 0; min-height: 52px; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 5px 2px; border-radius: 11px; font-size: 10px; }
+  .app-shell:not(.desktop-shell) .app-page-links > button { display: flex; min-width: 0; min-height: 52px; flex: 1 1 0; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 5px 2px; border-radius: 11px; font-size: 10px; white-space: normal; }
   .app-shell:not(.desktop-shell) .app-page-links > button svg { width: 18px; height: 18px; margin: 0; }
-  .app-shell:not(.desktop-shell) .app-nav-label { font-size: 10px; line-height: 1; }
+  /* Five tabs across 360px leave ~70px per label. "Perkhidmatan" / "エクスプローラー" /
+     "Обозреватель" do not fit on one line at 10px, so a label may take TWO lines
+     (clamped there, so the bar keeps one height) and breaks anywhere rather than
+     overflowing its neighbour. */
+  .app-shell:not(.desktop-shell) .app-nav-label { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; max-width: 100%; min-width: 0; font-size: clamp(10px, 2.8vw, 11px); line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
   .app-shell:not(.desktop-shell) .app-page-links > button.active { background: var(--ember-soft); color: var(--ember-text); }
   .app-shell:not(.desktop-shell) .tabs { top: calc(8px + env(safe-area-inset-top)); }
   .control-page { width: min(100% - 20px, 820px); padding-top: 20px; }
@@ -2708,15 +2842,20 @@ select { appearance: none; cursor: pointer; }
 }
 .setrow-head:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
 .setrow-head:focus-visible { outline: 2px solid var(--ember); outline-offset: -2px; }
-.setrow-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
-.setrow-right { margin-inline-start: auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* Title and summary ("Network privacy" · "Tor") share the row. Neither may push the
+   chevron out: the title shrinks and wraps to a second line, the summary truncates
+   with an ellipsis (the open row shows the full value anyway). */
+.setrow-title { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.setrow-right { margin-inline-start: auto; display: flex; align-items: center; gap: 10px; min-width: 0; flex: 0 1 auto; }
 .setrow-summary {
   color: var(--muted);
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 46vw;
+  min-width: 0;
+  max-width: 40vw;
+  text-align: end;
 }
 .setrow-chev { color: var(--muted); flex: none; transition: transform 0.22s ease; }
 .setrow.open .setrow-chev { transform: rotate(180deg); }
@@ -2799,6 +2938,11 @@ select { appearance: none; cursor: pointer; }
    16px also stops iOS zooming the page when the field is focused. */
 input.mono, .host-token { font-size: 16px; }
 .detail-row .k, .notegrid .k { white-space: nowrap; }
+/* On a phone a translated label ("Anclaje de compromiso actual") can be most of the
+   row: let it wrap instead of forcing the value (or the card) out of view. */
+@media (max-width: 620px) {
+  .detail-row .k, .notegrid .k { white-space: normal; overflow-wrap: anywhere; }
+}
 .detail-row.stacked { display: block; }
 .detail-row.stacked .v { display: block; text-align: start; margin-top: 4px; overflow-wrap: anywhere; }
 
@@ -2867,15 +3011,16 @@ input.mono, .host-token { font-size: 16px; }
 .lang-notice-body select { width: auto; padding: 4px 8px; font-size: 13px; }
 
 /* Globe button + language list. */
-.lang-button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 7px 11px; border: 1px solid rgb(var(--ember-rgb) / 0.5); border-radius: 14px; background: rgb(var(--ember-rgb) / 0.08); color: var(--fg); font-size: 12px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; flex: 0 0 auto; }
+/* flex: 0 0 auto + nowrap: the globe/flag button is never squeezed and never breaks
+   its code onto a second line; the chips beside it in the topline give way instead. */
+.lang-button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 7px 11px; border: 1px solid rgb(var(--ember-rgb) / 0.5); border-radius: 14px; background: rgb(var(--ember-rgb) / 0.08); color: var(--ink); font-size: 12px; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; cursor: pointer; flex: 0 0 auto; }
 .lang-button:hover { border-color: var(--ember); background: rgb(var(--ember-rgb) / 0.16); }
 .lang-button.compact { padding: 7px 9px; }
-.lockwrap .lang-button, .firstrun .lang-button { position: absolute; top: 14px; right: 14px; }
-[dir="rtl"] .lockwrap .lang-button, [dir="rtl"] .firstrun .lang-button { right: auto; left: 14px; }
+.lockwrap .lang-button, .firstrun .lang-button { position: absolute; top: 14px; inset-inline-end: 14px; }
 .lockwrap { position: relative; }
 .lang-modal { max-width: 420px; }
 .lang-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-height: 60vh; overflow: auto; }
-.lang-item { min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--fg); font-size: 14px; text-align: start; cursor: pointer; }
+.lang-item { min-width: 0; min-height: 44px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--ink); font-size: 14px; text-align: start; overflow-wrap: anywhere; cursor: pointer; }
 .lang-item:hover { border-color: var(--ember); }
 .lang-item.on { border-color: var(--ember); background: rgb(var(--ember-rgb) / 0.14); font-weight: 600; }
 

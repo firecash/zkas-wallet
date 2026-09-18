@@ -223,7 +223,7 @@ function DashboardView() {
           <h1>{t("dashboardView.title")}</h1>
           <p>{t("dashboardView.intro")}</p>
         </div>
-        <span className={`status-pill ${data ? "good" : "warm"}`}>{refreshing ? t("dashboardView.updating") : data ? t("dashboardView.live") : t("dashboardView.offline")}</span>
+        <span className={`status-pill ${data ? "good" : "warm"}`} title={refreshing ? t("dashboardView.updating") : data ? t("dashboardView.live") : t("dashboardView.offline")}>{refreshing ? t("dashboardView.updating") : data ? t("dashboardView.live") : t("dashboardView.offline")}</span>
       </div>
 
       <section className="explorer-live-hero" aria-label={t("dashboardView.heroAria")}>
@@ -243,10 +243,10 @@ function DashboardView() {
       ) : (
         <>
           <div className="explorer-metrics">
-            <div className="metric"><span>{t("dashboardView.daaScore")}</span><strong>{integer(data.dag.virtualDaaScore)}</strong></div>
-            <div className="metric"><span>{t("dashboardView.blockRate")}</span><strong>{t("dashboardView.bps", { bps: data.pulse.bps15m.toFixed(2) })}</strong></div>
-            <div className="metric"><span>{t("dashboardView.estHashrate")}</span><strong>{hashrate(data.dag.difficulty * 2)}</strong></div>
-            <div className="metric"><span>{t("dashboardView.connectedPeers")}</span><strong>{integer(data.network.connectedPeers)}</strong></div>
+            <div className="metric"><span title={t("dashboardView.daaScore")}>{t("dashboardView.daaScore")}</span><strong>{integer(data.dag.virtualDaaScore)}</strong></div>
+            <div className="metric"><span title={t("dashboardView.blockRate")}>{t("dashboardView.blockRate")}</span><strong>{t("dashboardView.bps", { bps: data.pulse.bps15m.toFixed(2) })}</strong></div>
+            <div className="metric"><span title={t("dashboardView.estHashrate")}>{t("dashboardView.estHashrate")}</span><strong>{hashrate(data.dag.difficulty * 2)}</strong></div>
+            <div className="metric"><span title={t("dashboardView.connectedPeers")}>{t("dashboardView.connectedPeers")}</span><strong>{integer(data.network.connectedPeers)}</strong></div>
           </div>
 
           <section className="control-card explorer-map-card">
@@ -325,10 +325,10 @@ function BlockView({ id }: { id: string }) {
       {block && (
         <>
           <div className="explorer-metrics">
-            <div className="metric"><span>{t("blockView.blueScore")}</span><strong>{integer(block.header.blueScore)}</strong></div>
-            <div className="metric"><span>{t("blockView.daaScore")}</span><strong>{integer(block.header.daaScore)}</strong></div>
-            <div className="metric"><span>{t("blockView.transactions")}</span><strong>{block.verboseData.transactionIds.length}</strong></div>
-            <div className="metric"><span>{t("blockView.chainBlock")}</span><strong>{block.verboseData.isChainBlock ? t("blockView.yes") : t("blockView.no")}</strong></div>
+            <div className="metric"><span title={t("blockView.blueScore")}>{t("blockView.blueScore")}</span><strong>{integer(block.header.blueScore)}</strong></div>
+            <div className="metric"><span title={t("blockView.daaScore")}>{t("blockView.daaScore")}</span><strong>{integer(block.header.daaScore)}</strong></div>
+            <div className="metric"><span title={t("blockView.transactions")}>{t("blockView.transactions")}</span><strong>{block.verboseData.transactionIds.length}</strong></div>
+            <div className="metric"><span title={t("blockView.chainBlock")}>{t("blockView.chainBlock")}</span><strong>{block.verboseData.isChainBlock ? t("blockView.yes") : t("blockView.no")}</strong></div>
           </div>
           <section className="control-card">
             <div className="detail-row"><span className="k">{t("blockView.timestamp")}</span><span className="v">{new Date(block.header.timestamp).toLocaleString()}</span></div>
@@ -367,10 +367,10 @@ function TransactionView({ id }: { id: string }) {
       {tx && (
         <>
           <div className="explorer-metrics">
-            <div className="metric"><span>{t("transactionView.status")}</span><strong>{tx.is_accepted ? t("transactionView.confirmed") : t("transactionView.pending")}</strong></div>
-            <div className="metric"><span>{t("transactionView.confirmations")}</span><strong>{integer(tx.confirmations)}</strong></div>
-            <div className="metric"><span>{t("transactionView.blueScore")}</span><strong>{integer(tx.accepting_block_blue_score)}</strong></div>
-            <div className="metric"><span>{t("transactionView.mass")}</span><strong>{integer(tx.mass)}</strong></div>
+            <div className="metric"><span title={t("transactionView.status")}>{t("transactionView.status")}</span><strong>{tx.is_accepted ? t("transactionView.confirmed") : t("transactionView.pending")}</strong></div>
+            <div className="metric"><span title={t("transactionView.confirmations")}>{t("transactionView.confirmations")}</span><strong>{integer(tx.confirmations)}</strong></div>
+            <div className="metric"><span title={t("transactionView.blueScore")}>{t("transactionView.blueScore")}</span><strong>{integer(tx.accepting_block_blue_score)}</strong></div>
+            <div className="metric"><span title={t("transactionView.mass")}>{t("transactionView.mass")}</span><strong>{integer(tx.mass)}</strong></div>
           </div>
           <section className="control-card privacy-explainer">
             <h2>{t("transactionView.privateTitle")}</h2>

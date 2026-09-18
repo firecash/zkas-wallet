@@ -290,7 +290,7 @@ export function Mining() {
     <main className="control-page mining-page">
       <header className="control-heading">
         <div><span className="eyebrow">{t("mining.eyebrow")}</span><h1>{t("mining.title")}</h1><p>{t("mining.intro")}</p></div>
-        <span className={`status-pill ${live ? "good" : ""}`}>{live ? t("mining.listening") : t("mining.stopped")}</span>
+        <span className={`status-pill ${live ? "good" : ""}`} title={live ? t("mining.listening") : t("mining.stopped")}>{live ? t("mining.listening") : t("mining.stopped")}</span>
       </header>
 
       {!live && (
@@ -327,7 +327,7 @@ export function Mining() {
       {live && <section className="control-card mining-setup-card">
         <div className="card-title-row">
           <div><h2>{live ? t("mining.serviceTitle") : t("mining.setupTitle")}</h2><p>{live ? t("mining.serviceIntro") : t("mining.setupIntro")}</p></div>
-          {missing.length > 0 && !live && <span className="status-pill">{t("mining.installs", { n: missing.length })}</span>}
+          {missing.length > 0 && !live && <span className="status-pill" title={t("mining.installs", { n: missing.length })}>{t("mining.installs", { n: missing.length })}</span>}
         </div>
 
         <div className="setup-section">
@@ -378,7 +378,7 @@ export function Mining() {
       </section>}
 
       {(live || showConnect) && <section className="control-card connect-miner-card">
-        <div className="card-title-row"><div><h2>{t("mining.connectTitle")}</h2><p>{t("mining.connectIntro")}</p></div><span className={`status-pill ${live ? "good" : ""}`}>{live ? t("mining.portOpen", { port: stratumPort }) : t("mining.startFirst")}</span></div>
+        <div className="card-title-row"><div><h2>{t("mining.connectTitle")}</h2><p>{t("mining.connectIntro")}</p></div><span className={`status-pill ${live ? "good" : ""}`} title={live ? t("mining.portOpen", { port: stratumPort }) : t("mining.startFirst")}>{live ? t("mining.portOpen", { port: stratumPort }) : t("mining.startFirst")}</span></div>
         <div className="endpoint-grid">
           <EndpointCard icon={<Cpu size={18} />} title={t("mining.thisComputer")} note={t("mining.thisComputerNote")} value={endpoint("127.0.0.1")} id="local" copied={copied} onCopy={copyEndpoint} />
           {lanIps.length ? lanIps.map((ip, index) => (
@@ -592,5 +592,5 @@ function EndpointCard({ icon, title, note, value, id, copied, onCopy }: { icon: 
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="metric"><span>{label}</span><strong>{value}</strong></div>;
+  return <div className="metric"><span title={label}>{label}</span><strong>{value}</strong></div>;
 }

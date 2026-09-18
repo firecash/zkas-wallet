@@ -156,7 +156,7 @@ export function Services() {
             <article className="service-card" key={service.id}>
               <div className="card-title-row">
                 <span className="service-icon" aria-hidden="true"><Icon size={21} strokeWidth={1.8} /></span>
-                <span className="service-meta"><span className={`service-status ${["Live", "Available", "Published", "Open"].includes(service.status) ? "live" : "testing"}`}>{STATUS_LABELS[service.status]()}</span><span className="service-category">{service.categories.map((category) => CATEGORY_LABELS[category]()).join(" · ")}</span></span>
+                <span className="service-meta"><span className={`service-status ${["Live", "Available", "Published", "Open"].includes(service.status) ? "live" : "testing"}`} title={STATUS_LABELS[service.status]()}>{STATUS_LABELS[service.status]()}</span><span className="service-category">{service.categories.map((category) => CATEGORY_LABELS[category]()).join(" · ")}</span></span>
               </div>
               <h2>{service.name}</h2>
               <p>{service.description}</p>

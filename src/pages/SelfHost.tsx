@@ -172,7 +172,7 @@ export function SelfHost() {
 
   return (
     <main className="control-page selfhost-page">
-      <div className="control-heading"><div><span className="eyebrow">{t("selfHost.eyebrow")}</span><h1>{t("selfHost.title")}</h1><p>{t("selfHost.intro")}</p></div><span className={`status-pill ${status?.wallet_access === "device" ? "good" : "warm"}`}>{status?.wallet_access === "wan" ? t("selfHost.internetAccess") : status?.wallet_access === "lan" ? t("selfHost.lanAccess") : t("selfHost.deviceOnly")}</span></div>
+      <div className="control-heading"><div><span className="eyebrow">{t("selfHost.eyebrow")}</span><h1>{t("selfHost.title")}</h1><p>{t("selfHost.intro")}</p></div><span className={`status-pill ${status?.wallet_access === "device" ? "good" : "warm"}`} title={status?.wallet_access === "wan" ? t("selfHost.internetAccess") : status?.wallet_access === "lan" ? t("selfHost.lanAccess") : t("selfHost.deviceOnly")}>{status?.wallet_access === "wan" ? t("selfHost.internetAccess") : status?.wallet_access === "lan" ? t("selfHost.lanAccess") : t("selfHost.deviceOnly")}</span></div>
       {error && <div className="control-error">{error}</div>}
       {!status ? <div className="control-card empty-state"><span className="spin" /> {t("selfHost.reading")}</div> : (
         <>
@@ -259,17 +259,17 @@ export function SelfHost() {
 
           <div className="selfhost-grid">
             <section className="control-card service-runtime-card">
-              <div className="card-title-row"><div><h2>{t("selfHost.walletEngine")}</h2><p>{t("selfHost.walletEngineNote")}</p></div><span className={`status-pill ${status.wallet_engine_running ? "good" : "warm"}`}>{status.wallet_engine_running ? t("selfHost.running") : t("selfHost.stopped")}</span></div>
+              <div className="card-title-row"><div><h2>{t("selfHost.walletEngine")}</h2><p>{t("selfHost.walletEngineNote")}</p></div><span className={`status-pill ${status.wallet_engine_running ? "good" : "warm"}`} title={status.wallet_engine_running ? t("selfHost.running") : t("selfHost.stopped")}>{status.wallet_engine_running ? t("selfHost.running") : t("selfHost.stopped")}</span></div>
               <code>{status.wallet_engine_url || t("selfHost.locked")}</code>
               <p className="subtle">{t("selfHost.boundNote")}</p>
             </section>
             <section className="control-card service-runtime-card">
-              <div className="card-title-row"><div><h2>{t("selfHost.nodeConnection")}</h2><p>{status.node_mode === "local" ? t("selfHost.nodeLocal") : status.node_mode === "custom" ? t("selfHost.nodeCustom") : t("selfHost.nodePublic")}</p></div><span className="status-pill good">{status.node_mode === "local" ? t("selfHost.modeLocal") : status.node_mode === "custom" ? t("selfHost.modeCustom") : t("selfHost.modeRemote")}</span></div>
+              <div className="card-title-row"><div><h2>{t("selfHost.nodeConnection")}</h2><p>{status.node_mode === "local" ? t("selfHost.nodeLocal") : status.node_mode === "custom" ? t("selfHost.nodeCustom") : t("selfHost.nodePublic")}</p></div><span className="status-pill good" title={status.node_mode === "local" ? t("selfHost.modeLocal") : status.node_mode === "custom" ? t("selfHost.modeCustom") : t("selfHost.modeRemote")}>{status.node_mode === "local" ? t("selfHost.modeLocal") : status.node_mode === "custom" ? t("selfHost.modeCustom") : t("selfHost.modeRemote")}</span></div>
               <code>{status.node_rpc}</code>
               <button className="btn ghost compact" onClick={() => navigate("/node")}>{t("selfHost.nodeControls")}</button>
             </section>
             <section className="control-card service-runtime-card">
-              <div className="card-title-row"><div><h2>{t("selfHost.explorerApi")}</h2><p>{t("selfHost.explorerNote")}</p></div><span className={`status-pill ${status.explorer_running ? "good" : status.explorer_installed ? "" : "warm"}`}>{status.explorer_running ? t("selfHost.running") : status.explorer_installed ? t("selfHost.stopped") : t("selfHost.notInstalled")}</span></div>
+              <div className="card-title-row"><div><h2>{t("selfHost.explorerApi")}</h2><p>{t("selfHost.explorerNote")}</p></div><span className={`status-pill ${status.explorer_running ? "good" : status.explorer_installed ? "" : "warm"}`} title={status.explorer_running ? t("selfHost.running") : status.explorer_installed ? t("selfHost.stopped") : t("selfHost.notInstalled")}>{status.explorer_running ? t("selfHost.running") : status.explorer_installed ? t("selfHost.stopped") : t("selfHost.notInstalled")}</span></div>
               <code>{status.explorer_url}</code>
               {/* Opening this in a browser returns 404, because the service answers
                   /info/… and /blocks/… and has no page at the root. Saying so here is

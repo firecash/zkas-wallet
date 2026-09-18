@@ -1282,6 +1282,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 className="qa qa-receive"
                 onClick={() => setTab("receive")}
                 aria-label={t("app.receiveAria")}
+                title={t("app.receive")}
               >
                 <ArrowDownLeft className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
                 <span className="qa-label">{t("app.receive")}</span>
@@ -1294,6 +1295,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 // may not: it does not yet know about all of its own notes.
                 disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready })}
                 aria-label={t("app.sendAria")}
+                title={t("app.send")}
               >
                 <ArrowUpRight className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
                 <span className="qa-label">{t("app.send")}</span>
@@ -1333,6 +1335,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 role="tab"
                 aria-selected={tab === t}
                 aria-label={TAB_LABEL[t]()}
+                title={TAB_LABEL[t]()}
                 className={`${tab === t ? "active" : ""}${t === "settings" ? " gear" : ""}`}
                 onClick={() => setTab(t)}
                 onKeyDown={(e) => {
@@ -1687,7 +1690,7 @@ function WalletBar() {
     <>
       <button className="walletbar" onClick={() => setOpen(true)} aria-label={t("walletBar.switchWallet")}>
         <WalletCards aria-hidden="true" size={18} strokeWidth={2.2} />
-        <span className="walletbar-name">{current?.label ?? t("walletBar.defaultName")}</span>
+        <span className="walletbar-name" title={current?.label ?? t("walletBar.defaultName")}>{current?.label ?? t("walletBar.defaultName")}</span>
         <span className="walletbar-chev" aria-hidden="true">
           <ChevronDown size={16} strokeWidth={2.2} />
         </span>
@@ -1973,11 +1976,12 @@ function ConnectionButton() {
     await switchWalletd(address, "add", bearer, (connected) => walletdProfiles.save(name.trim() || address.replace(/^https?:\/\//, "").split(/[/?]/)[0] || t("connectionButton.labelMyWalletd"), connected, bearer));
   };
 
+  const serviceLabel = desktop ? t("connectionButton.chainSource") : t("connectionButton.walletService");
   return (
     <>
-      <button className="connection-button" onClick={() => { setOpen(true); void refresh(); }} aria-label={t("connectionButton.connectionAria", { label })}>
+      <button className="connection-button" onClick={() => { setOpen(true); void refresh(); }} aria-label={t("connectionButton.connectionAria", { label })} title={t("connectionButton.connectionAria", { label })}>
         <Server aria-hidden="true" size={17} strokeWidth={2.2} />
-        <span><small>{desktop ? t("connectionButton.chainSource") : t("connectionButton.walletService")}</small><b>{label}</b></span>
+        <span><small title={serviceLabel}>{serviceLabel}</small><b title={label}>{label}</b></span>
         <ChevronDown aria-hidden="true" size={15} />
       </button>
       {open && createPortal(
@@ -1985,7 +1989,7 @@ function ConnectionButton() {
           <div className="card modalcard connection-modal" onClick={(event) => event.stopPropagation()}>
             <div className="connection-modal-head">
               <div><span className="eyebrow">{t("connectionButton.eyebrow")}</span><h2>{desktop ? t("connectionButton.chainSource") : t("connectionButton.chooseService")}</h2></div>
-              <span className="status-pill good">{label}</span>
+              <span className="status-pill good" title={label}>{label}</span>
             </div>
             <p className="muted small">
               {desktop
@@ -3637,7 +3641,7 @@ function SyncDestination() {
             try { return new URL(base).host; } catch { return t("syncDestination.chosenService"); }
           })();
   return (
-    <div className="msg" style={{ textAlign: "left" }}>
+    <div className="msg" style={{ textAlign: "start" }}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span className="muted small">
           <Trans i18nKey="syncDestination.intro" values={{ where }} components={{ b: <b /> }} />
@@ -4171,9 +4175,9 @@ function SendScene({ stage, estimateMs, progress }: { stage?: SendStage; estimat
         </div>
       </div>
       <div className="sendscene-steps" aria-hidden="true">
-        <span className={"ss-step" + (s === "proving" || s === "warming" ? " on" : " done")}>{t("sendScene.stepProve")}</span>
-        <span className={"ss-step" + (s === "signing" ? " on" : s === "broadcasting" ? " done" : "")}>{t("sendScene.stepSign")}</span>
-        <span className={"ss-step" + (s === "broadcasting" ? " on" : "")}>{t("sendScene.stepSend")}</span>
+        <span className={"ss-step" + (s === "proving" || s === "warming" ? " on" : " done")} title={t("sendScene.stepProve")}>{t("sendScene.stepProve")}</span>
+        <span className={"ss-step" + (s === "signing" ? " on" : s === "broadcasting" ? " done" : "")} title={t("sendScene.stepSign")}>{t("sendScene.stepSign")}</span>
+        <span className={"ss-step" + (s === "broadcasting" ? " on" : "")} title={t("sendScene.stepSend")}>{t("sendScene.stepSend")}</span>
       </div>
       <div className="sendscene-cap">{caption}</div>
       {/* aria-hidden: the container is an aria-live region, and a counter ticking
@@ -4265,12 +4269,12 @@ function TxDetail({
           <span className="v">
             {row.confs != null ? (
               row.confs >= 1 ? (
-                <span className="conf-pill done">{t("txDetail.confirmations", { count: row.confs })}</span>
+                <span className="conf-pill done" title={t("txDetail.confirmations", { count: row.confs })}>{t("txDetail.confirmations", { count: row.confs })}</span>
               ) : (
-                <span className="conf-pill wait">{t("txDetail.awaitingConfirmation")}</span>
+                <span className="conf-pill wait" title={t("txDetail.awaitingConfirmation")}>{t("txDetail.awaitingConfirmation")}</span>
               )
             ) : (
-              <span className="conf-pill done">{t("txDetail.confirmedOnChain")}</span>
+              <span className="conf-pill done" title={t("txDetail.confirmedOnChain")}>{t("txDetail.confirmedOnChain")}</span>
             )}
           </span>
         </div>
@@ -4404,9 +4408,9 @@ function Collapsible({
   return (
     <div className={"card setrow" + (open ? " open" : "")}>
       <button type="button" className="setrow-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className="setrow-title">{title}</span>
+        <span className="setrow-title" title={title}>{title}</span>
         <span className="setrow-right">
-          {summary && !open && <span className="setrow-summary">{summary}</span>}
+          {summary && !open && <span className="setrow-summary" title={typeof summary === "string" ? summary : undefined}>{summary}</span>}
           <ChevronDown className="setrow-chev" size={18} aria-hidden="true" />
         </span>
       </button>
@@ -4882,7 +4886,7 @@ function ContactsCard() {
             autoCapitalize="off"
             spellCheck={false}
           />
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="row" style={{ gap: 8 }}>
             <button
               className="btn"
               disabled={!looksLikeAddress(newAddr)}
@@ -5162,10 +5166,10 @@ function Receive({ status }: { status: Status }) {
       <h2>{t("receive.title")}</h2>
 
       <div className="rcv-toggle" role="tablist" aria-label={t("receive.modeAria")}>
-        <button type="button" role="tab" aria-selected={mode === "address"} className={"rcv-seg" + (mode === "address" ? " on" : "")} onClick={() => setMode("address")}>
+        <button type="button" role="tab" aria-selected={mode === "address"} className={"rcv-seg" + (mode === "address" ? " on" : "")} title={t("receive.modeAddress")} onClick={() => setMode("address")}>
           {t("receive.modeAddress")}
         </button>
-        <button type="button" role="tab" aria-selected={mode === "request"} className={"rcv-seg" + (mode === "request" ? " on" : "")} onClick={() => setMode("request")}>
+        <button type="button" role="tab" aria-selected={mode === "request"} className={"rcv-seg" + (mode === "request" ? " on" : "")} title={t("receive.modeRequest")} onClick={() => setMode("request")}>
           {t("receive.modeRequest")}
         </button>
         <span className="rcv-seg-ind" data-mode={mode} aria-hidden="true" />
@@ -5997,7 +6001,7 @@ function Send({
           {t("send.selfAddress")}
         </div>
       )}
-      <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
+      <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
         <button type="button" className="linkbtn" onClick={() => setPickContact(true)}>
           {t("send.chooseContact")}
         </button>
@@ -6627,11 +6631,14 @@ const History = memo(function History({
       {(historyOff ? txs.length : allRows.length) > 3 && (
         <div className="filterbar">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("history.searchPlaceholder")} />
-          {(["all", "received", "sent", "coinbase"] as const).map((k) => (
-            <button key={k} className={"chip" + (kindFilter === k ? " on" : "")} onClick={() => setKindFilter(k)}>
-              {k === "all" ? t("history.filterAll") : k === "coinbase" ? t("history.filterMined") : k === "sent" ? t("history.filterSent") : t("history.filterReceived")}
-            </button>
-          ))}
+          {(["all", "received", "sent", "coinbase"] as const).map((k) => {
+            const label = k === "all" ? t("history.filterAll") : k === "coinbase" ? t("history.filterMined") : k === "sent" ? t("history.filterSent") : t("history.filterReceived");
+            return (
+              <button key={k} className={"chip" + (kindFilter === k ? " on" : "")} title={label} onClick={() => setKindFilter(k)}>
+                {label}
+              </button>
+            );
+          })}
         </div>
       )}
       {/* ONE list, so ONE empty state. These used to be two guards keyed on the
@@ -6675,7 +6682,7 @@ const History = memo(function History({
                   key={tx.txid}
                   type="button"
                   className={"txrow" + (tx.txid === justSent ? " fresh" : "")}
-                  style={{ textAlign: "left", width: "100%", font: "inherit", color: "inherit" }}
+                  style={{ textAlign: "start", width: "100%", font: "inherit", color: "inherit" }}
                   onClick={() => setDetail(localTxToRow(tx))}
                 >
                   <div className="txrow-main">
@@ -6700,7 +6707,7 @@ const History = memo(function History({
                 key={`${r.txid}:${r.kind}:${ri}`}
                 type="button"
                 className="txrow"
-                style={{ textAlign: "left", width: "100%", font: "inherit", color: "inherit" }}
+                style={{ textAlign: "start", width: "100%", font: "inherit", color: "inherit" }}
                 onClick={() => setDetail(r)}
               >
                 <div className="txrow-main">
@@ -7335,7 +7342,7 @@ function BiometricToggle() {
           </div>
         </>
       ) : on ? (
-        <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span className="small">
             <Trans i18nKey="biometricToggle.isOn" components={{ b: <b /> }} />
           </span>
@@ -7344,7 +7351,7 @@ function BiometricToggle() {
           </button>
         </div>
       ) : (
-        <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span className="small muted">{pin ? t("biometricToggle.offerPin") : t("biometricToggle.offerPassphrase")}</span>
           <button className="btn small" onClick={() => setMode("enable")}>
             {t("biometricToggle.enable")}
@@ -7435,7 +7442,7 @@ function AppLockSetting() {
           <p className="muted small" style={{ marginTop: 0 }}>
             <Trans i18nKey="appLockSetting.enableIntro" components={{ b: <b /> }} />
           </p>
-          <div style={{ display: "flex", gap: 14, margin: "8px 0 4px" }}>
+          <div style={{ display: "flex", gap: 14, margin: "8px 0 4px", flexWrap: "wrap" }}>
             <label className="choice" style={{ margin: 0 }}>
               <input type="radio" checked={kind === "pin"} onChange={() => setKind("pin")} /> <span>{t("appLockSetting.pin")}</span>
             </label>
@@ -7698,7 +7705,7 @@ function RenameWallet({ wallet, onClose }: { wallet: WalletRef; onClose: () => v
       <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
         <h2 style={{ marginTop: 0 }}>{t("renameWallet.title")}</h2>
         <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="row" style={{ gap: 8 }}>
           <button
             className="btn"
             disabled={!name.trim()}
