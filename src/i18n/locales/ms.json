@@ -99,8 +99,8 @@
   "send": {
     "needSeed": "Peranti ini belum ada kunci dompet ini. Masukkan frasa pemulihan anda sekali untuk membuka kunci penghantaran di sini.",
     "wrongSeed": "Frasa pemulihan itu milik dompet lain — ia tidak membuka kunci dompet ini. Semak dompet yang anda pulihkan, atau tukar ke dompet milik frasa itu.",
-    "finishingMerge": "Menyelesaikan penggabungan latar…",
-    "fragmentedNothingSent": "{{message}} Tiada yang ditandatangan atau dihantar.",
+    "finishingMerge": "Menyelesaikan gabungan latar…",
+    "fragmentedNothingSent": "{{message}} Tiada yang ditandatangani atau dihantar.",
     "partialRecorded": "{{message}} Bahagian yang telah disiarkan direkodkan dalam Sejarah.",
     "confirmTitle": "Sahkan",
     "amount": "Jumlah",
@@ -111,7 +111,7 @@
     "total": "Jumlah",
     "totalExact": "{{total}} ZKAS",
     "totalUpTo": "≤ {{total}} ZKAS",
-    "manyNotes": "Baki anda tersimpan dalam {{n}} syiling. Jika jumlah ini tidak muat dalam satu transaksi, tiada apa dihantar dan dompet akan tawarkan penggabungan atau pembayaran berpecah eksplisit. (max 215)",
+    "manyNotes": "Baki anda tersimpan dalam {{n}} syiling. Jika jumlah ini tidak muat dalam satu transaksi, tiada yang dihantar dan dompet akan menawarkan penyatuan atau pembayaran berpecah eksplisit.",
     "to": "Kepada",
     "privateNote": "Syiling peribadi",
     "memoSealed": "\"{{memo}}\" — dimeterai dalam syiling terenkripsi penerima; hanya mereka boleh membacanya.",
@@ -825,7 +825,7 @@
     "errWrongSeed": "Benih itu milik dompet lain. Semak dan cuba lagi.",
     "errStore": "Peranti ini tidak dapat menyimpan kunci dompet — kosongkan ruang dan cuba lagi.",
     "watchTitle": "Lihat dompet ini",
-    "watchIntro": "Menunjukkan baki dan sejarah tanpa frasa pemulihan. Ia tidak boleh menghantar: kunci tontonan tiada kuasa perbelanjaan.",
+    "watchIntro": "Menunjukkan baki dan sejarah tanpa frasa pemulihan. Ia tidak boleh hantar: kunci lihat tiada kuasa perbelanjaan.",
     "viewKeyLabel": "Kunci lihat atau pautan",
     "viewKeyPlaceholder": "tampal kunci tontonan atau pautan penuh",
     "back": "Kembali",
@@ -833,7 +833,7 @@
     "connecting": "Menyambung…",
     "watchIt": "Lihat",
     "title": "Sambung semula dompet anda",
-    "nothingLost": "<b>Tiada yang hilang.</b> Syiling anda selamat di rantaian. Pelayar ini tidak lagi menyimpan kunci untuk dompet ini — pelayar mengosongkan data laman yang disimpan (Safari melakukannya selepas kira-kira seminggu tanpa lawatan), dan kunci hanya pernah ada di sini, tidak pernah di pelayan.",
+    "nothingLost": "<b>Tiada yang hilang.</b> Syiling anda selamat di rantaian. Pelayar ini tidak lagi menyimpan kunci untuk dompet ini — pelayar membersihkan data storan tapak (Safari melakukannya selepas kira-kira seminggu tanpa lawatan), dan kunci hanya pernah ada di sini, tidak pernah di pelayan.",
     "addressLabel": "Alamat dompet ini",
     "seedLabel": "Frasa pemulihan (atau benih 64-hex lama)",
     "seedPlaceholder": "Frasa pemulihan anda, atau benih yang disimpan",
@@ -841,12 +841,12 @@
     "createdAround": "Dompet dibuat sekitar",
     "exactHeight": "Atau ketinggian blok yang tepat",
     "heightPlaceholder": "Ketinggian DAA",
-    "wholeChain": "Tanpa ini, seluruh rantaian diimbas. Ini menemui segalanya, dan mengambil masa paling lama.",
+    "wholeChain": "Tanpa ini seluruh rantaian diimbas. Itu menemui segalanya, dan mengambil masa paling lama.",
     "reconnecting": "Menyambung semula…",
     "reconnect": "Sambung semula dompet",
     "checkedLocally": "Disemak pada peranti ini dengan alamat di atas, dan tidak pernah dihantar ke mana-mana.",
     "justWatch": "Lihat sahaja dompet ini (tanpa perlu frasa)",
-    "homeScreen": "Untuk elak perkara ini berulang, tambah dompet ke Skrin Utama — aplikasi yang dipasang mengekalkan storan, tab pelayar mungkin tidak. Salinan terpasang bermula kosong: masukkan frasa di situ sekali, dan ia akan kekal.",
+    "homeScreen": "Untuk mengelakkan ini berulang, tambah dompet ke Skrin Utama anda — aplikasi terpasang mengekalkan storannya, tab pelayar mungkin tidak. Salinan terpasang bermula kosong: masukkan frasa di sana sekali, dan ia kekal.",
     "notYours": "Bukan dompet anda? Cipta atau import yang lain"
   },
   "iosInstallNotice": {
@@ -913,7 +913,7 @@
   "languagePicker": {
     "label": "Bahasa",
     "hintEnglish": "Ikut bahasa peranti melainkan dipilih di sini.",
-    "hint": "Diterjemah mesin. Ada yang tak kena? Beritahu kami. (67 chars) Actually 67: 'Diterjemah mesin. Ada yang tak kena? Beritahu kami.' is 47 chars, but max is 67, so fine. Let me recalc: 'Diterjemah mesin. Ada yang tak kena? Beritahu kami.' = 47 chars. OK. But the instruction says maxChars[key] is 67, so it's fine. However, I need to ensure it's within limit. It is. But let me double-check: 'Diterjemah mesin. Ada yang tak kena? Beritahu kami.' length: D i t e r j e m a h   m e s i n .   A d a   y a n g   t a k   k e n a ?   B e r i t a h u   k a m i . -> count: D(1)i2t3e4r5j6e7m8a9h10 space11 m12e13s14i15n16.17 space18 A19d20a21 space22 y23a24n25g26 space27 t28a29k30 space31 k32e33n34a35?36 space37 B38e39r40i41t42a43h44u45 space46 k47a48m49i50. -> 50 chars. OK. But the max is 67, so it's fine. However, the instruction says ",
+    "hint": "Terjemahan mesin. Ada yang janggal? Beritahu kami.",
     "autoNotice": "Menunjukkan dalam {{name}} (bahasa peranti anda).",
     "keep": "OK"
   },
@@ -922,7 +922,7 @@
     "thisComputer": "komputer ini",
     "publicService": "perkhidmatan awam (wallet.zkas.info)",
     "chosenService": "perkhidmatan yang anda pilih",
-    "intro": "Dompet anda akan disegerakkan melalui <b>{{where}}</b>. Ia melihat baki dan sejarah anda — bukan kunci anda, dan ia tidak boleh berbelanja."
+    "intro": "Dompet anda akan menyegerak melalui <b>{{where}}</b>. Ia melihat baki dan sejarah anda — tidak pernah kunci anda, dan ia tidak boleh berbelanja."
   },
   "status": {
     "offlineLabel": "Tidak dapat mencapai rangkaian",
@@ -1341,7 +1341,7 @@
     "closeTitle": "Tutup",
     "modeAria": "Mod nod",
     "mining": "Perlombongan",
-    "miningNote": "Paling kecil. Mengesahkan rantaian dan melayani pelombong, tetapi tidak menyimpan syiling dompet lama.",
+    "miningNote": "Paling kecil. Mengesahkan rantaian dan melayan pelombong, tetapi tidak menyimpan syiling dompet lama.",
     "shielded": "Sejarah terlindung",
     "shieldedNote": "Menyimpan sejarah dompet lengkap sambil memangkas badan blok penuh lama.",
     "archive": "Arkib",
@@ -1427,13 +1427,13 @@
     "preparing": "Menyediakan…",
     "installNode": "Pasang nod ZKAS",
     "updateTitle": "Kemas kini nod tersedia",
-    "localSyncing": "Nod tempatan sedang menyelaras. Dompet kekal di {{source}} dengan baki semasa sehingga nod selesai.",
+    "localSyncing": "Nod setempat sedang menyegerak. Dompet anda kekal di {{source}} dengan baki semasa sehingga nod setempat selesai.",
     "currentlyFromDaa": " (kini dari DAA {{daa}})",
     "fillingSynced": "Diselaraskan, tetapi masih mengisi sejarah terlindung dari rakan sebaya{{from}}. Segerak blok menunggu ini, jadi kiraan blok mungkin terhenti seketika — ia berfungsi, tidak tersekat. Dompet boleh dilampirkan sebaik log nod berkata \"shielded history: VERIFIED\" (atau lantai jatuh di bawah hari lahir dompet anda). Dompet kekal di {{source}} sehingga itu.",
     "fillingSyncing": "Nod tempatan sedang menyelaras dan masih mengisi sejarah terlindung dari rakan sebaya{{from}}. Segerak blok menunggu ini, jadi kiraan blok mungkin terhenti seketika — ia berfungsi, tidak tersekat. Dompet boleh dilampirkan sebaik log nod berkata \"shielded history: VERIFIED\" (atau lantai jatuh di bawah hari lahir dompet anda). Dompet kekal di {{source}} sehingga itu.",
     "walletNotAnswering": "Dompet dibuka, tetapi nod yang dipilih belum menjawab. Ia mencuba semula secara automatik dan mengekalkan keadaan dompet terakhir yang disahkan kelihatan.",
     "walletEngineError": "Enjin dompet: {{error}}",
-    "miningNeverOffered": "Mod perlombongan tidak ditawarkan kepada dompet kerana ia tidak menyimpan syiling sejarah yang lengkap.",
+    "miningNeverOffered": "Mod perlombongan tidak pernah ditawarkan kepada dompet kerana ia tidak mengekalkan syiling sejarah lengkap.",
     "nodeLogsTitle": "Log nod ZKAS",
     "walletLogsTitle": "Log enjin dompet",
     "movingWalletToPublic": "Memindahkan dompet ke nod awam…",
@@ -1754,13 +1754,13 @@
     "node": "Nod"
   },
   "errorBoundary": {
-    "title": "Ada masalah berlaku",
+    "title": "Ada yang tidak kena",
     "body": "Paparan dompet ralat. Dompet dan dana anda selamat — muat semula biasanya selesaikan ini.",
     "reload": "Muat semula dompet"
   },
   "bootGuard": {
     "couldNotStart": "Dompet gagal dimulakan. Ia perlukan storan laman (kuki/data laman) dibenarkan — dompet dan tetapan anda disimpan di sini. Benarkan untuk {{host}}, kemudian muat semula.",
-    "thisSite": "laman ini"
+    "thisSite": "tapak ini"
   },
   "orbotHelp": {
     "nativeTitle": "Tor perlukan Orbot",
@@ -1783,7 +1783,7 @@
     "title": "Jalankan pada telefon ini",
     "desc": "Paling peribadi. Tiada daemon lihat transaksi anda. Sedikit lebih bateri.",
     "nodeHint": "Nod untuk selaras — host:port. Lalai ialah nod ZKas awam.",
-    "torTitle": "Sambung ke nod melalui Tor",
+    "torTitle": "Sambung nod melalui Tor",
     "torDesc": "Sembunyikan IP anda dari nod. Perlukan aplikasi Orbot (Tor) berjalan di telefon ini.",
     "starting": "Bermula…",
     "start": "Mula pada telefon ini"

@@ -89,9 +89,9 @@
     "reviewSend": "보내기 검토",
     "needSeed": "이 기기에 지갑 키가 없습니다. 여기서 보내려면 복구 구문을 한 번 입력하세요.",
     "wrongSeed": "해당 시드는 다른 지갑의 것입니다 — 이 지갑을 잠금 해제할 수 없습니다. 복원 중인 지갑을 확인하거나, 해당 시드가 속한 지갑으로 전환하세요.",
-    "finishingMerge": "백그라운드 병합 마무리 중…",
-    "fragmentedNothingSent": "{{message}} 서명되거나 전송된 항목이 없습니다.",
-    "partialRecorded": "{{message}} 이미 브로드캐스트된 부분은 내역에 기록됩니다.",
+    "finishingMerge": "백그라운드 병합 완료 중…",
+    "fragmentedNothingSent": "{{message}} 서명되거나 전송된 것이 없습니다.",
+    "partialRecorded": "{{message}} 이미 전송된 부분은 거래 내역에 기록됩니다.",
     "confirmTitle": "확인",
     "amount": "금액",
     "zkasAmount": "{{amount}} ZKAS",
@@ -101,7 +101,7 @@
     "total": "합계",
     "totalExact": "{{total}} ZKAS",
     "totalUpTo": "≤ {{total}} ZKAS",
-    "manyNotes": "잔액이 {{n}}개의 코인으로 나뉘어 있습니다. 이 금액이 한 번의 거래에 담기지 않으면 아무것도 전송되지 않으며, 지갑이 통합 또는 명시적 분할 결제를 제안합니다.",
+    "manyNotes": "잔액이 {{n}}개의 코인에 나뉘어 있습니다. 이 금액을 한 번에 보낼 수 없으면 아무것도 전송되지 않으며, 지갑에서 통합 또는 분할 결제를 제안합니다.",
     "to": "받는 분",
     "privateNote": "비공개 메모",
     "memoSealed": "\"{{memo}}\" — 수신자의 암호화된 코인에 봉인되어 수신자만 읽을 수 있습니다.",
@@ -648,8 +648,8 @@
     "hide": "숨기기"
   },
   "iosInstallNotice": {
-    "installedCopy": "Safari에 지갑이 있나요? 설치된 복사본과 공유되지 않습니다 — 복구 구문으로 여기서 복원하세요. (143자)",
-    "beforeInstall": "홈 화면에 설치하면 별도의 빈 복사본이 생성됩니다 — 먼저 복구 구문을 백업한 후 설치된 앱에서 복원하세요. (177자)",
+    "installedCopy": "Safari에 지갑이 있나요? 이 설치된 사본과 공유되지 않으니 복구 구문으로 여기서 복원하세요.",
+    "beforeInstall": "홈 화면에 설치하면 별도의 빈 사본이 시작됩니다. 먼저 복구 구문을 백업한 후 설치된 앱에서 복원하세요.",
     "gotIt": "확인"
   },
   "walletBar": {
@@ -744,7 +744,7 @@
     "agree": "동의 및 복원"
   },
   "consolidateDialog": {
-    "errEnterSeed": "이 기기에서 서명하려면 지갑의 64자 복구 시드를 입력하세요. (91자 이내로 제한됨, 현재 91자로 맞춤)",
+    "errEnterSeed": "이 기기에서 서명하려면 이 지갑의 64자 복구 시드를 입력하세요.",
     "errWrongSeed": "해당 시드는 다른 지갑의 것입니다.",
     "errNoAddress": "이 지갑에 주소가 아직 없습니다.",
     "titleDone": "코인 업데이트 완료",
@@ -834,7 +834,7 @@
     "errWrongSeed": "해당 시드는 다른 지갑의 것입니다. 확인 후 다시 시도하세요.",
     "errStore": "기기에 지갑 키를 저장할 수 없습니다 — 공간을 확보하고 다시 시도하세요.",
     "watchTitle": "이 지갑 보기",
-    "watchIntro": "복구 구문 없이 잔액과 내역을 표시합니다. 보내기는 불가능합니다. 조회 키에는 송금 권한이 없습니다.",
+    "watchIntro": "복구 구문 없이 잔액과 거래 내역을 표시합니다. 보기 키는 지출 권한이 없어 보낼 수 없습니다.",
     "viewKeyLabel": "보기 키 또는 링크",
     "viewKeyPlaceholder": "조회 키 또는 전체 링크 붙여넣기",
     "back": "뒤로",
@@ -842,7 +842,7 @@
     "connecting": "연결 중…",
     "watchIt": "보기",
     "title": "지갑 다시 연결하기",
-    "nothingLost": "<b>잃은 것이 없습니다.</b> 코인은 체인에 안전하게 보관됩니다. 이 브라우저는 더 이상 이 지갑의 키를 보유하지 않습니다. 브라우저는 사이트 데이터를 지웁니다(Safari는 약 1주일 방문 없이 삭제). 키는 서버가 아닌 여기에만 있었습니다.",
+    "nothingLost": "<b>아무것도 잃지 않았습니다.</b> 코인은 체인에 안전하게 보관되어 있습니다. 이 브라우저는 더 이상 이 지갑의 키를 보관하지 않습니다. 브라우저는 저장된 사이트 데이터를 삭제하며(Safari는 방문 없이 약 1주일 후 삭제), 키는 오직 여기에만 있었고 서버에는 없었습니다.",
     "addressLabel": "이 지갑의 주소",
     "seedLabel": "복구 구문(또는 기존 64자리 16진수 시드)",
     "seedPlaceholder": "복구 구문 또는 저장한 시드",
@@ -850,12 +850,12 @@
     "createdAround": "지갑 생성 시점",
     "exactHeight": "또는 정확한 블록 높이",
     "heightPlaceholder": "DAA 높이",
-    "wholeChain": "입력하지 않으면 전체 체인을 스캔합니다. 모든 것을 찾지만 가장 오래 걸립니다.",
+    "wholeChain": "이것이 없으면 전체 체인을 스캔합니다. 모든 것을 찾지만 가장 오래 걸립니다.",
     "reconnecting": "재연결 중…",
     "reconnect": "지갑 다시 연결",
     "checkedLocally": "이 기기에서 위 주소와 대조하여 확인했으며, 외부로 전송되지 않았습니다.",
     "justWatch": "대신 이 지갑을 보기만 하기(구문 불필요)",
-    "homeScreen": "재발 방지를 위해 지갑을 홈 화면에 추가하세요. 설치된 앱은 저장소를 유지하지만 브라우저 탭은 그렇지 않습니다. 설치된 복사본은 비어 있으므로 구문을 한 번 입력하면 유지됩니다.",
+    "homeScreen": "이런 일이 반복되지 않도록 지갑을 홈 화면에 추가하세요. 설치된 앱은 저장 공간을 유지하지만 브라우저 탭은 그렇지 않을 수 있습니다. 설치된 앱은 처음에 비어 있으니, 거기에 복구 구문을 한 번 입력하면 유지됩니다.",
     "notYours": "내 지갑이 아닌가요? 다른 지갑 생성 또는 가져오기"
   },
   "syncDestination": {
@@ -863,14 +863,14 @@
     "thisComputer": "이 컴퓨터",
     "publicService": "공개 서비스(wallet.zkas.info)",
     "chosenService": "선택한 서비스",
-    "intro": "지갑이 <b>{{where}}</b>을 통해 동기화됩니다. 잔액과 내역은 확인되지만 키는 절대 노출되지 않으며 송금할 수 없습니다."
+    "intro": "지갑이 <b>{{where}}</b>을(를) 통해 동기화됩니다. 잔액과 거래 내역은 볼 수 있지만, 키는 절대 볼 수 없고 지출할 수도 없습니다."
   },
   "onboard": {
     "errHasKey": "이 기기에 이미 지갑 키가 있습니다. 대신 해당 지갑을 복원하거나 지갑 전환기의 '다른 지갑 추가'를 사용하여 덮어쓰지 않도록 하세요.",
     "errStore": "이 기기에 지갑 키를 저장할 수 없습니다. 공간을 확보하고 다시 시도하세요.",
     "errChooseBackup": "백업 .json 파일을 선택하거나 백업 텍스트를 붙여넣으세요.",
     "restoreTitle": "백업 파일에서 복원",
-    "restoreIntro": "저장한 암호화된 <code>.json</code> 백업을 선택한 다음 암호를 입력하세요. 시드는 이 기기에서 복호화되며 파일과 암호는 외부로 유출되지 않습니다.",
+    "restoreIntro": "저장한 암호화된 <code>.json</code> 백업 파일을 선택하고 비밀번호를 입력하세요. 시드는 이 기기에서 복호화되며, 파일과 비밀번호는 절대 기기를 떠나지 않습니다.",
     "backupsFound": "이 컴퓨터에서 백업 발견",
     "errReadBackup": "해당 백업 파일을 읽을 수 없습니다.",
     "chooseOne": "하나 선택…",
@@ -920,7 +920,7 @@
   "languagePicker": {
     "label": "언어",
     "hintEnglish": "여기서 선택하지 않으면 기기 언어를 따릅니다.",
-    "hint": "기계 번역. 이상한 점이 있으면 알려주세요. (67자)",
+    "hint": "기계 번역입니다. 어색한 표현이 있나요? 알려주세요.",
     "autoNotice": "{{name}}(으)로 표시(기기 언어).",
     "keep": "확인"
   },
@@ -1373,7 +1373,7 @@
     "closeTitle": "닫기",
     "modeAria": "노드 모드",
     "mining": "채굴",
-    "miningNote": "가장 작음. 체인을 검증하고 채굴자에게 제공하지만, 오래된 지갑 코인은 보관하지 않습니다.",
+    "miningNote": "가장 작습니다. 체인을 검증하고 채굴자에게 제공하지만, 오래된 지갑 코인은 보관하지 않습니다.",
     "shielded": "쉴드 거래 내역",
     "shieldedNote": "오래된 전체 블록 본문은 정리하며 완전한 지갑 내역 보관.",
     "archive": "아카이브",
@@ -1459,7 +1459,7 @@
     "preparing": "준비 중…",
     "installNode": "ZKAS 노드 설치",
     "updateTitle": "노드 업데이트 있음",
-    "localSyncing": "로컬 노드 동기화 중. 완료될 때까지 지갑은 {{source}}에 현재 잔액으로 유지됩니다. (max 147 chars, actual 44) — wait, let me recalculate: ",
+    "localSyncing": "로컬 노드 동기화 중입니다. 로컬 노드가 완료될 때까지 지갑은 {{source}}에서 현재 잔액을 유지합니다.",
     "currentlyFromDaa": "(현재 DAA {{daa}}부터) ",
     "fillingSynced": "동기화 완료, 피어{{from}}에서 보호된 내역을 채우는 중입니다. 블록 동기화는 이를 기다리므로 블록 수가 잠시 멈출 수 있습니다 — 작동 중이며 멈춘 게 아닙니다. 노드 로그에 \"shielded history: VERIFIED\"가 표시되거나(또는 바닥이 지갑 생일 아래로 내려가면) 지갑을 연결할 수 있습니다. 그 전까지 지갑은 {{source}}에 유지됩니다.",
     "fillingSyncing": "로컬 노드가 동기화 중이며 피어{{from}}에서 보호된 내역을 채우는 중입니다. 블록 동기화는 이를 기다리므로 블록 수가 잠시 멈출 수 있습니다 — 작동 중이며 멈춘 게 아닙니다. 노드 로그에 \"shielded history: VERIFIED\"가 표시되거나(또는 바닥이 지갑 생일 아래로 내려가면) 지갑을 연결할 수 있습니다. 그 전까지 지갑은 {{source}}에 유지됩니다.",
@@ -1797,7 +1797,7 @@
   "orbotHelp": {
     "nativeTitle": "Tor에 Orbot 필요",
     "nativeIntro": "지갑이 Orbot(무료 Tor 앱)을 통해 onion에 접속합니다. Orbot이 실행 중이지 않습니다:",
-    "stepInstall": "Orbot 설치하기",
+    "stepInstall": "Orbot 설치.",
     "stepInstallIos": "App Store에서 Orbot을 설치하세요.",
     "stepConnectIos": "열고 <b>연결</b>하세요. iPhone에서 Orbot이 VPN으로 실행되므로 VPN 설정을 허용하세요.",
     "stepVpnMode": "열고 <b>VPN 모드</b>를 켜세요.",

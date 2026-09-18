@@ -388,10 +388,15 @@ async function callDeepSeek(lang, batch, termBank) {
   return parsed;
 }
 
+// Model chatter that must never reach a screen: "(38 chars)", "(max 147 chars, fits)",
+// "[shortened]" and the like, appended because the prompt talks about budgets.
+const ARTEFACT = /\s*[(\[]\s*(?:\d+\s*(?:chars?|characters|자|tekens|caract[èe]res|Zeichen|символ\w*|знак\w*|caratteri|caracteres|文字|字符|ตัวอักษร|karakter\w*|ký tự|अक्षर|অক্ষর|حرف\w*)\b|max\s*\d+|maxChars|\d+\/\d+ chars?|shortened|fits)[^)\]]*[)\]]\s*$/i;
 function validate(batch, answer) {
   const problems = [];
   for (const [k, en] of Object.entries(batch)) {
-    const v = answer[k];
+    let v = answer[k];
+    if (typeof v === "string" && ARTEFACT.test(v) && !ARTEFACT.test(en)) v = answer[k] = v.replace(ARTEFACT, "").trim();
+    if (typeof v === "string" && /\b(chars?|maxChars)\b/i.test(v) && !/\b(chars?|maxChars)\b/i.test(en)) problems.push(`${k}: model annotation leaked`);
     if (typeof v !== "string" || !v.trim()) problems.push(`${k}: missing/empty`);
     else if (placeholders(v) !== placeholders(en)) problems.push(`${k}: placeholders differ (${placeholders(en)} vs ${placeholders(v)})`);
     // A one-character overrun is not worth two more round trips; retry real overruns.

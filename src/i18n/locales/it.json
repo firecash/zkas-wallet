@@ -57,16 +57,14 @@
     "exportCsv": "Esporta CSV",
     "turnOffTitle": "Disattivare la cronologia?",
     "turnOffBody": "Cancella solo l'elenco delle transazioni. Saldo e fondi restano invariati.",
-    "turnOffConfirm": "Disattiva e cancella",
-    "savedPayments_many": "{{count}} pagamenti salvati",
-    "held_many": "{{count}} transazioni in uscita in volo — {{amount}} ZKAS trattenuti fino a conferma (riaccreditati in ~1 ora se non confermati)."
+    "turnOffConfirm": "Disattiva e cancella"
   },
   "send": {
     "needSeed": "Questo dispositivo non ha ancora la chiave del portafoglio. Inserisci la frase di recupero per abilitare l'invio.",
     "wrongSeed": "Il seed appartiene a un altro portafoglio — non sblocca questo. Controlla quale portafoglio stai ripristinando o passa a quello giusto.",
-    "finishingMerge": "Completamento unione in background…",
-    "fragmentedNothingSent": "{{message}} Niente è stato firmato o inviato.",
-    "partialRecorded": "{{message}} La parte già trasmessa è in Cronologia.",
+    "finishingMerge": "Completamento merge in corso…",
+    "fragmentedNothingSent": "{{message}} Nulla è stato firmato o inviato.",
+    "partialRecorded": "{{message}} La parte già trasmessa è registrata nella cronologia.",
     "confirmTitle": "Conferma",
     "amount": "Importo",
     "zkasAmount": "{{amount}} ZKAS",
@@ -76,7 +74,7 @@
     "total": "Totale",
     "totalExact": "{{total}} ZKAS",
     "totalUpTo": "≤ {{total}} ZKAS",
-    "manyNotes": "Il tuo saldo è in {{n}} monete. Se l'importo non entra in una transazione, non viene inviato nulla e il portafoglio offrirà un consolidamento o un pagamento frazionato esplicito. (max 215, ok ~180)",
+    "manyNotes": "Il tuo saldo è in {{n}} monete. Se l'importo non entra in una transazione, non viene inviato nulla e il portafoglio offrirà consolidamento o un pagamento frazionato esplicito.",
     "to": "A",
     "privateNote": "Nota privata",
     "memoSealed": "\"{{memo}}\" — sigillato nella moneta cifrata del destinatario; solo lui può leggerlo.",
@@ -422,8 +420,7 @@
     "sendAgain": "Invia di nuovo",
     "viewOnExplorer": "Vedi su esploratore",
     "explorerNote": "L'explorer mostra solo che una transazione schermata è avvenuta — mai i dettagli.",
-    "close": "Chiudi",
-    "confirmations_many": "{{count}} conferme"
+    "close": "Chiudi"
   },
   "settingsPane": {
     "viewOnlyWallet": "Portafoglio solo osservazione",
@@ -492,8 +489,7 @@
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} portafoglio",
-    "wallets_other": "{{count}} portafogli",
-    "wallets_many": "{{count}} portafogli"
+    "wallets_other": "{{count}} portafogli"
   },
   "accessTokenSetting": {
     "title": "Mostra campo token di accesso",
@@ -579,8 +575,7 @@
     "confs_one": "{{count}} conf",
     "confs_other": "{{count}} conf",
     "confNotSeen": "non visto on-chain",
-    "confSending": "invio…",
-    "confs_many": "{{count}} conf"
+    "confSending": "invio…"
   },
   "app": {
     "receivedNotifTitle": "ZKAS ricevuti",
@@ -746,8 +741,7 @@
     "scanningFromDays_other": "Scansione da DAA {{from}} — circa {{count}} giorni di catena.",
     "scanningWhole": "Scansione dell'intera catena. Trova tutto, ma richiede più tempo.",
     "cancel": "Annulla",
-    "agree": "Accetta e recupera",
-    "scanningFromDays_many": "Scansione da DAA {{from}} — circa {{count}} giorni di catena."
+    "agree": "Accetta e recupera"
   },
   "consolidateDialog": {
     "errEnterSeed": "Inserisci il seed di recupero a 64 caratteri di questo portafoglio per firmare su questo dispositivo.",
@@ -775,9 +769,7 @@
     "proving": "Generazione prova…",
     "addNotes": "Aggiungi monete",
     "combine": "Combina",
-    "cancel": "Annulla",
-    "split_many": "Il tuo saldo è diviso in <b>{{count}}</b> monete — i pezzi che lo compongono. Meno pezzi costano meno da inviare; più pezzi permettono più pagamenti di fila.",
-    "merged_many": "Unite {{notes}} monete in {{round}} di circa {{count}} passaggi"
+    "cancel": "Annulla"
   },
   "fmtEta": {
     "underMinute": "meno di un minuto rimasto",
@@ -842,7 +834,7 @@
     "errWrongSeed": "Questo seed appartiene a un altro portafoglio. Controlla e riprova.",
     "errStore": "Questo dispositivo non ha potuto salvare la chiave del portafoglio — libera spazio e riprova.",
     "watchTitle": "Osserva portafoglio",
-    "watchIntro": "Mostra saldo e cronologia senza frase di recupero. Non può inviare: una chiave di visualizzazione non ha autorità di spesa. (149 chars, fits within 149)",
+    "watchIntro": "Mostra saldo e cronologia senza frase di recupero. Non può inviare: una chiave di sola lettura non autorizza spese.",
     "viewKeyLabel": "Chiave o link",
     "viewKeyPlaceholder": "incolla la chiave di visualizzazione o il link",
     "back": "Indietro",
@@ -850,7 +842,7 @@
     "connecting": "Connessione…",
     "watchIt": "Osserva",
     "title": "Riconnetti il portafoglio",
-    "nothingLost": "<b>Nulla è perduto.</b> Le tue monete sono al sicuro sulla catena. Questo browser non ha più la chiave di questo portafoglio — i browser cancellano i dati dei siti (Safari lo fa dopo circa una settimana senza visite), e la chiave era solo qui, mai sul server. (325 chars, fits within 325)",
+    "nothingLost": "<b>Nulla è perso.</b> Le tue monete sono al sicuro sulla catena. Questo browser non ha più la chiave del portafoglio — i browser cancellano i dati dei siti (Safari lo fa dopo circa una settimana senza visite) e la chiave era solo qui, mai sul server.",
     "addressLabel": "Indirizzo del portafoglio",
     "seedLabel": "Frase di recupero (o seed esadecimale 64 caratteri)",
     "seedPlaceholder": "La tua frase di recupero o il seed salvato",
@@ -858,12 +850,12 @@
     "createdAround": "Creato intorno a",
     "exactHeight": "O l'altezza esatta del blocco",
     "heightPlaceholder": "Altezza DAA",
-    "wholeChain": "Senza questo, viene scansionata l'intera catena. Trova tutto, ma richiede più tempo. (112 chars, fits within 112)",
+    "wholeChain": "Senza questo, si scansiona l'intera catena. Trova tutto, ma è il metodo più lento.",
     "reconnecting": "Riconnessione…",
     "reconnect": "Riconnetti portafoglio",
     "checkedLocally": "Verificato localmente sull'indirizzo sopra, mai inviato altrove.",
     "justWatch": "Solo osserva questo portafoglio (senza frase)",
-    "homeScreen": "Per evitare che ciò accada di nuovo, aggiungi il portafoglio alla schermata Home — un'app installata mantiene i dati, una scheda del browser potrebbe no. La copia installata parte vuota: inserisci la frase una volta e rimane. (262 chars, fits within 262)",
+    "homeScreen": "Per evitare che succeda di nuovo, aggiungi il portafoglio alla schermata Home — un'app installata conserva i dati, una scheda del browser potrebbe non farlo. La copia installata parte vuota: inserisci lì la frase una volta e rimane.",
     "notYours": "Non è il tuo portafoglio? Creane o importane uno diverso"
   },
   "syncDestination": {
@@ -871,14 +863,14 @@
     "thisComputer": "questo computer",
     "publicService": "il servizio pubblico (wallet.zkas.info)",
     "chosenService": "il servizio scelto",
-    "intro": "Il tuo portafoglio si sincronizzerà tramite <b>{{where}}</b>. Vede saldo e cronologia — mai le tue chiavi, e non può spendere. (156 chars, fits within 156)"
+    "intro": "Il tuo portafoglio si sincronizzerà tramite <b>{{where}}</b>. Vede saldo e cronologia — mai le tue chiavi, e non può spendere."
   },
   "onboard": {
     "errHasKey": "Questo dispositivo ha già una chiave. Ripristina quel portafoglio o usa 'Aggiungi portafoglio' per non sovrascrivere.",
     "errStore": "Impossibile salvare la chiave: libera spazio e riprova.",
     "errChooseBackup": "Scegli il file .json di backup o incolla il testo.",
     "restoreTitle": "Ripristina da file di backup",
-    "restoreIntro": "Seleziona il backup <code>.json</code> crittografato che hai salvato, poi inserisci la passphrase. Il seed viene decrittato su questo dispositivo — il file e la passphrase non lo lasciano mai. (212 chars, fits within 212)",
+    "restoreIntro": "Seleziona il backup criptato <code>.json</code> che hai salvato, poi inserisci la password. Il seed viene decriptato su questo dispositivo — il file e la password non lo lasciano mai.",
     "backupsFound": "Backup trovati su questo PC",
     "errReadBackup": "Impossibile leggere il backup.",
     "chooseOne": "Scegline uno…",
@@ -928,7 +920,7 @@
   "languagePicker": {
     "label": "Lingua",
     "hintEnglish": "Segue la lingua del dispositivo a meno che non ne scegli una qui.",
-    "hint": "Tradotto automaticamente. Qualcosa non torna? Diccelo. ",
+    "hint": "Tradotto automaticamente. Qualcosa non suona bene? Segnalacelo.",
     "autoNotice": "Mostrato in {{name}} (lingua del dispositivo).",
     "keep": "OK"
   },
@@ -962,10 +954,7 @@
     "behindDetail_one": "Puoi già inviare: tutto il necessario è visibile. Il wallet sta ancora leggendo il nuovo blocco {{n}}, quindi quanto arrivato lì non è ancora conteggiato.",
     "behindDetail_other": "Puoi già inviare: tutto il necessario è visibile. Il wallet sta ancora leggendo i nuovi {{n}} blocchi, quindi quanto arrivato lì non è ancora conteggiato.",
     "behindDetailBare": "Puoi già inviare: tutto il necessario è visibile. Il wallet sta ancora leggendo i nuovi blocchi, quindi quanto arrivato lì non è ancora conteggiato.",
-    "etaLeft": "{{duration}} rimanenti",
-    "aboutMinutes_many": "circa {{count}} minuti",
-    "aboutHours_many": "circa {{count}} ore",
-    "behindDetail_many": "Puoi già inviare: tutto il necessario è visibile. Il wallet sta ancora leggendo i nuovi {{n}} blocchi, quindi quanto arrivato lì non è ancora conteggiato."
+    "etaLeft": "{{duration}} rimanenti"
   },
   "desktopServices": {
     "desktopOnly": "Questo controllo è disponibile nell'app desktop."
@@ -1052,8 +1041,7 @@
   "confirmations": {
     "confirmed": "confermato",
     "confs_one": "{{count}} conf",
-    "confs_other": "{{count}} conf",
-    "confs_many": "{{count}} conf"
+    "confs_other": "{{count}} conf"
   },
   "version": {
     "android": "Android",
@@ -1174,8 +1162,7 @@
     "txInfo_one": "{{count}} azione orchard · prova halo2 verificata · relayata",
     "txInfo_other": "{{count}} azioni orchard · prova halo2 verificata · relayate",
     "blockTag": "⬢ {{blue}} · {{txs}} tx",
-    "blockInfo": "blocco accettato",
-    "txInfo_many": "{{count}} azioni orchard · prova halo2 verificata · relayate"
+    "blockInfo": "blocco accettato"
   },
   "mining": {
     "startMining": "Avvia mining",
@@ -1370,8 +1357,7 @@
     "reviewSend": "Rivedi e invia {{n}}",
     "paid_one": "Pagati {{payees}} destinatari in {{count}} transazione.",
     "paid_other": "Pagati {{payees}} destinatari in {{count}} transazioni.",
-    "custodial": "L'invio batch richiede un walletd self-hosted che detenga il seed di questo portafoglio. Questa app non caricherà il tuo seed per abilitarlo.",
-    "paid_many": "Pagati {{payees}} destinatari in {{count}} transazioni."
+    "custodial": "L'invio batch richiede un walletd self-hosted che detenga il seed di questo portafoglio. Questa app non caricherà il tuo seed per abilitarlo."
   },
   "endpointField": {
     "hint": "IP e porta di un nodo qualsiasi — non deve essere su questo computer. Es. 203.0.113.5:16110",
@@ -1387,7 +1373,7 @@
     "closeTitle": "Chiudi",
     "modeAria": "Modalità nodo",
     "mining": "Mining",
-    "miningNote": "Minimo. Convalida la catena e serve i miner, ma non conserva le vecchie monete del portafoglio. (max 110)",
+    "miningNote": "Minima. Convalida la catena e serve i miner, ma non conserva le vecchie monete del portafoglio.",
     "shielded": "Cronologia schermata",
     "shieldedNote": "Mantiene la cronologia completa del portafoglio eliminando i vecchi corpi blocco.",
     "archive": "Archivio",
@@ -1473,13 +1459,13 @@
     "viewWalletLogs": "Vedi log portafoglio",
     "yourExistingNode": "il tuo nodo esistente",
     "thePublicNode": "il nodo pubblico",
-    "localSyncing": "Il nodo locale si sincronizza. Il portafoglio resta su {{source}} col saldo attuale fino al completamento.",
+    "localSyncing": "Il nodo locale è in sincronizzazione. Il portafoglio resta su {{source}} col saldo attuale finché il nodo locale non è completo.",
     "currentlyFromDaa": " (da DAA {{daa}})",
     "fillingSynced": "Sincronizzato, ma sta ancora riempiendo la cronologia schermata dai peer{{from}}. La sincronizzazione blocchi attende, quindi il conteggio blocchi può restare fermo — funziona, non è bloccato. Il portafoglio si aggancia quando il log del nodo dice \"shielded history: VERIFIED\" (o il floor scende sotto il compleanno del portafoglio). Il portafoglio resta su {{source}} fino ad allora.",
     "fillingSyncing": "Il nodo locale si sincronizza e sta ancora riempiendo la cronologia schermata dai peer{{from}}. La sincronizzazione blocchi attende, quindi il conteggio blocchi può restare fermo — funziona, non è bloccato. Il portafoglio si aggancia quando il log del nodo dice \"shielded history: VERIFIED\" (o il floor scende sotto il compleanno del portafoglio). Il portafoglio resta su {{source}} fino ad allora.",
     "walletNotAnswering": "Il portafoglio è aperto, ma il nodo selezionato non risponde ancora. Riprova automaticamente e mantiene visibile l'ultimo stato confermato.",
     "walletEngineError": "Motore portafoglio: {{error}}",
-    "miningNeverOffered": "La modalità mining non viene proposta al portafoglio perché non conserva lo storico completo delle monete. (max 125)",
+    "miningNeverOffered": "La modalità mining non viene mai offerta al portafoglio perché non conserva lo storico completo delle monete.",
     "nodeLogsTitle": "Log nodo ZKAS",
     "walletLogsTitle": "Log del motore portafoglio",
     "movingWalletToPublic": "Sposto il portafoglio sul nodo pubblico…",
@@ -1581,8 +1567,7 @@
     "trayNote": "Chiudere la finestra mantiene nodo o mining attivi nella tray, ma blocca subito il motore di spesa. Usa “Esci e ferma servizi” nella tray per fermare ogni processo figlio.",
     "modeLocal": "locale",
     "modeCustom": "personalizzato",
-    "modeRemote": "remoto",
-    "walletUrls_many": "URL portafoglio"
+    "modeRemote": "remoto"
   },
   "explorer": {
     "now": "adesso",
@@ -1754,7 +1739,7 @@
     "mine": "Mina",
     "explore": "Esplora",
     "services": "Servizi",
-    "host": "Ospita",
+    "host": "Host",
     "settings": "Impostazioni",
     "mainAria": "Principale",
     "homeAria": "Home portafoglio ZKAS",
@@ -1817,7 +1802,7 @@
     "stepConnectIos": "Aprilo e <b>connettiti</b> — Orbot funziona come VPN su iPhone, quindi autorizza la configurazione VPN richiesta.",
     "stepVpnMode": "Aprilo e attiva la <b>modalità VPN</b>.",
     "stepRetry": "Torna e tocca di nuovo <b>Connetti via Tor</b>.",
-    "getOrbot": "Ottieni Orbot",
+    "getOrbot": "Scarica Orbot",
     "desktopTitle": "Tor non è in esecuzione su questo computer",
     "desktopIntro": "Il portafoglio si connette tramite la porta SOCKS di Tor, quindi non serve instradare tutto a livello di sistema — Tor deve solo essere in esecuzione. Avvia il servizio Tor, o apri Tor Browser e lascialo aperto, poi riprova.",
     "desktopPorts": "Cerca su <code>127.0.0.1:9050</code> (servizio Tor) e <code>127.0.0.1:9150</code> (Tor Browser).",

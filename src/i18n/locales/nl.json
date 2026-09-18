@@ -648,8 +648,8 @@
     "hide": "Verbergen"
   },
   "iosInstallNotice": {
-    "installedCopy": "Heb je een portemonnee in Safari? Die wordt niet gedeeld met deze app — herstel hem hier via de herstelzin.",
-    "beforeInstall": "Installeren op het beginscherm start een aparte, lege kopie — maak eerst een back-up van je herstelzin en herstel hem daarna in de geïnstalleerde app.",
+    "installedCopy": "Heb je een wallet in Safari? Die wordt niet gedeeld met deze geïnstalleerde kopie — herstel hem hier met je herstelzin.",
+    "beforeInstall": "Installeren op je beginscherm start een aparte, lege kopie — maak eerst een back-up van je herstelzin en herstel die daarna in de geïnstalleerde app.",
     "gotIt": "Begrepen"
   },
   "walletBar": {
@@ -744,7 +744,7 @@
     "agree": "Akkoord & herstellen"
   },
   "consolidateDialog": {
-    "errEnterSeed": "Voer de herstelseed (64 tekens) van deze portemonnee in om op dit apparaat te ondertekenen.",
+    "errEnterSeed": "Voer de 64 tekens lange herstelzin van deze wallet in om op dit apparaat te ondertekenen.",
     "errWrongSeed": "Die seed hoort bij een andere portemonnee.",
     "errNoAddress": "Deze portemonnee heeft nog geen adres.",
     "titleDone": "Munten bijgewerkt",
@@ -1824,7 +1824,7 @@
     "settings": "Instellingen",
     "mainAria": "Hoofd",
     "homeAria": "ZKAS wallet home",
-    "tabShortcut": "{{label}} · Ctrl+{{n}} (36 tekens, past)"
+    "tabShortcut": "{{label}} · Ctrl+{{n}}"
   },
   "errorBoundary": {
     "title": "Er is iets misgegaan",

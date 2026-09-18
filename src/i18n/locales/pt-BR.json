@@ -57,9 +57,7 @@
     "exportCsv": "Exportar CSV",
     "turnOffTitle": "Desativar histórico?",
     "turnOffBody": "Apaga apenas a lista de transações salvas. Seu saldo e fundos não são afetados.",
-    "turnOffConfirm": "Desativar e apagar",
-    "savedPayments_many": "{{count}} pagamentos salvos",
-    "held_many": "{{count}} transações enviadas em trânsito — {{amount}} ZKAS retidos até confirmar (devolvidos em ~1h se não confirmarem)."
+    "turnOffConfirm": "Desativar e apagar"
   },
   "send": {
     "scanAria": "Escanear QR",
@@ -91,8 +89,8 @@
     "reviewSend": "Revisar envio",
     "needSeed": "Este dispositivo ainda não tem a chave desta carteira. Digite sua frase de recuperação para desbloquear envios aqui.",
     "wrongSeed": "Essa frase de recuperação pertence a outra carteira — ela não desbloqueia esta. Verifique qual carteira está restaurando ou troque para a carteira correspondente.",
-    "finishingMerge": "Finalizando mesclagem em segundo plano…",
-    "fragmentedNothingSent": "{{message}} Nada foi assinado nem enviado.",
+    "finishingMerge": "Finalizando uma fusão em segundo plano…",
+    "fragmentedNothingSent": "{{message}} Nada foi assinado ou enviado.",
     "partialRecorded": "{{message}} A parte já transmitida está no Histórico.",
     "confirmTitle": "Confirmar",
     "amount": "Valor",
@@ -103,7 +101,7 @@
     "total": "Total",
     "totalExact": "{{total}} ZKAS",
     "totalUpTo": "≤ {{total}} ZKAS",
-    "manyNotes": "Seu saldo está em {{n}} moedas. Se esse valor não couber em uma transação, nada é enviado e a carteira oferecerá consolidação ou um pagamento dividido explícito. (max 215, fits easily)",
+    "manyNotes": "Seu saldo está em {{n}} moedas. Se esse valor não couber em uma transação, nada é enviado e a carteira oferecerá consolidação ou um pagamento dividido explícito.",
     "to": "Para",
     "privateNote": "Mensagem privada",
     "memoSealed": "\"{{memo}}\" — selado na moeda criptografada do destinatário; só ele pode ler.",
@@ -397,13 +395,11 @@
     "confirmedOnChain": "Confirmado na cadeia",
     "privateLabel": "Rótulo privado",
     "labelPlaceholder": "Pedido, cliente, finalidade…",
-    "labelSaved": "Salvo neste dispositivo",
-    "confirmations_many": "{{count}} confirmações"
+    "labelSaved": "Salvo neste dispositivo"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} carteira",
-    "wallets_other": "{{count}} carteiras",
-    "wallets_many": "{{count}} carteiras"
+    "wallets_other": "{{count}} carteiras"
   },
   "accessTokenSetting": {
     "title": "Mostrar campo token de acesso",
@@ -579,8 +575,7 @@
     "confs_one": "{{count}} conf",
     "confs_other": "{{count}} confs",
     "confNotSeen": "não visto na cadeia",
-    "confSending": "enviando…",
-    "confs_many": "{{count}} confs"
+    "confSending": "enviando…"
   },
   "app": {
     "receivedNotifTitle": "ZKAS recebido",
@@ -737,8 +732,7 @@
     "scanningFromDays_other": "Escaneando do DAA {{from}} — cerca de {{count}} dias da blockchain.",
     "scanningWhole": "Escaneando toda a blockchain. Isso encontra tudo, mas leva mais tempo.",
     "cancel": "Cancelar",
-    "agree": "Aceitar e recuperar",
-    "scanningFromDays_many": "Escaneando do DAA {{from}} — cerca de {{count}} dias da blockchain."
+    "agree": "Aceitar e recuperar"
   },
   "consolidateDialog": {
     "errEnterSeed": "Insira a semente de 64 caracteres desta carteira para assinar neste dispositivo.",
@@ -766,9 +760,7 @@
     "proving": "Gerando prova…",
     "addNotes": "Adicionar moedas",
     "combine": "Combinar",
-    "cancel": "Cancelar",
-    "split_many": "Seu saldo está dividido em <b>{{count}}</b> moedas — as partes que o compõem. Menos moedas são mais baratas de enviar; mais moedas permitem pagar algumas vezes seguidas.",
-    "merged_many": "Unidas {{notes}} moedas em {{round}} de cerca de {{count}} passadas"
+    "cancel": "Cancelar"
   },
   "fmtEta": {
     "underMinute": "menos de um minuto restante",
@@ -833,7 +825,7 @@
     "errWrongSeed": "Essa semente é de outra carteira. Verifique e tente de novo.",
     "errStore": "Este dispositivo não pôde armazenar a chave da carteira — libere espaço e tente de novo.",
     "watchTitle": "Monitorar esta carteira",
-    "watchIntro": "Mostra o saldo e o histórico sem frase de recuperação. Não pode enviar: a chave de visualização não tem permissão para gastar.",
+    "watchIntro": "Mostra o saldo e o histórico sem a frase de recuperação. Não envia: a chave de visualização não permite gastar.",
     "viewKeyLabel": "Chave de visualização ou link",
     "viewKeyPlaceholder": "cole a chave de visualização ou o link completo",
     "back": "Voltar",
@@ -841,7 +833,7 @@
     "connecting": "Conectando…",
     "watchIt": "Monitorar",
     "title": "Reconecte sua carteira",
-    "nothingLost": "<b>Nada está perdido.</b> Suas moedas estão seguras na blockchain. Este navegador não tem mais a chave desta carteira — navegadores limpam dados de sites (o Safari faz isso após cerca de uma semana sem visita), e a chave só esteve aqui, nunca no servidor.",
+    "nothingLost": "<b>Nada foi perdido.</b> Suas moedas estão seguras na cadeia. Este navegador não tem mais a chave desta carteira — navegadores limpam dados de sites armazenados (o Safari faz isso após cerca de uma semana sem visita), e a chave só esteve aqui, nunca no servidor.",
     "addressLabel": "Endereço desta carteira",
     "seedLabel": "Frase de recuperação (ou seed 64-hex antiga)",
     "seedPlaceholder": "Sua frase de recuperação ou a seed salva",
@@ -849,12 +841,12 @@
     "createdAround": "Carteira criada por volta de",
     "exactHeight": "Ou a altura exata do bloco",
     "heightPlaceholder": "Altura DAA",
-    "wholeChain": "Sem isso, toda a blockchain é escaneada. Encontra tudo, mas leva mais tempo.",
+    "wholeChain": "Sem isso, a cadeia inteira é escaneada. Isso encontra tudo e leva mais tempo.",
     "reconnecting": "Reconectando…",
     "reconnect": "Reconectar carteira",
     "checkedLocally": "Verificado neste dispositivo com o endereço acima, e nunca enviado a lugar algum.",
     "justWatch": "Apenas visualize esta carteira (sem precisar da frase)",
-    "homeScreen": "Para evitar que isso aconteça de novo, adicione a carteira à Tela Inicial — um app instalado mantém seus dados, uma aba do navegador pode não manter. A cópia instalada começa vazia: insira a frase uma vez e ela fica.",
+    "homeScreen": "Para evitar que isso aconteça de novo, adicione a carteira à sua Tela de Início — um app instalado mantém seu armazenamento, uma aba do navegador pode não manter. A cópia instalada começa vazia: insira a frase lá uma vez e ela permanece.",
     "notYours": "Não é sua carteira? Crie ou importe uma diferente"
   },
   "onboard": {
@@ -900,7 +892,7 @@
     "errStore": "Este dispositivo não conseguiu armazenar a chave da carteira — libere espaço e tente novamente.",
     "errChooseBackup": "Escolha seu arquivo .json de backup ou cole o texto do backup.",
     "restoreTitle": "Restaurar de arquivo de backup",
-    "restoreIntro": "Selecione o backup <code>.json</code> criptografado que salvou e insira a senha. A seed é descriptografada neste dispositivo — o arquivo e a senha nunca saem dele.",
+    "restoreIntro": "Selecione o backup criptografado <code>.json</code> que você salvou e insira a senha. A semente é descriptografada neste dispositivo — o arquivo e a senha nunca saem dele.",
     "backupsFound": "Backups encontrados neste computador",
     "errReadBackup": "Não foi possível ler o arquivo de backup.",
     "chooseOne": "Escolha um…",
@@ -912,7 +904,7 @@
   "languagePicker": {
     "label": "Idioma",
     "hintEnglish": "Segue o idioma do dispositivo, a menos que você escolha um aqui.",
-    "hint": "Tradução automática. Algo errado? Fale conosco.",
+    "hint": "Tradução automática. Algo está estranho? Avise a gente.",
     "autoNotice": "Exibindo em {{name}} (idioma do dispositivo).",
     "keep": "OK"
   },
@@ -955,10 +947,7 @@
     "behindDetail_one": "Você já pode enviar — tudo que um pagamento precisa já está visível. A carteira ainda está lendo o {{n}} bloco mais novo, então o que chegou nele ainda não foi contado.",
     "behindDetail_other": "Você já pode enviar — tudo que um pagamento precisa já está visível. A carteira ainda está lendo os {{n}} blocos mais novos, então o que chegou neles ainda não foi contado.",
     "behindDetailBare": "Você já pode enviar — tudo que um pagamento precisa já está visível. A carteira ainda está lendo os blocos mais novos, então o que chegou neles ainda não foi contado.",
-    "etaLeft": "{{duration}} restantes",
-    "aboutMinutes_many": "cerca de {{count}} minutos",
-    "aboutHours_many": "cerca de {{count}} horas",
-    "behindDetail_many": "Você já pode enviar — tudo que um pagamento precisa já está visível. A carteira ainda está lendo os {{n}} blocos mais novos, então o que chegou neles ainda não foi contado."
+    "etaLeft": "{{duration}} restantes"
   },
   "desktopServices": {
     "desktopOnly": "Este controle está disponível no app para desktop."
@@ -1045,8 +1034,7 @@
   "confirmations": {
     "confirmed": "confirmado",
     "confs_one": "{{count}} conf",
-    "confs_other": "{{count}} confs",
-    "confs_many": "{{count}} confs"
+    "confs_other": "{{count}} confs"
   },
   "version": {
     "android": "Android",
@@ -1099,8 +1087,7 @@
     "ambientPeers": "pares: retransmitindo ✓",
     "txInfo_one": "{{count}} ação orchard · prova halo2 verificada · retransmitida",
     "txInfo_other": "{{count}} ações Orchard · prova Halo 2 verificada · retransmitida",
-    "blockTag": "⬢ {{blue}} · {{txs}} tx",
-    "txInfo_many": "{{count}} ações Orchard · prova Halo 2 verificada · retransmitida"
+    "blockTag": "⬢ {{blue}} · {{txs}} tx"
   },
   "services": {
     "catAll": "Tudo",
@@ -1139,8 +1126,7 @@
     "reviewSend": "Revisar e enviar {{n}}",
     "paid_one": "{{payees}} destinatários pagos em {{count}} transação.",
     "paid_other": "{{payees}} destinatários pagos em {{count}} transações.",
-    "custodial": "Envio em lote precisa de um walletd próprio que tenha a semente desta carteira. Este app não enviará sua semente para ativá-lo.",
-    "paid_many": "{{payees}} destinatários pagos em {{count}} transações."
+    "custodial": "Envio em lote precisa de um walletd próprio que tenha a semente desta carteira. Este app não enviará sua semente para ativá-lo."
   },
   "walletMaintenance": {
     "title": "Moedas",
@@ -1349,7 +1335,7 @@
     "closeTitle": "Fechar",
     "modeAria": "Modo do nó",
     "mining": "Mineração",
-    "miningNote": "O menor. Valida a cadeia e atende mineradores, mas não guarda moedas antigas da carteira.",
+    "miningNote": "A menor. Valida a cadeia e serve mineradores, mas não mantém moedas antigas da carteira.",
     "shielded": "Histórico blindado",
     "shieldedNote": "Mantém histórico completo da carteira enquanto poda corpos de blocos antigos.",
     "archive": "Arquivo",
@@ -1423,13 +1409,13 @@
     "viewWalletLogs": "Ver logs da carteira",
     "yourExistingNode": "seu nó existente",
     "thePublicNode": "o nó público",
-    "localSyncing": "O nó local está sincronizando. Sua carteira continua em {{source}} com o saldo atual até o nó concluir.",
+    "localSyncing": "Nó local está sincronizando. Sua carteira permanece em {{source}} com o saldo atual até que o nó local esteja completo.",
     "currentlyFromDaa": " (atualmente a partir do DAA {{daa}})",
     "fillingSynced": "Sincronizado, mas ainda preenchendo o histórico blindado de pares{{from}}. A sincronização de blocos aguarda isso, então a contagem pode ficar parada por um tempo — está funcionando, não travou. A carteira pode se conectar quando o log do nó disser \"shielded history: VERIFIED\" (ou o piso cair abaixo da data de criação da carteira). Sua carteira continua em {{source}} até lá.",
     "fillingSyncing": "O nó local está sincronizando e ainda preenchendo o histórico blindado de pares{{from}}. A sincronização de blocos aguarda isso, então a contagem pode ficar parada por um tempo — está funcionando, não travou. A carteira pode se conectar quando o log do nó disser \"shielded history: VERIFIED\" (ou o piso cair abaixo da data de criação da carteira). Sua carteira continua em {{source}} até lá.",
     "walletNotAnswering": "A carteira está aberta, mas o nó selecionado ainda não responde. Ela tenta novamente de forma automática e mantém visível o último estado confirmado.",
     "walletEngineError": "Motor da carteira: {{error}}",
-    "miningNeverOffered": "O modo mineração nunca é oferecido à carteira porque ela não retém o histórico completo de moedas. (125 chars: 112) OK.",
+    "miningNeverOffered": "O modo de mineração nunca é oferecido à carteira porque ela não retém notas históricas completas.",
     "nodeLogsTitle": "Logs do nó ZKAS",
     "walletLogsTitle": "Logs do motor da carteira",
     "movingWalletToPublic": "Movendo carteira para o nó público…",
@@ -1531,8 +1517,7 @@
     "trayNote": "Fechar a janela mantém serviços de nó ou mineração ativos na bandeja, mas bloqueia o motor de gastos. Use “Sair e parar serviços” na bandeja para encerrar todos os processos.",
     "modeLocal": "local",
     "modeCustom": "personalizado",
-    "modeRemote": "remoto",
-    "walletUrls_many": "URLs da carteira"
+    "modeRemote": "remoto"
   },
   "explorer": {
     "now": "agora",
@@ -1741,7 +1726,7 @@
   "orbotHelp": {
     "nativeTitle": "Tor precisa do Orbot",
     "nativeIntro": "A carteira acessa a cebola pelo Orbot, o app Tor gratuito. Ele não está rodando:",
-    "stepInstall": "Instalar Orbot.",
+    "stepInstall": "Instale o Orbot.",
     "stepInstallIos": "Instale o Orbot pela App Store.",
     "stepConnectIos": "Abra e <b>conecte</b> — o Orbot roda como VPN no iPhone, então permita a configuração de VPN solicitada.",
     "stepVpnMode": "Abra e ative o <b>modo VPN</b>.",
@@ -1756,10 +1741,10 @@
     "browserKeys": "Suas chaves ficam no seu dispositivo de qualquer forma."
   },
   "runOnPhoneOption": {
-    "title": "Rodar neste celular",
+    "title": "Executar neste celular",
     "desc": "Mais privado. Nenhum daemon vê suas transações. Um pouco mais de bateria.",
     "nodeHint": "Nó para sincronizar — host:porta. O padrão é o nó público ZKas.",
-    "torTitle": "Conectar ao nó via Tor",
+    "torTitle": "Acessar o nó via Tor",
     "torDesc": "Esconde seu IP do nó. Requer o app Orbot (Tor) rodando neste telefone.",
     "starting": "Iniciando…",
     "start": "Iniciar neste celular"
@@ -1782,11 +1767,11 @@
   "mainNav": {
     "wallet": "Carteira",
     "node": "Nó",
-    "mine": "Mineração",
-    "explore": "Explorador",
+    "mine": "Minerar",
+    "explore": "Explorar",
     "services": "Serviços",
     "host": "Hospedar",
-    "settings": "Configurações",
+    "settings": "Config.",
     "mainAria": "Principal",
     "homeAria": "Início da carteira ZKAS",
     "tabShortcut": "{{label}} · Ctrl+{{n}}"
@@ -1812,7 +1797,7 @@
     "thisComputer": "este computador",
     "publicService": "o serviço público (wallet.zkas.info)",
     "chosenService": "o serviço que você escolheu",
-    "intro": "Sua carteira sincronizará via <b>{{where}}</b>. Ele vê seu saldo e histórico — nunca suas chaves, e não pode gastar."
+    "intro": "Sua carteira vai sincronizar via <b>{{where}}</b>. Ela vê seu saldo e histórico — nunca suas chaves, e não pode gastar."
   },
   "watchonly": {
     "invalidViewKey": "Chave de visualização inválida."

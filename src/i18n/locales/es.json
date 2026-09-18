@@ -57,9 +57,7 @@
     "exportCsv": "Exportar CSV",
     "turnOffTitle": "¿Desactivar historial?",
     "turnOffBody": "Borra solo la lista de transacciones guardada. Tu saldo y fondos no se ven afectados.",
-    "turnOffConfirm": "Desactivar y borrar",
-    "savedPayments_many": "{{count}} pagos guardados",
-    "held_many": "{{count}} transacciones salientes en curso — {{amount}} ZKAS retenidos temporalmente hasta que se confirmen (se devuelven automáticamente en ~1 hora si nunca se confirman)."
+    "turnOffConfirm": "Desactivar y borrar"
   },
   "send": {
     "scanAria": "Escanear QR",
@@ -91,9 +89,9 @@
     "reviewSend": "Revisar envío",
     "needSeed": "Este dispositivo aún no tiene la clave de esta billetera. Ingresa tu frase de recuperación una vez para desbloquear envíos aquí.",
     "wrongSeed": "Esa semilla pertenece a otra billetera — no desbloquea esta. Revisa qué billetera estás restaurando, o cambia a la billetera de esa semilla.",
-    "finishingMerge": "Finalizando fusión en segundo plano…",
+    "finishingMerge": "Terminando una fusión en segundo plano…",
     "fragmentedNothingSent": "{{message}} No se firmó ni envió nada.",
-    "partialRecorded": "{{message}} La parte ya transmitida está registrada en el Historial.",
+    "partialRecorded": "{{message}} La parte ya emitida está en el historial.",
     "confirmTitle": "Confirmar",
     "amount": "Monto",
     "zkasAmount": "{{amount}} ZKAS",
@@ -103,7 +101,7 @@
     "total": "Total",
     "totalExact": "{{total}} ZKAS",
     "totalUpTo": "≤ {{total}} ZKAS",
-    "manyNotes": "Tu saldo está en {{n}} monedas. Si este monto no cabe en una transacción, no se envía nada y la billetera ofrecerá consolidar o un pago dividido explícito.",
+    "manyNotes": "Tu saldo está en {{n}} monedas. Si este monto no cabe en una transacción, no se envía nada y la billetera ofrecerá consolidar o dividir el pago.",
     "to": "Para",
     "privateNote": "Nota privada",
     "memoSealed": "\"{{memo}}\" — sellado en la moneda cifrada del destinatario; solo él puede leerlo.",
@@ -462,13 +460,11 @@
     "confirmedOnChain": "Confirmado en cadena",
     "privateLabel": "Etiqueta privada",
     "labelPlaceholder": "Pedido, cliente, propósito…",
-    "labelSaved": "Guardado en este dispositivo",
-    "confirmations_many": "{{count}} confirmaciones"
+    "labelSaved": "Guardado en este dispositivo"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} cartera",
-    "wallets_other": "{{count}} carteras",
-    "wallets_many": "{{count}} billeteras"
+    "wallets_other": "{{count}} carteras"
   },
   "accessTokenSetting": {
     "title": "Mostrar campo de token de acceso",
@@ -579,8 +575,7 @@
     "confs_one": "{{count}} conf",
     "confs_other": "{{count}} confs",
     "confNotSeen": "no visto en cadena",
-    "confSending": "enviando…",
-    "confs_many": "{{count}} confs"
+    "confSending": "enviando…"
   },
   "app": {
     "receivedNotifTitle": "ZKAS recibido",
@@ -746,8 +741,7 @@
     "scanningFromDays_other": "Escaneando desde DAA {{from}} — aprox. {{count}} días de cadena.",
     "scanningWhole": "Escaneando toda la cadena. Encuentra todo, pero es lo más lento.",
     "cancel": "Cancelar",
-    "agree": "Aceptar y recuperar",
-    "scanningFromDays_many": "Escaneando desde DAA {{from}} — aprox. {{count}} días de cadena."
+    "agree": "Aceptar y recuperar"
   },
   "consolidateDialog": {
     "errEnterSeed": "Ingresa la semilla de 64 caracteres de esta billetera para firmar en este dispositivo.",
@@ -775,9 +769,7 @@
     "proving": "Creando prueba…",
     "addNotes": "Añadir notas",
     "combine": "Combinar",
-    "cancel": "Cancelar",
-    "split_many": "Tu saldo está dividido en <b>{{count}}</b> monedas — las piezas que lo componen. Menos son más baratas de enviar; más te permiten pagar unas pocas veces seguidas.",
-    "merged_many": "Se fusionaron {{notes}} monedas en {{round}} de aproximadamente {{count}} pasadas"
+    "cancel": "Cancelar"
   },
   "fmtEta": {
     "underMinute": "menos de un minuto",
@@ -854,7 +846,7 @@
     "errStore": "Este dispositivo no pudo guardar la clave de billetera — libera espacio e inténtalo de nuevo.",
     "errChooseBackup": "Elige tu archivo de copia de seguridad .json o pega el texto.",
     "restoreTitle": "Restaurar desde archivo de respaldo",
-    "restoreIntro": "Selecciona la copia de seguridad <code>.json</code> cifrada que guardaste, luego ingresa su contraseña. La semilla se descifra en este dispositivo — el archivo y la contraseña nunca lo abandonan.",
+    "restoreIntro": "Selecciona el respaldo cifrado <code>.json</code> que guardaste e ingresa su contraseña. La semilla se descifra en este dispositivo — el archivo y la contraseña nunca salen de aquí.",
     "backupsFound": "Copias de seguridad en este equipo",
     "errReadBackup": "No se pudo leer esa copia de seguridad.",
     "chooseOne": "Elige uno…",
@@ -866,12 +858,12 @@
   "languagePicker": {
     "label": "Idioma",
     "hintEnglish": "Sigue el idioma del dispositivo a menos que elijas uno aquí.",
-    "hint": "Traducción automática. ¿Ves algún error? Avísanos.",
+    "hint": "Traducción automática. ¿Algo suena mal? Avísanos.",
     "autoNotice": "Mostrando en {{name}} (idioma del dispositivo).",
     "keep": "OK"
   },
   "recoverWallet": {
-    "watchIntro": "Muestra saldo e historial sin frase de recuperación. No puede enviar: una clave de visualización no permite gastar.",
+    "watchIntro": "Muestra el saldo y el historial sin frase de recuperación. No puede enviar: una clave de visualización no permite gastar.",
     "viewKeyLabel": "Clave de vista o enlace",
     "viewKeyPlaceholder": "pega la clave de visualización o el enlace",
     "back": "Atrás",
@@ -879,7 +871,7 @@
     "connecting": "Conectando…",
     "watchIt": "Observar",
     "title": "Reconecta tu wallet",
-    "nothingLost": "<b>No perdiste nada.</b> Tus monedas están seguras en la cadena. Este navegador ya no tiene la clave de esta billetera — los navegadores borran datos de sitios (Safari lo hace tras cerca de una semana sin visitas), y la clave solo estuvo aquí, nunca en el servidor.",
+    "nothingLost": "<b>No se perdió nada.</b> Tus monedas están seguras en la cadena. Este navegador ya no tiene la clave de esta billetera — los navegadores borran datos guardados (Safari lo hace tras una semana sin visitas), y la clave solo estuvo aquí, nunca en el servidor.",
     "addressLabel": "Dirección de esta wallet",
     "seedLabel": "Frase de recuperación (o semilla 64-hex antigua)",
     "seedPlaceholder": "Tu frase de recuperación o la semilla guardada",
@@ -892,7 +884,7 @@
     "reconnect": "Reconectar wallet",
     "checkedLocally": "Verificado en este dispositivo contra la dirección de arriba, nunca enviado a ningún lado.",
     "justWatch": "Solo observa esta billetera (sin necesidad de frase)",
-    "homeScreen": "Para evitar que vuelva a pasar, añade la billetera a tu pantalla de inicio — una app instalada conserva sus datos, una pestaña del navegador quizás no. La copia instalada inicia vacía: ingresa la frase una vez y se queda.",
+    "homeScreen": "Para que no vuelva a pasar, añade la billetera a tu pantalla de inicio — una app instalada conserva sus datos, una pestaña del navegador puede que no. La copia instalada empieza vacía: ingresa la frase ahí una vez y se queda.",
     "notYours": "¿No es tu billetera? Crea o importa otra",
     "errNotSecret": "Eso no parece una frase de recuperación (12 palabras) ni una semilla de recuperación (64 caracteres hex).",
     "errWrongSeed": "Esa semilla pertenece a otra billetera. Revísala e inténtalo de nuevo.",
@@ -904,7 +896,7 @@
     "thisComputer": "esta computadora",
     "publicService": "el servicio público (wallet.zkas.info)",
     "chosenService": "el servicio elegido",
-    "intro": "Tu billetera se sincronizará a través de <b>{{where}}</b>. Ve tu saldo e historial — nunca tus claves, y no puede gastar."
+    "intro": "Tu billetera se sincronizará mediante <b>{{where}}</b>. Ve tu saldo e historial — nunca tus claves, y no puede gastar."
   },
   "addAccountWallet": {
     "noPhrase": "Esta billetera no tiene frase de recuperación, así que no se puede derivar una cuenta. Usa “Agregar billetera aparte” — obtiene su propia frase de recuperación, que debes respaldar.",
@@ -962,10 +954,7 @@
     "behindDetail_one": "Ya puedes enviar — todo lo necesario está visible. La billetera aún lee el último bloque ({{n}}), así que lo que llegó en él aún no se cuenta.",
     "behindDetail_other": "Ya puedes enviar — todo lo necesario está visible. La billetera aún lee los {{n}} bloques más nuevos, así que lo que llegó en ellos aún no se cuenta.",
     "behindDetailBare": "Ya puedes enviar — todo lo necesario está visible. La billetera aún lee los bloques más nuevos, así que lo que llegó en ellos aún no se cuenta.",
-    "etaLeft": "{{duration}} restante",
-    "aboutMinutes_many": "alrededor de {{count}} minutos",
-    "aboutHours_many": "alrededor de {{count}} horas",
-    "behindDetail_many": "Ya puedes enviar — todo lo necesario está visible. La billetera aún lee los {{n}} bloques más nuevos, así que lo que llegó en ellos aún no se cuenta."
+    "etaLeft": "{{duration}} restante"
   },
   "desktopServices": {
     "desktopOnly": "Este control está disponible en la app de escritorio."
@@ -1084,8 +1073,7 @@
   "confirmations": {
     "confirmed": "confirmado",
     "confs_one": "{{count}} conf",
-    "confs_other": "{{count}} confs",
-    "confs_many": "{{count}} confs"
+    "confs_other": "{{count}} confs"
   },
   "version": {
     "android": "Android",
@@ -1138,8 +1126,7 @@
     "ambientPeers": "pares: retransmitiendo ✓",
     "txInfo_one": "{{count}} acción orchard · prueba halo2 verificada · retransmitida",
     "txInfo_other": "{{count}} acciones orchard · prueba halo2 verificada · retransmitidas",
-    "blockTag": "⬢ {{blue}} · {{txs}} tx",
-    "txInfo_many": "{{count}} acciones orchard · prueba halo2 verificada · retransmitidas"
+    "blockTag": "⬢ {{blue}} · {{txs}} tx"
   },
   "services": {
     "catAll": "Todos",
@@ -1178,8 +1165,7 @@
     "reviewSend": "Revisar y enviar {{n}}",
     "paid_one": "Se pagó a {{payees}} destinatarios en {{count}} transacción.",
     "paid_other": "Se pagó a {{payees}} destinatarios en {{count}} transacciones.",
-    "custodial": "El envío en lote necesita un walletd propio con la semilla de esta billetera. Esta app no subirá tu semilla para habilitarlo.",
-    "paid_many": "Se pagó a {{payees}} destinatarios en {{count}} transacciones."
+    "custodial": "El envío en lote necesita un walletd propio con la semilla de esta billetera. Esta app no subirá tu semilla para habilitarlo."
   },
   "walletMaintenance": {
     "title": "Notas",
@@ -1387,7 +1373,7 @@
     "closeTitle": "Cerrar",
     "modeAria": "Modo del nodo",
     "mining": "Minería",
-    "miningNote": "La más pequeña. Valida la cadena y sirve a los mineros, pero no conserva las monedas antiguas de la billetera.",
+    "miningNote": "La más pequeña. Valida la cadena y sirve a mineros, pero no guarda monedas viejas de la billetera.",
     "shielded": "Historial blindado",
     "shieldedNote": "Conserva el historial completo de la billetera, podando cuerpos de bloques viejos.",
     "archive": "Archivo",
@@ -1473,13 +1459,13 @@
     "viewWalletLogs": "Ver registros del monedero",
     "yourExistingNode": "tu nodo existente",
     "thePublicNode": "el nodo público",
-    "localSyncing": "El nodo local está sincronizando. Tu billetera permanece en {{source}} con su saldo actual hasta que el nodo local esté listo.",
+    "localSyncing": "El nodo local se está sincronizando. Tu billetera sigue en {{source}} con su saldo actual hasta que el nodo local termine.",
     "currentlyFromDaa": " (desde DAA {{daa}})",
     "fillingSynced": "Sincronizado, pero aún completando el historial blindado de pares{{from}}. La sincronización de bloques espera esto, así que el conteo puede pausarse — está funcionando, no trabado. La billetera puede conectarse cuando el registro del nodo diga \"shielded history: VERIFIED\" (o el piso baje de la fecha de creación de tu billetera). Tu billetera sigue en {{source}} hasta entonces.",
     "fillingSyncing": "El nodo local está sincronizando y aún completando el historial blindado de pares{{from}}. La sincronización de bloques espera esto, así que el conteo puede pausarse — está funcionando, no trabado. La billetera puede conectarse cuando el registro del nodo diga \"shielded history: VERIFIED\" (o el piso baje de la fecha de creación de tu billetera). Tu billetera sigue en {{source}} hasta entonces.",
     "walletNotAnswering": "La billetera está abierta, pero su nodo seleccionado aún no responde. Reintenta automáticamente y mantiene visible el último estado confirmado.",
     "walletEngineError": "Motor del monedero: {{error}}",
-    "miningNeverOffered": "El modo minería nunca se ofrece a la billetera porque no retiene el historial completo de monedas. (maxChars: 125, actual: 99)",
+    "miningNeverOffered": "El modo minería nunca se ofrece a la billetera porque no retiene el historial completo de monedas.",
     "nodeLogsTitle": "Registros del nodo ZKAS",
     "walletLogsTitle": "Registros del motor de wallet",
     "movingWalletToPublic": "Moviendo billetera al nodo público…",
@@ -1581,8 +1567,7 @@
     "trayNote": "Cerrar la ventana mantiene activos los servicios de nodo o minería en la bandeja, pero bloquea de inmediato el motor de gasto. Usa “Salir y detener servicios” en la bandeja para detener todos los subprocesos.",
     "modeLocal": "local",
     "modeCustom": "personalizado",
-    "modeRemote": "remoto",
-    "walletUrls_many": "URLs de billetera"
+    "modeRemote": "remoto"
   },
   "explorer": {
     "now": "ahora",
@@ -1812,7 +1797,7 @@
   "orbotHelp": {
     "nativeTitle": "Tor necesita Orbot",
     "nativeIntro": "La billetera se conecta a la onion mediante Orbot, la app gratuita de Tor. No se está ejecutando:",
-    "stepInstall": "Instalar Orbot",
+    "stepInstall": "Instala Orbot.",
     "stepInstallIos": "Instala Orbot desde el App Store.",
     "stepConnectIos": "Ábrela y <b>conecta</b> — Orbot funciona como VPN en iPhone, así que permite la configuración VPN que solicite.",
     "stepVpnMode": "Ábrela y activa el <b>modo VPN</b>.",

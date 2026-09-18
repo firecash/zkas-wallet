@@ -90,8 +90,8 @@
     "needSeed": "Thiết bị chưa có khóa của ví này. Nhập cụm từ khôi phục một lần để mở khóa gửi tại đây.",
     "wrongSeed": "Cụm từ đó thuộc ví khác — không mở khóa được ví này. Kiểm tra ví bạn đang khôi phục, hoặc chuyển sang ví của cụm từ đó.",
     "finishingMerge": "Đang hoàn tất hợp nhất nền…",
-    "fragmentedNothingSent": "{{message}} Chưa ký hay gửi gì.",
-    "partialRecorded": "{{message}} Phần đã phát được ghi trong Lịch sử.",
+    "fragmentedNothingSent": "{{message}} Không có gì được ký hoặc gửi.",
+    "partialRecorded": "{{message}} Phần đã phát được ghi vào Lịch sử.",
     "confirmTitle": "Xác nhận",
     "amount": "Số lượng",
     "zkasAmount": "{{amount}} ZKAS",
@@ -101,7 +101,7 @@
     "total": "Tổng",
     "totalExact": "{{total}} ZKAS",
     "totalUpTo": "≤ {{total}} ZKAS",
-    "manyNotes": "Số dư của bạn nằm trong {{n}} đồng. Nếu số tiền này không vừa một giao dịch, sẽ không có gì được gửi và ví sẽ đề xuất gộp đồng hoặc thanh toán tách rõ ràng. (max 215, fits easily)",
+    "manyNotes": "Số dư của bạn nằm trong {{n}} đồng. Nếu số lượng này không vừa một giao dịch, sẽ không có gì được gửi và ví sẽ đề xuất hợp nhất hoặc thanh toán tách rõ ràng.",
     "to": "Đến",
     "privateNote": "Ghi chú riêng",
     "memoSealed": "“{{memo}}” — được niêm phong trong đồng mã hóa của người nhận; chỉ họ đọc được.",
@@ -833,7 +833,7 @@
     "connecting": "Đang kết nối…",
     "watchIt": "Theo dõi",
     "title": "Kết nối lại ví của bạn",
-    "nothingLost": "<b>Không mất gì cả.</b> Tiền của bạn an toàn trên chuỗi. Trình duyệt này không còn giữ khóa của ví — trình duyệt xóa dữ liệu trang web đã lưu (Safari làm vậy sau khoảng một tuần không truy cập), và khóa chỉ ở đây, không bao giờ trên máy chủ.",
+    "nothingLost": "<b>Không mất gì cả.</b> Đồng của bạn an toàn trên chuỗi. Trình duyệt này không còn giữ khóa cho ví này nữa — trình duyệt xóa dữ liệu trang đã lưu (Safari làm vậy sau khoảng một tuần không truy cập), và khóa chỉ từng ở đây, không bao giờ trên máy chủ.",
     "addressLabel": "Địa chỉ ví này",
     "seedLabel": "Cụm từ khôi phục (hoặc hạt giống hex 64 ký tự cũ)",
     "seedPlaceholder": "Cụm từ khôi phục hoặc hạt giống đã lưu",
@@ -841,12 +841,12 @@
     "createdAround": "Ví được tạo khoảng",
     "exactHeight": "Hoặc chiều cao khối chính xác",
     "heightPlaceholder": "Chiều cao DAA",
-    "wholeChain": "Nếu không có, toàn bộ chuỗi sẽ bị quét. Tìm được mọi thứ, nhưng lâu nhất.",
+    "wholeChain": "Nếu không có cái này, toàn bộ chuỗi sẽ được quét. Cách đó tìm thấy mọi thứ, và mất nhiều thời gian nhất.",
     "reconnecting": "Đang kết nối lại…",
     "reconnect": "Kết nối lại ví",
     "checkedLocally": "Đã kiểm tra trên thiết bị này với địa chỉ trên, không bao giờ gửi đi đâu.",
     "justWatch": "Chỉ xem ví này thay vào đó (không cần cụm từ)",
-    "homeScreen": "Để tránh điều này tái diễn, hãy thêm ví vào Màn hình chính — ứng dụng đã cài giữ được bộ nhớ, tab trình duyệt thì không. Bản sao đã cài khởi đầu trống: nhập cụm từ vào đó một lần, và nó sẽ ở lại.",
+    "homeScreen": "Để tránh việc này xảy ra lần nữa, hãy thêm ví vào Màn hình chính — ứng dụng đã cài giữ lại bộ nhớ của nó, tab trình duyệt thì có thể không. Bản sao đã cài khởi đầu trống: nhập cụm từ vào đó một lần, và nó ở lại.",
     "notYours": "Không phải ví của bạn? Tạo hoặc nhập ví khác"
   },
   "syncDestination": {
@@ -854,14 +854,14 @@
     "thisComputer": "máy tính này",
     "publicService": "dịch vụ công (wallet.zkas.info)",
     "chosenService": "dịch vụ bạn đã chọn",
-    "intro": "Ví của bạn sẽ đồng bộ qua <b>{{where}}</b>. Nó thấy số dư và lịch sử — không bao giờ thấy khóa, và không thể chi tiêu."
+    "intro": "Ví của bạn sẽ đồng bộ qua <b>{{where}}</b>. Nó thấy số dư và lịch sử của bạn — không bao giờ thấy khóa của bạn, và không thể chi tiêu."
   },
   "onboard": {
     "errHasKey": "Thiết bị này đã có khóa ví. Hãy khôi phục ví đó — hoặc dùng 'Thêm ví khác' trong trình chuyển đổi ví để không ghi đè.",
     "errStore": "Thiết bị không thể lưu khóa ví — hãy giải phóng dung lượng và thử lại.",
     "errChooseBackup": "Chọn tệp sao lưu .json hoặc dán văn bản sao lưu.",
     "restoreTitle": "Khôi phục từ tệp sao lưu",
-    "restoreIntro": "Chọn tệp sao lưu <code>.json</code> đã mã hóa bạn đã lưu, sau đó nhập mật khẩu. Hạt giống được giải mã trên thiết bị này — tệp và mật khẩu không bao giờ rời khỏi thiết bị.",
+    "restoreIntro": "Chọn tệp sao lưu <code>.json</code> đã mã hóa bạn đã lưu, rồi nhập mật khẩu của nó. Hạt giống được giải mã trên thiết bị này — tệp và mật khẩu không bao giờ rời khỏi nó.",
     "backupsFound": "Đã tìm thấy sao lưu trên máy này",
     "errReadBackup": "Không thể đọc tệp sao lưu đó.",
     "chooseOne": "Chọn một…",
@@ -911,7 +911,7 @@
   "languagePicker": {
     "label": "Ngôn ngữ",
     "hintEnglish": "Theo ngôn ngữ thiết bị trừ khi bạn chọn ở đây.",
-    "hint": "Dịch máy. Có gì sai? Báo cho chúng tôi.",
+    "hint": "Dịch máy. Có gì đọc sai không? Hãy cho chúng tôi biết.",
     "autoNotice": "Hiển thị bằng {{name}} (ngôn ngữ thiết bị).",
     "keep": "OK"
   },
@@ -1332,7 +1332,7 @@
     "closeTitle": "Đóng",
     "modeAria": "Chế độ nút",
     "mining": "Đào",
-    "miningNote": "Nhỏ nhất. Xác thực chuỗi và phục vụ thợ đào, nhưng không giữ đồng cũ trong ví.",
+    "miningNote": "Nhỏ nhất. Xác thực chuỗi và phục vụ thợ đào, nhưng không giữ đồng cũ của ví.",
     "shielded": "Lịch sử ẩn danh",
     "shieldedNote": "Giữ toàn bộ lịch sử ví, tỉa bỏ thân khối cũ.",
     "archive": "Lưu trữ",
@@ -1427,13 +1427,13 @@
     "viewWalletLogs": "Xem nhật ký ví",
     "yourExistingNode": "nút hiện có của bạn",
     "thePublicNode": "nút công khai",
-    "localSyncing": "Nút cục bộ đang đồng bộ. Ví của bạn vẫn dùng {{source}} với số dư hiện tại cho đến khi nút hoàn tất.",
+    "localSyncing": "Nút cục bộ đang đồng bộ. Ví của bạn ở lại {{source}} với số dư hiện tại cho đến khi nút cục bộ hoàn tất.",
     "currentlyFromDaa": " (hiện từ DAA {{daa}})",
     "fillingSynced": "Đã đồng bộ, nhưng vẫn đang điền lịch sử ẩn danh từ các đồng nghiệp{{from}}. Đồng bộ khối chờ việc này, nên số khối có thể đứng yên một lúc — nó đang chạy, không bị kẹt. Ví có thể kết nối khi nhật ký nút ghi \"shielded history: VERIFIED\" (hoặc mức sàn xuống dưới ngày sinh của ví). Ví của bạn vẫn dùng {{source}} cho đến lúc đó.",
     "fillingSyncing": "Nút cục bộ đang đồng bộ và vẫn đang điền lịch sử ẩn danh từ các đồng nghiệp{{from}}. Đồng bộ khối chờ việc này, nên số khối có thể đứng yên một lúc — nó đang chạy, không bị kẹt. Ví có thể kết nối khi nhật ký nút ghi \"shielded history: VERIFIED\" (hoặc mức sàn xuống dưới ngày sinh của ví). Ví của bạn vẫn dùng {{source}} cho đến lúc đó.",
     "walletNotAnswering": "Ví đang mở, nhưng nút được chọn chưa phản hồi. Nó tự động thử lại và giữ trạng thái ví đã xác nhận cuối cùng.",
     "walletEngineError": "Engine ví: {{error}}",
-    "miningNeverOffered": "Chế độ đào không được cung cấp cho ví vì nó không giữ lại toàn bộ lịch sử đồng.",
+    "miningNeverOffered": "Chế độ đào không bao giờ được cung cấp cho ví vì nó không giữ lại lịch sử đồng đầy đủ.",
     "nodeLogsTitle": "Nhật ký nút ZKAS",
     "walletLogsTitle": "Nhật ký ví",
     "movingWalletToPublic": "Đang chuyển ví sang nút công khai…",
@@ -1762,10 +1762,10 @@
     "title": "Chạy trên điện thoại này",
     "desc": "Riêng tư nhất. Không daemon nào thấy giao dịch. Tốn pin hơn chút.",
     "nodeHint": "Nút để đồng bộ — host:port. Mặc định là nút ZKas công cộng.",
-    "torTitle": "Kết nối đến nút qua Tor",
+    "torTitle": "Kết nối tới nút qua Tor",
     "torDesc": "Ẩn IP của bạn khỏi nút. Cần Orbot (Tor) chạy trên máy.",
     "starting": "Đang khởi động…",
-    "start": "Khởi động trên điện thoại này"
+    "start": "Bắt đầu trên điện thoại này"
   },
   "whatsNew": {
     "eyebrow": "Mới trong 1.0.17",
@@ -1801,7 +1801,7 @@
   },
   "bootGuard": {
     "couldNotStart": "Ví không thể khởi động. Cần bật lưu trữ trang web (cookie/dữ liệu) cho trang này — ví và cài đặt của bạn nằm ở đó. Cho phép cho {{host}}, rồi tải lại.",
-    "thisSite": "trang web này"
+    "thisSite": "trang này"
   },
   "api": {
     "unauthorized": "Dịch vụ ví có thể kết nối, nhưng từ chối token truy cập. Sao chép token từ màn hình Host trên máy tính đang chạy nó.",

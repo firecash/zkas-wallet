@@ -30,7 +30,7 @@
     "needSeed": "To urządzenie nie ma jeszcze klucza tego portfela. Wpisz frazę odzyskiwania raz, aby odblokować wysyłanie.",
     "wrongSeed": "To ziarno należy do innego portfela – nie odblokowuje tego. Sprawdź, który portfel przywracasz, lub przełącz na portfel, do którego należy to ziarno.",
     "finishingMerge": "Kończenie scalania w tle…",
-    "fragmentedNothingSent": "{{message}} Nic nie zostało podpisane ani wysłane.",
+    "fragmentedNothingSent": "{{message}} Nic nie podpisano ani nie wysłano.",
     "partialRecorded": "{{message}} Część już rozgłoszona jest zapisana w Historii.",
     "confirmTitle": "Potwierdź",
     "amount": "Kwota",
@@ -41,7 +41,7 @@
     "total": "Suma",
     "totalExact": "{{total}} ZKAS",
     "totalUpTo": "≤ {{total}} ZKAS",
-    "manyNotes": "Twoje saldo jest rozbite na {{n}} monet. Jeśli ta kwota nie zmieści się w jednej transakcji, nic nie zostanie wysłane, a portfel zaproponuje konsolidację lub jawny podział płatności. (max 215, current 215)",
+    "manyNotes": "Twoje saldo jest w {{n}} monetach. Jeśli ta kwota nie zmieści się w jednej transakcji, nic nie zostanie wysłane, a portfel zaproponuje konsolidację lub podział płatności.",
     "to": "Do",
     "privateNote": "Prywatna notatka",
     "memoSealed": "„{{memo}}” — zapieczętowane w zaszyfrowanej monecie odbiorcy; tylko on może ją odczytać.",
@@ -136,11 +136,7 @@
     "exportCsv": "Eksportuj CSV",
     "turnOffTitle": "Wyłączyć historię?",
     "turnOffBody": "Usuwa tylko zapisaną listę transakcji. Saldo i środki pozostają bez zmian.",
-    "turnOffConfirm": "Wyłącz i usuń",
-    "savedPayments_few": "{{count}} zapisane płatności",
-    "savedPayments_many": "{{count}} zapisanych płatności",
-    "held_few": "{{count}} transakcje wychodzące w locie — {{amount}} ZKAS tymczasowo wstrzymane do potwierdzenia (automatyczny zwrot w ~1h, jeśli nie dojdą).",
-    "held_many": "{{count}} transakcji wychodzących w locie — {{amount}} ZKAS tymczasowo wstrzymanych do potwierdzenia (automatyczny zwrot w ~1h, jeśli nie dojdą)."
+    "turnOffConfirm": "Wyłącz i usuń"
   },
   "daemonSetting": {
     "timedOut": "przekroczono czas (5s)",
@@ -352,15 +348,11 @@
     "sendAgain": "Wyślij ponownie",
     "viewOnExplorer": "Zobacz w eksploratorze",
     "explorerNote": "Eksplorator pokazuje tylko, że zaszła chroniona transakcja — nigdy jej szczegółów.",
-    "close": "Zamknij",
-    "confirmations_few": "{{count}} potwierdzenia",
-    "confirmations_many": "{{count}} potwierdzeń"
+    "close": "Zamknij"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} portfel",
-    "wallets_other": "{{count}} portfele",
-    "wallets_few": "{{count}} portfele",
-    "wallets_many": "{{count}} portfeli"
+    "wallets_other": "{{count}} portfele"
   },
   "accessTokenSetting": {
     "title": "Pokaż pole tokena dostępu",
@@ -621,9 +613,7 @@
     "confs_one": "{{count}} potw.",
     "confs_other": "{{count}} potw.",
     "confNotSeen": "niewidoczne w łańcuchu",
-    "confSending": "wysyłanie…",
-    "confs_few": "{{count}} potw.",
-    "confs_many": "{{count}} potw."
+    "confSending": "wysyłanie…"
   },
   "app": {
     "receivedNotifTitle": "Otrzymano ZKAS",
@@ -751,9 +741,7 @@
     "scanningFromDays_other": "Skanowanie od DAA {{from}} — około {{count}} dni łańcucha.",
     "scanningWhole": "Skanowanie całego łańcucha. Znajduje wszystko i trwa najdłużej.",
     "cancel": "Anuluj",
-    "agree": "Zgadzam się i odzyskuję",
-    "scanningFromDays_few": "Skanowanie od DAA {{from}} — około {{count}} dni łańcucha.",
-    "scanningFromDays_many": "Skanowanie od DAA {{from}} — około {{count}} dni łańcucha."
+    "agree": "Zgadzam się i odzyskuję"
   },
   "balanceHero": {
     "showBalance": "Pokaż saldo",
@@ -812,7 +800,7 @@
     "errWrongSeed": "To ziarno należy do innego portfela. Sprawdź je i spróbuj ponownie.",
     "errStore": "To urządzenie nie mogło zapisać klucza portfela — zwolnij miejsce i spróbuj ponownie.",
     "watchTitle": "Obserwuj ten portfel",
-    "watchIntro": "Pokazuje saldo i historię bez frazy odzyskiwania. Nie można wysyłać: klucz podglądu nie ma uprawnień do wydawania.",
+    "watchIntro": "Pokazuje saldo i historię bez frazy odzyskiwania. Nie może wysyłać: klucz podglądu nie daje uprawnień do wydawania.",
     "viewKeyLabel": "Klucz podglądu lub link",
     "viewKeyPlaceholder": "wklej klucz podglądu lub cały link",
     "back": "Wstecz",
@@ -820,7 +808,7 @@
     "connecting": "Łączenie…",
     "watchIt": "Obserwuj",
     "title": "Połącz ponownie portfel",
-    "nothingLost": "<b>Nic nie stracone.</b> Monety są bezpieczne w łańcuchu. Ta przeglądarka nie ma już klucza do tego portfela — przeglądarki czyszczą dane witryn (Safari po ok. tygodniu bez odwiedzin), a klucz był tylko tutaj, nigdy na serwerze.",
+    "nothingLost": "<b>Nic nie straciłeś.</b> Twoje monety są bezpieczne na łańcuchu. Ta przeglądarka nie przechowuje już klucza do tego portfela — przeglądarki czyszczą dane stron (Safari robi to po około tygodniu bez odwiedzin), a klucz był tylko tutaj, nigdy na serwerze.",
     "addressLabel": "Adres tego portfela",
     "seedLabel": "Fraza odzyskiwania (lub legacy 64-znakowe ziarno hex)",
     "seedPlaceholder": "Twoja fraza odzyskiwania lub zapisane ziarno",
@@ -828,12 +816,12 @@
     "createdAround": "Portfel utworzony około",
     "exactHeight": "Lub dokładna wysokość bloku",
     "heightPlaceholder": "Wysokość DAA",
-    "wholeChain": "Bez tego skanowany jest cały łańcuch. Znajduje wszystko, ale trwa najdłużej.",
+    "wholeChain": "Bez tego skanowany jest cały łańcuch. To znajduje wszystko i trwa najdłużej.",
     "reconnecting": "Ponowne łączenie…",
     "reconnect": "Połącz portfel ponownie",
     "checkedLocally": "Sprawdzone lokalnie względem adresu powyżej, nigdzie nie wysłane.",
     "justWatch": "Tylko podglądaj ten portfel (bez frazy)",
-    "homeScreen": "Aby to nie powtórzyło się, dodaj portfel do ekranu głównego — zainstalowana aplikacja zachowuje dane, karta przeglądarki może nie. Zainstalowana kopia startuje pusta: wpisz frazę raz i zostanie.",
+    "homeScreen": "Aby to się nie powtórzyło, dodaj portfel do ekranu głównego — zainstalowana aplikacja zachowuje dane, karta przeglądarki może nie. Zainstalowana kopia startuje pusta: wprowadź tam frazę raz i zostanie.",
     "notYours": "To nie twój portfel? Utwórz lub zaimportuj inny"
   },
   "syncDestination": {
@@ -841,14 +829,14 @@
     "thisComputer": "ten komputer",
     "publicService": "publiczna usługa (wallet.zkas.info)",
     "chosenService": "wybrana usługa",
-    "intro": "Twój portfel będzie synchronizowany przez <b>{{where}}</b>. Widzi saldo i historię — nigdy kluczy i nie może wydawać."
+    "intro": "Twój portfel zsynchronizuje się przez <b>{{where}}</b>. Widzi twoje saldo i historię — nigdy twoje klucze i nie może wydawać."
   },
   "onboard": {
     "errHasKey": "To urządzenie ma już klucz portfela. Przywróć ten portfel — lub użyj przełącznika portfeli 'Dodaj inny portfel', aby nic nie zostało nadpisane.",
     "errStore": "Urządzenie nie mogło zapisać klucza portfela — zwolnij miejsce i spróbuj ponownie.",
     "errChooseBackup": "Wybierz plik kopii zapasowej .json lub wklej tekst kopii.",
     "restoreTitle": "Przywróć z pliku kopii zapasowej",
-    "restoreIntro": "Wybierz zaszyfrowany plik <code>.json</code>, który zapisałeś, a następnie podaj hasło. Ziarno jest odszyfrowywane na tym urządzeniu — plik i hasło nigdy go nie opuszczają.",
+    "restoreIntro": "Wybierz zapisaną zaszyfrowaną kopię zapasową <code>.json</code>, a następnie wprowadź jej hasło. Ziarno jest odszyfrowywane na tym urządzeniu — plik i hasło nigdy go nie opuszczają.",
     "backupsFound": "Znaleziono kopie na tym komputerze",
     "errReadBackup": "Nie można odczytać pliku kopii.",
     "chooseOne": "Wybierz…",
@@ -921,11 +909,7 @@
     "proving": "Budowanie dowodu…",
     "addNotes": "Dodaj monety",
     "combine": "Połącz",
-    "cancel": "Anuluj",
-    "split_few": "Twoje saldo jest podzielone na <b>{{count}}</b> monety — części, z których się składa. Im mniej, tym taniej wysłać; im więcej, tym więcej razy pod rząd możesz zapłacić.",
-    "split_many": "Twoje saldo jest podzielone na <b>{{count}}</b> monet — części, z których się składa. Im mniej, tym taniej wysłać; im więcej, tym więcej razy pod rząd możesz zapłacić.",
-    "merged_few": "Scalono {{notes}} monet w {{round}} z około {{count}} przebiegów",
-    "merged_many": "Scalono {{notes}} monet w {{round}} z około {{count}} przebiegów"
+    "cancel": "Anuluj"
   },
   "fmtEta": {
     "underMinute": "mniej niż minuta",
@@ -936,7 +920,7 @@
   "languagePicker": {
     "label": "Język",
     "hintEnglish": "Dopasowuje język urządzenia, chyba że wybierzesz tutaj.",
-    "hint": "Tłumaczenie maszynowe. Coś źle brzmi? Daj znać.",
+    "hint": "Tłumaczenie maszynowe. Coś brzmi źle? Daj znać.",
     "autoNotice": "Wyświetlane w {{name}} (język urządzenia).",
     "keep": "OK"
   },
@@ -1002,13 +986,7 @@
     "warmingDetail": "Twoje saldo jest aktualne. Portfel przygotowuje się do płatności — pierwsza jest wolna, kolejne trwają sekundy.",
     "warmingDetailWaited": "Twoje saldo jest aktualne. Portfel przygotowuje się do płatności ({{waited}} do tej pory) — pierwsza jest wolna, kolejne trwają sekundy.",
     "readyLabel": "Gotowe",
-    "readyDetail": "Twoje saldo jest aktualne.",
-    "aboutMinutes_few": "około {{count}} minuty",
-    "aboutMinutes_many": "około {{count}} minut",
-    "aboutHours_few": "około {{count}} godziny",
-    "aboutHours_many": "około {{count}} godzin",
-    "behindDetail_few": "Możesz już wysłać — wszystko potrzebne do płatności jest widoczne. Portfel wciąż czyta najnowsze {{n}} bloki, więc to, co w nich przyszło, nie jest jeszcze policzone.",
-    "behindDetail_many": "Możesz już wysłać — wszystko potrzebne do płatności jest widoczne. Portfel wciąż czyta najnowsze {{n}} bloki, więc to, co w nich przyszło, nie jest jeszcze policzone."
+    "readyDetail": "Twoje saldo jest aktualne."
   },
   "desktopServices": {
     "desktopOnly": "Ta opcja jest dostępna w aplikacji desktopowej."
@@ -1095,9 +1073,7 @@
   "confirmations": {
     "confirmed": "potwierdzone",
     "confs_one": "{{count}} potw.",
-    "confs_other": "{{count}} potw.",
-    "confs_few": "{{count}} potw.",
-    "confs_many": "{{count}} potw."
+    "confs_other": "{{count}} potw."
   },
   "version": {
     "android": "Android",
@@ -1186,9 +1162,7 @@
     "txInfo_one": "{{count}} akcja orchard · dowód halo2 zweryfikowany · przekazano",
     "txInfo_other": "{{count}} akcje orchard · dowód halo2 zweryfikowany · przekazano",
     "blockTag": "⬢ {{blue}} · {{txs}} tx",
-    "blockInfo": "zaakceptowany blok",
-    "txInfo_few": "{{count}} akcje orchard · dowód halo2 zweryfikowany · przekazano",
-    "txInfo_many": "{{count}} akcji orchard · dowód halo2 zweryfikowany · przekazano"
+    "blockInfo": "zaakceptowany blok"
   },
   "services": {
     "catAll": "Wszystko",
@@ -1227,9 +1201,7 @@
     "reviewSend": "Sprawdź i wyślij {{n}}",
     "paid_one": "Zapłacono {{payees}} odbiorcom w {{count}} transakcji.",
     "paid_other": "Zapłacono {{payees}} odbiorcom w {{count}} transakcjach.",
-    "custodial": "Wysyłka zbiorcza wymaga samodzielnego hostowania walletd z ziarnem tego portfela. Ta aplikacja nie prześle Twojego ziarna, aby to umożliwić.",
-    "paid_few": "Zapłacono {{payees}} odbiorcom w {{count}} transakcjach.",
-    "paid_many": "Zapłacono {{payees}} odbiorcom w {{count}} transakcjach."
+    "custodial": "Wysyłka zbiorcza wymaga samodzielnego hostowania walletd z ziarnem tego portfela. Ta aplikacja nie prześle Twojego ziarna, aby to umożliwić."
   },
   "walletMaintenance": {
     "title": "Monety",
@@ -1487,13 +1459,13 @@
     "preparing": "Przygotowywanie…",
     "installNode": "Zainstaluj węzeł ZKAS",
     "updateTitle": "Dostępna aktualizacja węzła",
-    "localSyncing": "Lokalny węzeł się synchronizuje. Twój portfel pozostaje na {{source}} z bieżącym saldem do zakończenia synchronizacji.",
+    "localSyncing": "Lokalny węzeł się synchronizuje. Twój portfel pozostaje na {{source}} z obecnym saldem, dopóki lokalny węzeł nie będzie gotowy.",
     "currentlyFromDaa": " (obecnie od DAA {{daa}})",
     "fillingSynced": "Zsynchronizowano, ale wciąż uzupełniana jest chroniona historia od innych węzłów{{from}}. Synchronizacja bloków czeka na to, więc licznik bloków może stać w miejscu — to działa, nie zacięło się. Portfel można podłączyć, gdy log węzła pokaże \"shielded history: VERIFIED\" (lub gdy poziom spadnie poniżej daty utworzenia portfela). Twój portfel pozostaje na {{source}} do tego czasu.",
     "fillingSyncing": "Lokalny węzeł synchronizuje się i wciąż uzupełnia chronioną historię od innych węzłów{{from}}. Synchronizacja bloków czeka na to, więc licznik bloków może stać w miejscu — to działa, nie zacięło się. Portfel można podłączyć, gdy log węzła pokaże \"shielded history: VERIFIED\" (lub gdy poziom spadnie poniżej daty utworzenia portfela). Twój portfel pozostaje na {{source}} do tego czasu.",
     "walletNotAnswering": "Portfel jest otwarty, ale wybrany węzeł jeszcze nie odpowiada. Próby ponawiane są automatycznie, a ostatni potwierdzony stan portfela pozostaje widoczny.",
     "walletEngineError": "Silnik portfela: {{error}}",
-    "miningNeverOffered": "Tryb kopania nie jest oferowany portfelowi, ponieważ nie zachowuje on pełnych historycznych monet. (max 125 znaków: 93 znaki) OK",
+    "miningNeverOffered": "Tryb kopania nie jest oferowany portfelowi, ponieważ nie przechowuje pełnych historycznych monet.",
     "nodeLogsTitle": "Logi węzła ZKAS",
     "walletLogsTitle": "Logi silnika portfela",
     "movingWalletToPublic": "Przenoszenie portfela do węzła publicznego…",
@@ -1595,9 +1567,7 @@
     "trayNote": "Zamknięcie okna pozostawia aktywne usługi węzła lub kopania w zasobniku, ale natychmiast blokuje silnik wydawania. Użyj „Zakończ i zatrzymaj usługi” w zasobniku, aby zatrzymać wszystkie procesy.",
     "modeLocal": "lokalny",
     "modeCustom": "własny",
-    "modeRemote": "zdalny",
-    "walletUrls_few": "URLe portfela",
-    "walletUrls_many": "URLe portfela"
+    "modeRemote": "zdalny"
   },
   "explorer": {
     "now": "teraz",
@@ -1771,7 +1741,7 @@
     "services": "Usługi",
     "host": "Host",
     "settings": "Ustawienia",
-    "mainAria": "Główna",
+    "mainAria": "Główne",
     "homeAria": "Strona główna portfela ZKAS",
     "tabShortcut": "{{label}} · Ctrl+{{n}}",
     "wallet": "Portfel",
