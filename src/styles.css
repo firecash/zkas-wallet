@@ -2897,3 +2897,7 @@ input[inputmode="decimal"], input[inputmode="numeric"], input.mono, textarea.mon
 /* An LTR value in an end-aligned detail cell resolves `end` to its own right; in
    an RTL row the far edge is the left, so pin it there. */
 [dir="rtl"] .detail-row:not(.stacked) .v.mono { text-align: left; }
+
+/* Flag glyphs: colour emoji where the OS has them (Windows renders regional letters). */
+.lang-flag { font-size: 18px; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif; }
+.lang-button .lang-flag { font-size: 20px; }

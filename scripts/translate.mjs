@@ -7,6 +7,7 @@
 //   … de ja                                                      # only these languages
 //   … --force                                                    # retranslate everything
 //   … --dry-run                                                  # show what would be sent
+//   … --plurals                                                  # fill few/many/two/zero plural forms for languages that have them
 //   … --review                                                   # a model re-reads every translation and fixes the bad ones
 //   … --review --flagged [--stats]                                # only strings a local screen flags (terms, register, abbreviations, untranslated, length); --stats just counts
 //   TRANSLATE_BUDGET_USD=3 REVIEW_MODEL=deepseek-v4-flash …       # spend cap and model
@@ -98,7 +99,9 @@ function english() {
 // long); the budget is the target the model is pushed toward, with slack for short
 // strings, and a translation that still overruns after retries is KEPT (shortest seen)
 // rather than replaced by English — an over-long label beats an untranslated one.
-const budget = (en) => (en.length <= 24 ? Math.max(en.length + 2, Math.ceil(en.length * 1.25), 6) : Math.ceil(en.length * 1.3));
+// Short labels get 60% headroom: the earlier 25% produced period-mangled abbreviations
+// ("Встав.", "О прил.", "Синхр.") which read far worse than a slightly longer word.
+const budget = (en) => (en.length <= 24 ? Math.max(en.length + 4, Math.ceil(en.length * 1.6), 8) : Math.ceil(en.length * 1.3));
 const placeholders = (s) => (s.match(/\{\{[^}]+\}\}|<\/?[a-z0-9]+>/g) || []).sort().join("|");
 
 const GLOSSARY = `Never translate or transliterate (product/protocol names): ZKAS (the coin ticker), zkas: (address prefix), ZKas (the project), Kaspa, KAS, Tor, Orbot, Orchard, walletd, DAA, QR, Halo 2.`;
@@ -151,7 +154,7 @@ function systemPrompt(lang, termBank) {
 Input: a JSON object {strings: {key: English}, kind: {key: "button/label" | "title" | "input placeholder" | "sentence"}, maxChars: {key: N}, instructions?: {key: a per-key note from the developer that overrides the glossary for that key}}. Output: a JSON object with EXACTLY the keys of "strings", each mapped to its translation. JSON only, no commentary.
 Register: ${REGISTER[lang] || "one consistent register throughout"}. Buttons (kind button/label) take the form a native app uses on a button — an imperative verb or a short noun, never an infinitive-as-noun or a description.
 Quality bar: write what a native speaker would expect to read in a polished, popular wallet app in this language — the most natural, idiomatic, everyday wording, never a literal or bureaucratic rendering. Prefer the common term over the technically precise one when both are understood. Match the English register: plain and direct, no marketing tone, sentence case unless the English is a title.
-Length: a translation should be at most maxChars[key] characters and should be SHORTER than the English whenever the language allows. Buttons, tabs and labels are the priority: abbreviate, drop articles and filler, use the short synonym, use everyday forms — a short natural phrase beats a long precise one. If a key truly cannot fit, still answer it with the shortest natural wording; NEVER omit a key and never leave a value empty.
+Length: a translation should be at most maxChars[key] characters and should be SHORTER than the English whenever the language allows. Buttons, tabs and labels are the priority: drop articles and filler, use the short synonym, use everyday forms — a short natural phrase beats a long precise one. NEVER cut a word short with a period ("Встав.", "Einst.", "Синхр."): a full shorter word or the full word, even if it exceeds the budget a little. If a key truly cannot fit, still answer it with the shortest natural wording; NEVER omit a key and never leave a value empty.
 Example (English → German): "Confirm & send" → "Senden" is wrong (meaning lost); "Bestätigen und senden" is too long; "Bestätigen & senden" is right. "Loading…" → "Lädt…". "Show all" → "Alle".
 Placeholders and markup: keep every {{placeholder}} verbatim (same spelling, same double braces) and every tag pair such as <b>…</b>, <code>…</code>, <a>…</a> around the corresponding words; tag names are markup and are never translated; do not add, drop or reorder tags. Keys are identifiers: never translate or change them.
 Plurals: keys ending in _one / _other are the singular / plural form of the same sentence; translate both per the language's plural rules (identical if the language does not inflect for number). Keep "…" and "·" characters, numbers, units and product names as in the English.
@@ -241,6 +244,51 @@ function suspicious(lang, key, en, cur, termBank) {
     }
   }
   return reasons;
+}
+
+// Plural forms beyond one/other. i18next resolves `key_few` / `key_many` / `key_two` /
+// `key_zero` by the language's CLDR categories; when a form is missing it falls back to
+// ENGLISH, so Russian showed "5 notes" in an otherwise Russian dialog. Ask for every
+// category the language has, with the count each one stands for.
+const PLURAL_EXAMPLES = { zero: "0", one: "1", two: "2", few: "3 (2–4 in Slavic languages)", many: "11 (5–20 in Slavic; ≥1,000,000 in Romance)", other: "a general/large count" };
+async function pluralsFor(lang, en, source) {
+  const file = join(OUT_DIR, `${lang}.json`);
+  if (!existsSync(file)) return;
+  const cur = flatten(JSON.parse(readFileSync(file, "utf8")));
+  let cats;
+  try { cats = new Intl.PluralRules(lang).resolvedOptions().pluralCategories; } catch { return; }
+  const extra = cats.filter((c) => c !== "one" && c !== "other");
+  if (!extra.length) return;
+  const bases = [...new Set(Object.keys(en).filter((k) => k.endsWith("_one")).map((k) => k.slice(0, -4)))];
+  const todo = bases.filter((b) => extra.some((c) => !cur[`${b}_${c}`] || source[lang]?.[`${b}_${c}`] !== en[`${b}_other`]));
+  if (!todo.length) { console.log(`${lang}: plural forms complete`); return; }
+  const termBank = await termBankFor(lang);
+  const req = {};
+  for (const b of todo) for (const c of extra) req[`${b}_${c}`] = en[`${b}_other`];
+  const context = {};
+  for (const b of todo) context[b] = { english_one: en[`${b}_one`], english_other: en[`${b}_other`], current_one: cur[`${b}_one`], current_other: cur[`${b}_other`] };
+  const body = {
+    model: MODEL, temperature: 0.1, response_format: { type: "json_object" },
+    ...(VENICE ? { venice_parameters: { include_venice_system_prompt: false, disable_thinking: true } } : {}),
+    messages: [
+      { role: "system", content: systemPrompt(lang, termBank) + `\nPLURAL FORMS. Each requested key ends in a CLDR plural category (${extra.join(", ")}); translate the English sentence into the form ${NAMES[lang] || lang} uses for that count: ${extra.map((c) => `${c} = count ${PLURAL_EXAMPLES[c]}`).join("; ")}. Keep {{count}} and every other placeholder verbatim. \`context\` shows the English and the existing one/other translations for consistency. Answer JSON with exactly the requested keys.` },
+      { role: "user", content: JSON.stringify({ strings: req, context }) },
+    ],
+  };
+  const res = await fetch(API, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${KEY}` }, body: JSON.stringify(body), signal: AbortSignal.timeout(180_000) });
+  if (!res.ok) { console.warn(`  ${lang}: plurals HTTP ${res.status}`); return; }
+  const data = await res.json();
+  charge(MODEL, data.usage);
+  let a = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+  if (!Object.keys(req).some((k) => k in a)) { const inner = Object.values(a).find((v) => v && typeof v === "object" && Object.keys(req).some((k) => k in v)); if (inner) a = inner; }
+  let n = 0;
+  for (const [k, v] of Object.entries(a)) {
+    if (!(k in req) || typeof v !== "string" || !v.trim() || placeholders(v) !== placeholders(req[k])) continue;
+    cur[k] = v; source[lang][k] = req[k]; n++;
+  }
+  writeFileSync(file, JSON.stringify(unflatten(cur), null, 2) + "\n");
+  writeFileSync(SOURCE_FILE, JSON.stringify(source, null, 0) + "\n");
+  console.log(`  ${lang}: ${n}/${Object.keys(req).length} plural forms written (${extra.join(",")}); spent so far $${spentUsd.toFixed(2)}`);
 }
 
 async function reviewLanguage(lang, en, source) {
@@ -471,6 +519,7 @@ async function main() {
     for (let l = queue.shift(); l; l = queue.shift()) {
       source[l.code] ??= {};
       if (args.includes("--terms")) await printTermBank(l.code);
+      else if (args.includes("--plurals")) await pluralsFor(l.code, en, source);
       else if (REVIEW) await reviewLanguage(l.code, en, source);
       else await translateLanguage(l.code, en, source);
     }

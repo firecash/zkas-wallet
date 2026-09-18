@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Globe } from "lucide-react";
 import { LANGUAGES, currentLanguage, hasChosenLanguage, languageName, setLanguage } from "./i18n";
+
+const flagOf = (code: string) => LANGUAGES.find((l) => l.code === code)?.flag ?? "🌐";
 
 function LanguageSelect({ label }: { label: string }) {
   const current = currentLanguage();
@@ -42,7 +43,7 @@ export function LanguageInline() {
   const { t } = useTranslation();
   return (
     <div className="lang-inline">
-      <Globe aria-hidden="true" size={15} strokeWidth={2.2} />
+      <span className="lang-flag" aria-hidden="true">{flagOf(currentLanguage())}</span>
       <LanguageSelect label={t("languagePicker.label")} />
     </div>
   );
@@ -59,7 +60,7 @@ export function LanguageNotice() {
   if (gone || current === "en" || hasChosenLanguage()) return null;
   return (
     <div className="warnbar lang-notice" role="note">
-      <Globe className="warnbar-icon" aria-hidden="true" size={17} strokeWidth={2.2} />
+      <span className="warnbar-icon lang-flag" aria-hidden="true">{flagOf(current)}</span>
       <div className="lang-notice-body">
         <span>{t("languagePicker.autoNotice", { name: languageName(current) })}</span>
         <LanguageSelect label={t("languagePicker.label")} />
@@ -114,7 +115,7 @@ export function LanguageButton({ compact = false }: { compact?: boolean }) {
         aria-label={t("languagePicker.label")}
         title={t("languagePicker.label")}
       >
-        <Globe aria-hidden="true" size={17} strokeWidth={2.2} />
+        <span className="lang-flag" aria-hidden="true">{flagOf(current)}</span>
         {!compact && <span>{current.toUpperCase()}</span>}
       </button>
       {open &&
@@ -131,7 +132,7 @@ export function LanguageButton({ compact = false }: { compact?: boolean }) {
                     onClick={() => pick(l.code)}
                     aria-pressed={l.code === current}
                   >
-                    {l.name}
+                    <span className="lang-flag" aria-hidden="true">{l.flag}</span> {l.name}
                   </button>
                 ))}
               </div>

@@ -14,34 +14,36 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
 /// The languages the app ships. Native names are what a user looks for in a list —
-/// nobody searches for "Japanese" in a menu written in Japanese. `rtl` flips the
+/// nobody searches for "Japanese" in a menu written in Japanese. The flag is what the
+/// language button shows (a flag is recognised faster than a code; it stands for the
+/// language, not a country — Spanish gets Spain's, Swahili Kenya's). `rtl` flips the
 /// document direction for the scripts that run right-to-left.
-export const LANGUAGES: { code: string; name: string; rtl?: boolean }[] = [
-  { code: "en", name: "English" },
-  { code: "zh-CN", name: "简体中文" },
-  { code: "zh-TW", name: "繁體中文" },
-  { code: "es", name: "Español" },
-  { code: "hi", name: "हिन्दी" },
-  { code: "ar", name: "العربية", rtl: true },
-  { code: "fr", name: "Français" },
-  { code: "bn", name: "বাংলা" },
-  { code: "pt-BR", name: "Português (Brasil)" },
-  { code: "ru", name: "Русский" },
-  { code: "ur", name: "اردو", rtl: true },
-  { code: "id", name: "Bahasa Indonesia" },
-  { code: "de", name: "Deutsch" },
-  { code: "ja", name: "日本語" },
-  { code: "tr", name: "Türkçe" },
-  { code: "vi", name: "Tiếng Việt" },
-  { code: "ko", name: "한국어" },
-  { code: "it", name: "Italiano" },
-  { code: "th", name: "ไทย" },
-  { code: "pl", name: "Polski" },
-  { code: "fa", name: "فارسی", rtl: true },
-  { code: "uk", name: "Українська" },
-  { code: "nl", name: "Nederlands" },
-  { code: "ms", name: "Bahasa Melayu" },
-  { code: "sw", name: "Kiswahili" },
+export const LANGUAGES: { code: string; name: string; flag: string; rtl?: boolean }[] = [
+  { code: "en", name: "English", flag: "🇬🇧" },
+  { code: "zh-CN", name: "简体中文", flag: "🇨🇳" },
+  { code: "zh-TW", name: "繁體中文", flag: "🇹🇼" },
+  { code: "es", name: "Español", flag: "🇪🇸" },
+  { code: "hi", name: "हिन्दी", flag: "🇮🇳" },
+  { code: "ar", name: "العربية", flag: "🇸🇦", rtl: true },
+  { code: "fr", name: "Français", flag: "🇫🇷" },
+  { code: "bn", name: "বাংলা", flag: "🇧🇩" },
+  { code: "pt-BR", name: "Português (Brasil)", flag: "🇧🇷" },
+  { code: "ru", name: "Русский", flag: "🇷🇺" },
+  { code: "ur", name: "اردو", flag: "🇵🇰", rtl: true },
+  { code: "id", name: "Bahasa Indonesia", flag: "🇮🇩" },
+  { code: "de", name: "Deutsch", flag: "🇩🇪" },
+  { code: "ja", name: "日本語", flag: "🇯🇵" },
+  { code: "tr", name: "Türkçe", flag: "🇹🇷" },
+  { code: "vi", name: "Tiếng Việt", flag: "🇻🇳" },
+  { code: "ko", name: "한국어", flag: "🇰🇷" },
+  { code: "it", name: "Italiano", flag: "🇮🇹" },
+  { code: "th", name: "ไทย", flag: "🇹🇭" },
+  { code: "pl", name: "Polski", flag: "🇵🇱" },
+  { code: "fa", name: "فارسی", flag: "🇮🇷", rtl: true },
+  { code: "uk", name: "Українська", flag: "🇺🇦" },
+  { code: "nl", name: "Nederlands", flag: "🇳🇱" },
+  { code: "ms", name: "Bahasa Melayu", flag: "🇲🇾" },
+  { code: "sw", name: "Kiswahili", flag: "🇰🇪" },
 ];
 
 const LANG_KEY = "lang";
@@ -101,6 +103,31 @@ export function detectLanguage(): string {
   return "en";
 }
 
+/// i18next picks `key_few` / `key_many` / … by the language's plural rules and falls back
+/// to ENGLISH when that form is missing. The catalogues carry every form the language
+/// has (scripts/translate.mjs --plurals); this is the belt to those braces: a form that
+/// is still missing borrows the language's `_other` text, so a Russian dialog never says
+/// "5 notes" in English while the rest is Russian.
+function fillPluralForms(code: string, tree: Record<string, unknown>): Record<string, unknown> {
+  let cats: string[] = [];
+  try {
+    cats = new Intl.PluralRules(code).resolvedOptions().pluralCategories;
+  } catch {
+    return tree;
+  }
+  const walk = (node: Record<string, unknown>) => {
+    for (const [k, v] of Object.entries(node)) {
+      if (v && typeof v === "object") walk(v as Record<string, unknown>);
+      else if (k.endsWith("_other")) {
+        const base = k.slice(0, -6);
+        for (const c of cats) if (!(`${base}_${c}` in node)) node[`${base}_${c}`] = v;
+      }
+    }
+  };
+  walk(tree);
+  return tree;
+}
+
 function applyDirection(code: string) {
   if (typeof document === "undefined") return;
   const lang = LANGUAGES.find((l) => l.code === code);
@@ -125,7 +152,7 @@ export async function applyLanguage(code: string): Promise<void> {
     const loader = locales[`./locales/${code}.json`];
     if (loader) {
       try {
-        i18n.addResourceBundle(code, "translation", await loader(), true, true);
+        i18n.addResourceBundle(code, "translation", fillPluralForms(code, await loader()), true, true);
       } catch (e) {
         console.warn(`i18n: could not load ${code}`, e);
       }
