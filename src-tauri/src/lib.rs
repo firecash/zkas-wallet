@@ -1255,6 +1255,21 @@ fn allowed_wallet_api_path(path: &str) -> bool {
     )
 }
 
+#[cfg(test)]
+mod api_path_tests {
+    use super::allowed_wallet_api_path;
+    fn bare(path: &str) -> &str {
+        path.split('?').next().unwrap_or(path)
+    }
+    #[test]
+    fn query_strings_do_not_change_the_endpoint() {
+        assert!(allowed_wallet_api_path(bare("/api/wallet/history?limit=50")));
+        assert!(allowed_wallet_api_path(bare("/api/wallet/history")));
+        assert!(!allowed_wallet_api_path(bare("/api/wallet/history/../reveal?x=1")));
+        assert!(!allowed_wallet_api_path(bare("/api/admin?limit=50")));
+    }
+}
+
 fn config_of(e: &mut Engine) -> WalletConfig {
     WalletConfig {
         base: format!("http://127.0.0.1:{}", e.port),
@@ -1301,7 +1316,11 @@ async fn wallet_api_request(
     if !matches!(method.as_str(), "GET" | "POST") {
         return Err("wallet API method is not allowed".into());
     }
-    if !allowed_wallet_api_path(&path) {
+    // The allowlist names endpoints; a query string is the endpoint's own business
+    // (`/api/wallet/history?limit=50`, `/api/wallet/address?index=N`). Matching the
+    // whole string rejected every call that carried one — History sat on its loading
+    // skeleton forever on desktop in 1.0.35/1.0.36 while web and Android were fine.
+    if !allowed_wallet_api_path(path.split('?').next().unwrap_or(&path)) {
         return Err("wallet API path is not allowed".into());
     }
     if !valid_wallet_token(&wallet_token) {
