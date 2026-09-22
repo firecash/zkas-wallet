@@ -124,7 +124,8 @@
     "address": "Adresse",
     "signatureLabel": "Signature (fvk‖sig, hex)",
     "copySignature": "Copier signature",
-    "sign": "Signer"
+    "sign": "Signer",
+    "fvkWarning": "Signer livre votre clé de visualisation au vérificateur : il pourra voir le solde, l’historique et les destinations de ce portefeuille. Si c’est important, signez depuis un portefeuille séparé — vous pouvez en ajouter un dans Paramètres."
   },
   "autoConsolidationCard": {
     "turnOn": "Activer la consolidation auto",
@@ -383,7 +384,8 @@
     "confirmedOnChain": "Confirmé on-chain",
     "privateLabel": "Libellé privé",
     "labelPlaceholder": "Commande, client, motif…",
-    "labelSaved": "Enregistré sur l’appareil"
+    "labelSaved": "Enregistré sur l’appareil",
+    "provePayment": "Prouver le paiement"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} portefeuille",
@@ -436,7 +438,8 @@
     "hidden": "Masqué",
     "signatures": "Signatures",
     "sectionAbout": "À propos",
-    "aboutZkas": "À propos de ZKas"
+    "aboutZkas": "À propos de ZKas",
+    "privateSends": "Envois privés"
   },
   "saveContactDialog": {
     "namePlaceholder": "ex. Alice",
@@ -1343,7 +1346,8 @@
     "intro": "Paiements par lot et gestion des pièces.",
     "deviceSigned": "Signé par l’appareil",
     "tabBatch": "Envoi groupé",
-    "tabMaintenance": "Maintenance"
+    "tabMaintenance": "Maintenance",
+    "tabVerify": "Vérifier un paiement"
   },
   "endpointField": {
     "hint": "IP et port de n'importe quel nœud — pas besoin d'être sur cet ordinateur. ex. 203.0.113.5:16110",
@@ -1820,5 +1824,36 @@
   },
   "mainRoot": {
     "opening": "Ouverture…"
+  },
+  "privateSends": {
+    "intro": "Vos paiements incluent normalement une copie de leurs détails chiffrée pour <b>votre propre</b> clé, afin que votre historique survive à une restauration et que vous puissiez prouver un paiement plus tard. Les envois privés omettent cette copie.",
+    "cost": "Le coût est permanent : un envoi privé ne peut pas être récupéré après une restauration de ce portefeuille, ne peut pas être affiché dans l’historique sur un autre appareil, et ne peut être prouvé à personne. Le destinataire le reçoit normalement.",
+    "turnOn": "Activer les envois privés",
+    "turnOff": "Désactiver les envois privés"
+  },
+  "paymentProof": {
+    "title": "Prouver ce paiement",
+    "intro": "Crée une preuve que cette transaction a payé cette adresse de ce montant. N’importe qui peut la vérifier sur la chaîne ; elle ne révèle rien sur votre solde ou vos autres paiements.",
+    "create": "Créer la preuve",
+    "paid": "Payé",
+    "to": "À",
+    "tx": "Transaction",
+    "includeMemo": "Inclure la pièce privée dans la preuve",
+    "copy": "Copier la preuve",
+    "copied": "Copié ✓",
+    "saveFile": "Enregistrer en fichier",
+    "disclosureNote": "Quiconque détient cette preuve apprend ce seul paiement — le destinataire, le montant et la pièce si vous l’avez incluse. Rien d’autre.",
+    "close": "Fermer",
+    "errNone": "Ce paiement ne peut pas être prouvé : il a été envoyé avant que le portefeuille ne conserve les détails récupérables.",
+    "errNotJson": "Ce n’est pas une preuve de paiement.",
+    "verifyTitle": "Vérifier un paiement",
+    "verifyIntro": "Collez une preuve que quelqu’un vous a envoyée. La chaîne décide — aucune confiance en eux ou en nous.",
+    "pastePlaceholder": "Collez la preuve ici",
+    "verify": "Vérifier",
+    "valid": "Valide : {{amount}} ZKAS ont été payés à {{address}}.",
+    "invalid": "Non valide.",
+    "confirmations_one": "{{count}} confirmation",
+    "confirmations_other": "{{count}} confirmations",
+    "verifyNote": "La preuve est vérifiée par rapport à la transaction sur la chaîne : le destinataire et le montant divulgués doivent reproduire l’engagement enregistré par le bloc."
   }
 }

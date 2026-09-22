@@ -124,7 +124,8 @@
     "address": "Địa chỉ",
     "signatureLabel": "Chữ ký (fvk‖sig, hex)",
     "copySignature": "Sao chép chữ ký",
-    "sign": "Ký"
+    "sign": "Ký",
+    "fvkWarning": "Ký sẽ trao khóa xem của bạn cho người xác minh: từ đó họ có thể thấy số dư, lịch sử và nơi bạn gửi của ví này. Nếu điều đó quan trọng, hãy ký từ một ví riêng — bạn có thể thêm ví trong Cài đặt."
   },
   "autoConsolidationCard": {
     "turnOn": "Bật tự động gộp",
@@ -408,7 +409,8 @@
     "sendAgain": "Gửi lại",
     "viewOnExplorer": "Xem trên trình khám phá",
     "explorerNote": "Trình khám phá chỉ cho thấy một giao dịch ẩn danh đã xảy ra — không bao giờ hiển thị chi tiết.",
-    "close": "Đóng"
+    "close": "Đóng",
+    "provePayment": "Chứng minh thanh toán"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} ví",
@@ -461,7 +463,8 @@
     "hidden": "Ẩn",
     "signatures": "Chữ ký",
     "sectionAbout": "Giới thiệu",
-    "aboutZkas": "Về ZKas"
+    "aboutZkas": "Về ZKas",
+    "privateSends": "Gửi riêng tư"
   },
   "appearanceCard": {
     "title": "Màu chủ đạo",
@@ -1164,7 +1167,8 @@
     "intro": "Thanh toán hàng loạt và quản lý đồng.",
     "deviceSigned": "Thiết bị đã ký",
     "tabBatch": "Gửi hàng loạt",
-    "tabMaintenance": "Bảo trì"
+    "tabMaintenance": "Bảo trì",
+    "tabVerify": "Xác minh thanh toán"
   },
   "mining": {
     "installZkasNodeUpdate": "Cập nhật nút ZKAS",
@@ -1820,5 +1824,36 @@
     "unsafeConsolidation": "Dịch vụ ví trả về hợp nhất không an toàn.",
     "noSpendableToSplit": "Hiện không có đồng nào khả dụng để tách. Chờ tiền gần đây đã xác nhận (khoảng 10 phút), rồi thử lại.",
     "fewerThanThree": "Hiện có ít hơn ba đồng khả dụng, nên việc gộp sẽ không giảm số lượng đồng trong ví."
+  },
+  "privateSends": {
+    "intro": "Các khoản thanh toán của bạn thường mang theo một bản sao chi tiết được mã hóa bằng khóa của <b>chính bạn</b>, để lịch sử của bạn tồn tại sau khi khôi phục và bạn có thể chứng minh khoản thanh toán sau này. Gửi riêng tư sẽ bỏ bản sao đó đi.",
+    "cost": "Cái giá là vĩnh viễn: một giao dịch gửi riêng tư không thể khôi phục sau khi bạn khôi phục ví này, không thể hiển thị trong lịch sử trên thiết bị khác và không thể chứng minh với bất kỳ ai. Người nhận vẫn nhận được bình thường.",
+    "turnOn": "Bật gửi riêng tư",
+    "turnOff": "Tắt gửi riêng tư"
+  },
+  "paymentProof": {
+    "title": "Chứng minh thanh toán này",
+    "intro": "Tạo bằng chứng rằng giao dịch này đã trả cho địa chỉ đó số lượng đó. Bất kỳ ai cũng có thể kiểm tra nó với chuỗi; nó không tiết lộ gì về số dư hay các khoản thanh toán khác của bạn.",
+    "create": "Tạo bằng chứng",
+    "paid": "Đã trả",
+    "to": "Đến",
+    "tx": "Giao dịch",
+    "includeMemo": "Bao gồm ghi chú riêng tư trong bằng chứng",
+    "copy": "Sao chép bằng chứng",
+    "copied": "Đã sao chép ✓",
+    "saveFile": "Lưu thành tệp",
+    "disclosureNote": "Ai giữ bằng chứng này sẽ biết một khoản thanh toán này — người nhận, số lượng và ghi chú nếu bạn bao gồm. Không gì khác.",
+    "close": "Đóng",
+    "errNone": "Không thể chứng minh khoản thanh toán này: nó được gửi trước khi ví lưu chi tiết có thể khôi phục.",
+    "errNotJson": "Đó không phải là bằng chứng thanh toán.",
+    "verifyTitle": "Xác minh thanh toán",
+    "verifyIntro": "Dán bằng chứng ai đó gửi cho bạn. Chuỗi quyết định — không cần tin họ hay chúng tôi.",
+    "pastePlaceholder": "Dán bằng chứng vào đây",
+    "verify": "Xác minh",
+    "valid": "Hợp lệ: {{amount}} ZKAS đã được trả cho {{address}}.",
+    "invalid": "Không hợp lệ.",
+    "confirmations_one": "{{count}} xác nhận",
+    "confirmations_other": "{{count}} xác nhận",
+    "verifyNote": "Bằng chứng được kiểm tra với giao dịch trên chuỗi: người nhận và số lượng được tiết lộ phải khớp với cam kết mà khối đã ghi lại."
   }
 }

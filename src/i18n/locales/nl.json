@@ -124,7 +124,8 @@
     "address": "Adres",
     "signatureLabel": "Handtekening (fvk‖sig, hex)",
     "copySignature": "Kopieer handtekening",
-    "sign": "Teken"
+    "sign": "Teken",
+    "fvkWarning": "Ondertekenen geeft de verificateur je kijksleutel: vanaf dan kunnen ze het saldo, de geschiedenis en je betalingen van deze wallet zien. Als dat belangrijk is, onderteken dan vanuit een aparte wallet — je kunt er een toevoegen in Instellingen."
   },
   "daemonSetting": {
     "timedOut": "time-out na 5s",
@@ -408,7 +409,8 @@
     "sendAgain": "Opnieuw verzenden",
     "viewOnExplorer": "Bekijk in verkenner",
     "explorerNote": "De verkenner toont alleen dat een afgeschermde transactie plaatsvond — nooit de details.",
-    "close": "Sluiten"
+    "close": "Sluiten",
+    "provePayment": "Betaling bewijzen"
   },
   "settingsPane": {
     "viewOnlyWallet": "Alleen bekijken",
@@ -435,7 +437,8 @@
     "appLock": "Appvergrendeling",
     "fingerprint": "Vingerafdruk",
     "on": "Aan",
-    "off": "Uit"
+    "off": "Uit",
+    "privateSends": "Privé verzendingen"
   },
   "appearanceCard": {
     "title": "Accentkleur",
@@ -1343,7 +1346,8 @@
     "intro": "Batch-uitbetalingen en muntbeheer.",
     "deviceSigned": "Apparaat-ondertekend",
     "tabBatch": "Batch verzenden",
-    "tabMaintenance": "Onderhoud"
+    "tabMaintenance": "Onderhoud",
+    "tabVerify": "Betaling verifiëren"
   },
   "nodeStartDialog": {
     "inbound": "Inkomende peers accepteren",
@@ -1820,5 +1824,36 @@
   "bootGuard": {
     "couldNotStart": "De portemonnee kon niet starten. Site-opslag (cookies / sitegegevens) moet ingeschakeld zijn voor deze site — uw portemonnee en instellingen staan daar. Sta dit toe voor {{host}} en herlaad.",
     "thisSite": "deze site"
+  },
+  "privateSends": {
+    "intro": "Je betalingen bevatten normaal een kopie van hun details, versleuteld naar <b>je eigen</b> sleutel, zodat je geschiedenis een herstel overleeft en je later een betaling kunt bewijzen. Privé verzendingen laten die kopie weg.",
+    "cost": "De kost is permanent: een privé verzending kan niet worden hersteld nadat je deze wallet herstelt, kan niet in de geschiedenis op een ander apparaat worden getoond en kan aan niemand worden bewezen. De ontvanger ontvangt hem nog steeds normaal.",
+    "turnOn": "Privé verzendingen aan",
+    "turnOff": "Privé verzendingen uit"
+  },
+  "paymentProof": {
+    "title": "Deze betaling bewijzen",
+    "intro": "Maakt een bewijs dat deze transactie dat adres dat bedrag heeft betaald. Iedereen kan het controleren tegen de keten; het zegt niets over je saldo of je andere betalingen.",
+    "create": "Bewijs aanmaken",
+    "paid": "Betaald",
+    "to": "Aan",
+    "tx": "Transactie",
+    "includeMemo": "Privé-memo opnemen in het bewijs",
+    "copy": "Bewijs kopiëren",
+    "copied": "Gekopieerd ✓",
+    "saveFile": "Opslaan als bestand",
+    "disclosureNote": "Wie dit bewijs in handen heeft, leert deze ene betaling — de ontvanger, het bedrag en de memo als je die hebt opgenomen. Verder niets.",
+    "close": "Sluiten",
+    "errNone": "Deze betaling kan niet worden bewezen: hij is verzonden voordat de wallet herstelbare details bijhield.",
+    "errNotJson": "Dat is geen betalingsbewijs.",
+    "verifyTitle": "Een betaling verifiëren",
+    "verifyIntro": "Plak een bewijs dat iemand je heeft gestuurd. De keten beslist — geen vertrouwen in hen of in ons nodig.",
+    "pastePlaceholder": "Plak het bewijs hier",
+    "verify": "Verifiëren",
+    "valid": "Geldig: {{amount}} ZKAS is betaald aan {{address}}.",
+    "invalid": "Niet geldig.",
+    "confirmations_one": "{{count}} bevestiging",
+    "confirmations_other": "{{count}} bevestigingen",
+    "verifyNote": "Het bewijs wordt gecontroleerd tegen de transactie op de keten: de onthulde ontvanger en het bedrag moeten de commitment reproduceren die het blok heeft vastgelegd."
   }
 }

@@ -124,7 +124,8 @@
     "address": "Indirizzo",
     "signatureLabel": "Firma (fvk‖sig, hex)",
     "copySignature": "Copia firma",
-    "sign": "Firma"
+    "sign": "Firma",
+    "fvkWarning": "Firmare consegna la tua chiave di sola lettura al verificatore: da quel momento potrà vedere il saldo, la cronologia e le tue destinazioni. Se è un problema, firma da un altro portafoglio — puoi aggiungerlo nelle Impostazioni."
   },
   "daemonSetting": {
     "timedOut": "timeout dopo 5s",
@@ -408,7 +409,8 @@
     "sendAgain": "Invia di nuovo",
     "viewOnExplorer": "Vedi su esploratore",
     "explorerNote": "L'explorer mostra solo che una transazione schermata è avvenuta — mai i dettagli.",
-    "close": "Chiudi"
+    "close": "Chiudi",
+    "provePayment": "Prova pagamento"
   },
   "settingsPane": {
     "viewOnlyWallet": "Portafoglio solo osservazione",
@@ -435,7 +437,8 @@
     "appLock": "Blocco app",
     "fingerprint": "Impronta digitale",
     "on": "Attivo",
-    "off": "Disattivo"
+    "off": "Disattivo",
+    "privateSends": "Invii privati"
   },
   "appearanceCard": {
     "title": "Colore accento",
@@ -1304,7 +1307,8 @@
     "intro": "Pagamenti batch e gestione monete.",
     "deviceSigned": "Firmato dal dispositivo",
     "tabBatch": "Invio multiplo",
-    "tabMaintenance": "Manutenzione"
+    "tabMaintenance": "Manutenzione",
+    "tabVerify": "Verifica un pagamento"
   },
   "services": {
     "catAll": "Tutti",
@@ -1820,5 +1824,36 @@
   },
   "mainRoot": {
     "opening": "Apertura…"
+  },
+  "privateSends": {
+    "intro": "Di solito i tuoi pagamenti includono una copia dei dettagli cifrata con la <b>tua</b> chiave, così la cronologia sopravvive a un ripristino e puoi provare un pagamento. Gli invii privati la omettono.",
+    "cost": "Il costo è permanente: un invio privato non può essere recuperato dopo un ripristino del portafoglio, non apparirà nella cronologia su altri dispositivi e non potrai provarlo a nessuno. Il destinatario lo riceve normalmente.",
+    "turnOn": "Attiva invii privati",
+    "turnOff": "Disattiva invii privati"
+  },
+  "paymentProof": {
+    "title": "Prova questo pagamento",
+    "intro": "Crea una prova che questa transazione ha pagato quell'indirizzo quell'importo. Chiunque può verificarla sulla catena; non rivela nulla sul tuo saldo o sugli altri pagamenti.",
+    "create": "Crea prova",
+    "paid": "Pagato",
+    "to": "A",
+    "tx": "Transazione",
+    "includeMemo": "Includi la nota privata nella prova",
+    "copy": "Copia prova",
+    "copied": "Copiato ✓",
+    "saveFile": "Salva come file",
+    "disclosureNote": "Chiunque abbia questa prova conosce questo singolo pagamento — destinatario, importo e nota se l'hai inclusa. Nient'altro.",
+    "close": "Chiudi",
+    "errNone": "Questo pagamento non può essere provato: è stato inviato prima che il portafoglio conservasse i dettagli recuperabili.",
+    "errNotJson": "Non è una prova di pagamento.",
+    "verifyTitle": "Verifica un pagamento",
+    "verifyIntro": "Incolla una prova che ti hanno inviato. Decide la catena — non devi fidarti di loro né di noi.",
+    "pastePlaceholder": "Incolla qui la prova",
+    "verify": "Verifica",
+    "valid": "Valido: {{amount}} ZKAS pagati a {{address}}.",
+    "invalid": "Non valido.",
+    "confirmations_one": "{{count}} conferma",
+    "confirmations_other": "{{count}} conferme",
+    "verifyNote": "La prova è verificata sulla transazione in catena: il destinatario e l'importo rivelati devono riprodurre l'impegno registrato nel blocco."
   }
 }

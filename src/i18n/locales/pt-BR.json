@@ -124,7 +124,8 @@
     "address": "Endereço",
     "signatureLabel": "Assinatura (fvk‖sig, hex)",
     "copySignature": "Copiar assinatura",
-    "sign": "Assinar"
+    "sign": "Assinar",
+    "fvkWarning": "Assinar entrega sua chave de visualização ao verificador: a partir daí ele pode ver o saldo, o histórico e os envios desta carteira. Se isso importa, assine de uma carteira separada — você pode adicionar uma em Configurações."
   },
   "daemonSetting": {
     "timedOut": "tempo esgotado após 5s",
@@ -383,7 +384,8 @@
     "confirmedOnChain": "Confirmado na cadeia",
     "privateLabel": "Rótulo privado",
     "labelPlaceholder": "Pedido, cliente, finalidade…",
-    "labelSaved": "Salvo neste dispositivo"
+    "labelSaved": "Salvo neste dispositivo",
+    "provePayment": "Provar pagamento"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} carteira",
@@ -436,7 +438,8 @@
     "hidden": "Oculto",
     "signatures": "Assinaturas",
     "sectionAbout": "Sobre",
-    "aboutZkas": "Sobre o ZKas"
+    "aboutZkas": "Sobre o ZKas",
+    "privateSends": "Envios privados"
   },
   "setup": {
     "title": "Sem conexão com o serviço de carteira",
@@ -1130,7 +1133,8 @@
     "intro": "Pagamentos em lote e gerenciamento de moedas.",
     "deviceSigned": "Assinado no dispositivo",
     "tabBatch": "Envio em lote",
-    "tabMaintenance": "Manutenção"
+    "tabMaintenance": "Manutenção",
+    "tabVerify": "Verificar pagamento"
   },
   "mining": {
     "installZkasNodeUpdate": "Atualização do nó ZKAS",
@@ -1820,5 +1824,36 @@
     "closeLogsAria": "Fechar logs",
     "closeTitle": "Fechar",
     "interrupted": "Eventos ao vivo foram interrompidos. A consulta continuará tentando: {{error}}"
+  },
+  "privateSends": {
+    "intro": "Seus pagamentos normalmente levam uma cópia dos detalhes criptografada para <b>sua própria</b> chave, para que seu histórico sobreviva a uma restauração e você possa provar um pagamento depois. Envios privados deixam essa cópia de fora.",
+    "cost": "O custo é permanente: um envio privado não pode ser recuperado após restaurar esta carteira, não pode ser exibido no histórico em outro dispositivo e não pode ser provado a ninguém. O destinatário ainda o recebe normalmente.",
+    "turnOn": "Ativar envios privados",
+    "turnOff": "Desativar envios privados"
+  },
+  "paymentProof": {
+    "title": "Provar este pagamento",
+    "intro": "Cria uma prova de que esta transação pagou aquele valor àquele endereço. Qualquer um pode verificá-la na cadeia; ela não revela nada sobre seu saldo ou outros pagamentos.",
+    "create": "Criar prova",
+    "paid": "Pago",
+    "to": "Para",
+    "tx": "Transação",
+    "includeMemo": "Incluir a mensagem privada na prova",
+    "copy": "Copiar prova",
+    "copied": "Copiado ✓",
+    "saveFile": "Salvar como arquivo",
+    "disclosureNote": "Quem tiver esta prova fica sabendo deste único pagamento — o destinatário, o valor e a mensagem, se você a incluiu. Nada mais.",
+    "close": "Fechar",
+    "errNone": "Este pagamento não pode ser provado: foi enviado antes de a carteira manter detalhes recuperáveis.",
+    "errNotJson": "Isso não é uma prova de pagamento.",
+    "verifyTitle": "Verificar um pagamento",
+    "verifyIntro": "Cole uma prova que alguém lhe enviou. A cadeia decide — sem confiança neles ou em nós.",
+    "pastePlaceholder": "Cole a prova aqui",
+    "verify": "Verificar",
+    "valid": "Válido: {{amount}} ZKAS foram pagos para {{address}}.",
+    "invalid": "Inválido.",
+    "confirmations_one": "{{count}} confirmação",
+    "confirmations_other": "{{count}} confirmações",
+    "verifyNote": "A prova é verificada contra a transação na cadeia: o destinatário e o valor revelados devem reproduzir o compromisso registrado no bloco."
   }
 }

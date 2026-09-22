@@ -161,7 +161,8 @@
     "address": "Alamat",
     "signatureLabel": "Tandatangan (fvk‖sig, hex)",
     "copySignature": "Salin tandatangan",
-    "sign": "Tandatangan"
+    "sign": "Tandatangan",
+    "fvkWarning": "Menandatangani menyerahkan kunci lihat anda kepada pengesah: selepas itu mereka boleh lihat baki, sejarah dan tujuan hantaran dompet ini. Jika itu penting, tandatangani dari dompet berasingan — anda boleh tambah satu di Tetapan."
   },
   "networkPrivacyLabel": {
     "phone": "Pada telefon ini",
@@ -378,7 +379,8 @@
     "appLock": "Kunci aplikasi",
     "fingerprint": "Cap jari",
     "on": "Hidup",
-    "off": "Mati"
+    "off": "Mati",
+    "privateSends": "Hantaran peribadi"
   },
   "appearanceCard": {
     "title": "Warna aksen",
@@ -448,7 +450,8 @@
     "confirmedOnChain": "Disahkan on-chain",
     "privateLabel": "Label peribadi",
     "labelPlaceholder": "Pesanan, pelanggan, tujuan…",
-    "labelSaved": "Disimpan pada peranti ini"
+    "labelSaved": "Disimpan pada peranti ini",
+    "provePayment": "Buktikan bayaran"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} dompet",
@@ -1311,7 +1314,8 @@
     "intro": "Pembayaran kelompok dan pengurusan syiling.",
     "deviceSigned": "Ditandatangani peranti",
     "tabBatch": "Hantar pukal",
-    "tabMaintenance": "Penyelenggaraan"
+    "tabMaintenance": "Penyelenggaraan",
+    "tabVerify": "Sahkan bayaran"
   },
   "endpointField": {
     "hint": "IP dan port mana-mana nod — tidak semestinya pada komputer ini. cth. 203.0.113.5:16110",
@@ -1820,5 +1824,36 @@
     "unsafeConsolidation": "Perkhidmatan dompet mengembalikan penyatuan yang tidak selamat.",
     "noSpendableToSplit": "Tiada syiling boleh belanja tersedia untuk dipecahkan sekarang. Tunggu dana terkini matang (kira-kira 10 minit), kemudian cuba lagi.",
     "fewerThanThree": "Kurang daripada tiga syiling boleh dibelanjakan sekarang, jadi penggabungan tidak akan mengurangkan kiraan syiling dompet."
+  },
+  "privateSends": {
+    "intro": "Bayaran anda biasanya membawa salinan butiran yang disulitkan kepada kunci <b>anda sendiri</b>, supaya sejarah terselamat selepas pemulihan dan anda boleh buktikan bayaran kemudian. Hantaran peribadi tinggalkan salinan itu.",
+    "cost": "Kosnya kekal: hantaran peribadi tidak boleh dipulihkan selepas anda pulihkan dompet ini, tidak boleh dipapar dalam sejarah pada peranti lain, dan tidak boleh dibuktikan kepada sesiapa. Penerima tetap menerimanya seperti biasa.",
+    "turnOn": "Hidupkan hantaran peribadi",
+    "turnOff": "Matikan hantaran peribadi"
+  },
+  "paymentProof": {
+    "title": "Buktikan bayaran ini",
+    "intro": "Cipta bukti bahawa transaksi ini membayar alamat itu jumlah itu. Sesiapa sahaja boleh semak terhadap rantaian; ia tidak dedahkan baki atau bayaran lain anda.",
+    "create": "Cipta bukti",
+    "paid": "Dibayar",
+    "to": "Kepada",
+    "tx": "Transaksi",
+    "includeMemo": "Sertakan nota peribadi dalam bukti",
+    "copy": "Salin bukti",
+    "copied": "Disalin ✓",
+    "saveFile": "Simpan sebagai fail",
+    "disclosureNote": "Sesiapa yang memegang bukti ini mengetahui satu bayaran ini — penerima, jumlah, dan nota jika anda sertakan. Tiada yang lain.",
+    "close": "Tutup",
+    "errNone": "Bayaran ini tidak boleh dibuktikan: ia dihantar sebelum dompet menyimpan butiran boleh pulih.",
+    "errNotJson": "Itu bukan bukti bayaran.",
+    "verifyTitle": "Sahkan bayaran",
+    "verifyIntro": "Tampal bukti yang dihantar kepada anda. Rantaian yang tentukan — tidak perlu percayakan mereka atau kami.",
+    "pastePlaceholder": "Tampal bukti di sini",
+    "verify": "Sahkan",
+    "valid": "Sah: {{amount}} ZKAS telah dibayar kepada {{address}}.",
+    "invalid": "Tidak sah.",
+    "confirmations_one": "{{count}} pengesahan",
+    "confirmations_other": "{{count}} pengesahan",
+    "verifyNote": "Bukti disemak terhadap transaksi pada rantaian: penerima dan jumlah yang didedahkan mesti menghasilkan komitmen yang direkodkan oleh blok."
   }
 }

@@ -124,7 +124,8 @@
     "address": "Dirección",
     "signatureLabel": "Firma (fvk‖sig, hex)",
     "copySignature": "Copiar firma",
-    "sign": "Firmar"
+    "sign": "Firmar",
+    "fvkWarning": "Firmar entrega tu clave de visualización al verificador: desde entonces podrá ver el saldo, el historial y los envíos de esta billetera. Si eso importa, firma desde otra billetera — puedes añadir una en Configuración."
   },
   "daemonSetting": {
     "timedOut": "tiempo de espera agotado (5 s)",
@@ -378,7 +379,8 @@
     "appLock": "Bloqueo de app",
     "fingerprint": "Huella digital",
     "on": "Activo",
-    "off": "Inactivo"
+    "off": "Inactivo",
+    "privateSends": "Envíos privados"
   },
   "appearanceCard": {
     "title": "Color de acento",
@@ -448,7 +450,8 @@
     "confirmedOnChain": "Confirmado en cadena",
     "privateLabel": "Etiqueta privada",
     "labelPlaceholder": "Pedido, cliente, propósito…",
-    "labelSaved": "Guardado en este dispositivo"
+    "labelSaved": "Guardado en este dispositivo",
+    "provePayment": "Probar pago"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} cartera",
@@ -1205,7 +1208,8 @@
     "intro": "Pagos por lotes y gestión de monedas.",
     "deviceSigned": "Firmado por dispositivo",
     "tabBatch": "Envío por lote",
-    "tabMaintenance": "Mantenimiento"
+    "tabMaintenance": "Mantenimiento",
+    "tabVerify": "Verificar un pago"
   },
   "mining": {
     "installZkasNodeUpdate": "Actualizar nodo ZKAS",
@@ -1820,5 +1824,36 @@
   },
   "mainRoot": {
     "opening": "Abriendo…"
+  },
+  "privateSends": {
+    "intro": "Tus pagos normalmente llevan una copia de sus detalles cifrada para <b>tu propia</b> clave, así tu historial sobrevive a una restauración y puedes probar un pago después. Los envíos privados omiten esa copia.",
+    "cost": "El costo es permanente: un envío privado no se puede recuperar tras restaurar esta billetera, no se muestra en el historial en otro dispositivo y no se puede probar a nadie. El destinatario lo recibe normalmente.",
+    "turnOn": "Activar envíos privados",
+    "turnOff": "Desactivar envíos privados"
+  },
+  "paymentProof": {
+    "title": "Probar este pago",
+    "intro": "Crea una prueba de que esta transacción pagó ese monto a esa dirección. Cualquiera puede verificarla contra la cadena; no revela nada sobre tu saldo ni tus otros pagos.",
+    "create": "Crear prueba",
+    "paid": "Pagado",
+    "to": "A",
+    "tx": "Transacción",
+    "includeMemo": "Incluir la nota privada en la prueba",
+    "copy": "Copiar prueba",
+    "copied": "Copiado ✓",
+    "saveFile": "Guardar archivo",
+    "disclosureNote": "Quien tenga esta prueba sabrá solo este pago: el destinatario, el monto y la nota si la incluiste. Nada más.",
+    "close": "Cerrar",
+    "errNone": "Este pago no se puede probar: se envió antes de que la billetera guardara detalles recuperables.",
+    "errNotJson": "Eso no es una prueba de pago.",
+    "verifyTitle": "Verificar un pago",
+    "verifyIntro": "Pega una prueba que alguien te envió. La cadena decide — sin confiar en ellos ni en nosotros.",
+    "pastePlaceholder": "Pega la prueba aquí",
+    "verify": "Verificar",
+    "valid": "Válido: {{amount}} ZKAS pagados a {{address}}.",
+    "invalid": "No válido.",
+    "confirmations_one": "{{count}} confirmación",
+    "confirmations_other": "{{count}} confirmaciones",
+    "verifyNote": "La prueba se verifica contra la transacción en la cadena: el destinatario y el monto revelados deben reproducir el compromiso que registró el bloque."
   }
 }

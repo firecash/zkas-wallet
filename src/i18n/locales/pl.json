@@ -76,7 +76,8 @@
     "address": "Adres",
     "signatureLabel": "Podpis (fvk‖sig, hex)",
     "copySignature": "Kopiuj podpis",
-    "sign": "Podpisz"
+    "sign": "Podpisz",
+    "fvkWarning": "Podpisanie przekazuje weryfikatorowi twój klucz podglądu: od tej chwili może on widzieć saldo tego portfela, jego historię i dokąd wysyłasz. Jeśli to istotne, podpisz z osobnego portfela — możesz go dodać w ustawieniach."
   },
   "verify": {
     "title": "Weryfikuj wiadomość",
@@ -336,7 +337,8 @@
     "sendAgain": "Wyślij ponownie",
     "viewOnExplorer": "Zobacz w eksploratorze",
     "explorerNote": "Eksplorator pokazuje tylko, że zaszła chroniona transakcja — nigdy jej szczegółów.",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "provePayment": "Udowodnij płatność"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} portfel",
@@ -389,7 +391,8 @@
     "hidden": "Ukryte",
     "signatures": "Podpisy",
     "sectionAbout": "O aplikacji",
-    "aboutZkas": "O ZKas"
+    "aboutZkas": "O ZKas",
+    "privateSends": "Prywatne wysyłki"
   },
   "renameWallet": {
     "title": "Zmień nazwę portfela",
@@ -1205,7 +1208,8 @@
     "intro": "Wypłaty zbiorcze i zarządzanie monetami.",
     "deviceSigned": "Podpisane urządzeniem",
     "tabBatch": "Wysyłka grupowa",
-    "tabMaintenance": "Konserwacja"
+    "tabMaintenance": "Konserwacja",
+    "tabVerify": "Zweryfikuj płatność"
   },
   "mining": {
     "installZkasNodeUpdate": "Aktualizacja węzła ZKAS",
@@ -1820,5 +1824,36 @@
   },
   "mainRoot": {
     "opening": "Otwieranie…"
+  },
+  "privateSends": {
+    "intro": "Twoje płatności zwykle zawierają kopię szczegółów zaszyfrowaną <b>twoim własnym</b> kluczem, dzięki czemu historia przetrwa przywrócenie i możesz później udowodnić płatność. Prywatne wysyłki pomijają tę kopię.",
+    "cost": "Koszt jest trwały: prywatnej wysyłki nie da się odzyskać po przywróceniu portfela, nie będzie widoczna w historii na innym urządzeniu i nie można jej nikomu udowodnić. Odbiorca i tak otrzymuje ją normalnie.",
+    "turnOn": "Włącz prywatne wysyłki",
+    "turnOff": "Wyłącz prywatne wysyłki"
+  },
+  "paymentProof": {
+    "title": "Udowodnij tę płatność",
+    "intro": "Tworzy dowód, że ta transakcja zapłaciła ten adres tę kwotę. Każdy może to sprawdzić w łańcuchu; nie ujawnia nic o twoim saldzie ani innych płatnościach.",
+    "create": "Utwórz dowód",
+    "paid": "Zapłacono",
+    "to": "Do",
+    "tx": "Transakcja",
+    "includeMemo": "Dołącz prywatną notatkę do dowodu",
+    "copy": "Kopiuj dowód",
+    "copied": "Skopiowano ✓",
+    "saveFile": "Zapisz jako plik",
+    "disclosureNote": "Ktokolwiek ma ten dowód, poznaje tę jedną płatność — odbiorcę, kwotę i notatkę, jeśli ją dołączono. Nic więcej.",
+    "close": "Zamknij",
+    "errNone": "Tej płatności nie da się udowodnić: została wysłana, zanim portfel zachowywał szczegóły do odzyskania.",
+    "errNotJson": "To nie jest dowód płatności.",
+    "verifyTitle": "Zweryfikuj płatność",
+    "verifyIntro": "Wklej dowód, który ktoś ci przesłał. Decyduje łańcuch — nie musisz ufać im ani nam.",
+    "pastePlaceholder": "Wklej tutaj dowód",
+    "verify": "Zweryfikuj",
+    "valid": "Ważny: {{amount}} ZKAS zapłacono na {{address}}.",
+    "invalid": "Nieważny.",
+    "confirmations_one": "{{count}} potwierdzenie",
+    "confirmations_other": "{{count}} potwierdzeń",
+    "verifyNote": "Dowód jest sprawdzany względem transakcji w łańcuchu: ujawniony odbiorca i kwota muszą odtworzyć zobowiązanie zapisane w bloku."
   }
 }

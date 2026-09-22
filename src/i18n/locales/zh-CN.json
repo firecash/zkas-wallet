@@ -76,7 +76,8 @@
     "address": "地址",
     "signatureLabel": "签名 (fvk‖sig, hex)",
     "copySignature": "复制签名",
-    "sign": "签名"
+    "sign": "签名",
+    "fvkWarning": "签名会将你的查看密钥交给验证者：此后他们可以看到此钱包的余额、历史记录和你的转账去向。如果这很重要，请用另一个钱包签名——你可以在设置中添加一个。"
   },
   "verify": {
     "title": "验证消息",
@@ -383,7 +384,8 @@
     "confirmedOnChain": "链上已确认",
     "privateLabel": "私密标签",
     "labelPlaceholder": "订单、客户、用途…",
-    "labelSaved": "已保存在本设备"
+    "labelSaved": "已保存在本设备",
+    "provePayment": "证明支付"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} 个钱包",
@@ -436,7 +438,8 @@
     "hidden": "隐藏",
     "signatures": "签名",
     "sectionAbout": "关于",
-    "aboutZkas": "关于 ZKas"
+    "aboutZkas": "关于 ZKas",
+    "privateSends": "私密发送"
   },
   "setup": {
     "title": "无法连接钱包服务",
@@ -1205,7 +1208,8 @@
     "intro": "批量付款与币管理。",
     "deviceSigned": "设备签名",
     "tabBatch": "批量发送",
-    "tabMaintenance": "维护"
+    "tabMaintenance": "维护",
+    "tabVerify": "验证支付"
   },
   "mining": {
     "installZkasNodeUpdate": "ZKAS 节点更新",
@@ -1820,5 +1824,36 @@
   },
   "mainRoot": {
     "opening": "打开中…"
+  },
+  "privateSends": {
+    "intro": "你的支付通常会附带一份用<b>你自己的</b>密钥加密的详情副本，这样你的历史记录在恢复后仍能保留，并且你以后可以证明某笔支付。私密发送会省略该副本。",
+    "cost": "代价是永久性的：私密发送在恢复此钱包后无法找回，无法在另一台设备的历史记录中显示，也无法向任何人证明。收款方仍会正常收到。",
+    "turnOn": "开启私密发送",
+    "turnOff": "关闭私密发送"
+  },
+  "paymentProof": {
+    "title": "证明此支付",
+    "intro": "生成一份证明，证实此交易向该地址支付了该金额。任何人都可以在链上查验；它不会透露你的余额或其他支付信息。",
+    "create": "生成证明",
+    "paid": "已付",
+    "to": "至",
+    "tx": "交易",
+    "includeMemo": "在证明中包含私密备注",
+    "copy": "复制证明",
+    "copied": "已复制 ✓",
+    "saveFile": "保存为文件",
+    "disclosureNote": "持有此证明的人将获知这一笔支付——收款方、金额以及备注（如果你包含了）。别无其他。",
+    "close": "关闭",
+    "errNone": "此支付无法证明：它是在钱包保留可恢复详情之前发送的。",
+    "errNotJson": "这不是有效的支付证明。",
+    "verifyTitle": "验证支付",
+    "verifyIntro": "粘贴别人发给你的证明。由链上数据决定——无需信任他们或我们。",
+    "pastePlaceholder": "在此粘贴证明",
+    "verify": "验证",
+    "valid": "有效：{{amount}} ZKAS 已支付至 {{address}}。",
+    "invalid": "无效。",
+    "confirmations_one": "{{count}} 次确认",
+    "confirmations_other": "{{count}} 次确认",
+    "verifyNote": "该证明根据链上交易进行查验：披露的收款方和金额必须能重现区块中记录的承诺。"
   }
 }

@@ -124,7 +124,8 @@
     "address": "Adresse",
     "signatureLabel": "Signatur (fvk‖sig, hex)",
     "copySignature": "Signatur kopieren",
-    "sign": "Signieren"
+    "sign": "Signieren",
+    "fvkWarning": "Beim Signieren gibst du dem Prüfer deinen Betrachtungsschlüssel: Ab dann kann er dein Guthaben, den Verlauf und deine Zahlungen einsehen. Wenn das wichtig ist, signiere aus einem separaten Wallet – du kannst eines in den Einstellungen hinzufügen."
   },
   "daemonSetting": {
     "timedOut": "Zeitüberschreitung nach 5s",
@@ -408,7 +409,8 @@
     "sendAgain": "Erneut senden",
     "viewOnExplorer": "Im Explorer anzeigen",
     "explorerNote": "Der Explorer zeigt nur, dass eine abgeschirmte Transaktion stattfand – nie deren Details.",
-    "close": "Schließen"
+    "close": "Schließen",
+    "provePayment": "Zahlung beweisen"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} Wallet",
@@ -461,7 +463,8 @@
     "hidden": "Versteckt",
     "signatures": "Signaturen",
     "sectionAbout": "Über",
-    "aboutZkas": "Über ZKas"
+    "aboutZkas": "Über ZKas",
+    "privateSends": "Private Sends"
   },
   "appearanceCard": {
     "title": "Akzentfarbe",
@@ -977,7 +980,8 @@
     "intro": "Batch-Auszahlungen und Münzverwaltung.",
     "deviceSigned": "Gerätesigniert",
     "tabBatch": "Stapelversand",
-    "tabMaintenance": "Wartung"
+    "tabMaintenance": "Wartung",
+    "tabVerify": "Zahlung verifizieren"
   },
   "mining": {
     "installZkasNodeUpdate": "ZKAS Node-Update",
@@ -1820,5 +1824,36 @@
     "minutes": "~{{m}} Min übrig",
     "hoursMinutes": "~{{h}}h {{m}}m übrig",
     "hours": "~{{h}}h übrig"
+  },
+  "privateSends": {
+    "intro": "Deine Zahlungen enthalten normalerweise eine Kopie ihrer Details, verschlüsselt mit <b>deinem eigenen</b> Schlüssel, damit dein Verlauf eine Wiederherstellung übersteht und du später eine Zahlung beweisen kannst. Private Sends lassen diese Kopie weg.",
+    "cost": "Die Kosten sind dauerhaft: Ein privater Send kann nach Wiederherstellung dieses Wallets nicht wiederhergestellt werden, kann nicht im Verlauf auf einem anderen Gerät angezeigt und niemandem bewiesen werden. Der Empfänger erhält ihn trotzdem normal.",
+    "turnOn": "Private Sends aktivieren",
+    "turnOff": "Private Sends deaktivieren"
+  },
+  "paymentProof": {
+    "title": "Diese Zahlung beweisen",
+    "intro": "Erstellt einen Beweis, dass diese Transaktion diese Adresse mit diesem Betrag bezahlt hat. Jeder kann ihn gegen die Chain prüfen; er verrät nichts über dein Guthaben oder andere Zahlungen.",
+    "create": "Beweis erstellen",
+    "paid": "Bezahlt",
+    "to": "An",
+    "tx": "Transaktion",
+    "includeMemo": "Private Notiz in den Beweis einschließen",
+    "copy": "Beweis kopieren",
+    "copied": "Kopiert ✓",
+    "saveFile": "Als Datei speichern",
+    "disclosureNote": "Wer diesen Beweis besitzt, erfährt diese eine Zahlung – den Empfänger, den Betrag und die Notiz, falls du sie eingeschlossen hast. Nichts weiter.",
+    "close": "Schließen",
+    "errNone": "Diese Zahlung kann nicht bewiesen werden: Sie wurde gesendet, bevor das Wallet wiederherstellbare Details gespeichert hat.",
+    "errNotJson": "Das ist kein Zahlungsbeweis.",
+    "verifyTitle": "Zahlung verifizieren",
+    "verifyIntro": "Füge einen Beweis ein, den dir jemand geschickt hat. Die Chain entscheidet – kein Vertrauen in sie oder uns nötig.",
+    "pastePlaceholder": "Beweis hier einfügen",
+    "verify": "Prüfen",
+    "valid": "Gültig: {{amount}} ZKAS wurden an {{address}} bezahlt.",
+    "invalid": "Ungültig.",
+    "confirmations_one": "{{count}} Bestätigung",
+    "confirmations_other": "{{count}} Bestätigungen",
+    "verifyNote": "Der Beweis wird gegen die Transaktion auf der Chain geprüft: Der offengelegte Empfänger und Betrag müssen die vom Block aufgezeichnete Verpflichtung reproduzieren."
   }
 }

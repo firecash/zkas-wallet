@@ -124,7 +124,8 @@
     "address": "地址",
     "signatureLabel": "簽名 (fvk‖sig, hex)",
     "copySignature": "複製簽名",
-    "sign": "簽名"
+    "sign": "簽名",
+    "fvkWarning": "簽署會將你的查看密鑰交給驗證者：此後他們就能看到此錢包的餘額、歷史記錄和發送去向。若這點很重要，請用另一個錢包簽署——你可以在設定中新增一個。"
   },
   "daemonSetting": {
     "timedOut": "5 秒後逾時",
@@ -383,7 +384,8 @@
     "confirmedOnChain": "鏈上已確認",
     "privateLabel": "私人標籤",
     "labelPlaceholder": "訂單、客戶、用途…",
-    "labelSaved": "已儲存在此裝置"
+    "labelSaved": "已儲存在此裝置",
+    "provePayment": "證明付款"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} 個錢包",
@@ -436,7 +438,8 @@
     "hidden": "隱藏",
     "signatures": "簽名",
     "sectionAbout": "關於",
-    "aboutZkas": "關於 ZKas"
+    "aboutZkas": "關於 ZKas",
+    "privateSends": "隱私發送"
   },
   "setup": {
     "title": "無法連線至錢包服務",
@@ -1116,7 +1119,8 @@
     "intro": "批次付款與幣管理。",
     "deviceSigned": "裝置簽署",
     "tabBatch": "批次發送",
-    "tabMaintenance": "維護"
+    "tabMaintenance": "維護",
+    "tabVerify": "驗證付款"
   },
   "mining": {
     "installZkasNodeUpdate": "ZKAS 節點更新",
@@ -1820,5 +1824,36 @@
     "continueWithout": "不連線並繼續",
     "opensNow": "你的錢包現在將在此電腦的引擎上開啟。你隨時可以在「設定」中更改連線方式。",
     "changeLater": "你隨時可以在「設定」中更改，完全不影響錢包或餘額。"
+  },
+  "privateSends": {
+    "intro": "你的付款通常會附上一份加密到<b>你自己</b>密鑰的詳細副本，以便恢復後仍保留歷史記錄，且日後可證明付款。隱私發送則會省略該副本。",
+    "cost": "代價是永久的：隱私發送在恢復此錢包後無法找回，無法在其他裝置的歷史記錄中顯示，也無法向任何人證明。收款方仍會正常收到款項。",
+    "turnOn": "開啟隱私發送",
+    "turnOff": "關閉隱私發送"
+  },
+  "paymentProof": {
+    "title": "證明此付款",
+    "intro": "建立一份證明，證實此交易支付了該金額至該地址。任何人都能對鏈上資料查驗；它不會洩漏你的餘額或其他付款資訊。",
+    "create": "建立證明",
+    "paid": "已付",
+    "to": "至",
+    "tx": "交易",
+    "includeMemo": "在證明中包含私人備註",
+    "copy": "複製證明",
+    "copied": "已複製 ✓",
+    "saveFile": "儲存為檔案",
+    "disclosureNote": "持有此證明的人會得知這一筆付款——收款方、金額，以及你選擇包含的備註。除此之外別無其他。",
+    "close": "關閉",
+    "errNone": "此付款無法證明：它是在錢包保留可恢復詳細資料之前發送的。",
+    "errNotJson": "這不是有效的付款證明。",
+    "verifyTitle": "驗證付款",
+    "verifyIntro": "貼上他人傳給你的證明。由鏈上資料決定——無需信任對方或我們。",
+    "pastePlaceholder": "在此貼上證明",
+    "verify": "驗證",
+    "valid": "有效：{{amount}} ZKAS 已支付至 {{address}}。",
+    "invalid": "無效。",
+    "confirmations_one": "{{count}} 次確認",
+    "confirmations_other": "{{count}} 次確認",
+    "verifyNote": "此證明會與鏈上交易比對：揭露的收款方和金額必須重現區塊記錄的承諾值。"
   }
 }

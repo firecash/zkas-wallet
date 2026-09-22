@@ -124,7 +124,8 @@
     "address": "Adres",
     "signatureLabel": "İmza (fvk‖sig, hex)",
     "copySignature": "İmzayı kopyala",
-    "sign": "İmzala"
+    "sign": "İmzala",
+    "fvkWarning": "İmzalamak, doğrulayıcıya görüntüleme anahtarınızı verir: o andan itibaren bu cüzdanın bakiyesini, geçmişini ve gönderimlerinizi görebilir. Bu önemliyse, ayrı bir cüzdandan imzalayın — Ayarlar'dan ekleyebilirsiniz."
   },
   "autoConsolidationCard": {
     "turnOn": "Otomatik birleştirmeyi aç",
@@ -383,7 +384,8 @@
     "confirmedOnChain": "Zincirde onaylandı",
     "privateLabel": "Özel etiket",
     "labelPlaceholder": "Sipariş, müşteri, amaç…",
-    "labelSaved": "Bu cihaza kaydedildi"
+    "labelSaved": "Bu cihaza kaydedildi",
+    "provePayment": "Ödemeyi kanıtla"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} cüzdan",
@@ -436,7 +438,8 @@
     "hidden": "Gizle",
     "signatures": "İmzalar",
     "sectionAbout": "Hakkında",
-    "aboutZkas": "ZKas Hakkında"
+    "aboutZkas": "ZKas Hakkında",
+    "privateSends": "Gizli gönderimler"
   },
   "setup": {
     "title": "Cüzdan hizmetine ulaşılamıyor",
@@ -1277,7 +1280,8 @@
     "intro": "Toplu ödemeler ve jeton yönetimi.",
     "deviceSigned": "Cihaz imzalı",
     "tabBatch": "Toplu gönderim",
-    "tabMaintenance": "Bakım"
+    "tabMaintenance": "Bakım",
+    "tabVerify": "Bir ödemeyi doğrula"
   },
   "endpointField": {
     "hint": "Herhangi bir düğümün IP ve portu — bu bilgisayarda olmak zorunda değil. Örn. 203.0.113.5:16110",
@@ -1820,5 +1824,36 @@
     "unsafeConsolidation": "Cüzdan hizmeti güvensiz bir birleştirme döndürdü.",
     "noSpendableToSplit": "Şu anda bölünecek harcanabilir jeton yok. Son fonların olgunlaşmasını bekleyin (yaklaşık 10 dakika), sonra tekrar deneyin.",
     "fewerThanThree": "Şu anda üçten az jeton harcanabilir, bu yüzden birleştirme cüzdanın jeton sayısını azaltmaz."
+  },
+  "privateSends": {
+    "intro": "Ödemeleriniz normalde, geri yükleme sonrası geçmişinizin korunması ve ödemeyi sonradan kanıtlayabilmeniz için <b>kendi</b> anahtarınıza şifrelenmiş bir detay kopyası taşır. Gizli gönderimler bu kopyayı dışarıda bırakır.",
+    "cost": "Maliyeti kalıcıdır: gizli bir gönderim, bu cüzdanı geri yükledikten sonra kurtarılamaz, başka bir cihazda geçmişte gösterilemez ve kimseye kanıtlanamaz. Alıcı yine de normal şekilde teslim alır.",
+    "turnOn": "Gizli gönderimleri aç",
+    "turnOff": "Gizli gönderimleri kapat"
+  },
+  "paymentProof": {
+    "title": "Bu ödemeyi kanıtla",
+    "intro": "Bu işlemin o adrese o miktarı ödediğine dair bir kanıt oluşturur. Herkes zincire karşı kontrol edebilir; bakiyeniz veya diğer ödemeleriniz hakkında hiçbir şey söylemez.",
+    "create": "Kanıt oluştur",
+    "paid": "Ödenen",
+    "to": "Alıcı",
+    "tx": "İşlem",
+    "includeMemo": "Kanıta özel notu dahil et",
+    "copy": "Kanıtı kopyala",
+    "copied": "Kopyalandı ✓",
+    "saveFile": "Dosya olarak kaydet",
+    "disclosureNote": "Bu kanıtı elinde bulunduran kişi yalnızca bu ödemeyi öğrenir — alıcı, miktar ve dahil ettiyseniz not. Başka hiçbir şeyi değil.",
+    "close": "Kapat",
+    "errNone": "Bu ödeme kanıtlanamaz: cüzdan kurtarılabilir detayları tutmaya başlamadan önce gönderilmiş.",
+    "errNotJson": "Bu bir ödeme kanıtı değil.",
+    "verifyTitle": "Bir ödemeyi doğrula",
+    "verifyIntro": "Birinin size gönderdiği kanıtı yapıştırın. Zincir karar verir — onlara veya bize güvenmeye gerek yok.",
+    "pastePlaceholder": "Kanıtı buraya yapıştırın",
+    "verify": "Doğrula",
+    "valid": "Geçerli: {{address}} adresine {{amount}} ZKAS ödendi.",
+    "invalid": "Geçerli değil.",
+    "confirmations_one": "{{count}} onay",
+    "confirmations_other": "{{count}} onay",
+    "verifyNote": "Kanıt, zincirdeki işleme karşı kontrol edilir: açıklanan alıcı ve miktar, bloğun kaydettiği taahhüdü yeniden üretmelidir."
   }
 }

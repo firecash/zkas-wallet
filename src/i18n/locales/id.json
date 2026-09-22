@@ -124,7 +124,8 @@
     "address": "Alamat",
     "signatureLabel": "Tanda tangan (fvk‖sig, hex)",
     "copySignature": "Salin tanda tangan",
-    "sign": "Tanda tangani"
+    "sign": "Tanda tangani",
+    "fvkWarning": "Menandatangani memberikan kunci lihat Anda ke pemverifikasi: setelah itu mereka dapat melihat saldo, riwayat, dan tujuan kiriman dompet ini. Jika itu penting, tanda tangani dari dompet terpisah — Anda bisa menambahkannya di Pengaturan."
   },
   "daemonSetting": {
     "timedOut": "waktu habis setelah 5d",
@@ -408,7 +409,8 @@
     "sendAgain": "Kirim lagi",
     "viewOnExplorer": "Lihat di penjelajah",
     "explorerNote": "Penjelajah hanya menunjukkan bahwa transaksi tersembunyi terjadi — tidak pernah detailnya.",
-    "close": "Tutup"
+    "close": "Tutup",
+    "provePayment": "Buktikan pembayaran"
   },
   "settingsPane": {
     "viewOnlyWallet": "Dompet hanya lihat",
@@ -435,7 +437,8 @@
     "appLock": "Kunci aplikasi",
     "fingerprint": "Sidik jari",
     "on": "Aktif",
-    "off": "Nonaktif"
+    "off": "Nonaktif",
+    "privateSends": "Kiriman pribadi"
   },
   "appearanceCard": {
     "title": "Warna aksen",
@@ -1343,7 +1346,8 @@
     "intro": "Pembayaran batch dan manajemen koin.",
     "deviceSigned": "Ditandatangani perangkat",
     "tabBatch": "Kirim massal",
-    "tabMaintenance": "Pemeliharaan"
+    "tabMaintenance": "Pemeliharaan",
+    "tabVerify": "Verifikasi pembayaran"
   },
   "endpointField": {
     "hint": "IP & port node mana pun — tidak harus di komputer ini. cth. 203.0.113.5:16110",
@@ -1820,5 +1824,36 @@
   },
   "mainRoot": {
     "opening": "Membuka…"
+  },
+  "privateSends": {
+    "intro": "Pembayaran Anda biasanya membawa salinan detailnya yang dienkripsi ke <b>kunci Anda sendiri</b>, agar riwayat tetap ada setelah pemulihan dan Anda bisa membuktikan pembayaran nanti. Kiriman pribadi menghilangkan salinan itu.",
+    "cost": "Konsekuensinya permanen: kiriman pribadi tidak dapat dipulihkan setelah Anda memulihkan dompet ini, tidak dapat ditampilkan di riwayat pada perangkat lain, dan tidak dapat dibuktikan kepada siapa pun. Penerima tetap menerimanya seperti biasa.",
+    "turnOn": "Aktifkan kiriman pribadi",
+    "turnOff": "Nonaktifkan kiriman pribadi"
+  },
+  "paymentProof": {
+    "title": "Buktikan pembayaran ini",
+    "intro": "Membuat bukti bahwa transaksi ini membayar alamat itu sejumlah tersebut. Siapa pun dapat memeriksanya terhadap rantai; ini tidak mengungkapkan apa pun tentang saldo atau pembayaran Anda yang lain.",
+    "create": "Buat bukti",
+    "paid": "Dibayar",
+    "to": "Ke",
+    "tx": "Transaksi",
+    "includeMemo": "Sertakan catatan pribadi dalam bukti",
+    "copy": "Salin bukti",
+    "copied": "Tersalin ✓",
+    "saveFile": "Simpan sebagai file",
+    "disclosureNote": "Siapa pun yang memegang bukti ini akan mengetahui satu pembayaran ini — penerima, jumlah, dan catatan jika Anda menyertakannya. Tidak ada yang lain.",
+    "close": "Tutup",
+    "errNone": "Pembayaran ini tidak dapat dibuktikan: dikirim sebelum dompet menyimpan detail yang dapat dipulihkan.",
+    "errNotJson": "Itu bukan bukti pembayaran.",
+    "verifyTitle": "Verifikasi pembayaran",
+    "verifyIntro": "Tempel bukti yang dikirim seseorang. Rantai yang memutuskan — tidak perlu percaya mereka atau kami.",
+    "pastePlaceholder": "Tempel bukti di sini",
+    "verify": "Verifikasi",
+    "valid": "Valid: {{amount}} ZKAS telah dibayarkan ke {{address}}.",
+    "invalid": "Tidak valid.",
+    "confirmations_one": "{{count}} konfirmasi",
+    "confirmations_other": "{{count}} konfirmasi",
+    "verifyNote": "Bukti diperiksa terhadap transaksi di rantai: penerima dan jumlah yang diungkapkan harus mereproduksi komitmen yang dicatat oleh blok."
   }
 }

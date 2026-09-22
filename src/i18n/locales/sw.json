@@ -124,7 +124,8 @@
     "address": "Anwani",
     "signatureLabel": "Sahihi (fvk‖sig, hex)",
     "copySignature": "Nakili sahihi",
-    "sign": "Saini"
+    "sign": "Saini",
+    "fvkWarning": "Kutia sahihi kunampa mthibitishaji ufunguo wako wa kutazama: kuanzia hapo anaweza kuona salio la pochi hii, historia yake na unapotuma. Ikiwa hilo ni muhimu, tia sahihi kutoka pochi nyingine — unaweza kuongeza moja kwenye Mipangilio."
   },
   "daemonSetting": {
     "timedOut": "muda umeisha baada ya 5s",
@@ -408,7 +409,8 @@
     "sendAgain": "Tuma tena",
     "viewOnExplorer": "Tazama kwenye kichunguzi",
     "explorerNote": "Kivinjari kinaonyesha tu kwamba muamala uliolindwa ulifanyika — kamwe si maelezo yake.",
-    "close": "Funga"
+    "close": "Funga",
+    "provePayment": "Thibitisha malipo"
   },
   "settingsPane": {
     "viewOnlyWallet": "Pochi ya kutazama tu",
@@ -435,7 +437,8 @@
     "appLock": "Kufuli ya programu",
     "fingerprint": "Alama ya kidole",
     "on": "Washa",
-    "off": "Zima"
+    "off": "Zima",
+    "privateSends": "Utumaji faragha"
   },
   "appearanceCard": {
     "title": "Rangi ya mwonekano",
@@ -1205,7 +1208,8 @@
     "intro": "Malipo ya kundi na usimamizi wa sarafu.",
     "deviceSigned": "Imesainiwa na kifaa",
     "tabBatch": "Tuma kwa wingi",
-    "tabMaintenance": "Matengenezo"
+    "tabMaintenance": "Matengenezo",
+    "tabVerify": "Thibitisha malipo"
   },
   "mining": {
     "installZkasNodeUpdate": "Sasisho la nodi ya ZKAS",
@@ -1820,5 +1824,36 @@
     "continueWithout": "Endelea bila kuunganisha",
     "opensNow": "Mkoba wako unafunguliwa sasa kwenye injini ya kompyuta hii. Unaweza kubadilisha jinsi unavyounganisha chini ya Mipangilio.",
     "changeLater": "Unaweza kubadilisha hili wakati wowote chini ya Mipangilio, bila kugusa mkoba wako au salio lake."
+  },
+  "privateSends": {
+    "intro": "Malipo yako kwa kawaida hubeba nakala ya maelezo yake yaliyosimbwa kwa ufunguo <b>wako mwenyewe</b>, ili historia yako iweze kurejeshwa na uweze kuthibitisha malipo baadaye. Utumaji wa faragha huacha nakala hiyo.",
+    "cost": "Gharama ni ya kudumu: utumaji wa faragha hauwezi kurejeshwa baada ya kurejesha pochi hii, hauwezi kuonyeshwa kwenye historia kwenye kifaa kingine, na hauwezi kuthibitishwa kwa mtu yeyote. Mpokeaji bado ataupokea kawaida.",
+    "turnOn": "Washa utumaji faragha",
+    "turnOff": "Zima utumaji faragha"
+  },
+  "paymentProof": {
+    "title": "Thibitisha malipo haya",
+    "intro": "Inaunda uthibitisho kwamba muamala huu ulilipa anwani hiyo kiasi hicho. Mtu yeyote anaweza kukiangalia kwenye mnyororo; haisemi chochote kuhusu salio lako au malipo yako mengine.",
+    "create": "Unda uthibitisho",
+    "paid": "Imelipwa",
+    "to": "Kwa",
+    "tx": "Muamala",
+    "includeMemo": "Jumuisha noti ya faragha kwenye uthibitisho",
+    "copy": "Nakili uthibitisho",
+    "copied": "Imenakiliwa ✓",
+    "saveFile": "Hifadhi kama faili",
+    "disclosureNote": "Yeyote mwenye uthibitisho huu anajua malipo haya moja — mpokeaji, kiasi, na noti ikiwa umeijumuisha. Hakuna kingine.",
+    "close": "Funga",
+    "errNone": "Malipo haya hayawezi kuthibitishwa: yalitumwa kabla ya pochi kuhifadhi maelezo yanayoweza kurejeshwa.",
+    "errNotJson": "Huo sio uthibitisho wa malipo.",
+    "verifyTitle": "Thibitisha malipo",
+    "verifyIntro": "Bandika uthibitisho aliyokutumia mtu. Mnyororo ndio unaoamua — hakuna imani kwao au kwetu.",
+    "pastePlaceholder": "Bandika uthibitisho hapa",
+    "verify": "Thibitisha",
+    "valid": "Sahihi: {{amount}} ZKAS imelipwa kwa {{address}}.",
+    "invalid": "Si sahihi.",
+    "confirmations_one": "{{count}} uthibitisho",
+    "confirmations_other": "{{count}} uthibitisho",
+    "verifyNote": "Uthibitisho unakaguliwa dhidi ya muamala kwenye mnyororo: mpokeaji na kiasi vilivyofichuliwa lazima vizalike ahadi iliyorekodiwa na bloku."
   }
 }
