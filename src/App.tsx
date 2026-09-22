@@ -503,6 +503,21 @@ function scrollToPane(force = false) {
   });
 }
 
+/// A tab pane that stays mounted but stops re-rendering while it is hidden.
+///
+/// Keeping panes mounted is what makes a tab switch instant (no mount, no refetch, no
+/// skeleton), but it would otherwise make every hidden pane re-render on each status
+/// change — during a sync that is once per block, for Settings and Tools nobody is
+/// looking at. The comparator freezes a hidden subtree: while `visible` is false and
+/// stays false, React skips the update entirely; the moment it flips, the pane renders
+/// with current data.
+const Pane = memo(
+  function Pane({ visible, children }: { visible: boolean; children: React.ReactNode }) {
+    return <div hidden={!visible}>{children}</div>;
+  },
+  (prev, next) => !prev.visible && !next.visible,
+);
+
 export default function App({ routeTab = null, routeSticky = false, onClearRoute }: AppRouteProps = {}) {
   const { t } = useTranslation();
   // Boot from the cached last-known status: the whole UI (balance, address, QR)
@@ -518,6 +533,13 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   const [tab, setTab] = useState<Tab>(() => (routeSticky ? null : asTab(routeTab)) ?? walletTabFromHash() ?? "history");
   const roomy = useRoomy();
   const tabs = useMemo(() => walletTabs(roomy), [roomy]);
+  // Tools and Settings are heavy and rarely opened: mount them on first visit, then
+  // keep them mounted so every later switch is a style change. History is mounted from
+  // the start because it is the landing tab.
+  const toolsSeen = useRef(false);
+  const settingsSeen = useRef(false);
+  if (tab === "tools") toolsSeen.current = true;
+  if (tab === "settings") settingsSeen.current = true;
   // A pill that just left the row (rotate to portrait while on Signatures) must not
   // leave the pane showing a section with no tab to name it.
   useEffect(() => {
@@ -1104,10 +1126,20 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // Native app: every tap on a control answers with a soft haptic tick.
   useEffect(() => attachTapHaptics(), []);
 
-  // Warm the signer WASM in the background right after first paint, so the first
-  // send/sign never waits on its (lazily-chunked) download + compile.
+  // Warm the signer WASM in the background, so the first send/sign never waits on its
+  // (lazily-chunked) download + compile. Scheduled on an IDLE callback rather than a
+  // fixed 800 ms timer: on a phone that timer landed while the first screens were still
+  // painting and the base64 decode competed with them for the main thread. Idle means
+  // "after the UI is done", and the fallback timer keeps the old behaviour where
+  // requestIdleCallback does not exist (Safari/WKWebView).
   useEffect(() => {
-    const t = setTimeout(() => void ensureSigner().catch(() => {}), 800);
+    const warm = () => void ensureSigner().catch(() => {});
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+    if (ric) {
+      const id = ric(warm, { timeout: 4000 });
+      return () => (window as unknown as { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
+    }
+    const t = setTimeout(warm, 1500);
     return () => clearTimeout(t);
   }, []);
 
@@ -1348,12 +1380,16 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               </button>
             ))}
             </div>
-          {/* key remounts the pane on tab switch so the entrance transition plays.
-              Send & Receive are NOT rendered here — they open as a full-screen sheet
-              (see the portal below) so the form is never something you have to scroll
-              the balance and tabs away to reach. */}
-            <div className="pane appear" key={tab}>
-            {tab === "history" && (
+          {/* Panes stay MOUNTED and are hidden with CSS, they are not remounted per tab.
+              Remounting (a `key={tab}`) replayed the entrance animation but also threw
+              away every pane's state on each switch: History refetched and showed its
+              skeleton, Settings lost its open sections, and the switch cost a mount +
+              network round trip instead of a style change. The entrance animation now
+              plays once, when the wallet first renders.
+              Send & Receive are NOT here — they open as a full-screen sheet (portal
+              below) so the form is never something you scroll the balance away to reach. */}
+            <div className="pane appear">
+            <Pane visible={tab === "history"}>
               <History
                 txs={txs}
                 justSent={justSent}
@@ -1361,14 +1397,16 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 daaScore={status?.daa_score}
                 onSendAnother={onSendAnother}
               />
+            </Pane>
+            {!viewOnly && <Pane visible={tab === "signatures"}><Signatures status={status} /></Pane>}
+            {!viewOnly && toolsSeen.current && (
+              <Pane visible={tab === "tools"}>
+                <Suspense fallback={<div className="card"><div className="muted small">{t("app.loading")}</div></div>}>
+                  <WalletTools status={status} />
+                </Suspense>
+              </Pane>
             )}
-            {tab === "signatures" && !viewOnly && <Signatures status={status} />}
-            {tab === "tools" && !viewOnly && (
-              <Suspense fallback={<div className="card"><div className="muted small">{t("app.loading")}</div></div>}>
-                <WalletTools status={status} />
-              </Suspense>
-            )}
-            {tab === "settings" && <SettingsPane status={status} />}
+            {settingsSeen.current && <Pane visible={tab === "settings"}><SettingsPane status={status} /></Pane>}
             </div>
           </section>
         </div>

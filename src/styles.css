@@ -3035,3 +3035,39 @@ input[inputmode="decimal"], input[inputmode="numeric"], input.mono, textarea.mon
 /* Flag glyphs: colour emoji where the OS has them (Windows renders regional letters). */
 .lang-flag { font-size: 18px; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif; }
 .lang-button .lang-flag { font-size: 20px; }
+
+/* ---------------------------------------------------------------------------
+   Input latency and idle GPU work.
+
+   Every interactive element declares `touch-action: manipulation`: without it a
+   mobile WebView waits ~300 ms after a tap to see whether a double-tap-to-zoom
+   follows, which is felt as "the wallet is slow" on every single press.
+
+   `reduced-effects` is set at boot (src/main.tsx) for renderers that composite
+   blur and backdrop-filter on the CPU — WebKitGTK (the Linux app) above all, and
+   phones, where a permanently animating blurred layer costs battery for a glow
+   nobody is looking at. The design survives: the same colours, without the parts
+   the GPU cannot give away for free. */
+button, a, select, input, textarea, label, [role="tab"], [role="button"], .chip, .linkbtn, .swatch, .lang-item, .connection-button, .lang-button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+html { -webkit-text-size-adjust: 100%; }
+
+/* A phone does not need a 14 s blurred aurora loop behind the balance. */
+@media (max-width: 720px), (prefers-reduced-motion: reduce) {
+  .balance-glow { animation: none; filter: none; }
+  .qr-frame, .qr-corner { animation: none; }
+}
+
+body.reduced-effects .balance-glow { animation: none; filter: none; }
+body.reduced-effects .qr-frame,
+body.reduced-effects .qr-corner { animation: none; }
+body.reduced-effects [class*="glass"],
+body.reduced-effects .modalcard,
+body.reduced-effects .action-sheet,
+body.reduced-effects .wallet-topline,
+body.reduced-effects .tabbar,
+body.reduced-effects .bottomnav { backdrop-filter: none; -webkit-backdrop-filter: none; }
+body.reduced-effects * { transition-duration: 120ms !important; }
+body.reduced-effects .appear { animation-duration: 0.12s; }

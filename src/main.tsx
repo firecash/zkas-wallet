@@ -302,6 +302,18 @@ async function boot() {
   // stored light/system preference so an early adopter is not stuck on it.
   try { localStorage.removeItem("theme"); } catch { /* ignore */ }
   applyStoredTheme();
+  // Renderers that composite blur/backdrop-filter without the GPU get a lighter
+  // skin: WebKitGTK (the Linux desktop app) is software-rendered on most setups,
+  // and a low-core phone spends that budget better on scrolling. Everything stays
+  // legible — only the decorative layers go.
+  try {
+    const ua = navigator.userAgent;
+    const webkitGtk = /\bWebKitGTK\b/i.test(ua) || (/AppleWebKit/.test(ua) && !/Chrome|Safari\/\d|Edg/.test(ua));
+    const weakDevice = (navigator.hardwareConcurrency ?? 8) <= 4 && /Android/i.test(ua);
+    if (webkitGtk || weakDevice) document.body.classList.add("reduced-effects");
+  } catch {
+    /* never block boot on a UA probe */
+  }
 
   // QR images are cached per address and were only ever swept when a wallet was
   // removed — addresses of long-gone wallets accumulated forever. Keep entries
