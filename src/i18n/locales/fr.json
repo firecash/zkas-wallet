@@ -17,13 +17,8 @@
     "title": "Historique",
     "recovering": "Récupération de l’historique depuis la chaîne — une minute ou deux. Vous pouvez quitter cet onglet.",
     "empty": "Rien pour l’instant. Vos paiements reçus et envoyés apparaîtront ici.",
-    "turnOff": "Désactiver historique",
     "starting": "Démarrage…",
     "recoverFull": "Récupérer tout l’historique",
-    "onThisDevice": "Sur cet appareil",
-    "noSavedPayments": "Aucun paiement sauvegardé",
-    "savedPayments_one": "{{count}} paiement sauvegardé",
-    "savedPayments_other": "{{count}} paiements sauvegardés",
     "sentPrivately": "<b>Envoyé en privé.</b> Suivez la confirmation ci-dessous — mise à jour en direct.",
     "sendAnother": "Envoyer un autre",
     "searchPlaceholder": "Rechercher nom, note ou montant",
@@ -32,15 +27,12 @@
     "filterSent": "Envoyé",
     "filterReceived": "Reçu",
     "nothingMatches": "Rien ne correspond à ce filtre.",
-    "receivedAria": "Reçu",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "reçu",
     "badgeSent": "envoyé",
     "badgeMined": "miné",
     "badgeConsolidated": "consolidé",
-    "noticedOnOpen": "Détecté à l’ouverture de l’appli",
-    "seenArriving": "Vu en arrivée",
     "toAddr": "vers {{addr}}",
     "mergedNotes": "pièces fusionnées dans votre portefeuille",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "Quelque chose manque ?",
     "rescanHint": "Relire la chaîne pour reconstruire l'historique et récupérer les fonds perdus localement.",
     "recoveredNote": "Récupéré de la chaîne par votre clé de visualisation. Appuyez pour les détails.",
-    "turnOffErase": "Désactiver et effacer",
     "exportFailed": "Impossible d'exporter le CSV sur cet appareil.",
-    "exportCsv": "Exporter CSV",
-    "turnOffTitle": "Désactiver l’historique ?",
-    "turnOffBody": "Efface la liste des transactions stockée. Votre solde et vos fonds ne sont pas affectés.",
-    "turnOffConfirm": "Désactiver et effacer"
+    "exportCsv": "Exporter CSV"
   },
   "send": {
     "scanAria": "Scanner un QR",
@@ -486,11 +474,9 @@
     "removeConfirm": "Supprimer"
   },
   "rescanButton": {
-    "offHint": "Récupère votre solde depuis la chaîne. L'historique étant désactivé, cela reconstruit les fonds — pas la liste des transactions.",
     "rescanning": "Rescan en cours — cet onglet se met à jour.",
     "starting": "Démarrage…",
-    "rescan": "↻ Réanalyser",
-    "enableHistory": "Activer historique et récupérer"
+    "rescan": "↻ Réanalyser"
   },
   "requestAmount": {
     "amountLabel": "Montant à demander",

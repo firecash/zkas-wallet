@@ -9,8 +9,8 @@ WebAssembly, and is never sent anywhere. It offers two wallet services:
 
 | Service | Where the daemon runs | Who can watch the wallet |
 |---|---|---|
-| **Hosted** (default, zero setup) | our `zkas-walletd`, over HTTPS or the Tor onion | our server holds the **viewing key**: it can see balance and history, it cannot spend |
-| **Run on this phone** (opt-in: first run, or Settings → Wallet service) | **inside the app** — `zkas-walletd` as a native library, trial-decrypting on the phone | **nobody**. No daemon anywhere sees your keys, balance or history; the node you sync from serves compact block records and learns only your IP (nothing, over Tor via Orbot or against your own node) |
+| **Hosted** (default, zero setup) | our `zkas-walletd`, over HTTPS or the Tor onion | our server holds the **viewing key**: it can see balance, history and where you send, it cannot spend |
+| **Run on this phone** (opt-in: first run, or Settings → Wallet service) | **inside the app** — `zkas-walletd` as a native library, trial-decrypting on the phone | **nobody**. No daemon anywhere sees your keys, balance, history or send destinations — it all stays on the phone; the node you sync from serves compact block records and learns only your IP (nothing, over Tor via Orbot or against your own node) |
 
 See [Run on this phone](#run-on-this-phone-the-local-engine) and
 [Custody](#custody-how-the-server-is-kept-powerless).
@@ -111,8 +111,11 @@ watch-only-registered wallet spent 1 ZKAS in tx
 `35dd94a1d8d20d8b19e1b70531f105736071876945f04b2028d5b97fdeff43ff`, signed on the device.
 
 **Honest tradeoff of the hosted service:** the daemon sees the FVK, so it can *watch* your
-balance and history — a **privacy** cost, not a **custody** one. **Run on this phone** removes
-it: the daemon runs inside the app, so nothing off the phone ever holds the viewing key.
+balance, your history and where you send — a **privacy** cost, not a **custody** one. History
+is always kept: the daemon records every wallet's transaction history and encrypts every send
+to the wallet's own outgoing viewing key, so it is recoverable by a rescan wherever the key
+is. **Run on this phone** removes the tradeoff: the daemon runs inside the app, so nothing off
+the phone ever holds the viewing key, and balance, history and send destinations stay on-device.
 (Self-hosting `zkas-walletd` and overriding the daemon URL is the third option.)
 
 The installed Android and iOS apps may connect directly to `http://<LAN-IP>:8501`. This is

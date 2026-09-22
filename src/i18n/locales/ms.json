@@ -17,13 +17,8 @@
     "title": "Sejarah",
     "recovering": "Memulihkan sejarah dari rantai — seminit dua. Anda boleh tinggalkan tab ini.",
     "empty": "Tiada lagi. Bayaran diterima dan dihantar muncul di sini.",
-    "turnOff": "Matikan sejarah",
     "starting": "Bermula…",
     "recoverFull": "Pulihkan sejarah penuh",
-    "onThisDevice": "Pada peranti ini",
-    "noSavedPayments": "Tiada bayaran disimpan",
-    "savedPayments_one": "{{count}} bayaran disimpan",
-    "savedPayments_other": "{{count}} bayaran disimpan",
     "sentPrivately": "<b>Dihantar secara peribadi.</b> Lihat pengesahan di bawah — dikemas kini secara langsung.",
     "sendAnother": "Hantar lagi",
     "searchPlaceholder": "Cari nama, nota atau jumlah",
@@ -32,15 +27,12 @@
     "filterSent": "Dihantar",
     "filterReceived": "Diterima",
     "nothingMatches": "Tiada padanan dengan penapis itu.",
-    "receivedAria": "Diterima",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "diterima",
     "badgeSent": "dihantar",
     "badgeMined": "dilombong",
     "badgeConsolidated": "disatukan",
-    "noticedOnOpen": "Dikesan semasa buka aplikasi",
-    "seenArriving": "Dilihat tiba",
     "toAddr": "ke {{addr}}",
     "mergedNotes": "syiling digabungkan dalam dompet anda",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "Ada yang hilang?",
     "rescanHint": "Baca semula rantai untuk bina semula sejarah dan pulihkan dana yang hilang.",
     "recoveredNote": "Dipulihkan daripada rantaian oleh kunci tontonan anda. Ketik bayaran untuk butiran.",
-    "turnOffErase": "Matikan sejarah & padam",
     "exportFailed": "Gagal eksport CSV pada peranti ini.",
-    "exportCsv": "Eksport CSV",
-    "turnOffTitle": "Matikan sejarah?",
-    "turnOffBody": "Hanya padam senarai urusan tersimpan. Baki dan dana anda tidak terjejas.",
-    "turnOffConfirm": "Matikan & padam"
+    "exportCsv": "Eksport CSV"
   },
   "daemonSetting": {
     "timedOut": "tamat masa selepas 5s",
@@ -537,11 +525,9 @@
     "removeConfirm": "Buang"
   },
   "rescanButton": {
-    "offHint": "Memulihkan baki anda daripada rantaian. Sejarah dimatikan, jadi ini membina semula dana — bukan senarai transaksi.",
     "rescanning": "Mengimbas semula — tab ini dikemas kini seiring kemajuan.",
     "starting": "Bermula…",
-    "rescan": "↻ Imbas semula",
-    "enableHistory": "Aktifkan sejarah & pulihkan"
+    "rescan": "↻ Imbas semula"
   },
   "requestAmount": {
     "amountLabel": "Jumlah diminta",

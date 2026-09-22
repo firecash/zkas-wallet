@@ -55,8 +55,8 @@ overridable in the UI):
 | Mode | Where `zkas-walletd` runs | Who holds the seed | What a third party learns |
 |---|---|---|---|
 | **Desktop** (Tauri app) | **inside the app**, on a random loopback port with a per-install token; syncs from the public node or a node the app installs and supervises | **only your machine** | nothing about your wallet — the node only serves blocks (it sees your IP; point the app at your own node or Tor and not even that) |
-| **Mobile — Run on this phone** (Android, opt-in) | **inside the app**: the same daemon as a native library (`zkas-walletd-mobile`), trial-decrypting on the phone; syncs from the public node or yours, optionally over Tor via Orbot | **only your phone** | same as desktop: no daemon anywhere sees your keys, balance or history. A foreground notification keeps the sync alive while it runs |
-| **Mobile — hosted** (Android, default) | `zkas-walletd` on our server, reached over HTTPS or the Tor onion | **only your phone** — the server gets the viewing key | the server can see balance and history (privacy cost); it **cannot spend** |
+| **Mobile — Run on this phone** (Android, opt-in) | **inside the app**: the same daemon as a native library (`zkas-walletd-mobile`), trial-decrypting on the phone; syncs from the public node or yours, optionally over Tor via Orbot | **only your phone** | same as desktop: no daemon anywhere sees your keys, balance, history or where you send — it all stays on the phone. A foreground notification keeps the sync alive while it runs |
+| **Mobile — hosted** (Android, default) | `zkas-walletd` on our server, reached over HTTPS or the Tor onion | **only your phone** — the server gets the viewing key | the server can see balance, history and where you send (privacy cost); it **cannot spend** |
 | **Hosted web** (wallet.zkas.info) | same-origin `/daemon` → `zkas-walletd` on the server | **only your browser** — the server gets the viewing key | same as hosted mobile, plus the inherent "you trust the page code served each visit" risk of any website |
 | **Self-hosted web** | your own **HTTPS** walletd endpoint | **only your machine/server** | whatever you run it on; the hosted HTTPS page cannot connect to a cleartext HTTP service — use an installed app for HTTP on a LAN |
 | **Paper** (cold) | none | **you, offline** | nothing; derive an address and receive with no daemon at all, import the seed later to spend |
@@ -80,7 +80,13 @@ and accepts custom chain-node endpoints as `host:port`.
 > does, and the Android app does in **Run on this phone** mode — then no server holds your
 > viewing key, and the public node it syncs from learns only your IP (or nothing, over Tor
 > or against your own node). The hosted service stays the zero-setup default; its only cost
-> is that our server can see your balance and history.
+> is that our server can see your balance, your history and where you send.
+>
+> *History* is always kept: the daemon records every wallet's readable transaction history
+> and encrypts every send to the wallet's own outgoing viewing key, so sends (recipient,
+> amount, memo) are recoverable from the chain by a rescan on any device. Whoever holds the
+> viewing key — our server in hosted mode, only your device in desktop or **Run on this
+> phone** mode — can read it.
 
 > **⚠️ Mainnet.** ZKas is live on mainnet. Your **recovery seed is the only way to
 > restore a wallet**: back it up offline.

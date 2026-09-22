@@ -17,13 +17,8 @@
     "title": "Historia",
     "recovering": "Inarejesha historia kutoka kwenye mnyororo — dakika moja au mbili. Unaweza kuondoka kwenye kichupo hiki.",
     "empty": "Bado hakuna chochote. Malipo unayopokea na kutuma yanaonekana hapa.",
-    "turnOff": "Zima historia",
     "starting": "Inaanza…",
     "recoverFull": "Rejesha historia kamili",
-    "onThisDevice": "Kwenye kifaa hiki",
-    "noSavedPayments": "Hakuna malipo yaliyohifadhiwa",
-    "savedPayments_one": "Malipo {{count}} yamehifadhiwa",
-    "savedPayments_other": "Malipo {{count}} yamehifadhiwa",
     "sentPrivately": "<b>Imetumwa kwa faragha.</b> Tazama ikithibitishwa chini — inasasishwa moja kwa moja.",
     "sendAnother": "Tuma nyingine",
     "searchPlaceholder": "Tafuta jina, sarafu au kiasi",
@@ -32,15 +27,12 @@
     "filterSent": "Imetumwa",
     "filterReceived": "Zilizopokelewa",
     "nothingMatches": "Hakuna kinacholingana na kichujio.",
-    "receivedAria": "Imepokelewa",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "imepokelewa",
     "badgeSent": "imetumwa",
     "badgeMined": "imechimbwa",
     "badgeConsolidated": "imeunganishwa",
-    "noticedOnOpen": "Imeonekana ulipofungua programu",
-    "seenArriving": "Inaonekana inawasili",
     "toAddr": "kwa {{addr}}",
     "mergedNotes": "sarafu zilizounganishwa kwenye mkoba wako",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "Kuna kinachokosekana?",
     "rescanHint": "Soma mnyororo upya kujenga historia hii na kurejesha fedha zozote zilizopotea.",
     "recoveredNote": "Imerejeshwa kutoka kwenye mnyororo kwa ufunguo wako wa kutazama. Gonga malipo kwa maelezo.",
-    "turnOffErase": "Zima historia na ufute",
     "exportFailed": "Haikuweza kuhamisha CSV kwenye kifaa hiki.",
-    "exportCsv": "Hamisha CSV",
-    "turnOffTitle": "Zima historia?",
-    "turnOffBody": "Inafuta tu orodha ya shughuli zilizohifadhiwa. Salio na fedha zako hazitaathirika.",
-    "turnOffConfirm": "Zima na ufute"
+    "exportCsv": "Hamisha CSV"
   },
   "send": {
     "needSeed": "Kifaa hiki bado hakina ufunguo wa mkoba huu. Weka kifungu chako cha urejeshaji mara moja ili ufungue kutuma hapa.",
@@ -537,11 +525,9 @@
     "removeConfirm": "Ondoa"
   },
   "rescanButton": {
-    "offHint": "Hurejesha salio lako kutoka kwenye mnyororo. Historia imezimwa, kwa hivyo hii hujenga fedha — si orodha ya miamala.",
     "rescanning": "Inachanganua tena — kichupo hiki husasishwa kinapoendelea.",
     "starting": "Inaanza…",
-    "rescan": "↻ Chunguza tena",
-    "enableHistory": "Wezesha historia na urejeshe"
+    "rescan": "↻ Chunguza tena"
   },
   "requestAmount": {
     "amountLabel": "Kiasi cha kuomba",

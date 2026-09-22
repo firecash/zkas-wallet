@@ -96,13 +96,8 @@
     "title": "Historia",
     "recovering": "Odzyskiwanie historii z łańcucha — chwila. Możesz opuścić tę kartę.",
     "empty": "Na razie pusto. Płatności, które wyślesz i otrzymasz, pojawią się tutaj.",
-    "turnOff": "Wyłącz historię",
     "starting": "Uruchamianie…",
     "recoverFull": "Odzyskaj pełną historię",
-    "onThisDevice": "Na tym urządzeniu",
-    "noSavedPayments": "Brak zapisanych płatności",
-    "savedPayments_one": "{{count}} zapisana płatność",
-    "savedPayments_other": "{{count}} zapisane płatności",
     "sentPrivately": "<b>Wysłano prywatnie.</b> Obserwuj potwierdzenie poniżej — aktualizuje się na żywo.",
     "sendAnother": "Wyślij kolejną",
     "searchPlaceholder": "Szukaj nazwy, notatki lub kwoty",
@@ -111,15 +106,12 @@
     "filterSent": "Wysłane",
     "filterReceived": "Odebrane",
     "nothingMatches": "Brak wyników dla tego filtra.",
-    "receivedAria": "Odebrane",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "odebrane",
     "badgeSent": "wysłane",
     "badgeMined": "wykopane",
     "badgeConsolidated": "skonsolidowane",
-    "noticedOnOpen": "Zauważono przy otwarciu aplikacji",
-    "seenArriving": "Zauważono nadchodzące",
     "toAddr": "do {{addr}}",
     "mergedNotes": "scalone monety w twoim portfelu",
     "memoQuoted": "„{{memo}}”",
@@ -131,12 +123,8 @@
     "somethingMissing": "Czegoś brakuje?",
     "rescanHint": "Ponownie odczytaj łańcuch, by odbudować historię i odzyskać środki utracone lokalnie.",
     "recoveredNote": "Odzyskane z łańcucha przez klucz podglądu. Stuknij płatność po szczegóły.",
-    "turnOffErase": "Wyłącz historię i usuń",
     "exportFailed": "Nie udało się wyeksportować CSV na tym urządzeniu.",
-    "exportCsv": "Eksportuj CSV",
-    "turnOffTitle": "Wyłączyć historię?",
-    "turnOffBody": "Usuwa tylko zapisaną listę transakcji. Saldo i środki pozostają bez zmian.",
-    "turnOffConfirm": "Wyłącz i usuń"
+    "exportCsv": "Eksportuj CSV"
   },
   "daemonSetting": {
     "timedOut": "przekroczono czas (5s)",
@@ -596,11 +584,9 @@
     "removeConfirm": "Usuń"
   },
   "rescanButton": {
-    "offHint": "Odzyskuje saldo z łańcucha. Historia jest wyłączona, więc odbudowuje środki — nie listę transakcji.",
     "rescanning": "Ponowne skanowanie — ta zakładka aktualizuje się w miarę postępu.",
     "starting": "Uruchamianie…",
-    "rescan": "↻ Skanuj ponownie",
-    "enableHistory": "Włącz historię i odzyskaj"
+    "rescan": "↻ Skanuj ponownie"
   },
   "appShell": {
     "tabReceive": "Odbierz",

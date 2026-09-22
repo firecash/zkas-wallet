@@ -17,13 +17,8 @@
     "title": "Riwayat",
     "recovering": "Memulihkan riwayat dari rantai — satu atau dua menit. Anda bisa tinggalkan tab ini.",
     "empty": "Belum ada. Pembayaran yang Anda terima dan kirim muncul di sini.",
-    "turnOff": "Matikan riwayat",
     "starting": "Memulai…",
     "recoverFull": "Pulihkan riwayat lengkap",
-    "onThisDevice": "Di perangkat ini",
-    "noSavedPayments": "Tidak ada pembayaran tersimpan",
-    "savedPayments_one": "{{count}} pembayaran tersimpan",
-    "savedPayments_other": "{{count}} pembayaran tersimpan",
     "sentPrivately": "<b>Dikirim secara pribadi.</b> Lihat konfirmasinya di bawah — diperbarui langsung.",
     "sendAnother": "Kirim lagi",
     "searchPlaceholder": "Cari nama, catatan, atau jumlah",
@@ -32,15 +27,12 @@
     "filterSent": "Terkirim",
     "filterReceived": "Diterima",
     "nothingMatches": "Tidak ada yang cocok dengan filter itu.",
-    "receivedAria": "Diterima",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "diterima",
     "badgeSent": "terkirim",
     "badgeMined": "ditambang",
     "badgeConsolidated": "digabung",
-    "noticedOnOpen": "Terlihat saat Anda membuka aplikasi",
-    "seenArriving": "Terlihat masuk",
     "toAddr": "ke {{addr}}",
     "mergedNotes": "koin yang digabung di dompet Anda",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "Ada yang kurang?",
     "rescanHint": "Baca ulang rantai untuk membangun ulang riwayat & pulihkan dana yang hilang.",
     "recoveredNote": "Dipulihkan dari rantai oleh kunci lihat Anda. Ketuk pembayaran untuk detail.",
-    "turnOffErase": "Matikan riwayat & hapus",
     "exportFailed": "Gagal mengekspor CSV di perangkat ini.",
-    "exportCsv": "Ekspor CSV",
-    "turnOffTitle": "Matikan riwayat?",
-    "turnOffBody": "Hanya menghapus daftar transaksi tersimpan. Saldo & dana tidak terpengaruh.",
-    "turnOffConfirm": "Matikan & hapus"
+    "exportCsv": "Ekspor CSV"
   },
   "send": {
     "needSeed": "Perangkat ini belum memiliki kunci dompet. Masukkan frasa pemulihan sekali untuk mengirim.",
@@ -537,11 +525,9 @@
     "removeConfirm": "Hapus"
   },
   "rescanButton": {
-    "offHint": "Memulihkan saldo dari rantai. Riwayat mati, jadi ini membangun ulang dana — bukan daftar transaksi.",
     "rescanning": "Memindai ulang — tab ini diperbarui seiring proses.",
     "starting": "Memulai…",
-    "rescan": "↻ Pindai ulang",
-    "enableHistory": "Aktifkan riwayat & pulihkan"
+    "rescan": "↻ Pindai ulang"
   },
   "requestAmount": {
     "amountLabel": "Jumlah diminta",

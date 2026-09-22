@@ -17,13 +17,8 @@
     "title": "تاریخچه",
     "recovering": "بازیابی تاریخچه از زنجیره — یکی دو دقیقه طول می‌کشد. می‌توانید این برگه را ترک کنید.",
     "empty": "هنوز چیزی نیست. پرداخت‌های دریافتی و ارسالی اینجا نمایش داده می‌شوند.",
-    "turnOff": "غیرفعال کردن تاریخچه",
     "starting": "در حال شروع…",
     "recoverFull": "بازیابی کامل تاریخچه",
-    "onThisDevice": "روی این دستگاه",
-    "noSavedPayments": "پرداخت ذخیره‌شده‌ای نیست",
-    "savedPayments_one": "{{count}} پرداخت ذخیره‌شده",
-    "savedPayments_other": "{{count}} پرداخت ذخیره‌شده",
     "sentPrivately": "<b>ارسال محرمانه.</b> تأیید آن را در زیر تماشا کنید — به‌روزرسانی زنده.",
     "sendAnother": "ارسال یکی دیگر",
     "searchPlaceholder": "جستجوی نام، یادداشت یا مقدار",
@@ -32,15 +27,12 @@
     "filterSent": "ارسال‌شده",
     "filterReceived": "دریافت‌شده",
     "nothingMatches": "هیچ موردی مطابق نیست.",
-    "receivedAria": "دریافت‌شده",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "دریافت‌شده",
     "badgeSent": "ارسال‌شده",
     "badgeMined": "استخراج‌شده",
     "badgeConsolidated": "ادغام‌شده",
-    "noticedOnOpen": "هنگام باز کردن برنامه مشاهده شد",
-    "seenArriving": "در حال دریافت دیده شد",
     "toAddr": "به {{addr}}",
     "mergedNotes": "سکه‌های ادغام‌شده در کیف پول شما",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "چیزی کم است؟",
     "rescanHint": "زنجیره را دوباره بخوانید تا تاریخچه بازسازی و وجوه گمشده بازیابی شود.",
     "recoveredNote": "با کلید مشاهده از زنجیره بازیابی شد. برای جزئیات ضربه بزنید.",
-    "turnOffErase": "خاموش کردن تاریخچه و پاک‌سازی",
     "exportFailed": "خروجی CSV در این دستگاه ممکن نیست.",
-    "exportCsv": "خروجی CSV",
-    "turnOffTitle": "تاریخچه خاموش شود؟",
-    "turnOffBody": "فقط لیست تراکنش‌ها پاک می‌شود. موجودی و وجوه تغییری نمی‌کند.",
-    "turnOffConfirm": "خاموش و پاک‌سازی"
+    "exportCsv": "خروجی CSV"
   },
   "send": {
     "scanAria": "اسکن QR",
@@ -512,11 +500,9 @@
     "removeConfirm": "حذف"
   },
   "rescanButton": {
-    "offHint": "موجودی را از زنجیره بازیابی می‌کند. تاریخچه خاموش است، بنابراین فقط دارایی بازسازی می‌شود — نه فهرست تراکنش‌ها.",
     "rescanning": "در حال اسکن مجدد — این برگه با پیشرفت به‌روز می‌شود.",
     "starting": "در حال شروع…",
-    "rescan": "↻ اسکن مجدد",
-    "enableHistory": "فعال‌سازی تاریخچه و بازیابی"
+    "rescan": "↻ اسکن مجدد"
   },
   "requestAmount": {
     "amountLabel": "مقدار درخواستی",

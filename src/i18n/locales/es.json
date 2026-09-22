@@ -17,13 +17,8 @@
     "title": "Historial",
     "recovering": "Recuperando historial de la cadena — un minuto o dos. Puedes salir de esta pestaña.",
     "empty": "Aún no hay nada. Aquí aparecerán los pagos que envíes y recibas.",
-    "turnOff": "Desactivar historial",
     "starting": "Iniciando…",
     "recoverFull": "Recuperar historial completo",
-    "onThisDevice": "En este dispositivo",
-    "noSavedPayments": "Sin pagos guardados",
-    "savedPayments_one": "{{count}} pago guardado",
-    "savedPayments_other": "{{count}} pagos guardados",
     "sentPrivately": "<b>Enviado en privado.</b> Mira cómo se confirma abajo — se actualiza en vivo.",
     "sendAnother": "Enviar otro",
     "searchPlaceholder": "Buscar nombre, nota o monto",
@@ -32,15 +27,12 @@
     "filterSent": "Enviados",
     "filterReceived": "Recibidos",
     "nothingMatches": "Nada coincide con ese filtro.",
-    "receivedAria": "Recibido",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "recibido",
     "badgeSent": "enviado",
     "badgeMined": "minado",
     "badgeConsolidated": "consolidado",
-    "noticedOnOpen": "Detectado al abrir la app",
-    "seenArriving": "Visto llegando",
     "toAddr": "a {{addr}}",
     "mergedNotes": "monedas fusionadas en tu billetera",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "¿Falta algo?",
     "rescanHint": "Relee la cadena para reconstruir este historial y recuperar fondos perdidos.",
     "recoveredNote": "Recuperado de la cadena con tu clave de visualización. Toca un pago para ver detalles.",
-    "turnOffErase": "Desactivar historial y borrar",
     "exportFailed": "No se pudo exportar el CSV en este dispositivo.",
-    "exportCsv": "Exportar CSV",
-    "turnOffTitle": "¿Desactivar historial?",
-    "turnOffBody": "Borra solo la lista de transacciones guardada. Tu saldo y fondos no se ven afectados.",
-    "turnOffConfirm": "Desactivar y borrar"
+    "exportCsv": "Exportar CSV"
   },
   "send": {
     "scanAria": "Escanear QR",
@@ -537,11 +525,9 @@
     "removeConfirm": "Eliminar"
   },
   "rescanButton": {
-    "offHint": "Recupera tu saldo desde la cadena. El historial está desactivado, así que reconstruye fondos — no una lista de transacciones.",
     "rescanning": "Reescaneando — esta pestaña se actualiza al sincronizar.",
     "starting": "Iniciando…",
-    "rescan": "↻ Reexplorar",
-    "enableHistory": "Activar historial y recuperar"
+    "rescan": "↻ Reexplorar"
   },
   "requestAmount": {
     "amountLabel": "Monto a solicitar",

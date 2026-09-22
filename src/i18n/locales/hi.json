@@ -96,13 +96,8 @@
     "title": "इतिहास",
     "recovering": "चेन से इतिहास पुनर्प्राप्त हो रहा है — एक-दो मिनट। आप यह टैब छोड़ सकते हैं।",
     "empty": "अभी कुछ नहीं। प्राप्त और भेजे गए भुगतान यहाँ दिखेंगे।",
-    "turnOff": "इतिहास बंद करें",
     "starting": "शुरू हो रहा है…",
     "recoverFull": "पूरा इतिहास रिकवर करें",
-    "onThisDevice": "इस डिवाइस पर",
-    "noSavedPayments": "कोई सहेजा गया भुगतान नहीं",
-    "savedPayments_one": "{{count}} सहेजा गया भुगतान",
-    "savedPayments_other": "{{count}} सहेजे गए भुगतान",
     "sentPrivately": "<b>निजी रूप से भेजा गया।</b> नीचे पुष्टि देखें — यह लाइव अपडेट होता है।",
     "sendAnother": "और भेजें",
     "searchPlaceholder": "नाम, नोट या राशि खोजें",
@@ -111,15 +106,12 @@
     "filterSent": "भेजा गया",
     "filterReceived": "प्राप्त किया",
     "nothingMatches": "उस फ़िल्टर से कुछ मेल नहीं खाता।",
-    "receivedAria": "प्राप्त किया",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "प्राप्त किया",
     "badgeSent": "भेजा गया",
     "badgeMined": "माइन किया",
     "badgeConsolidated": "समेकित",
-    "noticedOnOpen": "ऐप खोलने पर देखा गया",
-    "seenArriving": "आता हुआ देखा",
     "toAddr": "{{addr}} को",
     "mergedNotes": "आपके वॉलेट में सिक्के मर्ज किए",
     "memoQuoted": "“{{memo}}”",
@@ -131,12 +123,8 @@
     "somethingMissing": "कुछ कमी है?",
     "rescanHint": "इतिहास फिर से बनाने और छूटे फंड वापस पाने के लिए चेन फिर से स्कैन करें।",
     "recoveredNote": "आपकी व्यूइंग की द्वारा चेन से प्राप्त। विवरण के लिए किसी भुगतान पर टैप करें।",
-    "turnOffErase": "इतिहास बंद करें और मिटाएँ",
     "exportFailed": "इस डिवाइस पर CSV निर्यात नहीं हो सका।",
-    "exportCsv": "CSV निर्यात करें",
-    "turnOffTitle": "इतिहास बंद करें?",
-    "turnOffBody": "केवल संग्रहीत लेन-देन सूची मिटाता है। बैलेंस और फंड अप्रभावित रहते हैं।",
-    "turnOffConfirm": "बंद करें और मिटाएँ"
+    "exportCsv": "CSV निर्यात करें"
   },
   "daemonSetting": {
     "timedOut": "5s बाद टाइम आउट",
@@ -537,11 +525,9 @@
     "removeConfirm": "हटाएँ"
   },
   "rescanButton": {
-    "offHint": "चेन से आपका बैलेंस वापस लाता है। इतिहास बंद है, इसलिए यह फंड पुनर्स्थापित करता है — लेन-देन सूची नहीं।",
     "rescanning": "फिर से स्कैन हो रहा है — साथ-साथ यह टैब अपडेट होता रहेगा।",
     "starting": "शुरू हो रहा है…",
-    "rescan": "↻ रीस्कैन",
-    "enableHistory": "इतिहास चालू करें और रिकवर करें"
+    "rescan": "↻ रीस्कैन"
   },
   "requestAmount": {
     "amountLabel": "अनुरोध की राशि",

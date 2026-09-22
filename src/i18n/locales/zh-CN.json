@@ -96,13 +96,8 @@
     "title": "历史记录",
     "recovering": "正在从链上恢复你的历史记录，需一两分钟。你可以离开此标签页。",
     "empty": "暂无记录。收发的付款会显示在此。",
-    "turnOff": "关闭历史记录",
     "starting": "启动中…",
     "recoverFull": "恢复完整历史记录",
-    "onThisDevice": "本设备",
-    "noSavedPayments": "无已保存的付款",
-    "savedPayments_one": "{{count}} 笔已保存的付款",
-    "savedPayments_other": "{{count}} 笔已保存的付款",
     "sentPrivately": "<b>已私密发送。</b>下方实时更新确认状态。",
     "sendAnother": "再发一笔",
     "searchPlaceholder": "搜索姓名、留言或金额",
@@ -111,15 +106,12 @@
     "filterSent": "已发送",
     "filterReceived": "已接收",
     "nothingMatches": "无匹配结果。",
-    "receivedAria": "已接收",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "已接收",
     "badgeSent": "已发送",
     "badgeMined": "已挖出",
     "badgeConsolidated": "已合并",
-    "noticedOnOpen": "打开应用时发现",
-    "seenArriving": "看到到达",
     "toAddr": "至 {{addr}}",
     "mergedNotes": "钱包中已合并的币",
     "memoQuoted": "“{{memo}}”",
@@ -131,12 +123,8 @@
     "somethingMissing": "少了什么？",
     "rescanHint": "重新读取链数据以重建历史记录，并找回本地视图丢失的资金。",
     "recoveredNote": "通过查看密钥从链上恢复。点击付款查看详情。",
-    "turnOffErase": "关闭历史并清除",
     "exportFailed": "此设备无法导出 CSV。",
-    "exportCsv": "导出 CSV",
-    "turnOffTitle": "关闭历史记录？",
-    "turnOffBody": "仅清除存储的交易记录。余额和资金不受影响。",
-    "turnOffConfirm": "关闭并清除"
+    "exportCsv": "导出 CSV"
   },
   "daemonSetting": {
     "timedOut": "5 秒后超时",
@@ -537,11 +525,9 @@
     "removeConfirm": "移除"
   },
   "rescanButton": {
-    "offHint": "从链上恢复你的余额。历史记录已关闭，因此只会重建资金，而不会重建交易列表。",
     "rescanning": "重新扫描中——此标签页会随进度更新。",
     "starting": "启动中…",
-    "rescan": "↻ 重新扫描",
-    "enableHistory": "启用历史记录并恢复"
+    "rescan": "↻ 重新扫描"
   },
   "requestAmount": {
     "amountLabel": "请求金额",

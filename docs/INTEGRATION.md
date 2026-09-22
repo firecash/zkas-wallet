@@ -180,7 +180,7 @@ await z.send(seedHex, "zkas:…", 5_000_000_000n, 10_000_000n); // 50 ZKAS, ≤0
 | Tier | You get | You add |
 |---|---|---|
 | **Receive** | show a `zkas:` address | signer's `address_from_seed` only — no daemon |
-| **Watch-only** | balance + history | + register the FVK with a daemon (`/watch`) |
+| **Watch-only** | balance + history, including where the wallet sent (the daemon always records history and every send is OVK-recoverable) | + register the FVK with a daemon (`/watch`) |
 | **Non-custodial spend** ← *the quickstart* | private send, seed on device | + `verify_and_sign_payment` (SDK or drop-in) |
 | **Fully local** | nothing trusts a service — no server holds even the viewing key | run `zkas-walletd` yourself, or **embed it** the way our apps do: Android via the `zkas-walletd-mobile` UniFFI library (`firecash/zkas-signer`, AAR + xcframework published), desktop via the `zkas_walletd` lib crate; the app talks to it on loopback with the same REST API, and it syncs from any node's gRPC |
 
@@ -240,7 +240,7 @@ Every call carries `X-Wallet-Token`. A self-hosted daemon also enforces `--allow
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/wallet/watch` | register `{ fvk_hex, birthday }` — viewing key only |
+| `POST` | `/api/wallet/watch` | register `{ fvk_hex, birthday }` — viewing key only; history is always recorded (a hosted daemon holding the FVK can read balance, history and send destinations) |
 | `GET`  | `/api/wallet/balance` · `/api/wallet/history` | state |
 | `GET`  | `/api/status` | node/sync status — check `missing_history` (balance is a lower bound if the node pruned) |
 | `POST` | `/api/wallet/prepare` → `/api/wallet/submit` | the non-custodial send pair |

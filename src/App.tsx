@@ -28,8 +28,8 @@ import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
 import { useMaintenance, mergeInFlight } from "./useMaintenance";
 import { isMaintenanceEnabled, setMaintenanceEnabled } from "./maintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
-import { forgetReceipts, loadBaseline, loadReceipts, recordArrival, saveBaseline, type Receipt } from "./receipts";
-import { byNewest, receiptIsOnChain, isConsolidationRow } from "./history";
+import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./receipts";
+import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
 import { isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor } from "./lib/deviceseed";
@@ -570,7 +570,6 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   const recoveryNeeded = useRef(false);
   // On-device send history; drives the optimistic (0-conf) balance and History tab.
   const [txs, setTxs] = useState<LocalTx[]>(() => loadTxs());
-  const [receipts, setReceipts] = useState<Receipt[]>(() => loadReceipts());
   /// Set once the on-device signer has been asked to initialise; see the poll below.
   const signerWarmed = useRef(false);
   // Which wallet token `/api/wallet/warm` has been asked for this session (see refresh).
@@ -899,11 +898,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         firstFinalRead.current = false;
         if (gained !== null) {
           const amount = trimFc(gained.toFixed(8));
-          // Write it down before announcing it. With chain history off, History holds
-          // only sends from this device, so a receive had nowhere to live at all —
-          // the phone said "+11 ZKAS arrived" and the app, opened seconds later,
-          // showed nothing. A notification you cannot corroborate is worse than none.
-          setReceipts(recordArrival(gained, whileAway));
+          // Write it down before announcing it: the on-device record of arrivals is
+          // what lets a notification be corroborated even before the chain scan has
+          // written the matching history row.
+          recordArrival(gained, whileAway);
           // An arrival found on opening was almost certainly already announced by the
           // background worker that woke for it. Saying it twice is noise; the record
           // above is the part that was missing.
@@ -1358,7 +1356,6 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             {tab === "history" && (
               <History
                 txs={txs}
-                receipts={receipts}
                 justSent={justSent}
                 synced={!!status?.synced}
                 daaScore={status?.daa_score}
@@ -4202,8 +4199,8 @@ function SendScene({ stage, estimateMs, progress }: { stage?: SendStage; estimat
 /// are always our own sends; `confs` carries the live confirmation count so the
 /// same modal can show "0-conf" or "12 confirmations" for a send the chain history
 /// hasn't attributed yet. The wallet's optimistic 0-conf list is the ONLY record
-/// of a send made with chain history off, so it must open real details, not bounce
-/// straight to the explorer.
+/// of a send until the chain scan catches up, so it must open real details, not
+/// bounce straight to the explorer.
 function localTxToRow(t: LocalTx): ChainHistoryRow & { confs?: number } {
   return {
     kind: "sent",
@@ -4980,35 +4977,16 @@ function RescanButton({ label, hint, daaScore }: { label: string; hint: string; 
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  // Whether history recording is on decides what a rescan can actually give
-  // back. With it off, a rescan still recovers notes and balance — the funds —
-  // but writes no transaction rows, so the button must not promise a list.
-  const [historyOn, setHistoryOn] = useState<boolean | null>(null);
-  useEffect(() => {
-    let live = true;
-    api
-      .history()
-      .then((h) => live && setHistoryOn(h.recoverableHistory))
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  // `ask` holds the pending action (its value = "also enable history") until the
-  // user confirms in-app.
-  const [ask, setAsk] = useState<boolean | null>(null);
+  // Set while the birthday dialog is open; the rescan starts only once the user
+  // confirms in-app.
+  const [ask, setAsk] = useState(false);
   const [err, setErr] = useState("");
 
-  const run = async (alsoEnableHistory: boolean, birthday?: number) => {
-    setAsk(null);
+  const run = async (birthday?: number) => {
+    setAsk(false);
     setErr("");
     setBusy(true);
     try {
-      if (alsoEnableHistory) {
-        await api.setHistoryEnabled(true);
-        setHistoryOn(true);
-      }
       // Pass the chosen height through: without it the daemon defaults to genesis
       // and replays millions of leaves. `birthday` is a DAA height; a wallet the
       // user knows the age of should never wait for years of chain it never saw.
@@ -5022,40 +5000,24 @@ function RescanButton({ label, hint, daaScore }: { label: string; hint: string; 
     }
   };
 
-  const scopeText = (alsoEnableHistory: boolean) =>
-    (alsoEnableHistory
-      ? "Rescan will re-read the chain from your wallet's birthday, recovering your balance AND rebuilding your transaction history from here on."
-      : historyOn === false
-        ? "Rescan will re-read the chain from your wallet's birthday and recover your balance. History is off, so no transaction list is produced."
-        : "Rescan will re-read the chain from your wallet's birthday to rebuild history and recover anything missing.") +
-    " Takes a minute or two — the balance shows as syncing meanwhile.";
-
-  const offHint = t("rescanButton.offHint");
   return (
     <div className="rescanbox">
       <div>
         <b>{label}</b>
-        <div className="muted small">
-          {done ? t("rescanButton.rescanning") : historyOn === false ? offHint : hint}
-        </div>
+        <div className="muted small">{done ? t("rescanButton.rescanning") : hint}</div>
       </div>
       <div className="rescanbox-actions">
-        <button className="btn ghost" onClick={() => setAsk(false)} disabled={busy}>
+        <button className="btn ghost" onClick={() => setAsk(true)} disabled={busy}>
           {busy ? t("rescanButton.starting") : t("rescanButton.rescan")}
         </button>
-        {historyOn === false && (
-          <button className="btn ghost small" onClick={() => setAsk(true)} disabled={busy}>
-            {t("rescanButton.enableHistory")}
-          </button>
-        )}
       </div>
       {err && <div className="msg err">{err}</div>}
-      {ask !== null && (
+      {ask && (
         <RecoverHistoryDialog
           daaScore={daaScore ?? 0}
           known={knownBirthday()}
-          onConfirm={(birthday) => run(ask, birthday)}
-          onCancel={() => setAsk(null)}
+          onConfirm={(birthday) => run(birthday)}
+          onCancel={() => setAsk(false)}
         />
       )}
     </div>
@@ -5780,7 +5742,7 @@ function Send({
       // transaction is broadcast as several, and filing the whole amount under the
       // first txid was wrong twice over: the row claimed a transaction had paid far
       // more than it did, and the remaining transactions went unrecorded entirely —
-      // invisible on a device with chain history off. It also made the payment
+      // invisible until the chain scan caught up. It also made the payment
       // disappear, since the first txid landing on-chain retired a row standing in
       // for all of them.
       const parts = r.parts?.length
@@ -6282,7 +6244,7 @@ const NO_ROWS: ChainHistoryRow[] = [];
 /// answers with a new object every time; adopting it unchanged re-sorted and
 /// re-rendered the whole list for nothing.
 function sameHistory(a: ChainHistory, b: ChainHistory): boolean {
-  if (a.recoverableHistory !== b.recoverableHistory || a.total !== b.total || a.rows.length !== b.rows.length) return false;
+  if (a.total !== b.total || a.rows.length !== b.rows.length) return false;
   const ap = a.pendingOutgoing ?? [];
   const bp = b.pendingOutgoing ?? [];
   if (ap.length !== bp.length || ap.some((r, i) => r.txid !== bp[i].txid)) return false;
@@ -6295,19 +6257,15 @@ function sameHistory(a: ChainHistory, b: ChainHistory): boolean {
 /// Memoised: rendered inside the 7k-line App, it otherwise re-rendered on every
 /// status tick — once a second during a scan — and each render re-filtered,
 /// re-sorted and re-read localStorage per row. Its props are primitives plus
-/// lists whose identity the parent already preserves (`sameTxs`, receipts state).
+/// lists whose identity the parent already preserves (`sameTxs`).
 const History = memo(function History({
   txs,
-  receipts,
   justSent,
   onSendAnother,
   synced,
   daaScore,
 }: {
   txs: LocalTx[];
-  /// Arrivals this device noticed, shown only in the on-device scope: with full
-  /// recovery on, the chain itself reports receives and these would double up.
-  receipts?: Receipt[];
   justSent?: string | null;
   onSendAnother?: (prefillAddress?: string) => void;
   synced?: boolean;
@@ -6331,11 +6289,10 @@ const History = memo(function History({
     [historyKey],
   );
   const [busy, setBusy] = useState(false);
-  // True from the moment history is enabled until the recovery scan finishes —
-  // so the tab explains the wait instead of looking empty and broken.
+  // True from the moment a recovery rescan is started until it finishes — so the
+  // tab explains the wait instead of looking empty and broken.
   const [recovering, setRecovering] = useState(false);
   const [askRecover, setAskRecover] = useState(false);
-  const [askDisable, setAskDisable] = useState(false);
   const [err, setErr] = useState("");
   const [detail, setDetail] = useState<(ChainHistoryRow & { confs?: number }) | null>(null);
   const [q, setQ] = useState("");
@@ -6372,12 +6329,12 @@ const History = memo(function History({
   // Long histories render windowed — a miner wallet accrues thousands of rows
   // and a multi-thousand-button list makes the tab unusable.
   const [showAll, setShowAll] = useState(false);
-  // Set while the recovery scan is genuinely in flight. Enabling history starts a
-  // rescan, but the daemon takes a moment to report itself unsynced — so `synced` was
-  // still TRUE on the very next render and the tab declared recovery finished
-  // immediately, showing an empty history as if it were complete. That is the reported
-  // "enabled history, received coins not there": the rows arrived seconds later and
-  // nothing was watching for them any more.
+  // Set while the recovery scan is genuinely in flight. Recovery starts a rescan,
+  // but the daemon takes a moment to report itself unsynced — so `synced` was still
+  // TRUE on the very next render and the tab declared recovery finished immediately,
+  // showing an empty history as if it were complete. That is the reported "recovered
+  // history, received coins not there": the rows arrived seconds later and nothing
+  // was watching for them any more.
   const sawUnsynced = useRef(false);
   useEffect(() => {
     if (!recovering) {
@@ -6386,8 +6343,8 @@ const History = memo(function History({
     }
     if (!synced) sawUnsynced.current = true;
     // Finished when rows actually arrived, or when a scan that we WATCHED START has
-    // completed. A wallet with no recoverable history legitimately produces zero rows,
-    // so rows alone cannot be the only exit.
+    // completed. A wallet that never transacted legitimately produces zero rows, so
+    // rows alone cannot be the only exit.
     if ((chain?.rows.length ?? 0) > 0 || (synced && sawUnsynced.current)) setRecovering(false);
   }, [recovering, chain, synced]);
   useEffect(() => {
@@ -6415,30 +6372,23 @@ const History = memo(function History({
     };
   }, [recovering, setChain, showAll]);
 
-  // History is opt-in: nothing readable is stored until the user activates it,
-  // and turning it off erases the stored record immediately.
-  //
-  // Enabling also kicks off a rescan. Rows are only written as blocks are
-  // scanned, so without it "Enable history" leaves the tab empty until the next
-  // payment arrives — the flag looks broken. The rescan re-reads the chain from
-  // the wallet's birthday and recovers everything the keys can still derive.
-  const setHistory = async (on: boolean, birthday?: number) => {
-    setAskDisable(false);
+  // The daemon always records history; rows are written as blocks are scanned, so
+  // recovering means re-reading the chain from the wallet's birthday, which brings
+  // back everything the keys can still derive.
+  const recover = async (birthday?: number) => {
+    setAskRecover(false);
     setErr("");
     setBusy(true);
     try {
-      await api.setHistoryEnabled(on);
-      if (on) {
-        // Genesis unless the user told us when this wallet started. A full replay is
-        // millions of leaves; starting at a remembered date skips the years the
-        // wallet did not exist for.
-        await api.rescan(birthday);
-        // Mark recovery BEFORE the fetch below. The rescan is asynchronous on the
-        // daemon, so that fetch returns the pre-rescan (empty) history — which is
-        // correct to display, but only if the tab knows more is coming. The 2s poll
-        // above then fills it in.
-        setRecovering(true);
-      }
+      // Genesis unless the user told us when this wallet started. A full replay is
+      // millions of leaves; starting at a remembered date skips the years the
+      // wallet did not exist for.
+      await api.rescan(birthday);
+      // Mark recovery BEFORE the fetch below. The rescan is asynchronous on the
+      // daemon, so that fetch returns the pre-rescan (empty) history — which is
+      // correct to display, but only if the tab knows more is coming. The 2s poll
+      // above then fills it in.
+      setRecovering(true);
       setChain(await api.history(showAll ? undefined : HISTORY_PAGE));
     } catch (e) {
       setErr((e as Error).message);
@@ -6446,26 +6396,6 @@ const History = memo(function History({
       setBusy(false);
     }
   };
-
-  // A VIEW-ONLY wallet exists to be looked at. If its history is off — every viewer
-  // registered before the daemon learned to turn it on at import, and any viewer
-  // whose daemon ignored the request — turn it on once and recover, automatically,
-  // instead of leaving the tab at "confirmed on-chain" with no destination until
-  // someone finds the button. Sent rows (recipient, amount, memo) are recoverable
-  // through the viewing key's OVK, so this adds no disclosure the key does not
-  // already carry. One attempt per wallet, remembered on this device.
-  useEffect(() => {
-    if (!isWatchOnly() || !chain || chain.recoverableHistory || busy || recovering) return;
-    const flag = `history_autoon_${activeToken() ?? "default"}`;
-    try {
-      if (localStorage.getItem(flag)) return;
-      localStorage.setItem(flag, "1");
-    } catch {
-      return;
-    }
-    void setHistory(true, knownBirthday() || undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chain]);
 
   const fresh = justSent ? txs.find((t) => t.txid === justSent) : undefined;
   const allRows = chain?.rows ?? NO_ROWS;
@@ -6520,48 +6450,20 @@ const History = memo(function History({
   // These are always SENDS, so they must honour the same filter and search the
   // chain rows do — otherwise a send shows up under "Received".
   const pending = useMemo(() => notYetOnChain.filter(deviceMatches), [notYetOnChain, deviceMatches]);
-  const historyOff = chain !== null && !chain.recoverableHistory;
-  // Arrivals belong to the on-device scope only. With full recovery on, the chain
-  // reports receives itself and these would list the same payment twice.
-  const shownReceipts = useMemo(() => {
-    if (!historyOff) return [];
-    const rows = receipts ?? [];
-    if (kindFilter !== "all" && kindFilter !== "received") return [];
-    if (!q.trim()) return rows;
-    const needle = q.trim().toLowerCase();
-    return rows.filter((r) => r.amountFc.toFixed(8).includes(needle) || "received".includes(needle));
-  }, [historyOff, receipts, kindFilter, q]);
-  const deviceCount = txs.length + (historyOff ? (receipts?.length ?? 0) : 0);
-  // Sends this device recorded itself (localtx, in this browser/app's storage).
-  // These exist and are readable with chain history OFF — they never left the
-  // device. Chain-recovered history is the separate, permissioned thing.
-  // Everything this DEVICE recorded itself, not just what is still unconfirmed.
-  //
-  // This counted only `pending` — sends not yet seen on chain — so the moment a send
-  // confirmed it vanished from a history-off wallet and the tab reverted to the
-  // "turn history on" wall of text, as if the device had never known about it. It did:
-  // localtx rows live in this app's own storage and are readable with chain history
-  // off, because they never left the device.
-  const deviceRows = useMemo(() => txs.filter(deviceMatches), [txs, deviceMatches]);
 
-  // ONE list, in time order, out of three sources that record time differently.
+  // ONE list, in time order, out of two sources that record time differently.
   //
-  // These used to be rendered as three concatenated blocks — arrivals, then device
-  // sends, then chain rows — each sorted internally and none sorted against the others.
-  // A send at 12:19 was therefore listed BELOW arrivals at 12:23 and 12:12, which reads
-  // as a missing payment. See `history.ts` for how undated chain rows are handled.
+  // These used to be rendered as concatenated blocks — device sends, then chain
+  // rows — each sorted internally and not sorted against each other. A send at
+  // 12:19 was therefore listed BELOW arrivals at 12:23 and 12:12, which reads as a
+  // missing payment. See `history.ts` for how undated chain rows are handled.
   const merged = useMemo(
     () =>
       byNewest([
-        ...shownReceipts
-          // A receipt is an inferred arrival with no txid; if the chain already reports
-          // that payment, the chain row is the authoritative one and this would double it.
-          .filter((r) => !receiptIsOnChain(r, allRows))
-          .map((r) => ({ t: "receipt" as const, ts: r.ts, r })),
-        ...(historyOff ? deviceRows : pending).map((tx) => ({ t: "device" as const, ts: tx.ts, tx })),
+        ...pending.map((tx) => ({ t: "device" as const, ts: tx.ts, tx })),
         ...chainRows.map((row) => ({ t: "chain" as const, ts: row.timestamp, daaScore: row.daaScore, row })),
       ]),
-    [shownReceipts, allRows, historyOff, deviceRows, pending, chainRows],
+    [pending, chainRows],
   );
   const shownRows = showAll ? merged : merged.slice(0, HISTORY_PAGE);
 
@@ -6571,7 +6473,9 @@ const History = memo(function History({
   const heldZkas = (chain?.pendingOutgoing ?? []).reduce((s, p) => s + p.amountZkas, 0);
   const heldTxids = new Set((chain?.pendingOutgoing ?? []).map((p) => p.txid)).size;
 
-  if (!historyOff && pending.length === 0 && chainRows.length === 0) {
+  // Keyed on the UNFILTERED sources: a search or filter that matches nothing is
+  // reported inside the list view ("nothing matches"), not by hiding the filters.
+  if (notYetOnChain.length === 0 && allRows.length === 0) {
     return (
       <div className="card">
         <h2>{t("history.title")}</h2>
@@ -6589,10 +6493,19 @@ const History = memo(function History({
               ? t("history.recovering")
               : t("history.empty")}
         </p>
-        {chain !== null && (
-          <button className="btn ghost small" onClick={() => setAskDisable(true)} disabled={busy}>
-            {t("history.turnOff")}
+        {chain !== null && !recovering && (
+          <button className="btn ghost small" onClick={() => setAskRecover(true)} disabled={busy}>
+            {busy ? t("history.starting") : t("history.recoverFull")}
           </button>
+        )}
+        {err && <div className="msg err">{err}</div>}
+        {askRecover && (
+          <RecoverHistoryDialog
+            daaScore={loadStatusCache()?.daa_score ?? 0}
+            known={knownBirthday()}
+            onCancel={() => setAskRecover(false)}
+            onConfirm={(birthday) => void recover(birthday)}
+          />
         )}
       </div>
     );
@@ -6601,18 +6514,7 @@ const History = memo(function History({
     <div className="card">
       <div className="history-heading">
         <h2>{t("history.title")}</h2>
-        {historyOff && (
-          <button className="btn ghost small" onClick={() => setAskRecover(true)} disabled={busy}>
-            {busy ? t("history.starting") : t("history.recoverFull")}
-          </button>
-        )}
       </div>
-      {historyOff && (
-        <div className="history-scope">
-          <b>{t("history.onThisDevice")}</b>
-          <span>{deviceCount === 0 ? t("history.noSavedPayments") : t("history.savedPayments", { count: deviceCount })}</span>
-        </div>
-      )}
       {fresh && (
         <div className="sentbanner appear">
           <span className="sent-check small">✓</span>
@@ -6628,7 +6530,7 @@ const History = memo(function History({
           )}
         </div>
       )}
-      {(historyOff ? txs.length : allRows.length) > 3 && (
+      {allRows.length > 3 && (
         <div className="filterbar">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("history.searchPlaceholder")} />
           {(["all", "received", "sent", "coinbase"] as const).map((k) => {
@@ -6642,39 +6544,16 @@ const History = memo(function History({
         </div>
       )}
       {/* ONE list, so ONE empty state. These used to be two guards keyed on the
-          individual sources (`chainRows` here, `deviceRows` below), which contradicted
-          the rendered list the moment the two disagreed: filtering to "Received" with
-          history off leaves `deviceRows` — sends — empty by definition, so the screen
-          announced "nothing matches" directly above the arrivals it was showing. */}
-      {(allRows.length > 0 || txs.length > 0 || (receipts?.length ?? 0) > 0) && merged.length === 0 && (
+          individual sources, which contradicted the rendered list the moment the two
+          disagreed: the screen announced "nothing matches" directly above rows it
+          was showing. */}
+      {(allRows.length > 0 || txs.length > 0) && merged.length === 0 && (
         <p className="muted small">{t("history.nothingMatches")}</p>
       )}
       <div className="txlist">
-        {/* Every send this device recorded, not only the unconfirmed ones. A confirmed
-            send used to disappear from a history-off wallet entirely — the device knew
-            about it the whole time. Chain-recovered rows are listed separately below,
-            and `notYetOnChain` keeps the two from showing the same payment twice. */}
+        {/* Device-recorded sends the chain scan has not caught up to yet sit on top;
+            `notYetOnChain` keeps the two sources from showing the same payment twice. */}
           {shownRows.map((row, ri) => {
-            // An arrival INFERRED from the balance moving: amount and roughly when, and
-            // nothing else — no txid, and no sender, which is unknowable for a shielded
-            // payment by design. It is rendered in the SAME shape as every other row so
-            // the list reads as one history; the sub-line says how it was learned rather
-            // than dressing a local observation up as a chain record.
-            if (row.t === "receipt") {
-              const r = row.r;
-              return (
-                <div key={`rcpt-${r.ts}-${ri}`} className="txrow" aria-label={t("history.receivedAria")}>
-                  <div className="txrow-main">
-                    <span className="txrow-amt pos">{hide ? MASK : <>{t("history.plusZkas", { amount: trimFc(r.amountFc.toFixed(8)) })}{fmtFiat(r.amountFc, price) ? <span className="fiat-sub small"> · {fmtFiat(r.amountFc, price)}</span> : null}</>}</span>
-                    <span className="txrow-badge recv">{t("history.badgeReceived")}</span>
-                  </div>
-                  <div className="txrow-sub">
-                    <span>{r.whileAway ? t("history.noticedOnOpen") : t("history.seenArriving")}</span>
-                    <span>{fmtTime(r.ts)}</span>
-                  </div>
-                </div>
-              );
-            }
             if (row.t === "device") {
               const tx = row.tx;
               return (
@@ -6771,25 +6650,12 @@ const History = memo(function History({
           {t("history.held", { count: heldTxids, amount: trimFc(heldZkas.toFixed(8)) })}
         </p>
       )}
-      {!historyOff && (
-        <>
-          <RescanButton label={t("history.somethingMissing")} hint={t("history.rescanHint")} daaScore={daaScore} />
+      <RescanButton label={t("history.somethingMissing")} hint={t("history.rescanHint")} daaScore={daaScore} />
 
-          <p className="muted small" style={{ marginTop: 14 }}>
-            {t("history.recoveredNote")}{" "}
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                setAskDisable(true);
-              }}
-            >
-              {t("history.turnOffErase")}
-            </a>
-          </p>
-        </>
-      )}
-      {!historyOff && allRows.length > 0 && (
+      <p className="muted small" style={{ marginTop: 14 }}>
+        {t("history.recoveredNote")}
+      </p>
+      {allRows.length > 0 && (
         <button
           className="btn ghost small"
           onClick={() => {
@@ -6827,27 +6693,6 @@ const History = memo(function History({
         />
       )}
       {err && <div className="msg err">{err}</div>}
-      {askRecover && (
-        <RecoverHistoryDialog
-          daaScore={loadStatusCache()?.daa_score ?? 0}
-          known={knownBirthday()}
-          onCancel={() => setAskRecover(false)}
-          onConfirm={(birthday) => {
-            setAskRecover(false);
-            void setHistory(true, birthday);
-          }}
-        />
-      )}
-      {askDisable && (
-        <ConfirmDialog
-          title={t("history.turnOffTitle")}
-          body={t("history.turnOffBody")}
-          confirmLabel={t("history.turnOffConfirm")}
-          danger
-          onConfirm={() => setHistory(false)}
-          onCancel={() => setAskDisable(false)}
-        />
-      )}
     </div>
   );
 });

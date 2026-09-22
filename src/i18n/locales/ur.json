@@ -17,13 +17,8 @@
     "title": "تاریخچہ",
     "recovering": "چین سے آپ کا تاریخچہ بحال ہو رہا ہے — ایک دو منٹ۔ آپ یہ ٹیب چھوڑ سکتے ہیں۔",
     "empty": "ابھی کچھ نہیں۔ بھیجی اور وصول شدہ ادائیگیاں یہاں دکھیں گی۔",
-    "turnOff": "تاریخچہ بند کریں",
     "starting": "شروع ہو رہا ہے…",
     "recoverFull": "مکمل تاریخچہ بحال کریں",
-    "onThisDevice": "اس ڈیوائس پر",
-    "noSavedPayments": "کوئی محفوظ ادائیگی نہیں",
-    "savedPayments_one": "{{count}} محفوظ ادائیگی",
-    "savedPayments_other": "{{count}} محفوظ ادائیاں",
     "sentPrivately": "<b>نجی طور پر بھیجا۔</b> نیچے تصدیق دیکھیں — لائیو اپ ڈیٹ۔",
     "sendAnother": "دوسری بھیجیں",
     "searchPlaceholder": "نام، نوٹ یا رقم تلاش کریں",
@@ -32,15 +27,12 @@
     "filterSent": "بھیجی گئی",
     "filterReceived": "وصول شدہ",
     "nothingMatches": "کوئی مماثلت نہیں۔",
-    "receivedAria": "وصول شدہ",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "وصول شدہ",
     "badgeSent": "بھیجی گئی",
     "badgeMined": "مائن شدہ",
     "badgeConsolidated": "یکجا شدہ",
-    "noticedOnOpen": "ایپ کھولنے پر دیکھا",
-    "seenArriving": "آتے دیکھا گیا",
     "toAddr": "بجانب {{addr}}",
     "mergedNotes": "آپ کے والٹ میں یکجا کیے گئے سکے",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "کچھ غائب ہے؟",
     "rescanHint": "اس تاریخچہ کو دوبارہ بنانے اور گمشدہ فنڈز وصول کرنے کے لیے چین دوبارہ پڑھیں۔",
     "recoveredNote": "آپ کی دیکھنے کی کلید کے ذریعے چین سے برآمد ہوا۔ تفصیل کے لیے ادائیگی پر تھپتھپائیں۔",
-    "turnOffErase": "تاریخچہ بند کریں اور مٹائیں",
     "exportFailed": "اس ڈیوائس پر CSV برآمد نہیں ہو سکا۔",
-    "exportCsv": "CSV برآمد کریں",
-    "turnOffTitle": "تاریخچہ بند کریں؟",
-    "turnOffBody": "صرف ذخیرہ شدہ ٹرانزیکشن کی فہرست مٹاتا ہے۔ بیلنس اور فنڈز متاثر نہیں ہوتے۔",
-    "turnOffConfirm": "بند کریں اور مٹائیں"
+    "exportCsv": "CSV برآمد کریں"
   },
   "send": {
     "scanAria": "QR اسکین کریں",
@@ -537,11 +525,9 @@
     "removeConfirm": "ہٹائیں"
   },
   "rescanButton": {
-    "offHint": "چین سے بیلنس بحال کرتا ہے۔ تاریخچہ بند ہے، لہٰذا یہ فنڈز دوبارہ بناتا ہے — لین دین کی فہرست نہیں۔",
     "rescanning": "دوبارہ اسکین — یہ ٹیب اپ ڈیٹ ہو رہا ہے۔",
     "starting": "شروع ہو رہا ہے…",
-    "rescan": "↻ دوبارہ اسکین",
-    "enableHistory": "تاریخچہ فعال کریں اور بحال کریں"
+    "rescan": "↻ دوبارہ اسکین"
   },
   "requestAmount": {
     "amountLabel": "درخواست کی رقم",

@@ -1910,17 +1910,6 @@ select { appearance: none; cursor: pointer; }
 }
 .history-heading h2 { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .history-heading .btn { flex: 0 1 auto; max-width: 60%; white-space: normal; }
-.history-scope {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 2px 12px;
-  margin-bottom: 10px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.history-scope b { color: var(--ink); font-size: 13px; }
 .history-empty {
   padding: 24px 10px;
   color: var(--muted);

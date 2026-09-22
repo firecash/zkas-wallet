@@ -55,7 +55,6 @@ vi.mock("../src/api", async (orig) => {
       }),
       history: vi.fn(async () => ({ recoverableHistory: true, total: 0, rows: [], pendingOutgoing: [] })),
       balance: vi.fn(async () => ({})),
-      setHistoryEnabled: vi.fn(async () => ({ recoverableHistory: true })),
       rescan: vi.fn(async () => ({ rescanning: true })),
       watch: vi.fn(async () => ({ address: ADDRESS })),
       create: vi.fn(async () => ({ address: ADDRESS, seed_hex: "ab".repeat(32), network: "mainnet", warning: "" })),

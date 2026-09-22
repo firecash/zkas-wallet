@@ -17,13 +17,8 @@
     "title": "거래 내역",
     "recovering": "체인에서 내역을 복구 중입니다 — 1~2분 소요. 이 탭을 떠나도 됩니다.",
     "empty": "아직 없음. 받거나 보낸 결제가 여기에 표시됩니다.",
-    "turnOff": "거래 내역 끄기",
     "starting": "시작 중…",
     "recoverFull": "전체 거래 내역 복원",
-    "onThisDevice": "이 기기에서",
-    "noSavedPayments": "저장된 결제 없음",
-    "savedPayments_one": "저장된 결제 {{count}}건",
-    "savedPayments_other": "저장된 결제 {{count}}건",
     "sentPrivately": "<b>비공개 전송됨.</b> 아래에서 확인을 실시간으로 지켜보세요.",
     "sendAnother": "다시 보내기",
     "searchPlaceholder": "이름, 메모 또는 금액 검색",
@@ -32,15 +27,12 @@
     "filterSent": "보냄",
     "filterReceived": "받음",
     "nothingMatches": "일치하는 항목이 없습니다.",
-    "receivedAria": "받음",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "받음",
     "badgeSent": "보냄",
     "badgeMined": "채굴",
     "badgeConsolidated": "통합",
-    "noticedOnOpen": "앱 열 때 확인됨",
-    "seenArriving": "입금 확인됨",
     "toAddr": "{{addr}}에게",
     "mergedNotes": "지갑에서 병합된 코인",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "뭔가 빠졌나요?",
     "rescanHint": "체인을 다시 읽어 내역을 재구성하고 분실된 자금을 복구합니다.",
     "recoveredNote": "조회 키로 체인에서 복구됨. 세부 정보를 보려면 결제를 탭하세요.",
-    "turnOffErase": "거래 내역 끄기 및 삭제",
     "exportFailed": "이 기기에서 CSV를 내보낼 수 없습니다.",
-    "exportCsv": "CSV 내보내기",
-    "turnOffTitle": "거래 내역을 끌까요?",
-    "turnOffBody": "저장된 거래 목록만 삭제됩니다. 잔액과 자금에는 영향이 없습니다.",
-    "turnOffConfirm": "끄기 및 삭제"
+    "exportCsv": "CSV 내보내기"
   },
   "send": {
     "scanAria": "QR 스캔",
@@ -537,11 +525,9 @@
     "removeConfirm": "삭제"
   },
   "rescanButton": {
-    "offHint": "체인에서 잔액 복구. 내역은 꺼져 있으므로 거래 목록이 아닌 자금만 재구축합니다.",
     "rescanning": "재스캔 중 — 따라잡으면 이 탭이 업데이트됩니다.",
     "starting": "시작 중…",
-    "rescan": "↻ 재스캔",
-    "enableHistory": "내역 활성화 및 복구"
+    "rescan": "↻ 재스캔"
   },
   "requestAmount": {
     "amountLabel": "요청 금액",

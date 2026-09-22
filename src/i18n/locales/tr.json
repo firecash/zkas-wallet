@@ -17,13 +17,8 @@
     "title": "Geçmiş",
     "recovering": "Geçmişiniz zincirden kurtarılıyor — bir iki dakika. Bu sekmeyi terk edebilirsiniz.",
     "empty": "Henüz bir şey yok. Gönderip aldığınız ödemeler burada görünür.",
-    "turnOff": "Geçmişi kapat",
     "starting": "Başlatılıyor…",
     "recoverFull": "Tam geçmişi geri yükle",
-    "onThisDevice": "Bu cihazda",
-    "noSavedPayments": "Kayıtlı ödeme yok",
-    "savedPayments_one": "{{count}} kayıtlı ödeme",
-    "savedPayments_other": "{{count}} kayıtlı ödeme",
     "sentPrivately": "<b>Özel gönderildi.</b> Aşağıda onaylanmasını izleyin — canlı güncellenir.",
     "sendAnother": "Yeni gönderim",
     "searchPlaceholder": "İsim, not veya miktar ara",
@@ -32,15 +27,12 @@
     "filterSent": "Gönderilen",
     "filterReceived": "Alınan",
     "nothingMatches": "Bu filtreyle eşleşen yok.",
-    "receivedAria": "Alındı",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "alındı",
     "badgeSent": "gönderildi",
     "badgeMined": "kazıldı",
     "badgeConsolidated": "birleştirildi",
-    "noticedOnOpen": "Uygulama açıldığında fark edildi",
-    "seenArriving": "Gelişi görüldü",
     "toAddr": "alıcı: {{addr}}",
     "mergedNotes": "cüzdanınızda birleştirilmiş jetonlar",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "Eksik bir şey mi var?",
     "rescanHint": "Geçmişi yeniden oluşturmak ve kayıp fonları kurtarmak için zinciri yeniden tara.",
     "recoveredNote": "Görüntüleme anahtarınızla zincirden kurtarıldı. Detaylar için bir ödemeye dokunun.",
-    "turnOffErase": "Geçmişi kapat ve sil",
     "exportFailed": "CSV bu cihaza aktarılamadı.",
-    "exportCsv": "CSV Dışa Aktar",
-    "turnOffTitle": "Geçmiş kapatılsın mı?",
-    "turnOffBody": "Sadece kayıtlı işlem listesini siler. Bakiyeniz ve fonlarınız etkilenmez.",
-    "turnOffConfirm": "Kapat ve sil"
+    "exportCsv": "CSV Dışa Aktar"
   },
   "send": {
     "scanAria": "QR Tara",
@@ -537,11 +525,9 @@
     "removeConfirm": "Kaldır"
   },
   "rescanButton": {
-    "offHint": "Bakiyenizi zincirden kurtarır. Geçmiş kapalı, bu nedenle fonları yeniden oluşturur — işlem listesi değil.",
     "rescanning": "Yeniden taranıyor — bu sekme yetiştikçe güncellenir.",
     "starting": "Başlatılıyor…",
-    "rescan": "↻ Yeniden tara",
-    "enableHistory": "Geçmişi etkinleştir ve kurtar"
+    "rescan": "↻ Yeniden tara"
   },
   "requestAmount": {
     "amountLabel": "Talep edilecek miktar",

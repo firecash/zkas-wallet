@@ -17,13 +17,8 @@
     "title": "Lịch sử",
     "recovering": "Đang khôi phục lịch sử từ chuỗi — mất một hai phút. Bạn có thể rời tab này.",
     "empty": "Chưa có gì. Các khoản nhận/gửi sẽ hiện ở đây.",
-    "turnOff": "Tắt lịch sử",
     "starting": "Đang khởi động…",
     "recoverFull": "Khôi phục toàn bộ lịch sử",
-    "onThisDevice": "Trên thiết bị này",
-    "noSavedPayments": "Không có thanh toán đã lưu",
-    "savedPayments_one": "{{count}} thanh toán đã lưu",
-    "savedPayments_other": "{{count}} thanh toán đã lưu",
     "sentPrivately": "<b>Đã gửi ẩn danh.</b> Theo dõi xác nhận bên dưới — cập nhật trực tiếp.",
     "sendAnother": "Gửi giao dịch khác",
     "searchPlaceholder": "Tìm tên, ghi chú hoặc số lượng",
@@ -32,15 +27,12 @@
     "filterSent": "Đã gửi",
     "filterReceived": "Đã nhận",
     "nothingMatches": "Không có kết quả phù hợp.",
-    "receivedAria": "Đã nhận",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "đã nhận",
     "badgeSent": "đã gửi",
     "badgeMined": "đã đào",
     "badgeConsolidated": "đã hợp nhất",
-    "noticedOnOpen": "Phát hiện khi mở ứng dụng",
-    "seenArriving": "Đã thấy đang đến",
     "toAddr": "đến {{addr}}",
     "mergedNotes": "đồng đã gộp trong ví của bạn",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "Thiếu gì đó?",
     "rescanHint": "Đọc lại chuỗi để xây lại lịch sử và thu hồi tiền bị mất.",
     "recoveredNote": "Đã phục hồi từ chuỗi bằng khóa xem của bạn. Chạm để xem chi tiết.",
-    "turnOffErase": "Tắt lịch sử & xóa",
     "exportFailed": "Không thể xuất CSV trên thiết bị này.",
-    "exportCsv": "Xuất CSV",
-    "turnOffTitle": "Tắt lịch sử?",
-    "turnOffBody": "Chỉ xóa danh sách giao dịch đã lưu. Số dư và tiền của bạn không bị ảnh hưởng.",
-    "turnOffConfirm": "Tắt & xóa"
+    "exportCsv": "Xuất CSV"
   },
   "send": {
     "scanAria": "Quét mã QR",
@@ -537,11 +525,9 @@
     "removeConfirm": "Xóa"
   },
   "rescanButton": {
-    "offHint": "Khôi phục số dư từ chuỗi. Lịch sử tắt, nên chỉ xây dựng lại quỹ — không phải danh sách giao dịch.",
     "rescanning": "Đang quét lại — tab này cập nhật khi bắt kịp.",
     "starting": "Đang khởi động…",
-    "rescan": "↻ Quét lại",
-    "enableHistory": "Bật lịch sử & khôi phục"
+    "rescan": "↻ Quét lại"
   },
   "requestAmount": {
     "amountLabel": "Số lượng yêu cầu",

@@ -12,9 +12,11 @@
 //      exactly the case the Android background worker exists to catch. The worker
 //      notifies natively from a balance delta it computes itself, so the phone said
 //      "+11 ZKAS arrived" and the app, opened seconds later, knew nothing about it.
-//   2. With chain history off, History holds only sends made from this device.
-//      Receives had nowhere to be recorded even in principle, so a notification
-//      could never be corroborated inside the app.
+//   2. Before the daemon recorded history for every wallet, History held only sends
+//      made from this device. Receives had nowhere to be recorded even in principle,
+//      so a notification could never be corroborated inside the app. The chain now
+//      reports receives itself, so the History tab no longer lists these records;
+//      they remain the device's own note of what it announced.
 //
 // A notification you cannot verify is worse than no notification: it teaches people
 // to distrust the wallet at the exact moment it is telling the truth.

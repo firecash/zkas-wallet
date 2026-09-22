@@ -17,13 +17,8 @@
     "title": "Verlauf",
     "recovering": "Verlauf wird aus der Chain wiederhergestellt – eine Minute. Tab kann verlassen werden.",
     "empty": "Noch nichts. Empfangene und gesendete Zahlungen erscheinen hier.",
-    "turnOff": "Verlauf ausschalten",
     "starting": "Startet…",
     "recoverFull": "Gesamten Verlauf wiederherstellen",
-    "onThisDevice": "Auf diesem Gerät",
-    "noSavedPayments": "Keine gespeicherten Zahlungen",
-    "savedPayments_one": "{{count}} gespeicherte Zahlung",
-    "savedPayments_other": "{{count}} gespeicherte Zahlungen",
     "sentPrivately": "<b>Privat gesendet.</b> Bestätigung unten live verfolgen.",
     "sendAnother": "Weitere senden",
     "searchPlaceholder": "Name, Notiz oder Betrag suchen",
@@ -32,15 +27,12 @@
     "filterSent": "Gesendet",
     "filterReceived": "Empfangen",
     "nothingMatches": "Keine Treffer für diesen Filter.",
-    "receivedAria": "Empfangen",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "empfangen",
     "badgeSent": "gesendet",
     "badgeMined": "gemined",
     "badgeConsolidated": "konsolidiert",
-    "noticedOnOpen": "Beim Öffnen bemerkt",
-    "seenArriving": "Eingehend gesehen",
     "toAddr": "an {{addr}}",
     "mergedNotes": "zusammengeführte Münzen in deiner Wallet",
     "memoQuoted": "„{{memo}}“",
@@ -52,12 +44,8 @@
     "somethingMissing": "Fehlt etwas?",
     "rescanHint": "Chain erneut lesen, um Verlauf neu aufzubauen und verlorene Gelder zu finden.",
     "recoveredNote": "Von der Chain mit deinem Betrachtungsschlüssel wiederhergestellt. Tippe für Details.",
-    "turnOffErase": "Verlauf aus & löschen",
     "exportFailed": "CSV-Export auf diesem Gerät nicht möglich.",
-    "exportCsv": "CSV exportieren",
-    "turnOffTitle": "Verlauf ausschalten?",
-    "turnOffBody": "Löscht nur die gespeicherte Transaktionsliste. Guthaben und Gelder bleiben unberührt.",
-    "turnOffConfirm": "Ausschalten & löschen"
+    "exportCsv": "CSV exportieren"
   },
   "send": {
     "scanAria": "QR scannen",
@@ -641,11 +629,9 @@
     "removeConfirm": "Entfernen"
   },
   "rescanButton": {
-    "offHint": "Stellt Guthaben aus der Chain wieder her. Verlauf ist aus, daher werden nur Gelder, keine Transaktionen neu aufgebaut.",
     "rescanning": "Erneuter Scan – dieser Tab aktualisiert sich während des Vorgangs.",
     "starting": "Startet…",
-    "rescan": "↻ Erneut scannen",
-    "enableHistory": "Verlauf aktivieren & wiederherstellen"
+    "rescan": "↻ Erneut scannen"
   },
   "status": {
     "offlineLabel": "Netzwerk nicht erreichbar",

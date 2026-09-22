@@ -86,13 +86,8 @@
     "title": "歷史記錄",
     "recovering": "正在從鏈上復原你的歷史紀錄，約需一兩分鐘。你可以離開此分頁。",
     "empty": "尚無記錄。你發送與接收的款項會顯示在此。",
-    "turnOff": "關閉歷史記錄",
     "starting": "啟動中…",
     "recoverFull": "恢復完整歷史記錄",
-    "onThisDevice": "此裝置上",
-    "noSavedPayments": "無已儲存的付款",
-    "savedPayments_one": "{{count}} 筆已儲存的付款",
-    "savedPayments_other": "{{count}} 筆已儲存的付款",
     "sentPrivately": "<b>已隱私發送。</b>你可在下方查看確認狀態 — 此處即時更新。",
     "sendAnother": "再發送一筆",
     "searchPlaceholder": "搜尋名稱、備註或金額",
@@ -101,15 +96,12 @@
     "filterSent": "已發送",
     "filterReceived": "已接收",
     "nothingMatches": "無符合篩選條件的項目。",
-    "receivedAria": "已接收",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "已接收",
     "badgeSent": "已發送",
     "badgeMined": "已挖礦",
     "badgeConsolidated": "已合併",
-    "noticedOnOpen": "你開啟應用程式時發現",
-    "seenArriving": "看到正在接收",
     "toAddr": "至 {{addr}}",
     "mergedNotes": "已合併錢包中的幣",
     "memoQuoted": "「{{memo}}」",
@@ -121,12 +113,8 @@
     "somethingMissing": "少了什麼嗎？",
     "rescanHint": "重新讀取區塊鏈以重建歷史紀錄，並找回本機遺漏的資金。",
     "recoveredNote": "透過檢視金鑰從鏈上找回。點按付款查看詳情。",
-    "turnOffErase": "關閉歷史記錄並清除",
     "exportFailed": "無法在此裝置匯出 CSV。",
-    "exportCsv": "匯出 CSV",
-    "turnOffTitle": "關閉歷史記錄？",
-    "turnOffBody": "僅清除儲存的交易記錄，不影響餘額與資金。",
-    "turnOffConfirm": "關閉並清除"
+    "exportCsv": "匯出 CSV"
   },
   "sign": {
     "title": "簽署訊息",
@@ -537,11 +525,9 @@
     "removeConfirm": "移除"
   },
   "rescanButton": {
-    "offHint": "從鏈上復原餘額。歷史紀錄已關閉，因此只會重建資金，而非交易清單。",
     "rescanning": "重新掃描中 — 此分頁會隨進度更新。",
     "starting": "啟動中…",
-    "rescan": "↻ 重新掃描",
-    "enableHistory": "啟用歷史記錄並恢復"
+    "rescan": "↻ 重新掃描"
   },
   "requestAmount": {
     "amountLabel": "請求金額",

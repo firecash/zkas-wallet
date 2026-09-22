@@ -17,13 +17,8 @@
     "title": "Geschiedenis",
     "recovering": "Geschiedenis herstellen van de blockchain — een minuut of twee. Je kunt dit tabblad verlaten.",
     "empty": "Nog niets. Betalingen die je ontvangt en verzendt verschijnen hier.",
-    "turnOff": "Geschiedenis uitschakelen",
     "starting": "Starten…",
     "recoverFull": "Volledige geschiedenis herstellen",
-    "onThisDevice": "Op dit apparaat",
-    "noSavedPayments": "Geen opgeslagen betalingen",
-    "savedPayments_one": "{{count}} opgeslagen betaling",
-    "savedPayments_other": "{{count}} opgeslagen betalingen",
     "sentPrivately": "<b>Privé verzonden.</b> Volg de bevestiging hieronder — dit wordt live bijgewerkt.",
     "sendAnother": "Nog een verzenden",
     "searchPlaceholder": "Zoek naam, bericht of bedrag",
@@ -32,15 +27,12 @@
     "filterSent": "Verzonden",
     "filterReceived": "Ontvangen",
     "nothingMatches": "Niets gevonden voor dit filter.",
-    "receivedAria": "Ontvangen",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "ontvangen",
     "badgeSent": "verzonden",
     "badgeMined": "gemined",
     "badgeConsolidated": "geconsolideerd",
-    "noticedOnOpen": "Gezien bij het openen van de app",
-    "seenArriving": "Zichtbaar aankomend",
     "toAddr": "naar {{addr}}",
     "mergedNotes": "samengevoegde munten in je wallet",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "Mist er iets?",
     "rescanHint": "Lees de blockchain opnieuw om deze geschiedenis opnieuw op te bouwen en verloren fondsen te herstellen.",
     "recoveredNote": "Hersteld van de blockchain via je kijksleutel. Tik op een betaling voor details.",
-    "turnOffErase": "Geschiedenis uit & wissen",
     "exportFailed": "CSV-export mislukt op dit apparaat.",
-    "exportCsv": "Exporteer CSV",
-    "turnOffTitle": "Geschiedenis uitzetten?",
-    "turnOffBody": "Wist alleen de opgeslagen transactielijst. Je saldo en fondsen blijven onaangetast.",
-    "turnOffConfirm": "Uitzetten & wissen"
+    "exportCsv": "Exporteer CSV"
   },
   "send": {
     "needSeed": "Dit apparaat heeft de sleutel van deze portemonnee nog niet. Voer je herstelzin eenmalig in om hier te kunnen verzenden.",
@@ -537,11 +525,9 @@
     "removeConfirm": "Verwijderen"
   },
   "rescanButton": {
-    "offHint": "Herstelt je saldo van de blockchain. Geschiedenis staat uit, dus dit herstelt je tegoed — geen transactielijst.",
     "rescanning": "Opnieuw scannen — dit tabblad wordt bijgewerkt.",
     "starting": "Starten…",
-    "rescan": "↻ Opnieuw scannen",
-    "enableHistory": "Geschiedenis inschakelen en herstellen"
+    "rescan": "↻ Opnieuw scannen"
   },
   "requestAmount": {
     "amountLabel": "Te ontvangen bedrag",

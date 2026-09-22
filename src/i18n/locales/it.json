@@ -17,13 +17,8 @@
     "title": "Cronologia",
     "recovering": "Recupero cronologia dalla catena — un minuto o due. Puoi lasciare questa scheda.",
     "empty": "Ancora nulla. Qui compaiono pagamenti ricevuti e inviati.",
-    "turnOff": "Disattiva cronologia",
     "starting": "Avvio…",
     "recoverFull": "Recupera cronologia completa",
-    "onThisDevice": "Su questo dispositivo",
-    "noSavedPayments": "Nessun pagamento salvato",
-    "savedPayments_one": "{{count}} pagamento salvato",
-    "savedPayments_other": "{{count}} pagamenti salvati",
     "sentPrivately": "<b>Inviato privatamente.</b> Guarda la conferma qui sotto — si aggiorna in tempo reale.",
     "sendAnother": "Invia un altro",
     "searchPlaceholder": "Cerca nome, nota o importo",
@@ -32,15 +27,12 @@
     "filterSent": "Inviati",
     "filterReceived": "Ricevuti",
     "nothingMatches": "Nessun risultato per questo filtro.",
-    "receivedAria": "Ricevuti",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "ricevuto",
     "badgeSent": "inviato",
     "badgeMined": "minato",
     "badgeConsolidated": "consolidato",
-    "noticedOnOpen": "Notato all'apertura dell'app",
-    "seenArriving": "Visto in arrivo",
     "toAddr": "a {{addr}}",
     "mergedNotes": "monete unite nel tuo portafoglio",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "Manca qualcosa?",
     "rescanHint": "Rileggi la catena per ricostruire la cronologia e recuperare fondi persi.",
     "recoveredNote": "Recuperato dalla catena con la tua chiave di visualizzazione. Tocca per dettagli.",
-    "turnOffErase": "Disattiva cronologia e cancella",
     "exportFailed": "Impossibile esportare il CSV su questo dispositivo.",
-    "exportCsv": "Esporta CSV",
-    "turnOffTitle": "Disattivare la cronologia?",
-    "turnOffBody": "Cancella solo l'elenco delle transazioni. Saldo e fondi restano invariati.",
-    "turnOffConfirm": "Disattiva e cancella"
+    "exportCsv": "Esporta CSV"
   },
   "send": {
     "needSeed": "Questo dispositivo non ha ancora la chiave del portafoglio. Inserisci la frase di recupero per abilitare l'invio.",
@@ -537,11 +525,9 @@
     "removeConfirm": "Rimuovi"
   },
   "rescanButton": {
-    "offHint": "Recupera il saldo dalla catena. La cronologia è disattivata, quindi ricostruisce i fondi, non le transazioni.",
     "rescanning": "Nuova scansione — questa scheda si aggiorna.",
     "starting": "Avvio…",
-    "rescan": "↻ Riscansiona",
-    "enableHistory": "Abilita cronologia e recupera"
+    "rescan": "↻ Riscansiona"
   },
   "requestAmount": {
     "amountLabel": "Importo da richiedere",

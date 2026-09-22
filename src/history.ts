@@ -17,10 +17,11 @@
 //
 //   * `Receipt`  — an arrival INFERRED from the balance moving. Knows the amount and
 //     when this device noticed, and nothing else: no txid, and no sender, which is
-//     unknowable for a shielded payment. Only used when chain history is off; with it on
-//     the chain reports receives itself and these would double up.
+//     unknowable for a shielded payment. No longer listed by the History tab: the daemon
+//     always records history, so the chain reports receives itself and these would
+//     double up. Kept as the on-device corroboration of an arrival notification.
 //   * `LocalTx`  — a send this device made and recorded itself. Has a txid and the
-//     broadcast time. Readable with chain history off, because it never left the device.
+//     broadcast time; shown until the chain scan reports the same send.
 //   * `ChainHistoryRow` — recovered from the chain. Authoritative, but its `timestamp` is
 //     0 when the scanning node predated block metadata.
 

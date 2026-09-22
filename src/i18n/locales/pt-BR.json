@@ -17,13 +17,8 @@
     "title": "Histórico",
     "recovering": "Recuperando seu histórico da blockchain — um ou dois minutos. Pode sair desta aba.",
     "empty": "Nada ainda. Pagamentos que você recebe e envia aparecem aqui.",
-    "turnOff": "Desativar histórico",
     "starting": "Iniciando…",
     "recoverFull": "Recuperar histórico completo",
-    "onThisDevice": "Neste dispositivo",
-    "noSavedPayments": "Nenhum pagamento salvo",
-    "savedPayments_one": "{{count}} pagamento salvo",
-    "savedPayments_other": "{{count}} pagamentos salvos",
     "sentPrivately": "<b>Enviado de forma privada.</b> Veja a confirmação abaixo — atualiza ao vivo.",
     "sendAnother": "Enviar outro",
     "searchPlaceholder": "Buscar nome, nota ou valor",
@@ -32,15 +27,12 @@
     "filterSent": "Enviados",
     "filterReceived": "Recebidos",
     "nothingMatches": "Nada corresponde a esse filtro.",
-    "receivedAria": "Recebido",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "recebido",
     "badgeSent": "enviado",
     "badgeMined": "minerado",
     "badgeConsolidated": "consolidado",
-    "noticedOnOpen": "Detectado ao abrir o app",
-    "seenArriving": "Visto chegando",
     "toAddr": "para {{addr}}",
     "mergedNotes": "moedas unificadas na sua carteira",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "Algo faltando?",
     "rescanHint": "Releia a blockchain para reconstruir este histórico e recuperar fundos perdidos.",
     "recoveredNote": "Recuperado da blockchain pela sua chave de visualização. Toque num pagamento para detalhes.",
-    "turnOffErase": "Desativar histórico e apagar",
     "exportFailed": "Não foi possível exportar o CSV neste dispositivo.",
-    "exportCsv": "Exportar CSV",
-    "turnOffTitle": "Desativar histórico?",
-    "turnOffBody": "Apaga apenas a lista de transações salvas. Seu saldo e fundos não são afetados.",
-    "turnOffConfirm": "Desativar e apagar"
+    "exportCsv": "Exportar CSV"
   },
   "send": {
     "scanAria": "Escanear QR",
@@ -537,11 +525,9 @@
     "removeConfirm": "Remover"
   },
   "rescanButton": {
-    "offHint": "Recupera seu saldo da blockchain. Com o histórico desativado, isso reconstrói os fundos — não a lista de transações.",
     "rescanning": "Reescaneando — esta aba atualiza conforme avança.",
     "starting": "Iniciando…",
-    "rescan": "↻ Reescanear",
-    "enableHistory": "Ativar histórico e recuperar"
+    "rescan": "↻ Reescanear"
   },
   "requestAmount": {
     "amountLabel": "Valor a solicitar",

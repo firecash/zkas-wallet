@@ -17,13 +17,8 @@
     "title": "ประวัติ",
     "recovering": "กำลังกู้คืนประวัติจากเชน — ประมาณ 1-2 นาที ออกจากแท็บนี้ได้",
     "empty": "ยังไม่มีรายการ การรับและส่งจะแสดงที่นี่",
-    "turnOff": "ปิดประวัติ",
     "starting": "กำลังเริ่ม…",
     "recoverFull": "กู้คืนประวัติทั้งหมด",
-    "onThisDevice": "บนอุปกรณ์นี้",
-    "noSavedPayments": "ไม่มีการชำระเงินที่บันทึกไว้",
-    "savedPayments_one": "{{count}} รายการที่บันทึกไว้",
-    "savedPayments_other": "{{count}} รายการที่บันทึกไว้",
     "sentPrivately": "<b>ส่งแบบส่วนตัว</b> ดูการยืนยันด้านล่าง — อัปเดตแบบเรียลไทม์",
     "sendAnother": "ส่งอีกครั้ง",
     "searchPlaceholder": "ค้นหาชื่อ บันทึก หรือจำนวน",
@@ -32,15 +27,12 @@
     "filterSent": "ส่งแล้ว",
     "filterReceived": "รับแล้ว",
     "nothingMatches": "ไม่มีรายการที่ตรงกับตัวกรอง",
-    "receivedAria": "รับแล้ว",
     "plusZkas": "+ {{amount}} ZKAS",
     "minusZkas": "− {{amount}} ZKAS",
     "badgeReceived": "รับแล้ว",
     "badgeSent": "ส่งแล้ว",
     "badgeMined": "ขุดแล้ว",
     "badgeConsolidated": "รวมเหรียญ",
-    "noticedOnOpen": "พบเมื่อเปิดแอป",
-    "seenArriving": "เห็นว่ากำลังมา",
     "toAddr": "ไปยัง {{addr}}",
     "mergedNotes": "เหรียญที่รวมแล้วในกระเป๋าของคุณ",
     "memoQuoted": "“{{memo}}”",
@@ -52,12 +44,8 @@
     "somethingMissing": "มีอะไรหายไปหรือเปล่า",
     "rescanHint": "อ่านเชนใหม่เพื่อสร้างประวัติและกู้คืนเงินที่มุมมองท้องถิ่นหาย",
     "recoveredNote": "กู้คืนจากเชนโดยคีย์ดู แตะรายการเพื่อดูรายละเอียด",
-    "turnOffErase": "ปิดประวัติและลบ",
     "exportFailed": "ไม่สามารถส่งออก CSV บนอุปกรณ์นี้",
-    "exportCsv": "ส่งออก CSV",
-    "turnOffTitle": "ปิดประวัติ?",
-    "turnOffBody": "ลบเฉพาะรายการธุรกรรมที่เก็บไว้ ยอดคงเหลือและเงินของคุณไม่ได้รับผลกระทบ",
-    "turnOffConfirm": "ปิดและลบ"
+    "exportCsv": "ส่งออก CSV"
   },
   "send": {
     "scanAria": "สแกน QR",
@@ -511,11 +499,9 @@
     "removeConfirm": "ลบ"
   },
   "rescanButton": {
-    "offHint": "กู้คืนยอดคงเหลือจากเชน เนื่องจากปิดประวัติไว้ จึงกู้คืนเฉพาะยอดเงิน — ไม่ใช่ประวัติธุรกรรม",
     "rescanning": "กำลังสแกนใหม่ — แท็บนี้จะอัปเดตเมื่อซิงค์ทัน",
     "starting": "กำลังเริ่ม…",
-    "rescan": "↻ สแกนใหม่",
-    "enableHistory": "เปิดประวัติและกู้คืน"
+    "rescan": "↻ สแกนใหม่"
   },
   "requestAmount": {
     "amountLabel": "จำนวนที่ต้องการขอ",
