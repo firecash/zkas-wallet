@@ -305,6 +305,8 @@ export function getToken(): string {
 }
 
 export interface Status {
+  /// This wallet builds unrecoverable sends (Settings → Security → Private sends).
+  private_sends?: boolean;
   has_wallet: boolean;
   address: string | null;
   // Blocks between the wallet's view and the chain tip. Non-zero is normal: a wallet
@@ -676,6 +678,19 @@ export const api = {
   // HISTORY_PAGE rows unless "show all" is pressed, so it asks for only that many.
   history: (limit?: number) =>
     req<ChainHistory>("GET", `/api/wallet/history${limit ? `?limit=${limit}` : ""}`, undefined, 30_000),
+  // Proof of payment. The daemon re-reads the transaction from the chain and discloses
+  // what OUR OWN send paid and to whom — the note's recipient, amount, memo and the one
+  // random seed that lets anybody recompute the on-chain commitment. Nothing about the
+  // rest of the transaction, the inputs or the balance is revealed, and only a send this
+  // wallet made can be disclosed.
+  // Private sends: build payments without the sender-recoverable ciphertext. Off by
+  // default; the cost is that such a payment can never be recovered or proven.
+  setPrivateSends: (on: boolean) =>
+    req<{ recoverableHistory: boolean; privateSends: boolean }>("POST", "/api/wallet/settings", { private_sends: on }, 15_000),
+  proof: (txid: string) => req<{ proofs: PaymentProof[] }>("GET", `/api/wallet/proof?txid=${txid}`, undefined, 30_000),
+  // Check somebody's proof against the chain. Needs no wallet: verifying is what a
+  // recipient, an exchange or an arbitrator does.
+  verifyProof: (proof: PaymentProof) => req<ProofVerdict>("POST", "/api/proof/verify", proof, 30_000),
   // Re-derive the wallet from the chain itself (from its birthday): backfills
   // history rows and recovers anything the incremental view lost.
   // `birthday` is a DAA height to scan from. Omitted means genesis, which finds
@@ -704,6 +719,34 @@ export interface PendingOutgoingRow {
   amountSompi: number;
   amountZkas: number;
   submittedDaa: number;
+}
+
+/// A payment proof, exactly as the daemon emits it and as a verifier consumes it: the
+/// JSON below is the artefact a user copies, sends and pastes.
+export interface PaymentProof {
+  v: number;
+  txid: string;
+  daa: number;
+  action_index: number;
+  recipient: string;
+  value: number;
+  rseed: string;
+  memo?: number[];
+  /// Added by the daemon for display only; a verifier recomputes it from `recipient`.
+  recipientAddress?: string;
+  amountZkas?: number;
+}
+
+export interface ProofVerdict {
+  valid: boolean;
+  reason?: string;
+  txid?: string;
+  daaScore?: number;
+  confirmations?: number;
+  amountZkas?: number;
+  amountSompiExact?: string;
+  recipient?: string | null;
+  memo?: string | null;
 }
 
 export interface ChainHistory {

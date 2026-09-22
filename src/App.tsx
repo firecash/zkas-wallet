@@ -1,6 +1,7 @@
 import { useTranslation, Trans } from "react-i18next";
 import i18n, { formatDate } from "./i18n";
 import { LanguagePicker, LanguageInline, LanguageNotice, LanguageButton } from "./LanguagePicker";
+import { ProvePayment } from "./PaymentProof";
 import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo, memo, Fragment } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
@@ -4271,6 +4272,7 @@ function TxDetail({
   const [copied, setCopied] = useState("");
   const [label, setLabel] = useState(() => getTxLabel(row.txid));
   const [labelState, setLabelState] = useState("");
+  const [proving, setProving] = useState(false);
   const price = useZkasPrice();
   const contact = findContact(row.recipient);
   const isConsolidation = isConsolidationRow(row);
@@ -4373,6 +4375,11 @@ function TxDetail({
               {t("txDetail.sendAgain")}
             </button>
           )}
+          {row.kind === "sent" && row.recipient && (
+            <button className="btn ghost small" onClick={() => setProving(true)}>
+              {t("txDetail.provePayment")}
+            </button>
+          )}
           <a className="btn ghost small" href={`#/explore/tx/${row.txid}`}>
             {t("txDetail.viewOnExplorer")}
           </a>
@@ -4383,6 +4390,7 @@ function TxDetail({
         <button className="btn ghost" onClick={onClose}>
           {t("txDetail.close")}
         </button>
+        {proving && <ProvePayment row={row} onClose={() => setProving(false)} />}
         {saving && row.recipient && <SaveContactDialog address={row.recipient} onClose={() => setSaving(false)} />}
       </div>
     </div>,
@@ -4617,6 +4625,12 @@ function SettingsPane({ status }: { status: Status }) {
         <>
           <Collapsible title={t("settingsPane.recoverySeed")} summary={t("settingsPane.backUp")}>
             <RevealSeedCard expectedAddress={status.address ?? undefined} />
+          </Collapsible>
+          <Collapsible
+            title={t("settingsPane.privateSends")}
+            summary={status.private_sends ? t("settingsPane.on") : t("settingsPane.off")}
+          >
+            <PrivateSendsCard on={!!status.private_sends} />
           </Collapsible>
         </>
       )}
@@ -6176,6 +6190,10 @@ function Sign({ status, embedded }: { status: Status | null; embedded?: boolean 
       <p className="muted small" style={{ marginTop: 0 }}>
         {t("sign.intro")}
       </p>
+      {/* Disclosing the viewing key is not optional here (the verifier needs it to tie
+          the signature to the address), and since every send is recoverable it now
+          discloses outgoing destinations too. Say so where the decision is made. */}
+      <p className="muted small warn-note">{t("sign.fvkWarning")}</p>
       <label>{t("sign.message")}</label>
       <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("sign.messagePlaceholder")} />
       {error && <div className="msg err">{error}</div>}
@@ -7005,6 +7023,43 @@ function DebugLogsCard() {
         )}
       </div>
     </Collapsible>
+  );
+}
+
+/// Private sends: strip the sender-recoverable ciphertext from this wallet's payments.
+///
+/// Off by default, and it must stay that way: it trades away the two things users ask
+/// for most (history that survives a restore, and a payment you can prove) for one
+/// thing a minority genuinely needs (a payment that nobody holding the viewing key can
+/// ever read). The copy states the trade instead of selling the feature.
+function PrivateSendsCard({ on }: { on: boolean }) {
+  const { t } = useTranslation();
+  const [value, setValue] = useState(on);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const set = async (next: boolean) => {
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await api.setPrivateSends(next);
+      setValue(r.privateSends);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="card">
+      <p className="muted small" style={{ marginTop: 0 }}>
+        <Trans i18nKey="privateSends.intro" components={{ b: <b /> }} />
+      </p>
+      <p className="muted small">{t("privateSends.cost")}</p>
+      {err && <div className="msg err">{err}</div>}
+      <button className={"btn" + (value ? "" : " ghost")} disabled={busy} onClick={() => void set(!value)}>
+        {busy ? <span className="spin" /> : value ? t("privateSends.turnOff") : t("privateSends.turnOn")}
+      </button>
+    </div>
   );
 }
 

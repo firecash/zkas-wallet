@@ -101,7 +101,8 @@
     "intro": "Batch payouts and note management.",
     "deviceSigned": "Device-signed",
     "tabBatch": "Batch send",
-    "tabMaintenance": "Maintenance"
+    "tabMaintenance": "Maintenance",
+    "tabVerify": "Verify a payment"
   },
   "mining": {
     "installZkasNodeUpdate": "ZKAS node update",

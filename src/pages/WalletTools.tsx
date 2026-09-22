@@ -1,9 +1,10 @@
+import { VerifyPayment } from "../PaymentProof";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { api, type Status } from "../api";
 
-type ToolTab = "batch" | "maintenance";
+type ToolTab = "batch" | "maintenance" | "verify";
 
 function cleanAmount(value: string): string {
   const stripped = value.replace(/[^0-9.]/g, "");
@@ -140,8 +141,8 @@ export function WalletTools({ status: shared }: { status?: Status | null } = {})
   return (
     <main className="control-page tools-page">
       <div className="control-heading"><div><span className="eyebrow">{t("walletTools.eyebrow")}</span><h1>{t("walletTools.title")}</h1><p>{t("walletTools.intro")}</p></div>{status?.watch_only && <span className="status-pill" title={t("walletTools.deviceSigned")}>{t("walletTools.deviceSigned")}</span>}</div>
-      <div className="mode-tabs tool-tabs">{(["batch", "maintenance"] as ToolTab[]).map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => choose(item)}>{item === "batch" ? t("walletTools.tabBatch") : t("walletTools.tabMaintenance")}</button>)}</div>
-      {tab === "batch" ? <BatchSend status={status} onRefresh={refresh} /> : <Maintenance status={status} onRefresh={refresh} />}
+      <div className="mode-tabs tool-tabs">{(["batch", "maintenance", "verify"] as ToolTab[]).map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => choose(item)}>{item === "batch" ? t("walletTools.tabBatch") : item === "maintenance" ? t("walletTools.tabMaintenance") : t("walletTools.tabVerify")}</button>)}</div>
+      {tab === "batch" ? <BatchSend status={status} onRefresh={refresh} /> : tab === "maintenance" ? <Maintenance status={status} onRefresh={refresh} /> : <VerifyPayment />}
     </main>
   );
 }

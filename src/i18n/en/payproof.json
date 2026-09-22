@@ -1,0 +1,27 @@
+{
+  "paymentProof": {
+    "title": "Prove this payment",
+    "intro": "Creates a proof that this transaction paid that address that amount. Anyone can check it against the chain; it says nothing about your balance or your other payments.",
+    "create": "Create proof",
+    "paid": "Paid",
+    "to": "To",
+    "tx": "Transaction",
+    "includeMemo": "Include the private note in the proof",
+    "copy": "Copy proof",
+    "copied": "Copied ✓",
+    "saveFile": "Save as file",
+    "disclosureNote": "Whoever holds this proof learns this one payment — the recipient, the amount, and the note if you included it. Nothing else.",
+    "close": "Close",
+    "errNone": "This payment cannot be proven: it was sent before the wallet kept recoverable details.",
+    "errNotJson": "That is not a payment proof.",
+    "verifyTitle": "Verify a payment",
+    "verifyIntro": "Paste a proof somebody sent you. The chain decides — no trust in them or in us.",
+    "pastePlaceholder": "Paste the proof here",
+    "verify": "Verify",
+    "valid": "Valid: {{amount}} ZKAS was paid to {{address}}.",
+    "invalid": "Not valid.",
+    "confirmations_one": "{{count}} confirmation",
+    "confirmations_other": "{{count}} confirmations",
+    "verifyNote": "The proof is checked against the transaction on chain: the disclosed recipient and amount must reproduce the commitment the block recorded."
+  }
+}

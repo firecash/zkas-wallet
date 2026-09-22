@@ -3071,3 +3071,6 @@ body.reduced-effects .tabbar,
 body.reduced-effects .bottomnav { backdrop-filter: none; -webkit-backdrop-filter: none; }
 body.reduced-effects * { transition-duration: 120ms !important; }
 body.reduced-effects .appear { animation-duration: 0.12s; }
+
+/* An inline caution under a control: the same muted small type, marked by a rule. */
+.warn-note { border-inline-start: 2px solid rgb(var(--ember-rgb) / 0.55); padding-inline-start: 9px; }

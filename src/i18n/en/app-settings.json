@@ -43,7 +43,8 @@
     "sendAgain": "Send again",
     "viewOnExplorer": "View on explorer",
     "explorerNote": "The explorer shows only that a shielded transaction happened — never its details.",
-    "close": "Close"
+    "close": "Close",
+    "provePayment": "Prove payment"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} wallet",
@@ -96,7 +97,8 @@
     "hidden": "Hidden",
     "signatures": "Signatures",
     "sectionAbout": "About",
-    "aboutZkas": "About ZKas"
+    "aboutZkas": "About ZKas",
+    "privateSends": "Private sends"
   },
   "appearanceCard": {
     "title": "Accent color",

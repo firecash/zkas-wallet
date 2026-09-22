@@ -76,7 +76,8 @@
     "address": "Address",
     "signatureLabel": "Signature (fvk‖sig, hex)",
     "copySignature": "Copy signature",
-    "sign": "Sign"
+    "sign": "Sign",
+    "fvkWarning": "Signing hands the verifier your viewing key: from then on they can see this wallet's balance, its history and where you send. If that matters, sign from a separate wallet — you can add one in Settings."
   },
   "verify": {
     "title": "Verify message",
@@ -363,5 +364,11 @@
     "daemonUrl": "Daemon URL",
     "checking": "Checking…",
     "save": "Save"
+  },
+  "privateSends": {
+    "intro": "Your payments normally carry a copy of their details encrypted to <b>your own</b> key, so your history survives a restore and you can prove a payment later. Private sends leave that copy out.",
+    "cost": "The cost is permanent: a private send cannot be recovered after you restore this wallet, cannot be shown in history on another device, and cannot be proven to anyone. The recipient still receives it normally.",
+    "turnOn": "Turn private sends on",
+    "turnOff": "Turn private sends off"
   }
 }
