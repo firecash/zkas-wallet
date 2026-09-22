@@ -65,7 +65,7 @@
     "manyNotes": "Je saldo zit in {{n}} munten. Als dit bedrag niet in één transactie past, wordt er niets verzonden en biedt de wallet consolidatie of een expliciete gesplitste betaling aan.",
     "to": "Naar",
     "privateNote": "Privémemo",
-    "memoSealed": "\"{{memo}}\" — verzegeld in de versleutelde munt van de ontvanger; alleen zij kunnen het lezen.",
+    "memoSealed": "“{{memo}}” — versleuteld in de betaling; alleen de ontvanger kan het lezen.",
     "unlockLabel": "Herstelzin · ontgrendelt ondertekenen hier",
     "unlockPlaceholder": "Je herstelzin van 12 woorden",
     "warmingNote": "<b>⚡ Deze eerste betaling duurt een paar minuten</b> — de portemonnee moet je munten op de blockchain vinden voordat hij ze kan uitgeven. Dit gebeurt maar één keer; latere betalingen duren seconden.",
@@ -108,7 +108,7 @@
     "addMemo": "+ Privémemo toevoegen",
     "memoLabel": "Privémemo (optioneel)",
     "memoPlaceholder": "Waarvoor is deze betaling?",
-    "memoHint": "Verzegeld in de versleutelde munt van de ontvanger — alleen zij kunnen het lezen. Nooit zichtbaar op de keten of in de verkenner.",
+    "memoHint": "Versleuteld in de betaling — alleen de ontvanger kan het lezen. Verschijnt nooit op de keten of in de verkenner.",
     "maturingHint": "Alleen {{spendable}} is nu besteedbaar — {{maturing}} komt er nog bij. Munten worden besteedbaar circa 10 minuten na aankomst, inclusief wisselgeld van een zojuist gedane betaling. Het is snel klaar.",
     "notEnough": "Onvoldoende saldo: {{spendable}} besteedbaar, {{need}} nodig incl. tot {{maxFee}} netwerkkosten.",
     "feeSummary": "+ {{min}}–{{max}} netwerkkosten (schaalt met aantal gecombineerde munten) = tot {{total}} totaal",
@@ -132,7 +132,7 @@
     "title": "Verbind met je eigen node",
     "modeOwn": "je eigen ✓",
     "modeHosted": "gehost",
-    "intro": "Je seed tekent altijd op dit apparaat. Maar de gehoste walletdienst ziet nog steeds je <b>kijksleutel</b> — die kan je saldo en geschiedenis bekijken. Om zelfs dat privé te houden, draai <code>zkas-walletd</code> op je eigen node en verbind deze portemonnee er rechtstreeks mee.",
+    "intro": "Je seed ondertekent altijd op dit apparaat. Maar de gehoste service ziet nog steeds je <b>kijksleutel</b> — die kan je saldo, geschiedenis en bestemmingen bekijken. Om ook dat privé te houden, draai je <code>zkas-walletd</code> op je eigen node en verbind je deze wallet er rechtstreeks mee.",
     "enterIp": "Voer gewoon het <b>IP-adres</b> van je node in — wij vullen de rest aan.",
     "nativeTransports": "De geïnstalleerde app ondersteunt HTTPS en gewone HTTP LAN-verbindingen.",
     "webTransports": "De webportemonnee vereist HTTPS; gebruik de app voor gewone HTTP op een LAN.",
@@ -485,7 +485,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "Dit apparaat heeft de sleutel voor deze portemonnee niet.",
-    "intro": "Je kijksleutel laat een ander apparaat of tool deze portemonnee bekijken — saldo en geschiedenis, alleen-lezen. Het kan nooit verzenden.",
+    "intro": "Je kijksleutel laat een ander apparaat of tool deze wallet bekijken — saldo, geschiedenis en bestemmingen, alleen-lezen. Het kan nooit verzenden.",
     "warn": "Iedereen met deze sleutel ziet elk bedrag en memo dat deze portemonnee ooit had, en alles wat deze vanaf nu ontvangt — dat kun je niet ongedaan maken zonder je munten te verplaatsen.",
     "preparing": "Voorbereiden…",
     "showViewKey": "Toon kijksleutel",
@@ -495,7 +495,7 @@
     "otherDevice": "Op het andere apparaat: open de portemonnee → <b>Bekijk een portemonnee</b>, plak dan deze sleutel (of scan de QR)."
   },
   "stopWatching": {
-    "intro": "Dit apparaat heeft een kijksleutel en geen uitgavesleutel, dus het toont saldo en geschiedenis en kan niet verzenden. Niets hier kan munten verplaatsen.",
+    "intro": "Dit apparaat heeft een kijksleutel en geen bestedingssleutel, dus het kan saldo en geschiedenis tonen — inclusief waar deze wallet naartoe stuurde — en kan niet verzenden. Niets hier kan munten verplaatsen.",
     "stopWatching": "Stop met bekijken",
     "warn": "Verwijdert de kijksleutel uit deze browser. Anderen met de link kunnen blijven meekijken — dat kan alleen worden beëindigd door de munten te verplaatsen.",
     "removeIt": "Verwijderen",
@@ -849,7 +849,7 @@
     "thisComputer": "deze computer",
     "publicService": "de openbare service (wallet.zkas.info)",
     "chosenService": "de gekozen service",
-    "intro": "Je portemonnee synchroniseert via <b>{{where}}</b>. Het ziet je saldo en geschiedenis — nooit je sleutels, en het kan niet uitgeven."
+    "intro": "Je wallet synchroniseert via <b>{{where}}</b>. Die ziet je saldo, geschiedenis en bestemmingen — nooit je sleutels, en kan niet uitgeven."
   },
   "onboard": {
     "errHasKey": "Dit apparaat heeft al een portemonneesleutel. Herstel die portemonnee in plaats daarvan — of gebruik de portemonnee-wisselaar met 'Andere portemonnee toevoegen' zodat niets wordt overschreven.",

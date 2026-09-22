@@ -68,7 +68,7 @@
     "addMemo": "+ Thêm ghi chú riêng",
     "memoLabel": "Ghi chú riêng (tùy chọn)",
     "memoPlaceholder": "Khoản này để làm gì?",
-    "memoHint": "Được niêm phong trong đồng mã hóa của người nhận — chỉ họ đọc được. Không bao giờ xuất hiện trên chuỗi hay trình khám phá.",
+    "memoHint": "Được mã hóa trong giao dịch — chỉ người nhận mới đọc được. Không bao giờ xuất hiện trên chuỗi hoặc trên trình khám phá.",
     "maturingHint": "Chỉ {{spendable}} sẵn sàng chi ngay — {{maturing}} đang đến. Xu trở nên khả dụng sau khoảng 10 phút, kể cả tiền thừa từ giao dịch vừa thực hiện. Sẽ sẵn sàng sớm.",
     "notEnough": "Không đủ: {{spendable}} khả dụng, cần {{need}} gồm phí {{maxFee}}.",
     "feeSummary": "+ {{min}}–{{max}} phí (tùy số xu gộp) = tối đa {{total}} tổng",
@@ -92,7 +92,7 @@
     "manyNotes": "Số dư của bạn nằm trong {{n}} đồng. Nếu số lượng này không vừa một giao dịch, sẽ không có gì được gửi và ví sẽ đề xuất hợp nhất hoặc thanh toán tách rõ ràng.",
     "to": "Đến",
     "privateNote": "Ghi chú riêng",
-    "memoSealed": "“{{memo}}” — được niêm phong trong đồng mã hóa của người nhận; chỉ họ đọc được.",
+    "memoSealed": "“{{memo}}” — được mã hóa trong giao dịch; chỉ người nhận mới đọc được.",
     "unlockLabel": "Cụm từ khôi phục · mở khóa ký tại đây",
     "unlockPlaceholder": "Cụm từ khôi phục 12 từ của bạn",
     "warmingNote": "<b>⚡ Lần thanh toán đầu sẽ mất vài phút</b> — ví cần định vị đồng của bạn trong chuỗi trước khi chi. Chỉ làm một lần; các lần sau chỉ mất vài giây.",
@@ -195,7 +195,7 @@
     "title": "Kết nối với nút của bạn",
     "modeOwn": "của bạn ✓",
     "modeHosted": "lưu trữ",
-    "intro": "Hạt giống luôn ký trên thiết bị này. Nhưng dịch vụ lưu trữ vẫn thấy <b>khóa xem</b> của bạn — nó có thể theo dõi số dư và lịch sử. Để giữ kín hoàn toàn, hãy chạy <code>zkas-walletd</code> trên nút riêng và kết nối ví trực tiếp.",
+    "intro": "Seed của bạn luôn ký trên thiết bị này. Nhưng dịch vụ lưu trữ vẫn thấy <b>khóa xem</b> của bạn — nó có thể theo dõi số dư, lịch sử và nơi bạn gửi. Để giữ kín cả những thông tin đó, hãy chạy <code>zkas-walletd</code> trên nút riêng của bạn và kết nối ví này trực tiếp tới đó.",
     "enterIp": "Nhập <b>địa chỉ IP</b> nút của bạn — chúng tôi thêm phần còn lại.",
     "nativeTransports": "Ứng dụng hỗ trợ HTTPS và HTTP LAN thường.",
     "webTransports": "Ví web yêu cầu HTTPS; dùng ứng dụng cho HTTP LAN thường.",
@@ -420,7 +420,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "Thiết bị này không giữ khóa cho ví này.",
-    "intro": "Khóa xem của bạn cho phép thiết bị hoặc công cụ khác theo dõi ví này — số dư và lịch sử, chỉ đọc. Không thể gửi.",
+    "intro": "Khóa xem cho phép thiết bị hoặc công cụ khác theo dõi ví này — số dư, lịch sử và nơi bạn gửi, ở chế độ chỉ xem. Khóa này không bao giờ có thể gửi.",
     "warn": "Ai có khóa này đều thấy mọi số lượng và ghi chú mà ví này từng có, và mọi thứ nhận từ giờ — bạn không thể hủy điều đó mà không di chuyển tiền.",
     "preparing": "Đang chuẩn bị…",
     "showViewKey": "Hiện khóa xem",
@@ -430,7 +430,7 @@
     "otherDevice": "Trên thiết bị kia: mở ví → <b>Theo dõi ví</b>, rồi dán khóa này (hoặc quét QR)."
   },
   "stopWatching": {
-    "intro": "Thiết bị này giữ khóa xem và không có khóa chi tiêu, nên chỉ hiển thị số dư và lịch sử, không thể gửi. Không gì ở đây có thể di chuyển tiền.",
+    "intro": "Thiết bị này chỉ giữ khóa xem, không có khóa chi tiêu, nên chỉ hiển thị số dư và lịch sử — bao gồm nơi ví này đã gửi — và không thể gửi. Không có gì ở đây có thể chuyển đồng.",
     "stopWatching": "Dừng theo dõi",
     "warn": "Xóa khóa xem khỏi trình duyệt này. Ai khác giữ liên kết vẫn xem được — chỉ có thể kết thúc bằng cách di chuyển tiền.",
     "removeIt": "Xóa",
@@ -840,7 +840,7 @@
     "thisComputer": "máy tính này",
     "publicService": "dịch vụ công (wallet.zkas.info)",
     "chosenService": "dịch vụ bạn đã chọn",
-    "intro": "Ví của bạn sẽ đồng bộ qua <b>{{where}}</b>. Nó thấy số dư và lịch sử của bạn — không bao giờ thấy khóa của bạn, và không thể chi tiêu."
+    "intro": "Ví của bạn sẽ đồng bộ qua <b>{{where}}</b>. Nó thấy số dư, lịch sử và nơi bạn gửi — không bao giờ thấy khóa của bạn, và không thể chi tiêu."
   },
   "onboard": {
     "errHasKey": "Thiết bị này đã có khóa ví. Hãy khôi phục ví đó — hoặc dùng 'Thêm ví khác' trong trình chuyển đổi ví để không ghi đè.",
@@ -1422,7 +1422,7 @@
     "miningNeverOffered": "Chế độ đào không bao giờ được cung cấp cho ví vì nó không giữ lại lịch sử đồng đầy đủ.",
     "nodeLogsTitle": "Nhật ký nút ZKAS",
     "walletLogsTitle": "Nhật ký ví",
-    "movingWalletToPublic": "Đang chuyển ví sang nút công khai…",
+    "movingWalletToPublic": "Đang chuyển ví sang nút công cộng…",
     "stoppingNode": "Đang dừng nút…"
   },
   "selfHost": {

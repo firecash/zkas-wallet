@@ -65,7 +65,7 @@
     "manyNotes": "Salio lako liko katika sarafu {{n}}. Ikiwa kiasi hiki hakiwezi kutoshea katika muamala mmoja, hakuna kitakachotumwa na mkoba utapendekeza kuunganisha au kutuma kwa sehemu.",
     "to": "Kwa",
     "privateNote": "Sarafu ya siri",
-    "memoSealed": "“{{memo}}” — imefungwa ndani ya sarafu iliyosimbwa ya mpokeaji; ni yeye tu anayeweza kuisoma.",
+    "memoSealed": "“{{memo}}” — imesimbwa ndani ya malipo; mpokeaji pekee ndiye anaweza kuisoma.",
     "unlockLabel": "Kifungu cha urejeshaji · hufungua kusaini hapa",
     "unlockPlaceholder": "Kifungu cha urejeshaji cha maneno 12",
     "warmingNote": "<b>⚡ Malipo haya ya kwanza yatachukua dakika chache</b> — mkoba lazima utafute sarafu zako kwenye mnyororo kabla ya kuzitumia. Hii inafanyika mara moja tu; malipo ya baadaye yanachukua sekunde.",
@@ -108,7 +108,7 @@
     "addMemo": "+ Ongeza sarafu ya siri",
     "memoLabel": "Sarafu ya siri (si lazima)",
     "memoPlaceholder": "Malipo haya ni ya nini?",
-    "memoHint": "Imefungwa ndani ya sarafu iliyosimbwa ya mpokeaji — ni wao tu wanaweza kuisoma. Haionekani kamwe kwenye mnyororo au kivinjari.",
+    "memoHint": "Imesimbwa ndani ya malipo — mpokeaji pekee ndiye anaweza kuisoma. Haionekani kamwe kwenye mnyororo au kichunguzi.",
     "maturingHint": "{{spendable}} pekee ndiyo tayari kutumika sasa — {{maturing}} bado inafika. Sarafu zinakuwa tayari kutumika baada ya dakika ~10 tangu zifike, ikijumuisha chenji kutoka kwa malipo uliyofanya hivi punde. Itakuwa tayari hivi karibuni.",
     "notEnough": "Fedha hazitoshi: {{spendable}} zinazoweza kutumika, zinahitajika {{need}} ikijumuisha ada ya {{maxFee}}.",
     "feeSummary": "+ ada {{min}}–{{max}} (inategemea sarafu zinazounganishwa) = hadi {{total}} jumla",
@@ -132,7 +132,7 @@
     "title": "Unganisha kwenye nodi yako",
     "modeOwn": "yako ✓",
     "modeHosted": "inapangishwa",
-    "intro": "Mbegu yako inasaini kwenye kifaa hiki. Lakini huduma ya mwenyeji bado inaona <b>ufunguo wa kutazama</b> wako — inaweza kuangalia salio na historia yako. Ili hata hiyo ibaki ya faragha, endesha <code>zkas-walletd</code> kwenye nodi yako na unganisha mkoba huu moja kwa moja nayo.",
+    "intro": "Mbegu yako husaini daima kwenye kifaa hiki. Lakini huduma inayopangisha bado inaona <b>ufunguo wako wa kutazama</b> — inaweza kuangalia salio lako, historia yako na unakotuma. Ili hata hilo liwe faragha, endesha <code>zkas-walletd</code> kwenye nodi yako mwenyewe na unganisha pochi hii moja kwa moja nayo.",
     "enterIp": "Ingiza tu <b>anwani ya IP</b> ya nodi yako — tunaongeza iliyobaki.",
     "nativeTransports": "Programu iliyosakinishwa inasaidia HTTPS na HTTP LAN.",
     "webTransports": "Mkoba wa wavuti unahitaji HTTPS; tumia programu kwa HTTP kwenye LAN.",
@@ -485,7 +485,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "Kifaa hiki hakina ufunguo wa mkoba huu.",
-    "intro": "Ufunguo wako wa kutazama unaruhusu kifaa kingine kutazama mkoba huu — salio na historia, kusoma tu. Kamwe hauwezi kutuma.",
+    "intro": "Ufunguo wako wa kutazama huruhusu kifaa au zana nyingine kutazama pochi hii — salio, historia na unakotuma, kusoma tu. Haiwezi kamwe kutuma.",
     "warn": "Mtu yeyote aliye na ufunguo huu anaona kila kiasi na memo ambazo mkoba huu umewahi kuwa nazo, na kila kitu unachopokea kuanzia sasa — huwezi kutengua hilo bila kuhamisha sarafu zako.",
     "preparing": "Inatayarisha…",
     "showViewKey": "Onyesha ufunguo wa kutazama",
@@ -495,7 +495,7 @@
     "otherDevice": "Kwenye kifaa kingine: fungua mkoba → <b>Tazama mkoba</b>, kisha bandika ufunguo huu (au changanua QR)."
   },
   "stopWatching": {
-    "intro": "Kifaa hiki kina ufunguo wa kutazama na hakina ufunguo wa kutumia, kwa hivyo kinaweza kuonyesha salio na historia na hakiwezi kutuma. Hakuna chochote hapa kinachoweza kuhamisha sarafu.",
+    "intro": "Kifaa hiki kina ufunguo wa kutazama na hakina ufunguo wa kutumia, kwa hivyo kinaweza kuonyesha salio na historia — ikiwemo mahali pochi hii ilipotuma — na hakiwezi kutuma. Hakuna chochote hapa kinachoweza kusogeza sarafu.",
     "stopWatching": "Acha kutazama",
     "warn": "Huondoa ufunguo wa kutazama kwenye kivinjari hiki. Mtu mwingine yeyote aliye na kiungo anaendelea kuona — hilo linaweza kukomeshwa tu kwa kuhamisha sarafu.",
     "removeIt": "Ondoa",
@@ -882,7 +882,7 @@
     "thisComputer": "kompyuta hii",
     "publicService": "huduma ya umma (wallet.zkas.info)",
     "chosenService": "huduma uliyochagua",
-    "intro": "Mkoba wako utasawazisha kupitia <b>{{where}}</b>. Inaona salio na historia yako — kamwe si funguo zako, na haiwezi kutumia."
+    "intro": "Pochi yako itasawazisha kupitia <b>{{where}}</b>. Inaona salio lako, historia yako na unakotuma — kamwe haioni funguo zako, na haiwezi kutumia."
   },
   "addAccountWallet": {
     "noPhrase": "Mkoba huu hauna maneno ya kurejesha, kwa hivyo akaunti haiwezi kutolewa kutoka kwake. Tumia \"Ongeza mkoba tofauti\" — unapata maneno yake ya kurejesha, ambayo lazima uyahifadhi rudufu.",

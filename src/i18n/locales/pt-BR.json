@@ -68,7 +68,7 @@
     "addMemo": "+ Adicionar mensagem",
     "memoLabel": "Mensagem (opcional)",
     "memoPlaceholder": "Para que é este pagamento?",
-    "memoHint": "Selado na moeda criptografada do destinatário — só ele pode ler. Nunca aparece na cadeia ou no explorador.",
+    "memoHint": "Criptografado dentro do pagamento — só o destinatário lê. Nunca aparece na cadeia ou no explorador.",
     "maturingHint": "Só {{spendable}} está disponível agora — {{maturing}} ainda está chegando. Moedas ficam disponíveis ~10 min após chegarem, incluindo o troco de um pagamento. Logo estará pronto.",
     "notEnough": "Fundos insuficientes: {{spendable}} disponível, precisa {{need}} incl. até {{maxFee}} de taxa.",
     "feeSummary": "+ taxa de {{min}}–{{max}} (varia com quantas moedas são combinadas) = até {{total}} no total",
@@ -92,7 +92,7 @@
     "manyNotes": "Seu saldo está em {{n}} moedas. Se esse valor não couber em uma transação, nada é enviado e a carteira oferecerá consolidação ou um pagamento dividido explícito.",
     "to": "Para",
     "privateNote": "Mensagem privada",
-    "memoSealed": "\"{{memo}}\" — selado na moeda criptografada do destinatário; só ele pode ler.",
+    "memoSealed": "“{{memo}}” — criptografado dentro do pagamento; só o destinatário pode ler.",
     "unlockLabel": "Frase de recuperação · desbloqueia assinatura",
     "unlockPlaceholder": "Sua frase de 12 palavras",
     "warmingNote": "<b>⚡ Este primeiro pagamento vai levar alguns minutos</b> — a carteira precisa localizar suas moedas na blockchain antes de gastá-las. Isso só acontece uma vez; os próximos levam segundos.",
@@ -132,7 +132,7 @@
     "title": "Conectar ao seu próprio nó",
     "modeOwn": "seu próprio ✓",
     "modeHosted": "hospedado",
-    "intro": "Sua seed sempre assina neste dispositivo. Mas o serviço hospedado ainda vê sua <b>chave de visualização</b> — ele pode ver seu saldo e histórico. Para manter até isso privado, execute <code>zkas-walletd</code> no seu próprio nó e conecte esta carteira diretamente a ele.",
+    "intro": "Sua seed sempre assina neste dispositivo. Mas o serviço hospedado ainda vê sua <b>chave de visualização</b> — ele pode ver seu saldo, histórico e envios. Para manter isso privado, rode o <code>zkas-walletd</code> no seu próprio nó e conecte esta carteira direto a ele.",
     "enterIp": "Insira o <b>endereço IP</b> do seu nó — nós adicionamos o resto.",
     "nativeTransports": "O app instalado suporta HTTPS e HTTP LAN simples.",
     "webTransports": "A carteira web exige HTTPS; use o app instalado para HTTP LAN.",
@@ -395,7 +395,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "Este dispositivo não possui a chave desta carteira.",
-    "intro": "Sua chave de visualização permite que outro dispositivo ou ferramenta veja esta carteira — saldo e histórico, somente leitura. Nunca pode enviar.",
+    "intro": "Sua chave de visualização permite que outro dispositivo ou ferramenta monitore esta carteira — saldo, histórico e envios, somente leitura. Nunca pode enviar.",
     "warn": "Quem tiver esta chave vê todo valor e memo que a carteira já teve e tudo que receber daqui em diante — não dá para desfazer sem mover as moedas.",
     "preparing": "Preparando…",
     "showViewKey": "Mostrar chave de visualização",
@@ -405,7 +405,7 @@
     "otherDevice": "No outro dispositivo: abra a carteira → <b>Acompanhar uma carteira</b>, depois cole esta chave (ou escaneie o QR)."
   },
   "stopWatching": {
-    "intro": "Este dispositivo tem uma chave de visualização e nenhuma chave de gasto, então pode mostrar saldo e histórico e não pode enviar. Nada aqui move moedas.",
+    "intro": "Este dispositivo tem uma chave de visualização, sem chave de gasto. Ele mostra saldo e histórico — inclusive envios — mas não pode enviar. Nada aqui move moedas.",
     "stopWatching": "Parar de monitorar",
     "warn": "Remove a chave de visualização deste navegador. Quem mais tiver o link mantém a visualização — só movendo as moedas para acabar.",
     "removeIt": "Remover",
@@ -679,7 +679,7 @@
     "thisComputerOwn": "Este computador · seu próprio nó",
     "managedHere": "Gerenciado aqui · gRPC {{port}}",
     "removeAria": "Remover {{name}}",
-    "stageRestarting": "Reiniciando motor · {{s}}s",
+    "stageRestarting": "Reiniciando motor da carteira · {{s}}s",
     "stageLoadingScan": "Carregando estado do scan…"
   },
   "walletSwitcher": {
@@ -1783,7 +1783,7 @@
     "thisComputer": "este computador",
     "publicService": "o serviço público (wallet.zkas.info)",
     "chosenService": "o serviço que você escolheu",
-    "intro": "Sua carteira vai sincronizar via <b>{{where}}</b>. Ela vê seu saldo e histórico — nunca suas chaves, e não pode gastar."
+    "intro": "Sua carteira vai sincronizar via <b>{{where}}</b>. Ele vê seu saldo, histórico e envios — nunca suas chaves, e não pode gastar."
   },
   "watchonly": {
     "invalidViewKey": "Chave de visualização inválida."

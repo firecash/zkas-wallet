@@ -68,7 +68,7 @@
     "addMemo": "+ Private Notiz hinzufügen",
     "memoLabel": "Private Notiz (optional)",
     "memoPlaceholder": "Wofür ist diese Zahlung?",
-    "memoHint": "Versiegelt in der verschlüsselten Münze des Empfängers – nur er kann sie lesen. Erscheint nie on-chain oder im Explorer.",
+    "memoHint": "Verschlüsselt in der Zahlung – nur der Empfänger kann sie lesen. Erscheint nie on-chain oder im Explorer.",
     "maturingHint": "Nur {{spendable}} ist sofort verfügbar – {{maturing}} ist noch unterwegs. Coins sind ca. 10 Min. nach Eingang auszahlbar, inkl. Wechselgeld. Bald bereit.",
     "notEnough": "Nicht genug Guthaben: {{spendable}} verfügbar, {{need}} nötig inkl. bis {{maxFee}} Gebühr.",
     "feeSummary": "+ {{min}}–{{max}} Gebühr (skaliert mit Coin-Anzahl) = bis {{total}} gesamt",
@@ -92,7 +92,7 @@
     "manyNotes": "Dein Guthaben verteilt sich auf {{n}} Münzen. Passt dieser Betrag nicht in eine Transaktion, wird nichts gesendet und das Wallet bietet Konsolidierung oder eine explizite geteilte Zahlung an.",
     "to": "An",
     "privateNote": "Private Notiz",
-    "memoSealed": "„{{memo}}“ – versiegelt in der verschlüsselten Münze des Empfängers; nur er kann sie lesen.",
+    "memoSealed": "„{{memo}}“ — verschlüsselt in der Zahlung; nur der Empfänger kann sie lesen.",
     "unlockLabel": "Wiederherstellungsphrase · entsperrt Signieren",
     "unlockPlaceholder": "Deine 12-Wort-Wiederherstellungsphrase",
     "warmingNote": "<b>⚡ Diese erste Zahlung dauert ein paar Minuten</b> – das Wallet muss deine Coins in der Chain finden, bevor es sie ausgeben kann. Das passiert nur einmal; spätere Zahlungen dauern Sekunden.",
@@ -132,7 +132,7 @@
     "title": "Eigene Node verbinden",
     "modeOwn": "Eigene ✓",
     "modeHosted": "Gehostet",
-    "intro": "Dein Seed signiert immer auf diesem Gerät. Der gehostete Dienst sieht jedoch deinen <b>View-Key</b> — er kann Guthaben und Verlauf einsehen. Um auch das privat zu halten, betreibe <code>zkas-walletd</code> auf deinem eigenen Node und verbinde dieses Wallet direkt damit.",
+    "intro": "Dein Seed signiert immer auf diesem Gerät. Der gehostete Dienst sieht aber deinen <b>Betrachtungsschlüssel</b> – er kann dein Guthaben, deinen Verlauf und wohin du sendest einsehen. Um auch das privat zu halten, führe <code>zkas-walletd</code> auf deiner eigenen Node aus und verbinde dieses Wallet direkt damit.",
     "enterIp": "Gib einfach die <b>IP-Adresse</b> deines Nodes ein — den Rest fügen wir hinzu.",
     "nativeTransports": "Die App unterstützt HTTPS und unverschlüsseltes HTTP im LAN.",
     "webTransports": "Das Web-Wallet benötigt HTTPS; für HTTP im LAN die App nutzen.",
@@ -420,7 +420,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "Dieses Gerät hat keinen Key für dieses Wallet.",
-    "intro": "Dein Betrachtungsschlüssel lässt ein anderes Gerät dieses Wallet beobachten – Guthaben und Verlauf, nur lesend. Senden ist nie möglich.",
+    "intro": "Dein Betrachtungsschlüssel erlaubt einem anderen Gerät oder Tool, dieses Wallet zu beobachten – Guthaben, Verlauf und wohin du sendest, nur lesend. Senden ist nie möglich.",
     "warn": "Jeder mit diesem Key sieht jeden Betrag und jede Notiz, die dieses Wallet je hatte, und alles, was es ab jetzt empfängt – das lässt sich nur rückgängig machen, indem du deine Coins verschiebst.",
     "preparing": "Vorbereiten…",
     "showViewKey": "Betrachtungsschlüssel zeigen",
@@ -430,7 +430,7 @@
     "otherDevice": "Auf dem anderen Gerät: Wallet öffnen → <b>Wallet beobachten</b>, dann diesen Key einfügen (oder QR scannen)."
   },
   "stopWatching": {
-    "intro": "Dieses Gerät hat einen View-Key, aber keinen Spend-Key, daher zeigt es Guthaben und Verlauf und kann nicht senden. Nichts hier kann Coins bewegen.",
+    "intro": "Dieses Gerät hat nur einen Betrachtungsschlüssel, keinen Spending Key. Es kann daher Guthaben und Verlauf anzeigen – auch wohin dieses Wallet gesendet hat – aber nicht senden. Nichts hier kann Münzen bewegen.",
     "stopWatching": "Beobachtung beenden",
     "warn": "Entfernt den View-Key von diesem Browser. Andere mit dem Link behalten ihre Ansicht – das kann nur durch Verschieben der Coins beendet werden.",
     "removeIt": "Entfernen",
@@ -1776,7 +1776,7 @@
     "thisComputer": "dieser Computer",
     "publicService": "der öffentliche Dienst (wallet.zkas.info)",
     "chosenService": "der gewählte Dienst",
-    "intro": "Dein Wallet synchronisiert über <b>{{where}}</b>. Es sieht dein Guthaben und den Verlauf – niemals deine Schlüssel, und es kann nicht ausgeben."
+    "intro": "Dein Wallet synchronisiert über <b>{{where}}</b>. Es sieht dein Guthaben, deinen Verlauf und wohin du sendest – niemals deine Schlüssel, und es kann nicht ausgeben."
   },
   "iosInstallNotice": {
     "installedCopy": "Hast du ein Wallet in Safari? Es wird nicht mit dieser installierten Kopie geteilt – stell es hier mit der Wiederherstellungsphrase wieder her.",

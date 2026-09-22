@@ -68,7 +68,7 @@
     "addMemo": "+ Ajouter une note privée",
     "memoLabel": "Note privée (facultatif)",
     "memoPlaceholder": "Pourquoi ce paiement ?",
-    "memoHint": "Scellé dans la pièce chiffrée du destinataire — lui seul peut le lire. N’apparaît jamais sur la chaîne ni sur l’explorateur.",
+    "memoHint": "Chiffré dans le paiement — seul le destinataire peut le lire. N’apparaît jamais sur la chaîne ni sur l’explorateur.",
     "maturingHint": "Seuls {{spendable}} sont prêts à être dépensés pour l'instant — {{maturing}} est encore en maturation. Les pièces deviennent dépensables environ 10 minutes après leur arrivée, y compris la monnaie d'un paiement que vous venez d'effectuer. Tout sera bientôt prêt.",
     "notEnough": "Fonds insuffisants : {{spendable}} disponibles, {{need}} requis dont jusqu'à {{maxFee}} de frais.",
     "feeSummary": "+ {{min}}–{{max}} de frais (selon le nombre de pièces combinées) = jusqu'à {{total}} au total",
@@ -92,7 +92,7 @@
     "manyNotes": "Votre solde est réparti sur {{n}} pièces. Si ce montant ne tient pas en une transaction, rien n'est envoyé et le portefeuille proposera une consolidation ou un paiement fractionné explicite.",
     "to": "Destinataire",
     "privateNote": "Note privée",
-    "memoSealed": "« {{memo}} » — scellé dans la pièce chiffrée du destinataire ; lui seul peut le lire.",
+    "memoSealed": "« {{memo}} » — chiffré dans le paiement ; seul le destinataire peut le lire.",
     "unlockLabel": "Phrase de récupération · débloque la signature",
     "unlockPlaceholder": "Phrase de récupération de 12 mots",
     "warmingNote": "<b>⚡ Ce premier paiement prendra quelques minutes</b> — le portefeuille doit localiser vos pièces dans la chaîne avant de pouvoir les dépenser. Cela n'arrive qu'une fois ; les paiements suivants prennent quelques secondes.",
@@ -195,7 +195,7 @@
     "title": "Connexion à votre propre nœud",
     "modeOwn": "le vôtre ✓",
     "modeHosted": "hébergé",
-    "intro": "Votre graine signe toujours sur cet appareil. Mais le service hébergé voit votre <b>clé de visualisation</b> — il peut surveiller votre solde et votre historique. Pour garder cela privé, exécutez <code>zkas-walletd</code> sur votre propre nœud et connectez-y ce portefeuille.",
+    "intro": "Votre seed signe toujours sur cet appareil. Mais le service hébergé voit quand même votre <b>clé de visualisation</b> — il peut surveiller votre solde, votre historique et vos envois. Pour garder cela privé, exécutez <code>zkas-walletd</code> sur votre propre nœud et connectez-y ce portefeuille directement.",
     "enterIp": "Entrez l'<b>adresse IP</b> de votre nœud — nous ajoutons le reste.",
     "nativeTransports": "L'application installée prend en charge HTTPS et HTTP simple sur LAN.",
     "webTransports": "Le portefeuille web nécessite HTTPS ; utilisez l'application installée pour HTTP simple sur LAN.",
@@ -395,7 +395,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "Cet appareil n'a pas la clé de ce portefeuille.",
-    "intro": "Votre clé de visualisation permet à un autre appareil de surveiller ce portefeuille — solde et historique, lecture seule. Impossible d'envoyer.",
+    "intro": "Votre clé de visualisation permet à un autre appareil ou outil de surveiller ce portefeuille — solde, historique et envois, en lecture seule. Il ne peut jamais envoyer.",
     "warn": "Quiconque a cette clé voit chaque montant et mémo que ce portefeuille a eus, et tout ce qu'il reçoit désormais — irréversible sans déplacer vos pièces.",
     "preparing": "Préparation…",
     "showViewKey": "Afficher la clé de vue",
@@ -405,7 +405,7 @@
     "otherDevice": "Sur l'autre appareil : ouvrez le portefeuille → <b>Surveiller un portefeuille</b>, puis collez cette clé (ou scannez le QR)."
   },
   "stopWatching": {
-    "intro": "Cet appareil a une clé de visualisation sans clé de dépense, donc il affiche le solde et l'historique sans pouvoir envoyer. Rien ici ne peut déplacer des pièces.",
+    "intro": "Cet appareil détient une clé de visualisation et aucune clé de dépense, il peut donc afficher le solde et l’historique — y compris les envois de ce portefeuille — et ne peut pas envoyer. Rien ici ne peut déplacer des pièces.",
     "stopWatching": "Arrêter de suivre",
     "warn": "Supprime la clé de visualisation de ce navigateur. Quiconque détient le lien garde sa vue — seul un déplacement des pièces peut y mettre fin.",
     "removeIt": "Retirer",
@@ -823,7 +823,7 @@
     "thisComputer": "cet ordinateur",
     "publicService": "le service public (wallet.zkas.info)",
     "chosenService": "le service choisi",
-    "intro": "Votre portefeuille se synchronisera via <b>{{where}}</b>. Il voit votre solde et votre historique — jamais vos clés, et il ne peut pas dépenser."
+    "intro": "Votre portefeuille se synchronisera via <b>{{where}}</b>. Il voit votre solde, votre historique et vos envois — jamais vos clés, et il ne peut pas dépenser."
   },
   "onboard": {
     "errHasKey": "Cet appareil contient déjà une clé de portefeuille. Restaurez ce portefeuille — ou utilisez « Ajouter un portefeuille » pour ne rien écraser.",
@@ -1454,7 +1454,7 @@
     "miningNeverOffered": "Le mode minage n'est jamais proposé au portefeuille car il ne conserve pas l'historique complet des pièces.",
     "nodeLogsTitle": "Journaux du nœud ZKAS",
     "walletLogsTitle": "Logs du moteur de portefeuille",
-    "movingWalletToPublic": "Déplacement du portefeuille vers le nœud public…",
+    "movingWalletToPublic": "Déplacement vers le nœud public…",
     "stoppingNode": "Arrêt du nœud…"
   },
   "selfHost": {

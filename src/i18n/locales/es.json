@@ -68,7 +68,7 @@
     "addMemo": "+ Añadir nota privada",
     "memoLabel": "Nota privada (opcional)",
     "memoPlaceholder": "¿Para qué es este pago?",
-    "memoHint": "Sellado dentro de la moneda cifrada del destinatario — solo él puede leerlo. Nunca aparece en la cadena ni en el explorador.",
+    "memoHint": "Cifrado dentro del pago — solo el destinatario puede leerlo. Nunca aparece en la cadena ni en el explorador.",
     "maturingHint": "Solo {{spendable}} está listo para gastar — {{maturing}} sigue llegando. Las monedas se pueden gastar unos 10 minutos después de llegar, incluido el cambio de un pago recién hecho. Estará listo pronto.",
     "notEnough": "Fondos insuficientes: {{spendable}} disponible, se necesita {{need}} incl. hasta {{maxFee}} de comisión.",
     "feeSummary": "+ {{min}}–{{max}} de comisión (según cuántas monedas se combinen) = hasta {{total}} en total",
@@ -92,7 +92,7 @@
     "manyNotes": "Tu saldo está en {{n}} monedas. Si este monto no cabe en una transacción, no se envía nada y la billetera ofrecerá consolidar o dividir el pago.",
     "to": "Para",
     "privateNote": "Nota privada",
-    "memoSealed": "\"{{memo}}\" — sellado en la moneda cifrada del destinatario; solo él puede leerlo.",
+    "memoSealed": "“{{memo}}” — cifrado dentro del pago; solo el destinatario puede leerlo.",
     "unlockLabel": "Frase de recuperación · desbloquea la firma aquí",
     "unlockPlaceholder": "Frase de recuperación de 12 palabras",
     "warmingNote": "<b>⚡ Este primer pago tomará unos minutos</b> — la billetera debe localizar tus monedas en la cadena antes de gastarlas. Solo ocurre una vez; los pagos posteriores toman segundos.",
@@ -132,7 +132,7 @@
     "title": "Conectar a tu propio nodo",
     "modeOwn": "tuyo ✓",
     "modeHosted": "alojado",
-    "intro": "Tu semilla siempre firma en este dispositivo. Pero el servicio alojado aún ve tu <b>clave de visualización</b> — puede ver tu saldo e historial. Para mantener eso privado, ejecuta <code>zkas-walletd</code> en tu propio nodo y conecta esta billetera directamente.",
+    "intro": "Tu semilla siempre firma en este dispositivo. Pero el servicio alojado aún ve tu <b>clave de visualización</b> — puede ver tu saldo, tu historial y a dónde envías. Para mantener eso privado también, ejecuta <code>zkas-walletd</code> en tu propio nodo y conecta esta billetera directamente a él.",
     "enterIp": "Solo ingresa la <b>dirección IP</b> de tu nodo — nosotros añadimos el resto.",
     "nativeTransports": "La app instalada admite conexiones HTTPS y HTTP simple en LAN.",
     "webTransports": "La billetera web requiere HTTPS; usa la app instalada para HTTP simple en LAN.",
@@ -460,7 +460,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "Este dispositivo no tiene la clave de esta billetera.",
-    "intro": "Tu clave de visualización permite que otro dispositivo o herramienta vea esta billetera — saldo e historial, solo lectura. Nunca puede enviar.",
+    "intro": "Tu clave de visualización permite que otro dispositivo o herramienta vea esta billetera — saldo, historial y a dónde envías, solo lectura. Nunca puede enviar.",
     "warn": "Quien tenga esta clave ve cada monto y memo que esta billetera haya tenido, y todo lo que reciba de ahora en adelante — no puedes deshacerlo sin mover tus monedas.",
     "preparing": "Preparando…",
     "showViewKey": "Mostrar clave de vista",
@@ -470,7 +470,7 @@
     "otherDevice": "En el otro dispositivo: abre la billetera → <b>Observar una billetera</b>, luego pega esta clave (o escanea el QR)."
   },
   "stopWatching": {
-    "intro": "Este dispositivo tiene una clave de visualización y ninguna clave de gasto, por lo que puede mostrar el saldo y el historial y no puede enviar. Nada aquí puede mover monedas.",
+    "intro": "Este dispositivo tiene una clave de visualización y no tiene clave de gasto, por lo que puede mostrar el saldo y el historial — incluso a dónde envió esta billetera — y no puede enviar. Nada aquí puede mover monedas.",
     "stopWatching": "Dejar de observar",
     "warn": "Elimina la clave de visualización de este navegador. Quien tenga el enlace podrá seguir viéndola — esto solo se evita moviendo las monedas.",
     "removeIt": "Eliminar",
@@ -688,7 +688,7 @@
     "notPairingCode": "Ese código no es de emparejamiento de servicio de billetera. En la computadora que aloja la billetera, abre Host → Acceso a la red → Emparejar teléfono.",
     "nodeNotInstalled": "El nodo local gestionado no está instalado. Las pantallas Minería y Nodo pueden instalar la versión verificada automáticamente.",
     "close": "Cerrar",
-    "stageRestarting": "Reiniciando motor · {{s}}s",
+    "stageRestarting": "Reiniciando motor de billetera · {{s}}s",
     "stageLoadingScan": "Cargando estado de escaneo…"
   },
   "walletSwitcher": {
@@ -882,7 +882,7 @@
     "thisComputer": "esta computadora",
     "publicService": "el servicio público (wallet.zkas.info)",
     "chosenService": "el servicio elegido",
-    "intro": "Tu billetera se sincronizará mediante <b>{{where}}</b>. Ve tu saldo e historial — nunca tus claves, y no puede gastar."
+    "intro": "Tu billetera se sincronizará a través de <b>{{where}}</b>. Ve tu saldo, tu historial y a dónde envías — nunca tus claves, y no puede gastar."
   },
   "addAccountWallet": {
     "noPhrase": "Esta billetera no tiene frase de recuperación, así que no se puede derivar una cuenta. Usa “Agregar billetera aparte” — obtiene su propia frase de recuperación, que debes respaldar.",

@@ -53,7 +53,7 @@
     "title": "Sambung ke nod anda sendiri",
     "modeOwn": "milik anda ✓",
     "modeHosted": "dihoskan",
-    "intro": "Benih anda sentiasa menandatangan pada peranti ini. Namun perkhidmatan hos masih melihat <b>kunci tontonan</b> anda — ia boleh memantau baki dan sejarah. Untuk kekal peribadi, jalankan <code>zkas-walletd</code> pada nod sendiri dan sambung dompet ini terus kepadanya.",
+    "intro": "Benih anda sentiasa menandatangani pada peranti ini. Tetapi perkhidmatan yang dihoskan masih melihat <b>kunci lihat</b> anda — ia boleh memantau baki, sejarah dan destinasi hantaran anda. Untuk merahsiakan itu juga, jalankan <code>zkas-walletd</code> pada nod sendiri dan sambungkan dompet ini terus kepadanya.",
     "enterIp": "Masukkan <b>alamat IP</b> nod anda — kami tambah selebihnya.",
     "nativeTransports": "Aplikasi terpasang menyokong sambungan HTTPS dan HTTP biasa LAN.",
     "webTransports": "Dompet web perlukan HTTPS; guna aplikasi terpasang untuk HTTP biasa pada LAN.",
@@ -102,7 +102,7 @@
     "manyNotes": "Baki anda tersimpan dalam {{n}} syiling. Jika jumlah ini tidak muat dalam satu transaksi, tiada yang dihantar dan dompet akan menawarkan penyatuan atau pembayaran berpecah eksplisit.",
     "to": "Kepada",
     "privateNote": "Syiling peribadi",
-    "memoSealed": "\"{{memo}}\" — dimeterai dalam syiling terenkripsi penerima; hanya mereka boleh membacanya.",
+    "memoSealed": "“{{memo}}” — disulitkan dalam pembayaran; hanya penerima boleh membacanya.",
     "unlockLabel": "Frasa pemulihan · buka kunci tandatangan di sini",
     "unlockPlaceholder": "Frasa pemulihan 12 patah perkataan",
     "warmingNote": "<b>⚡ Pembayaran pertama ini akan mengambil masa beberapa minit</b> — dompet perlu mencari syiling anda dalam rantai sebelum boleh membelanjakannya. Ini hanya sekali; pembayaran seterusnya mengambil masa beberapa saat.",
@@ -145,7 +145,7 @@
     "addMemo": "+ Tambah syiling peribadi",
     "memoLabel": "Syiling peribadi (pilihan)",
     "memoPlaceholder": "Untuk apa bayaran ini?",
-    "memoHint": "Dimeterai dalam syiling terenkripsi penerima — hanya mereka boleh membacanya. Tidak kelihatan pada rantaian atau penjelajah.",
+    "memoHint": "Disulitkan dalam pembayaran — hanya penerima boleh membacanya. Tidak pernah muncul di rantaian atau penjelajah.",
     "maturingHint": "Hanya {{spendable}} sedia dibelanjakan sekarang — {{maturing}} masih dalam perjalanan. Syiling boleh dibelanjakan kira-kira 10 minit selepas tiba, termasuk baki daripada bayaran yang baru anda buat. Ia akan sedia sebentar lagi.",
     "notEnough": "Dana tidak cukup: {{spendable}} boleh belanja, perlukan {{need}} termasuk yuran sehingga {{maxFee}}.",
     "feeSummary": "+ yuran {{min}}–{{max}} (mengikut bilangan syiling digabungkan) = sehingga {{total}} jumlah",
@@ -460,7 +460,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "Peranti ini tiada kunci untuk dompet ini.",
-    "intro": "Kunci tontonan anda membenarkan peranti atau alatan lain memantau dompet ini — baki dan sejarah, baca sahaja. Ia tidak boleh menghantar.",
+    "intro": "Kunci lihat anda membenarkan peranti atau alat lain memantau dompet ini — baki, sejarah dan destinasi hantaran, lihat sahaja. Ia tidak boleh menghantar.",
     "warn": "Sesiapa dengan kunci ini boleh melihat setiap jumlah dan memo yang pernah ada dalam dompet ini, dan semua yang diterima mulai sekarang — anda tidak boleh membatalkannya tanpa memindahkan syiling anda.",
     "preparing": "Menyediakan…",
     "showViewKey": "Tunjuk kunci lihat",
@@ -470,7 +470,7 @@
     "otherDevice": "Pada peranti lain: buka dompet → <b>Pantau dompet</b>, kemudian tampal kunci ini (atau imbas QR)."
   },
   "stopWatching": {
-    "intro": "Peranti ini ada kunci tontonan tanpa kunci perbelanjaan, jadi ia boleh tunjuk baki dan sejarah serta tidak boleh hantar. Tiada apa di sini boleh memindahkan syiling.",
+    "intro": "Peranti ini memegang kunci lihat tanpa kunci belanja, jadi ia boleh menunjukkan baki dan sejarah — termasuk destinasi hantaran dompet ini — dan tidak boleh menghantar. Tiada apa di sini yang boleh mengalihkan syiling.",
     "stopWatching": "Hentikan lihat",
     "warn": "Buang kunci tontonan daripada pelayar ini. Sesiapa lain yang memegang pautan masih boleh melihat — ia hanya boleh dihentikan dengan memindahkan syiling.",
     "removeIt": "Buang",
@@ -908,7 +908,7 @@
     "thisComputer": "komputer ini",
     "publicService": "perkhidmatan awam (wallet.zkas.info)",
     "chosenService": "perkhidmatan yang anda pilih",
-    "intro": "Dompet anda akan menyegerak melalui <b>{{where}}</b>. Ia melihat baki dan sejarah anda — tidak pernah kunci anda, dan ia tidak boleh berbelanja."
+    "intro": "Dompet anda akan menyegerak melalui <b>{{where}}</b>. Ia melihat baki, sejarah dan destinasi hantaran anda — tidak pernah kunci anda, dan ia tidak boleh berbelanja."
   },
   "status": {
     "offlineLabel": "Tidak dapat mencapai rangkaian",

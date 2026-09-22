@@ -65,7 +65,7 @@
     "manyNotes": "Il tuo saldo è in {{n}} monete. Se l'importo non entra in una transazione, non viene inviato nulla e il portafoglio offrirà consolidamento o un pagamento frazionato esplicito.",
     "to": "A",
     "privateNote": "Nota privata",
-    "memoSealed": "\"{{memo}}\" — sigillato nella moneta cifrata del destinatario; solo lui può leggerlo.",
+    "memoSealed": "“{{memo}}” — cifrato nel pagamento; solo il destinatario può leggerlo.",
     "unlockLabel": "Frase di recupero · sblocca firma qui",
     "unlockPlaceholder": "Frase di recupero di 12 parole",
     "warmingNote": "<b>⚡ Il primo pagamento richiede qualche minuto</b> — il portafoglio deve localizzare le tue monete nella catena prima di spenderle. Succede solo una volta; i pagamenti successivi richiedono secondi.",
@@ -108,7 +108,7 @@
     "addMemo": "+ Aggiungi nota privata",
     "memoLabel": "Nota privata (facoltativa)",
     "memoPlaceholder": "A cosa serve questo pagamento?",
-    "memoHint": "Sigillato nella moneta cifrata del destinatario — solo lui può leggerlo. Mai in chiaro su catena o explorer.",
+    "memoHint": "Cifrato nel pagamento — solo il destinatario può leggerlo. Mai visibile on-chain o sull'esploratore.",
     "maturingHint": "Solo {{spendable}} è spendibile ora — {{maturing}} sta ancora arrivando. Le monete diventano spendibili circa 10 minuti dopo l'arrivo, incluso il resto di un pagamento appena fatto. Sarà pronto a breve.",
     "notEnough": "Fondi insufficienti: {{spendable}} spendibili, servono {{need}} incl. fino a {{maxFee}} di commissione.",
     "feeSummary": "+ {{min}}–{{max}} commissione (scala con quante monete si combinano) = fino a {{total}} totale",
@@ -132,7 +132,7 @@
     "title": "Connetti al tuo nodo",
     "modeOwn": "tuo ✓",
     "modeHosted": "ospitato",
-    "intro": "Il seed firma sempre su questo dispositivo. Ma il servizio hosted vede la tua <b>chiave di visualizzazione</b> — può osservare saldo e cronologia. Per tenere privato anche questo, esegui <code>zkas-walletd</code> sul tuo nodo e connetti il portafoglio direttamente.",
+    "intro": "Il tuo seed firma sempre su questo dispositivo. Ma il servizio ospitato vede comunque la tua <b>chiave di sola lettura</b> — può vedere il tuo saldo, la cronologia e dove invii. Per mantenere private anche queste informazioni, esegui <code>zkas-walletd</code> sul tuo nodo e connetti questo portafoglio direttamente ad esso.",
     "enterIp": "Inserisci l'<b>IP</b> del tuo nodo — il resto lo aggiungiamo noi.",
     "nativeTransports": "L'app supporta connessioni HTTPS e HTTP plain su LAN.",
     "webTransports": "Il wallet web richiede HTTPS; usa l'app per HTTP su LAN.",
@@ -485,7 +485,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "Questo dispositivo non ha la chiave per questo portafoglio.",
-    "intro": "La chiave di visualizzazione permette a un altro dispositivo o strumento di osservare questo portafoglio — saldo e cronologia, sola lettura. Non può mai inviare.",
+    "intro": "La tua chiave di sola lettura permette a un altro dispositivo o strumento di osservare questo portafoglio — saldo, cronologia e dove invii, in sola lettura. Non può mai inviare.",
     "warn": "Chiunque abbia questa chiave vede ogni importo e memo che questo portafoglio ha mai avuto, e tutto ciò che riceve d'ora in poi — non puoi annullarlo senza spostare le monete.",
     "preparing": "Preparazione…",
     "showViewKey": "Mostra chiave lettura",
@@ -495,7 +495,7 @@
     "otherDevice": "Sull'altro dispositivo: apri il portafoglio → <b>Osserva un portafoglio</b>, poi incolla questa chiave (o scansiona il QR)."
   },
   "stopWatching": {
-    "intro": "Questo dispositivo ha una chiave di visualizzazione e nessuna chiave di spesa, quindi può mostrare saldo e cronologia ma non può inviare. Niente qui può muovere monete.",
+    "intro": "Questo dispositivo ha una chiave di sola lettura e nessuna chiave di spesa, quindi può mostrare il saldo e la cronologia — incluso dove questo portafoglio ha inviato — e non può inviare. Niente qui può spostare monete.",
     "stopWatching": "Interrompi osservazione",
     "warn": "Rimuove la chiave di visualizzazione da questo browser. Chiunque altro abbia il link mantiene la visuale — può essere terminata solo spostando le monete.",
     "removeIt": "Rimuovi",
@@ -849,7 +849,7 @@
     "thisComputer": "questo computer",
     "publicService": "il servizio pubblico (wallet.zkas.info)",
     "chosenService": "il servizio scelto",
-    "intro": "Il tuo portafoglio si sincronizzerà tramite <b>{{where}}</b>. Vede saldo e cronologia — mai le tue chiavi, e non può spendere."
+    "intro": "Il tuo portafoglio si sincronizzerà tramite <b>{{where}}</b>. Vede il tuo saldo, la cronologia e dove invii — mai le tue chiavi, e non può spendere."
   },
   "onboard": {
     "errHasKey": "Questo dispositivo ha già una chiave. Ripristina quel portafoglio o usa 'Aggiungi portafoglio' per non sovrascrivere.",
@@ -1454,7 +1454,7 @@
     "miningNeverOffered": "La modalità mining non viene mai offerta al portafoglio perché non conserva lo storico completo delle monete.",
     "nodeLogsTitle": "Log nodo ZKAS",
     "walletLogsTitle": "Log del motore portafoglio",
-    "movingWalletToPublic": "Sposto il portafoglio sul nodo pubblico…",
+    "movingWalletToPublic": "Spostamento portafoglio sul nodo pubblico…",
     "stoppingNode": "Arresto nodo…"
   },
   "selfHost": {

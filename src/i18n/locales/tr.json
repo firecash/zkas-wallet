@@ -68,7 +68,7 @@
     "addMemo": "+ Özel not ekle",
     "memoLabel": "Özel not (isteğe bağlı)",
     "memoPlaceholder": "Bu ödeme ne için?",
-    "memoHint": "Alıcının şifreli jetonunda mühürlü — sadece onlar okuyabilir. Zincirde veya gezginde asla görünmez.",
+    "memoHint": "Ödeme içinde şifreli — yalnızca alıcı okuyabilir. Zincirde veya gezginde asla görünmez.",
     "maturingHint": "Şu an sadece {{spendable}} harcanabilir — {{maturing}} hâlâ geliyor. Paralar, geldikten yaklaşık 10 dakika sonra harcanabilir hale gelir; az önce yaptığın bir ödemeden kalan para üstü de buna dahil. Kısa süre içinde hazır olur.",
     "notEnough": "Yetersiz bakiye: {{spendable}} harcanabilir, {{need}} gerekli ({{maxFee}} ücret dahil).",
     "feeSummary": "+ {{min}}–{{max}} ücret (birleştirilen para sayısına göre değişir) = toplam {{total}}'e kadar",
@@ -92,7 +92,7 @@
     "manyNotes": "Bakiyeniz {{n}} jetonda duruyor. Bu miktar tek işleme sığmazsa hiçbir şey gönderilmez ve cüzdan birleştirme veya açık bölünmüş ödeme önerir.",
     "to": "Alıcı",
     "privateNote": "Özel not",
-    "memoSealed": "“{{memo}}” — alıcının şifreli jetonunda mühürlü; sadece onlar okuyabilir.",
+    "memoSealed": "“{{memo}}” — ödeme içinde şifreli; yalnızca alıcı okuyabilir. Zincirde veya gezginde asla görünmez.",
     "unlockLabel": "Kurtarma ifadesi · imzalamayı açar",
     "unlockPlaceholder": "12 kelimelik kurtarma ifadeniz",
     "warmingNote": "<b>⚡ İlk ödeme birkaç dakika sürecek</b> — cüzdan harcamadan önce zincirdeki coinlerinizi bulmalı. Bu yalnızca bir kez olur; sonraki ödemeler saniyeler sürer.",
@@ -195,7 +195,7 @@
     "title": "Kendi düğümüne bağlan",
     "modeOwn": "kendi düğümün ✓",
     "modeHosted": "barındırılan",
-    "intro": "Tohumunuz her zaman bu cihazda imzalar. Ancak barındırılan hizmet <b>görüntüleme anahtarınızı</b> görür — bakiyenizi ve geçmişinizi izleyebilir. Bunu özel tutmak için kendi düğümünüzde <code>zkas-walletd</code> çalıştırın ve cüzdanı doğrudan ona bağlayın.",
+    "intro": "Tohumunuz her zaman bu cihazda imzalar. Ancak barındırılan hizmet yine de <b>görüntüleme anahtarınızı</b> görür — bakiyenizi, geçmişinizi ve nereye gönderdiğinizi izleyebilir. Bunu bile gizli tutmak için kendi düğümünüzde <code>zkas-walletd</code> çalıştırın ve bu cüzdanı doğrudan ona bağlayın.",
     "enterIp": "Sadece düğümünüzün <b>IP adresini</b> girin — gerisini biz hallederiz.",
     "nativeTransports": "Yüklü uygulama HTTPS ve düz HTTP LAN bağlantılarını destekler.",
     "webTransports": "Web cüzdanı HTTPS gerektirir; LAN'da düz HTTP için yüklü uygulamayı kullanın.",
@@ -395,7 +395,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "Bu cihazda bu cüzdanın anahtarı yok.",
-    "intro": "Görüntüleme anahtarınız, başka bir cihazın veya aracın bu cüzdanı izlemesini sağlar — bakiye ve geçmiş, salt okunur. Asla gönderemez.",
+    "intro": "Görüntüleme anahtarınız başka bir cihazın veya aracın bu cüzdanı salt izleme modunda izlemesini sağlar — bakiye, geçmiş ve nereye gönderdiğiniz. Asla gönderemez.",
     "warn": "Bu anahtara sahip olan herkes, bu cüzdanın şimdiye kadar sahip olduğu her miktarı ve notu ve bundan sonra alacağı her şeyi görür — bunu paralarınızı taşımadan geri alamazsınız.",
     "preparing": "Hazırlanıyor…",
     "showViewKey": "Görüntüleme anahtarını göster",
@@ -405,7 +405,7 @@
     "otherDevice": "Diğer cihazda: cüzdanı aç → <b>Cüzdanı izle</b>, ardından bu anahtarı yapıştırın (veya QR'ı tarayın)."
   },
   "stopWatching": {
-    "intro": "Bu cihaz bir görüntüleme anahtarına sahiptir ve harcama anahtarı yoktur, bu nedenle bakiyeyi ve geçmişi gösterebilir ve gönderemez. Burada hiçbir şey para taşıyamaz.",
+    "intro": "Bu cihazda bir görüntüleme anahtarı var, harcama anahtarı yok. Bu yüzden bakiyeyi ve geçmişi — bu cüzdanın nereye gönderdiği dahil — gösterebilir, ancak gönderemez. Buradaki hiçbir şey coin taşıyamaz.",
     "stopWatching": "İzlemeyi durdur",
     "warn": "Görüntüleme anahtarını bu tarayıcıdan kaldırır. Bağlantıyı elinde tutan başka biri görüntülemeye devam eder — bu yalnızca paralar taşınarak sonlandırılabilir.",
     "removeIt": "Kaldır",
@@ -815,7 +815,7 @@
     "thisComputer": "bu bilgisayar",
     "publicService": "genel hizmet (wallet.zkas.info)",
     "chosenService": "seçtiğiniz hizmet",
-    "intro": "Cüzdanınız <b>{{where}}</b> üzerinden eşitlenecek. Bakiyenizi ve geçmişinizi görür — anahtarlarınızı asla görmez ve harcama yapamaz."
+    "intro": "Cüzdanınız <b>{{where}}</b> üzerinden eşitlenecek. Bakiyenizi, geçmişinizi ve nereye gönderdiğinizi görür — anahtarlarınızı asla görmez ve harcama yapamaz."
   },
   "onboard": {
     "errHasKey": "Bu cihaz zaten bir cüzdan anahtarı tutuyor. Bunun yerine o cüzdanı geri yükleyin — veya cüzdan değiştiriciden 'Başka bir cüzdan ekle'yi kullanın, böylece hiçbir şeyin üzerine yazılmaz.",

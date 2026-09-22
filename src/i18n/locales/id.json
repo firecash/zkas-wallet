@@ -65,7 +65,7 @@
     "manyNotes": "Saldo Anda terbagi dalam {{n}} koin. Jika jumlah ini tidak muat dalam satu transaksi, tidak ada yang dikirim dan dompet akan menawarkan konsolidasi atau pembayaran terpisah eksplisit.",
     "to": "Ke",
     "privateNote": "Koin pribadi",
-    "memoSealed": "\"{{memo}}\" — tersegel dalam koin terenkripsi penerima; hanya mereka yang bisa membacanya.",
+    "memoSealed": "“{{memo}}” — terenkripsi dalam pembayaran; hanya penerima yang bisa membacanya.",
     "unlockLabel": "Frasa pemulihan · membuka kunci penandatanganan",
     "unlockPlaceholder": "Frasa pemulihan 12 kata",
     "warmingNote": "<b>⚡ Pembayaran pertama ini memakan waktu beberapa menit</b> — dompet harus menemukan koin Anda di rantai sebelum dapat membelanjakannya. Hanya sekali; pembayaran berikutnya hitungan detik.",
@@ -108,7 +108,7 @@
     "addMemo": "+ Tambah memo pribadi",
     "memoLabel": "Memo pribadi (opsional)",
     "memoPlaceholder": "Untuk apa pembayaran ini?",
-    "memoHint": "Tersegel dalam koin terenkripsi penerima — hanya mereka yang bisa membacanya. Tidak pernah muncul di rantai atau penjelajah.",
+    "memoHint": "Terenskripsi di dalam pembayaran — hanya penerima yang bisa membacanya. Tidak pernah muncul di rantai atau penjelajah.",
     "maturingHint": "Hanya {{spendable}} yang siap dipakai sekarang — {{maturing}} masih dalam perjalanan. Koin bisa dipakai ~10 menit setelah tiba, termasuk kembalian dari pembayaran. Segera siap.",
     "notEnough": "Dana tidak cukup: {{spendable}} bisa dipakai, perlu {{need}} termasuk biaya hingga {{maxFee}}.",
     "feeSummary": "+ {{min}}–{{max}} biaya (tergantung jumlah koin yang digabung) = hingga {{total}} total",
@@ -132,7 +132,7 @@
     "title": "Hubungkan ke node Anda sendiri",
     "modeOwn": "milik Anda ✓",
     "modeHosted": "hosting",
-    "intro": "Seed Anda selalu menandatangani di perangkat ini. Namun layanan hosting tetap melihat <b>kunci lihat</b> Anda — bisa memantau saldo dan riwayat. Untuk menjaga privasi itu, jalankan <code>zkas-walletd</code> di node sendiri dan hubungkan dompet ini langsung ke sana.",
+    "intro": "Seed Anda selalu menandatangani di perangkat ini. Tapi layanan yang dihosting tetap melihat <b>kunci lihat</b> Anda — bisa memantau saldo, riwayat, dan tujuan kirim Anda. Agar itu tetap privat, jalankan <code>zkas-walletd</code> di node Anda sendiri dan hubungkan dompet ini langsung ke sana.",
     "enterIp": "Masukkan <b>alamat IP</b> node Anda — kami tambahkan sisanya.",
     "nativeTransports": "Aplikasi terinstal mendukung koneksi HTTPS dan HTTP LAN biasa.",
     "webTransports": "Dompet web memerlukan HTTPS; gunakan aplikasi terinstal untuk HTTP biasa di LAN.",
@@ -485,7 +485,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "Perangkat ini tidak memiliki kunci untuk dompet ini.",
-    "intro": "Kunci tampilan Anda memungkinkan perangkat lain memantau dompet ini — saldo dan riwayat, hanya baca. Tidak bisa mengirim.",
+    "intro": "Kunci lihat Anda memungkinkan perangkat atau alat lain memantau dompet ini — saldo, riwayat, dan tujuan kirim, hanya lihat. Tidak bisa mengirim.",
     "warn": "Siapa pun dengan kunci ini melihat setiap jumlah dan memo yang pernah dimiliki dompet ini, dan semua yang diterima mulai sekarang — tidak bisa dibatalkan tanpa memindahkan koin Anda.",
     "preparing": "Menyiapkan…",
     "showViewKey": "Tampilkan kunci lihat",
@@ -495,7 +495,7 @@
     "otherDevice": "Di perangkat lain: buka dompet → <b>Pantau dompet</b>, lalu tempel kunci ini (atau pindai QR)."
   },
   "stopWatching": {
-    "intro": "Perangkat ini memiliki kunci tampilan tanpa kunci pengeluaran, jadi bisa menampilkan saldo dan riwayat tanpa bisa mengirim. Tidak ada yang bisa memindahkan koin.",
+    "intro": "Perangkat ini menyimpan kunci lihat tanpa kunci pengeluaran, jadi bisa menampilkan saldo dan riwayat — termasuk ke mana dompet ini mengirim — dan tidak bisa mengirim. Tidak ada di sini yang bisa memindahkan koin.",
     "stopWatching": "Berhenti mengawasi",
     "warn": "Menghapus kunci tampilan dari browser ini. Orang lain yang memegang tautan tetap bisa melihat — itu hanya bisa diakhiri dengan memindahkan koin.",
     "removeIt": "Hapus",
@@ -679,7 +679,7 @@
     "thisComputerOwn": "Komputer ini · node sendiri",
     "managedHere": "Dikelola di sini · gRPC {{port}}",
     "removeAria": "Hapus {{name}}",
-    "stageRestarting": "Mulai ulang mesin dompet · {{s}}d",
+    "stageRestarting": "Memulai ulang mesin dompet · {{s}}d",
     "stageLoadingScan": "Memuat status pindai…"
   },
   "walletSwitcher": {
@@ -908,7 +908,7 @@
     "thisComputer": "komputer ini",
     "publicService": "layanan publik (wallet.zkas.info)",
     "chosenService": "layanan yang Anda pilih",
-    "intro": "Dompet Anda akan menyinkronkan melalui <b>{{where}}</b>. Ini melihat saldo dan riwayat Anda — tidak pernah kunci Anda, dan tidak bisa membelanjakan."
+    "intro": "Dompet Anda akan menyinkronkan melalui <b>{{where}}</b>. Ini melihat saldo, riwayat, dan tujuan kirim Anda — tidak pernah kunci Anda, dan tidak bisa membelanjakan."
   },
   "status": {
     "offlineLabel": "Tidak dapat menjangkau jaringan",

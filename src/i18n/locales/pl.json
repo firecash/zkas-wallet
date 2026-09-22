@@ -20,7 +20,7 @@
     "addMemo": "+ Dodaj prywatną notatkę",
     "memoLabel": "Prywatna notatka (opcjonalnie)",
     "memoPlaceholder": "Cel płatności?",
-    "memoHint": "Zapieczętowana w zaszyfrowanej monecie odbiorcy — tylko on może ją odczytać. Nigdy nie pojawia się w łańcuchu ani w eksploratorze.",
+    "memoHint": "Zaszyfrowane w płatności — tylko odbiorca może odczytać. Nigdy nie pojawia się w łańcuchu ani w eksploratorze.",
     "maturingHint": "Tylko {{spendable}} jest gotowe do wydania – {{maturing}} jeszcze dochodzi. Monety stają się dostępne ok. 10 minut po dotarciu, w tym reszta z właśnie wykonanej płatności. Będzie gotowe za chwilę.",
     "notEnough": "Za mało środków: {{spendable}} dostępne, potrzeba {{need}} z opłatą do {{maxFee}}.",
     "feeSummary": "+ {{min}}–{{max}} opłaty (zależy od liczby łączonych monet) = do {{total}} łącznie",
@@ -44,7 +44,7 @@
     "manyNotes": "Twoje saldo jest w {{n}} monetach. Jeśli ta kwota nie zmieści się w jednej transakcji, nic nie zostanie wysłane, a portfel zaproponuje konsolidację lub podział płatności.",
     "to": "Do",
     "privateNote": "Prywatna notatka",
-    "memoSealed": "„{{memo}}” — zapieczętowane w zaszyfrowanej monecie odbiorcy; tylko on może ją odczytać.",
+    "memoSealed": "„{{memo}}” — zaszyfrowane wewnątrz płatności; tylko odbiorca może to odczytać.},",
     "unlockLabel": "Fraza odzyskiwania · odblokowuje podpisywanie",
     "unlockPlaceholder": "Twoja 12-wyrazowa fraza odzyskiwania",
     "warmingNote": "<b>⚡ Ta pierwsza płatność zajmie kilka minut</b> – portfel musi zlokalizować Twoje monety w łańcuchu, zanim będzie mógł je wydać. Robi to tylko raz; kolejne płatności trwają sekundy.",
@@ -132,7 +132,7 @@
     "title": "Połącz z własnym węzłem",
     "modeOwn": "własny ✓",
     "modeHosted": "hostowany",
-    "intro": "Twoje ziarno zawsze podpisuje na tym urządzeniu. Hostowana usługa widzi jednak twój <b>klucz podglądu</b> — może śledzić saldo i historię. Aby zachować prywatność, uruchom <code>zkas-walletd</code> na własnym węźle i połącz portfel bezpośrednio.",
+    "intro": "Twój seed zawsze podpisuje na tym urządzeniu. Ale usługa hostowana wciąż widzi twój <b>klucz podglądu</b> — może śledzić twoje saldo, historię i dokąd wysyłasz. Aby nawet to zachować w tajemnicy, uruchom <code>zkas-walletd</code> na własnym węźle i połącz ten portfel bezpośrednio z nim.",
     "enterIp": "Wpisz <b>adres IP</b> węzła — resztę dodamy.",
     "nativeTransports": "Aplikacja obsługuje HTTPS i zwykłe HTTP w sieci LAN.",
     "webTransports": "Portfel web wymaga HTTPS; w LAN używaj aplikacji dla zwykłego HTTP.",
@@ -348,7 +348,7 @@
   },
   "watchOnAnotherDevice": {
     "noKey": "To urządzenie nie ma klucza do tego portfela.",
-    "intro": "Twój klucz podglądu pozwala innemu urządzeniu lub narzędziu obserwować ten portfel — saldo i historię, tylko do odczytu. Nigdy nie może wysyłać.",
+    "intro": "Twój klucz podglądu pozwala innemu urządzeniu lub narzędziu obserwować ten portfel — saldo, historię i dokąd wysyłasz, tylko do odczytu. Nigdy nie może wysyłać.",
     "warn": "Każdy z tym kluczem widzi każdą kwotę i notatkę, jakie ten portfel kiedykolwiek miał i wszystko, co otrzyma od teraz — nie możesz tego cofnąć bez przeniesienia monet.",
     "preparing": "Przygotowywanie…",
     "showViewKey": "Pokaż klucz podglądu",
@@ -358,7 +358,7 @@
     "otherDevice": "Na drugim urządzeniu: otwórz portfel → <b>Obserwuj portfel</b>, następnie wklej ten klucz (lub zeskanuj QR)."
   },
   "stopWatching": {
-    "intro": "To urządzenie ma klucz podglądu, bez klucza wydawania, więc pokazuje saldo i historię i nie może wysyłać. Nic tu nie może przenieść monet.",
+    "intro": "To urządzenie przechowuje klucz podglądu bez klucza wydawania, więc może pokazywać saldo i historię — w tym dokąd ten portfel wysłał — i nie może wysyłać. Nic tutaj nie może przenosić monet.",
     "stopWatching": "Przestań obserwować",
     "warn": "Usuwa klucz podglądu z tej przeglądarki. Każdy inny z linkiem zachowuje podgląd — można to zakończyć tylko przenosząc monety.",
     "removeIt": "Usuń go",
@@ -815,7 +815,7 @@
     "thisComputer": "ten komputer",
     "publicService": "publiczna usługa (wallet.zkas.info)",
     "chosenService": "wybrana usługa",
-    "intro": "Twój portfel zsynchronizuje się przez <b>{{where}}</b>. Widzi twoje saldo i historię — nigdy twoje klucze i nie może wydawać."
+    "intro": "Twój portfel będzie synchronizować przez <b>{{where}}</b>. Widzi twoje saldo, historię i dokąd wysyłasz — nigdy twoich kluczy i nie może wydawać."
   },
   "onboard": {
     "errHasKey": "To urządzenie ma już klucz portfela. Przywróć ten portfel — lub użyj przełącznika portfeli 'Dodaj inny portfel', aby nic nie zostało nadpisane.",
