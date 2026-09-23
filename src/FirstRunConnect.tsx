@@ -21,6 +21,7 @@ import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
 import { ONION_WALLETD_URL } from "./lib/relay";
 import { OrbotHelp } from "./OrbotHelp";
 import { embeddedAvailable, setEmbeddedChosen, ensureEmbedded } from "./embedded";
+import { markBackgroundPromptPending } from "./bgsync";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { showAccessTokenField } from "./lib/accesstoken";
 
@@ -52,6 +53,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
     try {
       const url = await ensureEmbedded(node, tor);
       setEmbeddedChosen(true);
+      markBackgroundPromptPending();
       setBase(url); setWalletdBearer("");
       finish();
     } catch (e) {

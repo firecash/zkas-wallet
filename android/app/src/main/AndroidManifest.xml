@@ -92,6 +92,12 @@
          closed. Runtime-asked on Android 13+ when the user turns the feature on;
          a denial just keeps the sync silent. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Lets the app ask (system dialog, user may refuse) to be exempt from Doze battery
+         optimisation. Without the exemption WorkManager's ~15 minute background sync
+         period is deferred to Doze maintenance windows — minutes to hours — so a wallet
+         running its own on-device engine is stale every time it is opened. Refusal is
+         handled: the sync still runs, just on Android's schedule. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Optional fingerprint/face unlock of the app lock. The passphrase always
          remains as a fallback, so a device without biometrics is unaffected. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />

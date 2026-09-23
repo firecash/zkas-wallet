@@ -23,6 +23,9 @@ interface BackgroundSyncPlugin {
   enable(): Promise<void>;
   disable(): Promise<void>;
   isEnabled(): Promise<{ enabled: boolean }>;
+  backgroundStatus(): Promise<{ exempt: boolean; suppressed: boolean; shouldAsk: boolean; enabled: boolean }>;
+  requestBackground(): Promise<{ shown: boolean }>;
+  suppressBackgroundPrompt(opts: { on: boolean }): Promise<void>;
 }
 
 const Native = registerPlugin<BackgroundSyncPlugin>("BackgroundSync");
@@ -67,5 +70,90 @@ export async function bgSyncReconfigure(): Promise<void> {
     await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer(), quietUntil: quietUntil(loadTxs()), embedded: embeddedChosen(), node: embeddedNode(), socks: embeddedTor() ? ORBOT_SOCKS : undefined });
   } catch {
     /* best-effort — the next boot re-tries */
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Doze exemption — what makes on-device background sync actually periodic.
+// ---------------------------------------------------------------------------
+//
+// Enabling background sync schedules a ~15 minute WorkManager wake. Android treats that
+// period as a hint: in Doze it is deferred to maintenance windows that stretch to hours,
+// so a phone running its own engine is behind every time it is opened — the same wait we
+// removed on the hosted side, reappearing on the device. The battery-optimisation
+// exemption is the only thing that fixes it, and only the user can grant it.
+//
+// Every function here is safe on platforms without the plugin: no plugin, nothing to ask.
+
+export interface BgBackgroundStatus {
+  exempt: boolean;
+  suppressed: boolean;
+  shouldAsk: boolean;
+  enabled: boolean;
+}
+
+export async function bgBackgroundStatus(): Promise<BgBackgroundStatus | null> {
+  if (!isAndroid()) return null;
+  try {
+    return await Native.backgroundStatus();
+  } catch {
+    // An older native build without these methods. Nothing to ask for.
+    return null;
+  }
+}
+
+/** Open the system dialog. false = this device has no such screen. */
+export async function bgRequestBackground(): Promise<boolean> {
+  if (!isAndroid()) return false;
+  try {
+    return (await Native.requestBackground()).shown;
+  } catch {
+    return false;
+  }
+}
+
+export async function bgSuppressPrompt(on = true): Promise<void> {
+  if (!isAndroid()) return;
+  try {
+    await Native.suppressBackgroundPrompt({ on });
+  } catch {
+    /* older native build — the prompt simply never appears */
+  }
+}
+
+/**
+ * Called when the user switches to "run on this phone".
+ *
+ * Returns whether the app should show its own explain-then-ask sheet. The user asked to
+ * be prompted on EVERY switch, not once ever, so this deliberately does not latch on a
+ * "seen it" flag — only on the explicit "don't ask again" the sheet offers, and on
+ * actually having the exemption, at which point there is nothing to ask for.
+ */
+export async function bgShouldPromptForBackground(): Promise<boolean> {
+  const s = await bgBackgroundStatus();
+  return !!s && s.shouldAsk;
+}
+
+// The "run on this phone" switch reloads the app (see `startOnPhone`), which would throw
+// away any sheet opened in the same tick. So the switch leaves a marker and the next boot
+// picks it up: exactly once per switch, and it survives the reload.
+const PENDING = "bg_prompt_pending";
+
+export function markBackgroundPromptPending(): void {
+  try {
+    if (isAndroid()) localStorage.setItem(PENDING, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Read and clear. Clearing on read is deliberate: a prompt shown is a prompt spent. */
+export function takeBackgroundPromptPending(): boolean {
+  try {
+    const had = localStorage.getItem(PENDING) === "1";
+    if (had) localStorage.removeItem(PENDING);
+    return had;
+  } catch {
+    return false;
   }
 }

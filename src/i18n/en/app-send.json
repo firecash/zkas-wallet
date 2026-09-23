@@ -370,5 +370,13 @@
     "cost": "The cost is permanent: a private send cannot be recovered after you restore this wallet, cannot be shown in history on another device, and cannot be proven to anyone. The recipient still receives it normally.",
     "turnOn": "Turn private sends on",
     "turnOff": "Turn private sends off"
+  },
+  "backgroundPermission": {
+    "title": "Let the wallet sync in the background?",
+    "body": "This phone is now running the wallet itself. Android puts sleeping apps on its own schedule, so without this the wallet can fall hours behind and the next time you open it you will wait for it to catch up. Allowing it lets the wallet wake about every 15 minutes to stay current. You can change this later in Android settings.",
+    "enable": "Allow",
+    "later": "Not now",
+    "never": "Don't ask again",
+    "noScreen": "This phone has no battery-optimisation screen. Background sync still runs, on Android's schedule."
   }
 }

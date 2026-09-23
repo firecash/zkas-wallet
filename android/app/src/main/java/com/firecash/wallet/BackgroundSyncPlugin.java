@@ -82,6 +82,42 @@ public class BackgroundSyncPlugin extends Plugin {
         call.resolve(ret);
     }
 
+    /**
+     * What Android will currently allow this app in the background.
+     *
+     * `exempt` is the only one that decides whether a ~15 minute wake really happens
+     * every ~15 minutes; without it WorkManager's period is a hint that Doze stretches
+     * to hours. `shouldAsk` folds in the user's "don't ask again" so the web layer does
+     * not have to keep that rule in two places.
+     */
+    @PluginMethod
+    public void backgroundStatus(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("exempt", BackgroundPermission.isExempt(getContext()));
+        ret.put("suppressed", BackgroundPermission.suppressed(getContext()));
+        ret.put("shouldAsk", BackgroundPermission.shouldAsk(getContext()));
+        ret.put("enabled", prefs().getBoolean("enabled", false));
+        call.resolve(ret);
+    }
+
+    /**
+     * Open the system battery-optimisation dialog. `shown:false` means this device has
+     * no such screen, so the caller should say that rather than claim it asked.
+     */
+    @PluginMethod
+    public void requestBackground(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("shown", BackgroundPermission.request(getContext()));
+        call.resolve(ret);
+    }
+
+    /** Remember "don't ask me again" — or clear it, if the user changes their mind. */
+    @PluginMethod
+    public void suppressBackgroundPrompt(PluginCall call) {
+        BackgroundPermission.setSuppressed(getContext(), !Boolean.FALSE.equals(call.getBoolean("on", true)));
+        call.resolve();
+    }
+
     // Android 13+ gates notifications behind a runtime permission. Worst case a
     // denial means the sync still runs but stays silent — so we ask and move on.
     private void maybeAskNotifications() {

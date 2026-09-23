@@ -82,7 +82,7 @@ import {
 } from "./contacts";
 import { disableLock, enableLock, forgetWalletLock, forgetMnemonicLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed } from "./applock";
 import { disableBiometricUnlock, enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured } from "./biometric";
-import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReconfigure } from "./bgsync";
+import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReconfigure, bgShouldPromptForBackground, bgRequestBackground, bgSuppressPrompt, markBackgroundPromptPending, takeBackgroundPromptPending } from "./bgsync";
 import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
@@ -1412,6 +1412,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           </section>
         </div>
       )}
+      <BackgroundPermissionPrompt />
       {/* Send & Receive open as a full-screen sheet OVER the wallet — everything for
           the action happens inside it, with its own scroll, so nothing pushes the
           balance/tabs around and there is nothing to scroll past to reach the form.
@@ -1845,6 +1846,7 @@ function ConnectionButton() {
     try {
       const url = await ensureEmbedded(node, tor);
       setEmbeddedChosen(true);
+      markBackgroundPromptPending();
       setBase(url); setWalletdBearer("");
       setOpen(false);
       void bgSyncReconfigure(); // tell the bg worker to talk to the on-device engine
@@ -7103,7 +7105,7 @@ function NetworkPrivacyCard() {
         setBusy(null);
       });
   };
-  const startOnPhone = (node?: string, tor?: boolean) => run("phone", async () => { const u = await ensureEmbedded(node, tor); setEmbeddedChosen(true); setBase(u); setWalletdBearer(""); });
+  const startOnPhone = (node?: string, tor?: boolean) => run("phone", async () => { const u = await ensureEmbedded(node, tor); setEmbeddedChosen(true); markBackgroundPromptPending(); setBase(u); setWalletdBearer(""); });
   const leaveEngine = async () => { if (embeddedChosen()) { setEmbeddedChosen(false); await stopEmbedded(); } };
   const usePublic = () => run("public", async () => { await leaveEngine(); setBase(""); setWalletdBearer(""); });
   const useTor = () => run("tor", async () => { await leaveEngine(); const u = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000); setBase(u); setWalletdBearer(""); });
@@ -7153,6 +7155,68 @@ function NetworkPrivacyCard() {
 /// daemon-side scan warm and posts a local notification when a payment lands
 /// while the app is closed (see bgsync.ts). Off by default — a convenience worth
 /// a little battery is the user's to choose, not ours to take.
+/**
+ * Asked once per switch to "run on this phone", because that is the switch that makes it
+ * matter: the wallet is now its own daemon, and Android decides when it gets to run.
+ *
+ * WorkManager's ~15 minute period is a request. In Doze, Android defers periodic work to
+ * maintenance windows that stretch from minutes to hours, so an on-device wallet is stale
+ * every time it is opened — the wait we removed on the hosted side, reappearing here. The
+ * battery-optimisation exemption is the only cure and only the user can grant it.
+ *
+ * Deliberately NOT once-ever: the user asked to be prompted on every switch to on-device,
+ * with an explicit way out. So it latches on two things only — actually holding the
+ * exemption (nothing left to ask) and "Don't ask again" (they said so). "Not now" leaves
+ * both alone, so the next switch asks again.
+ *
+ * The switch reloads the app, so the request is left as a marker and collected on boot.
+ */
+function BackgroundPermissionPrompt() {
+  const { t } = useTranslation();
+  const [show, setShow] = useState(false);
+  const [note, setNote] = useState("");
+  useEffect(() => {
+    if (!takeBackgroundPromptPending()) return;
+    let alive = true;
+    void bgShouldPromptForBackground().then((should) => {
+      if (alive && should) setShow(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!show) return null;
+  const close = () => setShow(false);
+  const allow = async () => {
+    const shown = await bgRequestBackground();
+    // A device with no such screen must not be told we asked for something.
+    if (!shown) {
+      setNote(t("backgroundPermission.noScreen"));
+      return;
+    }
+    close();
+  };
+  const never = async () => {
+    await bgSuppressPrompt(true);
+    close();
+  };
+  return createPortal(
+    <div className="modalwrap" onClick={close}>
+      <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>{t("backgroundPermission.title")}</h2>
+        <p className="muted small">{t("backgroundPermission.body")}</p>
+        {note && <div className="msg">{note}</div>}
+        <div className="dialog-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+          <button className="btn" onClick={() => void allow()}>{t("backgroundPermission.enable")}</button>
+          <button className="btn ghost" onClick={close}>{t("backgroundPermission.later")}</button>
+          <button className="btn ghost" onClick={() => void never()}>{t("backgroundPermission.never")}</button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function BackgroundSyncCard() {
   const { t } = useTranslation();
   const [on, setOn] = useState(bgSyncEnabled());
