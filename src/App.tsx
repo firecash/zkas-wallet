@@ -83,6 +83,7 @@ import {
 import { disableLock, enableLock, forgetWalletLock, forgetMnemonicLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed } from "./applock";
 import { disableBiometricUnlock, enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured } from "./biometric";
 import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReconfigure, bgShouldPromptForBackground, bgRequestBackground, bgSuppressPrompt, markBackgroundPromptPending, takeBackgroundPromptPending } from "./bgsync";
+import { startPrewarm, stopPrewarm } from "./prewarm";
 import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
@@ -1413,6 +1414,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         </div>
       )}
       <BackgroundPermissionPrompt />
+      <Prewarm />
       {/* Send & Receive open as a full-screen sheet OVER the wallet — everything for
           the action happens inside it, with its own scroll, so nothing pushes the
           balance/tabs around and there is nothing to scroll past to reach the form.
@@ -7171,6 +7173,18 @@ function NetworkPrivacyCard() {
  *
  * The switch reloads the app, so the request is left as a marker and collected on boot.
  */
+/**
+ * Keeps the user's OTHER wallets loaded and at the tip, so switching does not pay a cold
+ * restore. Renders nothing; it exists to own the lifecycle. See `prewarm.ts`.
+ */
+function Prewarm() {
+  useEffect(() => {
+    startPrewarm();
+    return stopPrewarm;
+  }, []);
+  return null;
+}
+
 function BackgroundPermissionPrompt() {
   const { t } = useTranslation();
   const [show, setShow] = useState(false);

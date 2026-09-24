@@ -585,6 +585,35 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
   return data as T;
 }
 
+/**
+ * Touch ONE wallet by token, without making it active.
+ *
+ * The daemon is multi-wallet, but the app only ever talked to the active token — so
+ * every other wallet of yours was, from the daemon's point of view, nobody's. It stopped
+ * being synced once `--active-sync-window` lapsed and was then evicted, and switching to
+ * it paid a full cold restore: measured on the hosted daemon at a median of 8.8 s and a
+ * p90 of 93.6 s, because these checkpoints reach 522 MB.
+ *
+ * A single `/api/status` fixes that, because of what it does on the far side: it loads
+ * the wallet, refreshes its `last_touch` so the sync loop keeps advancing it, and marks
+ * it warm. One cheap call per wallet is the difference between switching instantly and
+ * watching "Opening wallet".
+ *
+ * Only the app can do this. The daemon has no idea which tokens belong to one person.
+ */
+export async function touchWallet(token: string, timeoutMs = 20_000): Promise<boolean> {
+  const url = getBase();
+  const headers: Record<string, string> = { "X-Wallet-Token": token };
+  const bearer = getWalletdBearer();
+  if (bearer) headers.Authorization = `Bearer ${bearer}`;
+  try {
+    const r = await probe(url, "/api/status", headers, timeoutMs);
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
 export const api = {
   status: () => req<Status>("GET", "/api/status"),
   balance: () => req<Balance>("GET", "/api/wallet/balance"),
