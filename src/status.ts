@@ -176,16 +176,23 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     };
   }
 
-  // No progress figure yet: the wallet is being loaded and genuinely knows nothing.
-  // The daemon answers zeros here, which is "I don't know yet", never "you have none".
+  // Nothing known at all: the wallet is being loaded and the daemon genuinely cannot say
+  // where it was. Zeros here mean "I don't know yet", never "you have none", so nothing
+  // downstream may describe the balance.
   //
-  // `loading` is checked FIRST and on its own, because the other tests infer "not open
-  // yet" from zeros, and inference loses to a stale `synced`: a wallet re-opened after a
-  // daemon restart kept a held `synced: true` for a few seconds while reporting a zero
-  // balance, sailed past this branch, and was announced as finished with 0 ZKAS. When
-  // the daemon states outright that it has not opened the wallet, nothing downstream
-  // may describe the balance at all.
-  if (s.loading || (!s.synced && s.scannedBlocks === 0)) {
+  // `loading` no longer forces this on its own. The daemon now keeps a durable last-known
+  // status per wallet and serves it while the real one loads, so `loading` usually arrives
+  // WITH a real cursor and balance — and blocking on "Opening your wallet" for the length
+  // of a 177-522 MB restore (median 8.8 s, p90 93.6 s) while holding the answer would be
+  // absurd. A zero cursor is still the honest trigger: it is the one case where there is
+  // nothing true to show.
+  //
+  // The stale-`synced` hazard this guard was written for is unaffected. A wallet re-opened
+  // after a daemon restart that briefly holds `synced: true` over a zero balance still has
+  // `scannedBlocks === 0` and is still caught here. What changed is only that a KNOWN
+  // cursor is now allowed through, and every branch below it reports
+  // `balanceIsFinal: false`, so nothing is announced off a last-known figure.
+  if ((s.loading || !s.synced) && s.scannedBlocks === 0) {
     return {
       phase: "opening",
       label: i18n.t("status.openingLabel"),
