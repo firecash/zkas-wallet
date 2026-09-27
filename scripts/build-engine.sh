@@ -35,19 +35,35 @@ for tgt in "${!ABI[@]}"; do
     "AR_${tgt//-/_}=$BIN/llvm-ar" \
     "CARGO_TARGET_${var}_LINKER=$cc" \
     ANDROID_NDK_HOME="$NDK" \
+    CARGO_PROFILE_RELEASE_STRIP=none \
     cargo build --manifest-path "$ENGINE/Cargo.toml" --target "$tgt" --release
   dst="$ROOT/android/app/src/main/jniLibs/${ABI[$tgt]}"
   mkdir -p "$dst"
+  # Build UNSTRIPPED, then strip on the way into jniLibs.
+  #
+  # The workspace sets `[profile.release] strip = true`, which removes the full symbol
+  # table. UniFFI reads its metadata from THAT table (not .dynsym), so bindgen found
+  # nothing, generated nothing, and — because it exits 0 even on failure — the `|| true`
+  # below swallowed it. The vendored Kotlin binding silently froze on 2026-09-10: any
+  # UniFFI function added after that date simply never reached Kotlin.
+  #
+  # So the object bindgen reads keeps its symbols, and the object we ship does not.
   cp "$ENGINE/target/$tgt/release/libzkas_walletd_mobile.so" "$dst/"
+  "$BIN/llvm-strip" "$dst/libzkas_walletd_mobile.so"
 done
 
 # Refresh the vendored UniFFI Kotlin bindings from the just-built library.
 BIND="$ROOT/android/app/src/main/java/uniffi/zkas_walletd_mobile"
 mkdir -p "$BIND"
+rm -rf "$ROOT/.engine-bindings"
+# NOT silenced and NOT `|| true`. uniffi-bindgen exits 0 even when it fails, so the only
+# way to know it worked is to look for the file — and a stale binding is worse than a
+# failed build: the app compiles against Kotlin that no longer matches the library.
 (cd "$ENGINE" && cargo run --bin uniffi-bindgen -- generate \
   --library "$ENGINE/target/aarch64-linux-android/release/libzkas_walletd_mobile.so" \
-  --language kotlin --out-dir "$ROOT/.engine-bindings" >/dev/null 2>&1) || true
-[ -f "$ROOT/.engine-bindings/uniffi/zkas_walletd_mobile/zkas_walletd_mobile.kt" ] && \
-  cp "$ROOT/.engine-bindings/uniffi/zkas_walletd_mobile/zkas_walletd_mobile.kt" "$BIND/"
+  --language kotlin --out-dir "$ROOT/.engine-bindings")
+GEN="$ROOT/.engine-bindings/uniffi/zkas_walletd_mobile/zkas_walletd_mobile.kt"
+[ -f "$GEN" ] || { echo "FATAL: uniffi-bindgen produced no Kotlin binding (it exits 0 on failure - check the library kept its symbol table)"; exit 1; }
+cp "$GEN" "$BIND/"
 
 echo "engine built into android/app/src/main/jniLibs (arm64-v8a, armeabi-v7a, x86_64)"

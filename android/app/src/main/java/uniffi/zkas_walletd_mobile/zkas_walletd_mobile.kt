@@ -721,6 +721,8 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -740,6 +742,8 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_zkas_walletd_mobile_fn_func_port(uniffi_out_err: UniffiRustCallStatus, 
     ): Short
+    fun uniffi_zkas_walletd_mobile_fn_func_release_memory(uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
     fun uniffi_zkas_walletd_mobile_fn_func_set_debug_logs(`on`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     fun uniffi_zkas_walletd_mobile_fn_func_start(`nodeAddr`: RustBuffer.ByValue,`walletDir`: RustBuffer.ByValue,`secret`: RustBuffer.ByValue,`socks`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -862,6 +866,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_zkas_walletd_mobile_checksum_func_port(
     ): Short
+    fun uniffi_zkas_walletd_mobile_checksum_func_release_memory(
+    ): Short
     fun uniffi_zkas_walletd_mobile_checksum_func_set_debug_logs(
     ): Short
     fun uniffi_zkas_walletd_mobile_checksum_func_start(
@@ -888,7 +894,10 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_zkas_walletd_mobile_checksum_func_logs() != 16052.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_zkas_walletd_mobile_checksum_func_port() != 13306.toShort()) {
+    if (lib.uniffi_zkas_walletd_mobile_checksum_func_port() != 27779.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_zkas_walletd_mobile_checksum_func_release_memory() != 18627.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_zkas_walletd_mobile_checksum_func_set_debug_logs() != 32757.toShort()) {
@@ -967,6 +976,29 @@ public object FfiConverterUShort: FfiConverter<UShort, Short> {
 
     override fun write(value: UShort, buf: ByteBuffer) {
         buf.putShort(value.toShort())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterULong: FfiConverter<ULong, Long> {
+    override fun lift(value: Long): ULong {
+        return value.toULong()
+    }
+
+    override fun read(buf: ByteBuffer): ULong {
+        return lift(buf.getLong())
+    }
+
+    override fun lower(value: ULong): Long {
+        return value.toLong()
+    }
+
+    override fun allocationSize(value: ULong) = 8UL
+
+    override fun write(value: ULong, buf: ByteBuffer) {
+        buf.putLong(value.toLong())
     }
 }
 
@@ -1092,13 +1124,34 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
     )
     }
     
-
-        /**
-         * The engine's current loopback port, or 0 if not running.
-         */ fun `port`(): kotlin.UShort {
+ fun `port`(): kotlin.UShort {
             return FfiConverterUShort.lift(
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_zkas_walletd_mobile_fn_func_port(
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * The engine's current loopback port, or 0 if not running.
+         * Give back everything the engine can rebuild, and report how many decoded leaves went.
+         *
+         * Call this from Android's onTrimMemory. The system warns before it starts killing, and an
+         * engine that ignores the warning is the one that gets killed — losing the user's scan
+         * progress and forcing a cold restore on the next open, which is a median 8.8 s and a p90
+         * of 93.6 s of "Opening your wallet".
+         *
+         * What it drops is the decoded leaf cache: ~32 bytes per leaf, tens to hundreds of MB, and
+         * pure cache — rebuilt lazily on the next witness climb. Nothing persisted, nothing the
+         * wallet cannot recreate. Non-blocking: a wallet mid-scan is skipped rather than waited
+         * on, because stalling while the system is deciding whether to kill you is the one thing
+         * that must not happen here.
+         */ fun `releaseMemory`(): kotlin.ULong {
+            return FfiConverterULong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_zkas_walletd_mobile_fn_func_release_memory(
         _status)
 }
     )
