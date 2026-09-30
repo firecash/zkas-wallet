@@ -137,6 +137,7 @@
   "whatsNew": {
     "eyebrow": "New",
     "title": "Run the wallet on your phone",
+    "titleOnPhone": "Choose your nodes",
     "onPhoneTitle": "No server sees your wallet",
     "onPhoneDesc": "The wallet engine runs on this phone. Your keys and your viewing key never leave it, so no service can see your balance or your payments.",
     "nodesTitle": "Two nodes, with a fallback",
@@ -145,8 +146,8 @@
     "switchNow": "Run it on my phone",
     "switching": "Starting…",
     "switchFailed": "Could not start the on-device engine. You are still on the previous service.",
-    "openSettings": "Open settings",
-    "notNow": "Not now"
+    "notNow": "Not now",
+    "gotIt": "Got it"
   },
   "mainRoot": {
     "opening": "Opening…"

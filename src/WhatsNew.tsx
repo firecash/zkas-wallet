@@ -64,18 +64,13 @@ export function WhatsNew({ onClose, onSwitch }: { onClose: () => void; onSwitch?
     try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
     onClose();
   };
-  const openSettings = () => {
-    try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
-    // The settings SCREEN, not the in-wallet tab, so this lands where the nav
-    // sends people and Back returns to the wallet.
-    location.hash = "#/settings";
-    onClose();
-  };
   return (
     <div className="modalwrap" onClick={dismiss}>
       <div className="card modalcard" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
         <span className="eyebrow">{t("whatsNew.eyebrow")}</span>
-        <h2 style={{ margin: "6px 0 12px" }}>{t("whatsNew.title")}</h2>
+        <h2 style={{ margin: "6px 0 12px" }}>
+          {alreadyOn ? t("whatsNew.titleOnPhone") : t("whatsNew.title")}
+        </h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {!alreadyOn && (
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -89,14 +84,22 @@ export function WhatsNew({ onClose, onSwitch }: { onClose: () => void; onSwitch?
           </div>
           {!alreadyOn && <span className="muted small">{t("whatsNew.onPhoneCaveat")}</span>}
           {err && <span className="small" style={{ color: "var(--bad, #fca5a5)" }}>{err}</span>}
+          {/* One action, done here. Sending somebody to Settings to finish an upgrade
+              is not an upgrade, and for a user already on the engine there was nothing
+              for them to do there at all — the card just bounced them out of the wallet. */}
           <div className="row" style={{ gap: 8 }}>
-            {!alreadyOn && onSwitch && (
-              <button className="btn" disabled={switching} onClick={switchNow}>
-                {switching ? t("whatsNew.switching") : t("whatsNew.switchNow")}
-              </button>
+            {!alreadyOn && onSwitch ? (
+              <>
+                <button className="btn" disabled={switching} onClick={switchNow}>
+                  {switching ? t("whatsNew.switching") : t("whatsNew.switchNow")}
+                </button>
+                <button className="btn ghost" disabled={switching} onClick={dismiss}>
+                  {t("whatsNew.notNow")}
+                </button>
+              </>
+            ) : (
+              <button className="btn" onClick={dismiss}>{t("whatsNew.gotIt")}</button>
             )}
-            <button className="btn ghost" onClick={openSettings}>{t("whatsNew.openSettings")}</button>
-            <button className="btn ghost" onClick={dismiss}>{t("whatsNew.notNow")}</button>
           </div>
         </div>
       </div>
