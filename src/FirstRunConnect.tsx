@@ -20,7 +20,7 @@ import { walletdProfiles } from "./connection-profiles";
 import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
 import { ONION_WALLETD_URL } from "./lib/relay";
 import { OrbotHelp } from "./OrbotHelp";
-import { embeddedAvailable, setEmbeddedChosen, ensureEmbedded } from "./embedded";
+import { embeddedAvailable, setEmbeddedChosen, ensureEmbedded, setEmbeddedBackupNode } from "./embedded";
 import { markBackgroundPromptPending } from "./bgsync";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { showAccessTokenField } from "./lib/accesstoken";
@@ -47,10 +47,11 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
     setBase(""); setWalletdBearer(""); finish();
   };
 
-  const connectPhone = async (node?: string, tor?: boolean) => {
+  const connectPhone = async (node?: string, tor?: boolean, backup?: string) => {
     if (busy) return;
     setErr(""); setBusy("phone");
     try {
+      if (backup !== undefined) setEmbeddedBackupNode(backup);
       const url = await ensureEmbedded(node, tor);
       setEmbeddedChosen(true);
       markBackgroundPromptPending();
@@ -104,7 +105,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
         <span className="eyebrow">{t("firstRunConnect.connectEyebrow")}</span>
         <div className="connection-list firstrun-conn">
           {embeddedAvailable() && (
-            <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} onStart={(n, useTor) => connectPhone(n, useTor)} />
+            <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} tag={<span className="chip on">{t("firstRunConnect.recommended")}</span>} onStart={(n, useTor, backup) => connectPhone(n, useTor, backup)} />
           )}
           <button className="connection-option" disabled={!!busy} onClick={connectPublic}>
             <span><b>{t("firstRunConnect.publicTitle")}</b><small>{t("firstRunConnect.publicDesc")}</small></span>

@@ -6,18 +6,27 @@
 // once per release that needs it, gated by the version key below.
 
 import { useTranslation } from "react-i18next";
+import { embeddedAvailable, embeddedChosen } from "./embedded";
 
-const SEEN_KEY = "whatsnew_seen_v1_0_17";
+const SEEN_KEY = "whatsnew_seen_v1_0_39_onphone";
 
 /** Whether to show the update notice: an existing wallet that hasn't seen it.
  *
- * RETIRED. The notice below is frozen at the 1.0.17 feature set (phrases / accounts
- * / Tor), which is now many releases old — so it read to users as a stale "new
- * version" popup that kept appearing on a current build. Returning false disables it.
- * To bring it back for a real release, refresh the content AND the SEEN_KEY, then
- * restore the `hasWalletHistory && !localStorage.getItem(SEEN_KEY)` gate. */
-export function shouldShowWhatsNew(_hasWalletHistory: boolean): boolean {
-  return false;
+ * Revived for the on-device engine, per the instructions this comment used to carry:
+ * new content, new SEEN_KEY, gate restored. The previous notice was frozen at the
+ * 1.0.17 feature set and had gone stale, which is why it was switched off.
+ *
+ * Shown only where it can be acted on: an existing wallet (a fresh install meets this
+ * choice in first-run), on a build that HAS the engine, and not to somebody already
+ * running it — offering a thing you are already using is how a notice teaches people
+ * to dismiss notices. */
+export function shouldShowWhatsNew(hasWalletHistory: boolean): boolean {
+  if (!hasWalletHistory || !embeddedAvailable() || embeddedChosen()) return false;
+  try {
+    return !localStorage.getItem(SEEN_KEY);
+  } catch {
+    return false;
+  }
 }
 
 export function WhatsNew({ onClose }: { onClose: () => void }) {
@@ -38,23 +47,20 @@ export function WhatsNew({ onClose }: { onClose: () => void }) {
       <div className="card modalcard" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
         <span className="eyebrow">{t("whatsNew.eyebrow")}</span>
         <h2 style={{ margin: "6px 0 12px" }}>{t("whatsNew.title")}</h2>
-        <div className="whatsnew-list">
-          <div>
-            <b>{t("whatsNew.phraseTitle")}</b>
-            <span className="muted small">{t("whatsNew.phraseDesc")}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <b>{t("whatsNew.onPhoneTitle")}</b>
+            <span className="muted small">{t("whatsNew.onPhoneDesc")}</span>
           </div>
-          <div>
-            <b>{t("whatsNew.accountsTitle")}</b>
-            <span className="muted small">{t("whatsNew.accountsDesc")}</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <b>{t("whatsNew.nodesTitle")}</b>
+            <span className="muted small">{t("whatsNew.nodesDesc")}</span>
           </div>
-          <div>
-            <b>{t("whatsNew.torTitle")}</b>
-            <span className="muted small">{t("whatsNew.torDesc")}</span>
+          <span className="muted small">{t("whatsNew.onPhoneCaveat")}</span>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn" onClick={openSettings}>{t("whatsNew.setItUp")}</button>
+            <button className="btn ghost" onClick={dismiss}>{t("whatsNew.notNow")}</button>
           </div>
-        </div>
-        <div className="row" style={{ marginTop: 16, gap: 10 }}>
-          <button className="btn ghost" onClick={dismiss}>{t("whatsNew.gotIt")}</button>
-          <button className="btn" onClick={openSettings}>{t("whatsNew.openSettings")}</button>
         </div>
       </div>
     </div>

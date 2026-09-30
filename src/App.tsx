@@ -90,7 +90,7 @@ import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./con
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
 import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug, engineBusy, setEngineBusy, engineKeepAlive } from "./embedded";
 import { captureScanReceipt, adoptScanReceipt, haveScanReceipt } from "./scanreceipt";
-import { embeddedNodeIsAutomatic, rotatePublicNode } from "./embedded";
+import { rotatePublicNode, setEmbeddedBackupNode } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
@@ -876,7 +876,9 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // unreachable node would sit there forever. So count sustained failures and move
       // on. Only ever for an AUTOMATIC assignment: a node somebody typed on purpose is
       // theirs, and its failure is worth reporting rather than silently routing around.
-      if (embeddedChosen() && !s.node_connected && embeddedNodeIsAutomatic()) {
+      // `rotatePublicNode` answers null when no backup is configured, which is a valid
+      // setup — it just cannot be failed away from, and reporting that beats pretending.
+      if (embeddedChosen() && !s.node_connected) {
         nodeDownPolls.current += 1;
         if (nodeDownPolls.current >= NODE_DOWN_POLLS_BEFORE_ROTATE) {
           nodeDownPolls.current = 0;
@@ -1887,9 +1889,12 @@ function ConnectionButton() {
   /// claiming it "works immediately". The hosted service has already scanned, so
   /// the balance is there at once. Recorded as a remote choice so it survives a
   /// restart, and so api.ts routes calls to it instead of the embedded engine.
-  const connectEmbedded = async (node?: string, tor?: boolean) => {
+  const connectEmbedded = async (node?: string, tor?: boolean, backup?: string) => {
     setBusy("phone");
     try {
+      // Persist the spare before starting, so failover has somewhere to go from the
+      // first poll rather than only after the next visit to this screen.
+      if (backup !== undefined) setEmbeddedBackupNode(backup);
       // While we are still talking to the service being left: ask it for this wallet's
       // finished scan, so the on-device engine resumes instead of starting over.
       await captureScanReceipt(loadStatusCache()?.address);
@@ -2095,7 +2100,7 @@ function ConnectionButton() {
 
             <div className="connection-list">
               {embeddedAvailable() && (
-                <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? t("connectionButton.starting") : embeddedChosen() ? t("connectionButton.on") : t("connectionButton.use")} onStart={(n, tor) => connectEmbedded(n, tor)} />
+                <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? t("connectionButton.starting") : embeddedChosen() ? t("connectionButton.on") : t("connectionButton.use")} onStart={(n, tor, backup) => connectEmbedded(n, tor, backup)} />
               )}
               <button className={`connection-option ${!embeddedChosen() && hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
                 <span><b>{t("connectionButton.publicService")}</b><small>{desktop ? t("connectionButton.publicDescDesktop") : t("connectionButton.publicDescMobile")}</small></span><span>{busy === "hosted" ? t("connectionButton.checking") : hosted && !onion ? t("connectionButton.connected") : t("connectionButton.use")}</span>
@@ -7163,7 +7168,7 @@ function NetworkPrivacyCard() {
         setBusy(null);
       });
   };
-  const startOnPhone = (node?: string, tor?: boolean) => run("phone", async () => { await captureScanReceipt(loadStatusCache()?.address); const u = await ensureEmbedded(node, tor); setEmbeddedChosen(true); markBackgroundPromptPending(); setBase(u); setWalletdBearer(""); });
+  const startOnPhone = (node?: string, tor?: boolean, backup?: string) => run("phone", async () => { if (backup !== undefined) setEmbeddedBackupNode(backup); await captureScanReceipt(loadStatusCache()?.address); const u = await ensureEmbedded(node, tor); setEmbeddedChosen(true); markBackgroundPromptPending(); setBase(u); setWalletdBearer(""); });
   const leaveEngine = async () => {
     if (embeddedChosen()) {
       await captureScanReceipt(loadStatusCache()?.address);
@@ -7191,7 +7196,7 @@ function NetworkPrivacyCard() {
       <p className="muted small" style={{ marginTop: 0 }}>{t("networkPrivacyCard.intro")}</p>
       <div className="connection-list">
         {embeddedAvailable() && (
-          <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n, tor) => startOnPhone(n, tor)} />
+          <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n, tor, backup) => startOnPhone(n, tor, backup)} />
         )}
         <button className={"connection-option" + (current === "public" ? " active" : "")} disabled={!!busy} onClick={usePublic}>
           <span><b>{t("networkPrivacyCard.publicTitle")}</b><small>{t("networkPrivacyCard.publicHint")}</small></span><span>{tag("public")}</span>

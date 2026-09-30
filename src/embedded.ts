@@ -44,37 +44,121 @@ export const PUBLIC_EMBEDDED_NODES = ["185.147.157.125:16110", "160.187.211.153:
 /** Kept as the named default for display and for anything that wants one address. */
 export const DEFAULT_EMBEDDED_NODE = PUBLIC_EMBEDDED_NODES[0];
 
-const PICKED_KEY = "wallet_embedded_node_picked";
+const BACKUP_KEY = "wallet_embedded_node_backup";
+const ACTIVE_BACKUP_KEY = "wallet_embedded_node_using_backup";
+const SEEDED_KEY = "wallet_embedded_nodes_seeded_v2";
 
-/** Choose a public node for this install and remember it.
+/** Give this install a primary and a backup, once.
  *
- * Sticky rather than per-call: the engine is restarted on settings changes and on
- * resume, and a node that changed underneath it would discard warm page state and make
- * every restart a cold one. Sticky per install still spreads the fleet, which is what
- * the load and privacy arguments above actually need. */
-function pickPublicNode(): string {
+ * Which node is primary is randomised per install. Sync is fetch-bound and every
+ * sovereign wallet used to queue on one box; more importantly this is the option people
+ * choose so that no server holds their keys, and pointing all of them at one node we
+ * operate hands it every such user's IP and sync pattern. Spreading the default does not
+ * fix that, but concentrating it makes it worse.
+ *
+ * An install that already has a node keeps it as its primary — including one that
+ * earlier builds pinned without anyone choosing it, since `ensureEmbedded` used to
+ * persist on every start. It only gains a backup it did not have.
+ */
+function seedNodes(): void {
   try {
-    const kept = localStorage.getItem(PICKED_KEY);
-    if (kept && (PUBLIC_EMBEDDED_NODES as readonly string[]).includes(kept)) return kept;
-    const chosen = PUBLIC_EMBEDDED_NODES[Math.floor(Math.random() * PUBLIC_EMBEDDED_NODES.length)];
-    localStorage.setItem(PICKED_KEY, chosen);
-    return chosen;
+    if (localStorage.getItem(SEEDED_KEY)) return;
+    localStorage.setItem(SEEDED_KEY, "1");
+    const existing = (localStorage.getItem(NODE_KEY) || "").trim();
+    const shuffled = [...PUBLIC_EMBEDDED_NODES].sort(() => Math.random() - 0.5);
+    const primary = existing || shuffled[0];
+    const backup = PUBLIC_EMBEDDED_NODES.find((n) => n !== primary) ?? "";
+    localStorage.setItem(NODE_KEY, primary);
+    if (backup && !localStorage.getItem(BACKUP_KEY)) localStorage.setItem(BACKUP_KEY, backup);
   } catch {
-    return DEFAULT_EMBEDDED_NODE;
+    /* storage is a convenience here, never a requirement */
   }
 }
 
-/** The node the on-device engine should sync from (the user's choice, or the
- * public default). */
+/** The node to sync from: the primary, or the backup while failover has switched to it. */
 export function embeddedNode(): string {
   try {
-    return localStorage.getItem(NODE_KEY) || pickPublicNode();
+    seedNodes();
+    const backup = (localStorage.getItem(BACKUP_KEY) || "").trim();
+    if (localStorage.getItem(ACTIVE_BACKUP_KEY) === "1" && backup) return backup;
+    return (localStorage.getItem(NODE_KEY) || "").trim() || DEFAULT_EMBEDDED_NODE;
   } catch {
     return DEFAULT_EMBEDDED_NODE;
   }
 }
 
-/** Remember the node to sync from; clearing back to the default forgets it. */
+/** The primary, as configured — not necessarily the one in use right now. */
+export function embeddedPrimaryNode(): string {
+  try {
+    seedNodes();
+    return (localStorage.getItem(NODE_KEY) || "").trim() || DEFAULT_EMBEDDED_NODE;
+  } catch {
+    return DEFAULT_EMBEDDED_NODE;
+  }
+}
+
+/** The backup, or "" when none is configured. Optional by design: one node is a valid
+ * setup, it just cannot be failed away from. */
+export function embeddedBackupNode(): string {
+  try {
+    seedNodes();
+    return (localStorage.getItem(BACKUP_KEY) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+export function setEmbeddedNode(v: string): void {
+  try {
+    const a = (v || "").trim();
+    if (a) localStorage.setItem(NODE_KEY, a);
+    else localStorage.removeItem(NODE_KEY);
+    // Editing the primary means going back to it; otherwise a wallet left on the backup
+    // would ignore the address the user just typed.
+    localStorage.removeItem(ACTIVE_BACKUP_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function setEmbeddedBackupNode(v: string): void {
+  try {
+    const a = (v || "").trim();
+    if (a) localStorage.setItem(BACKUP_KEY, a);
+    else {
+      localStorage.removeItem(BACKUP_KEY);
+      localStorage.removeItem(ACTIVE_BACKUP_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/** True while sync is running on the backup rather than the primary. */
+export function embeddedUsingBackup(): boolean {
+  try {
+    return localStorage.getItem(ACTIVE_BACKUP_KEY) === "1" && !!embeddedBackupNode();
+  } catch {
+    return false;
+  }
+}
+
+/** Switch between primary and backup after sustained failure, and report the new
+ * address. Null when there is no backup to switch to — one node is a valid setup, it
+ * just cannot be failed away from, and saying so beats pretending to retry. */
+export function rotatePublicNode(): string | null {
+  const backup = embeddedBackupNode();
+  if (!backup) return null;
+  try {
+    const onBackup = localStorage.getItem(ACTIVE_BACKUP_KEY) === "1";
+    if (onBackup) localStorage.removeItem(ACTIVE_BACKUP_KEY);
+    else localStorage.setItem(ACTIVE_BACKUP_KEY, "1");
+    return embeddedNode();
+  } catch {
+    return null;
+  }
+}
+
 /** Orbot's local SOCKS5 proxy — Tor on Android. */
 export const ORBOT_SOCKS = "127.0.0.1:9050";
 const TOR_KEY = "wallet_embedded_tor";
@@ -95,56 +179,6 @@ export function embeddedDebugChosen(): boolean {
 }
 export function setEmbeddedDebug(on: boolean): void {
   try { if (on) localStorage.setItem(DEBUG_KEY, "1"); else localStorage.removeItem(DEBUG_KEY); } catch { /* ignore */ }
-}
-
-export function setEmbeddedNode(v: string): void {
-  const a = (v || "").trim();
-  try {
-    // Store whatever was chosen, verbatim.
-    //
-    // This used to drop the value when it equalled DEFAULT_EMBEDDED_NODE, encoding
-    // "same as the default" as "no preference". That was fine while there was one
-    // public node and is wrong now that there are several: picking the first one
-    // explicitly erased the key, the getter fell back to the automatic assignment, and
-    // a user who deliberately chose that node could be handed the other one instead.
-    // Absence means automatic; presence means the user picked, including when the pick
-    // happens to match a default.
-    if (a) localStorage.setItem(NODE_KEY, a);
-    else localStorage.removeItem(NODE_KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
-/** Has the user pinned a node, or are we assigning one? Failover only ever moves an
- * automatic assignment — a node somebody typed on purpose is left alone, and its
- * failure is reported rather than worked around. */
-export function embeddedNodeIsAutomatic(): boolean {
-  try {
-    return !localStorage.getItem(NODE_KEY);
-  } catch {
-    return true;
-  }
-}
-
-/** Move the automatic assignment to the next public node.
- *
- * A second node is only an improvement if a dead one can be left behind: the pick is
- * sticky, so without this an install that happened to land on an unreachable node would
- * stay there forever. Returns the new address, or null when there is nothing to move to
- * (one node configured, or the user pinned their own). */
-export function rotatePublicNode(): string | null {
-  if (!embeddedNodeIsAutomatic() || PUBLIC_EMBEDDED_NODES.length < 2) return null;
-  try {
-    const cur = localStorage.getItem(PICKED_KEY);
-    const i = PUBLIC_EMBEDDED_NODES.indexOf((cur ?? "") as (typeof PUBLIC_EMBEDDED_NODES)[number]);
-    const next = PUBLIC_EMBEDDED_NODES[(i + 1 + PUBLIC_EMBEDDED_NODES.length) % PUBLIC_EMBEDDED_NODES.length];
-    if (next === cur) return null;
-    localStorage.setItem(PICKED_KEY, next);
-    return next;
-  } catch {
-    return null;
-  }
 }
 
 /** Only the native Android shell carries the engine plugin. `isPluginAvailable`
