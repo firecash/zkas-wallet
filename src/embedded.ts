@@ -100,10 +100,50 @@ export function setEmbeddedDebug(on: boolean): void {
 export function setEmbeddedNode(v: string): void {
   const a = (v || "").trim();
   try {
-    if (a && a !== DEFAULT_EMBEDDED_NODE) localStorage.setItem(NODE_KEY, a);
+    // Store whatever was chosen, verbatim.
+    //
+    // This used to drop the value when it equalled DEFAULT_EMBEDDED_NODE, encoding
+    // "same as the default" as "no preference". That was fine while there was one
+    // public node and is wrong now that there are several: picking the first one
+    // explicitly erased the key, the getter fell back to the automatic assignment, and
+    // a user who deliberately chose that node could be handed the other one instead.
+    // Absence means automatic; presence means the user picked, including when the pick
+    // happens to match a default.
+    if (a) localStorage.setItem(NODE_KEY, a);
     else localStorage.removeItem(NODE_KEY);
   } catch {
     /* ignore */
+  }
+}
+
+/** Has the user pinned a node, or are we assigning one? Failover only ever moves an
+ * automatic assignment — a node somebody typed on purpose is left alone, and its
+ * failure is reported rather than worked around. */
+export function embeddedNodeIsAutomatic(): boolean {
+  try {
+    return !localStorage.getItem(NODE_KEY);
+  } catch {
+    return true;
+  }
+}
+
+/** Move the automatic assignment to the next public node.
+ *
+ * A second node is only an improvement if a dead one can be left behind: the pick is
+ * sticky, so without this an install that happened to land on an unreachable node would
+ * stay there forever. Returns the new address, or null when there is nothing to move to
+ * (one node configured, or the user pinned their own). */
+export function rotatePublicNode(): string | null {
+  if (!embeddedNodeIsAutomatic() || PUBLIC_EMBEDDED_NODES.length < 2) return null;
+  try {
+    const cur = localStorage.getItem(PICKED_KEY);
+    const i = PUBLIC_EMBEDDED_NODES.indexOf((cur ?? "") as (typeof PUBLIC_EMBEDDED_NODES)[number]);
+    const next = PUBLIC_EMBEDDED_NODES[(i + 1 + PUBLIC_EMBEDDED_NODES.length) % PUBLIC_EMBEDDED_NODES.length];
+    if (next === cur) return null;
+    localStorage.setItem(PICKED_KEY, next);
+    return next;
+  } catch {
+    return null;
   }
 }
 
@@ -152,8 +192,12 @@ export function setEngineBusy(v: boolean): void {
  * http://127.0.0.1:54123. Throws if the engine cannot start. */
 export async function ensureEmbedded(nodeAddr?: string, tor?: boolean): Promise<string> {
   if (!embeddedAvailable()) throw new Error(i18n.t("embedded.unavailable"));
-  // Sync from the node the user chose (persisted), or the public default.
-  const node = (nodeAddr && nodeAddr.trim()) || embeddedNode();
+  // An address passed here is a CHOICE and gets pinned; nothing passed means "whichever
+  // public node you assign me", which stays automatic so failover can move it later.
+  // Collapsing the two (persisting on every start) would pin the assignment the first
+  // time the engine ran and quietly disable the thing that leaves a dead node behind.
+  const explicit = !!(nodeAddr && nodeAddr.trim());
+  const node = explicit ? nodeAddr!.trim() : embeddedNode();
   const useTor = tor ?? embeddedTor();
   // Did the user change the node or the Tor toggle? start() is idempotent and would
   // otherwise keep the OLD transport, leaving e.g. a Tor-off switch stuck on a dead
@@ -165,7 +209,7 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean): Promise<
     await stopEmbedded().catch(() => {});
     startPromise = null;
   }
-  setEmbeddedNode(node);
+  if (explicit) setEmbeddedNode(node);
   setEmbeddedTor(useTor);
   if (!startPromise) {
     startPromise = Native.start({ nodeAddr: node, socks: useTor ? ORBOT_SOCKS : undefined }).then((r) => r.port);

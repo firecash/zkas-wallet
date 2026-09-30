@@ -123,7 +123,10 @@
   "runOnPhoneOption": {
     "title": "Run on this phone",
     "desc": "Most private. No daemon ever sees your transactions. A bit more battery.",
-    "nodeHint": "Node to sync from — host:port. The default is the public ZKas node.",
+    "nodeHint": "Node to sync from — host:port. This is who you ask about your coins.",
+    "nodeAuto": "Automatic",
+    "nodeAutoDesc": "Using {{node}}. Picked for you from the public nodes, and changed automatically if it stops answering.",
+    "nodePinnedDesc": "This node is pinned. It will not be changed for you, so if it stops answering you will be told rather than moved.",
     "torTitle": "Reach the node over Tor",
     "torDesc": "Hides your IP from the node. Requires the Orbot app (Tor) running on this phone.",
     "starting": "Starting…",

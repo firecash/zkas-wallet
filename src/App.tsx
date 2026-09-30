@@ -90,6 +90,7 @@ import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./con
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
 import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug, engineBusy, setEngineBusy, engineKeepAlive } from "./embedded";
 import { captureScanReceipt, adoptScanReceipt, haveScanReceipt } from "./scanreceipt";
+import { embeddedNodeIsAutomatic, rotatePublicNode } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
@@ -411,6 +412,10 @@ const CONF_RECENT_RETRY_MS = 60 * 60 * 1000;
 /// active-sync window, so a backgrounded wallet keeps syncing; far above the
 /// 1 s foreground cadence, so a background tab is no longer a request per second.
 const HIDDEN_POLL_MS = 30_000;
+/// How many consecutive polls the on-device engine's node must be unreachable before the
+/// automatic assignment moves to another public node. Deliberately several: a node that
+/// blips should not cost an engine restart, and a restart discards warm page state.
+const NODE_DOWN_POLLS_BEFORE_ROTATE = 6;
 
 function nextConfirmationPoll(tx: LocalTx, confirmations: number | null): number {
   const age = Date.now() - tx.ts;
@@ -624,6 +629,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // the "can't reach the wallet service" screen — that unmounts the whole wallet
   // (a half-filled Send form included) and oscillates on a flaky connection.
   const failedPolls = useRef(0);
+  /// Consecutive polls the on-device engine's node has been unreachable. Sustained, not
+  /// instantaneous: a node blips, and restarting the engine on every blip costs more
+  /// than the blip does.
+  const nodeDownPolls = useRef(0);
   // Guards a single in-flight self-heal restart of the on-device engine, so a
   // failure streak triggers at most one restart at a time (not one per second).
   const engineHealing = useRef(false);
@@ -860,6 +869,33 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       }
       saveStatusCache(s);
       if (s.has_wallet && s.address && !s.synced && haveScanReceipt(s.address)) void adoptScanReceipt(s.address);
+      // On-device engine: leave a node that is not answering.
+      //
+      // The public node assignment is sticky, which is what keeps warm page state warm
+      // across engine restarts — but it also means an install that landed on an
+      // unreachable node would sit there forever. So count sustained failures and move
+      // on. Only ever for an AUTOMATIC assignment: a node somebody typed on purpose is
+      // theirs, and its failure is worth reporting rather than silently routing around.
+      if (embeddedChosen() && !s.node_connected && embeddedNodeIsAutomatic()) {
+        nodeDownPolls.current += 1;
+        if (nodeDownPolls.current >= NODE_DOWN_POLLS_BEFORE_ROTATE) {
+          nodeDownPolls.current = 0;
+          const next = rotatePublicNode();
+          if (next) {
+            void (async () => {
+              try {
+                const url = await ensureEmbedded(next, undefined);
+                setBase(url);
+                void bgSyncReconfigure();
+              } catch {
+                /* the next poll re-arms; nothing here is worth failing the UI over */
+              }
+            })();
+          }
+        }
+      } else if (s.node_connected) {
+        nodeDownPolls.current = 0;
+      }
       // Once per wallet per session: make the birthday travel with the wallet.
       // Wallets from before the per-address copy existed have it only under their
       // token; paired/restored ones may have it only under another token, under

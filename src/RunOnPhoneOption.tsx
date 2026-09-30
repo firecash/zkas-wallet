@@ -10,7 +10,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { embeddedNode, embeddedTor, DEFAULT_EMBEDDED_NODE } from "./embedded";
+import { embeddedNode, embeddedTor, embeddedNodeIsAutomatic, PUBLIC_EMBEDDED_NODES } from "./embedded";
 
 export function RunOnPhoneOption({
   active,
@@ -27,9 +27,15 @@ export function RunOnPhoneOption({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [node, setNode] = useState(() => embeddedNode());
+  // Empty means AUTOMATIC: the app assigns a public node and may move that assignment
+  // if the node stops answering. A value here is a choice and is kept, failover
+  // included — a node somebody typed is theirs, and its failure is worth reporting
+  // rather than silently routing around. Prefilling the box would have made every
+  // start a choice, which is how automatic would have quietly stopped existing.
+  const [node, setNode] = useState(() => (embeddedNodeIsAutomatic() ? "" : embeddedNode()));
   const [tor, setTor] = useState(() => embeddedTor());
-  const go = () => void onStart(node.trim() || DEFAULT_EMBEDDED_NODE, tor);
+  const assigned = embeddedNode();
+  const go = () => void onStart(node.trim(), tor);
   return (
     <div className="run-on-phone">
       <button
@@ -47,10 +53,36 @@ export function RunOnPhoneOption({
       {open && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "10px 2px 4px" }}>
           <label className="fieldhint muted">{t("runOnPhoneOption.nodeHint")}</label>
+          <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className={"chip" + (node.trim() === "" ? " on" : "")}
+              disabled={!!busy}
+              onClick={() => setNode("")}
+            >
+              {t("runOnPhoneOption.nodeAuto")}
+            </button>
+            {PUBLIC_EMBEDDED_NODES.map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={"chip" + (node.trim() === n ? " on" : "")}
+                disabled={!!busy}
+                onClick={() => setNode(n)}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <span className="muted small">
+            {node.trim() === ""
+              ? t("runOnPhoneOption.nodeAutoDesc", { node: assigned })
+              : t("runOnPhoneOption.nodePinnedDesc")}
+          </span>
           <input
             value={node}
             onChange={(e) => setNode(e.target.value)}
-            placeholder={DEFAULT_EMBEDDED_NODE}
+            placeholder={assigned}
             disabled={!!busy}
             spellCheck={false}
             autoCapitalize="off"
