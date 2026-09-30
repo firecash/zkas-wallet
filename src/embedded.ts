@@ -27,15 +27,48 @@ const Native = registerPlugin<EmbeddedEnginePlugin>("EmbeddedEngine");
 const CHOICE_KEY = "wallet_service_embedded";
 const NODE_KEY = "wallet_embedded_node";
 
-/** The public ZKas node the on-device engine syncs from unless the user picks
- * their own. gRPC host:port. */
-export const DEFAULT_EMBEDDED_NODE = "185.147.157.125:16110";
+/** The public ZKas nodes the on-device engine can sync from, unless the user picks
+ * their own. gRPC host:port.
+ *
+ * There is more than one for two reasons, and the smaller one is load. Sync is
+ * overwhelmingly fetch-bound — measured at 94-99% of sync time, seconds per page — and
+ * a single hardcoded address meant every sovereign wallet in the world queued on one
+ * box that also runs the pool, the explorer and a wallet daemon.
+ *
+ * The larger reason is that this is the option people choose so that no server holds
+ * their keys. Pointing all of them at one node we operate hands that node every such
+ * user's IP and sync pattern — the record the chain exists to prevent. Spreading the
+ * default across nodes does not fix that, but concentrating it makes it worse. */
+export const PUBLIC_EMBEDDED_NODES = ["185.147.157.125:16110", "160.187.211.153:16110"] as const;
+
+/** Kept as the named default for display and for anything that wants one address. */
+export const DEFAULT_EMBEDDED_NODE = PUBLIC_EMBEDDED_NODES[0];
+
+const PICKED_KEY = "wallet_embedded_node_picked";
+
+/** Choose a public node for this install and remember it.
+ *
+ * Sticky rather than per-call: the engine is restarted on settings changes and on
+ * resume, and a node that changed underneath it would discard warm page state and make
+ * every restart a cold one. Sticky per install still spreads the fleet, which is what
+ * the load and privacy arguments above actually need. */
+function pickPublicNode(): string {
+  try {
+    const kept = localStorage.getItem(PICKED_KEY);
+    if (kept && (PUBLIC_EMBEDDED_NODES as readonly string[]).includes(kept)) return kept;
+    const chosen = PUBLIC_EMBEDDED_NODES[Math.floor(Math.random() * PUBLIC_EMBEDDED_NODES.length)];
+    localStorage.setItem(PICKED_KEY, chosen);
+    return chosen;
+  } catch {
+    return DEFAULT_EMBEDDED_NODE;
+  }
+}
 
 /** The node the on-device engine should sync from (the user's choice, or the
  * public default). */
 export function embeddedNode(): string {
   try {
-    return localStorage.getItem(NODE_KEY) || DEFAULT_EMBEDDED_NODE;
+    return localStorage.getItem(NODE_KEY) || pickPublicNode();
   } catch {
     return DEFAULT_EMBEDDED_NODE;
   }

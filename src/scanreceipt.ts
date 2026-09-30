@@ -17,7 +17,7 @@
 // names before it is believed. A receipt cannot invent money; at worst it omits some,
 // which shows up as a balance lower than a later scan finds.
 
-import { api } from "./api";
+import { api, getBase } from "./api";
 
 const KEY = "zkas_scan_receipt_v1";
 
@@ -26,6 +26,12 @@ const KEY = "zkas_scan_receipt_v1";
  * would be a worse failure than the rescan we are trying to avoid. */
 const MAX_STASH_BYTES = 900_000;
 
+/// A receipt is a snapshot of a scan, so it goes stale. Past this it is dropped rather
+/// than offered: a fresh engine has scanned nothing, so it would accept an arbitrarily
+/// old one, and while forward sync does correct that, starting from a months-old anchor
+/// is worse than the daemon's own birthday logic and much harder to reason about.
+const MAX_STASH_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+
 interface Stashed {
   /** The receiving address the receipt belongs to, so it is never applied to another
    * wallet on the same device. */
@@ -33,6 +39,11 @@ interface Stashed {
   receipt: string;
   scannedDaa: number;
   at: number;
+  /// The service this was taken from. Adoption refuses to feed a receipt back to the
+  /// daemon that produced it: that daemon already knows everything in it, would reject
+  /// it as not advancing, and the stash — the only copy — would be consumed before the
+  /// service it was captured *for* ever saw it.
+  from: string;
 }
 
 function read(): Stashed | null {
@@ -41,7 +52,18 @@ function read(): Stashed | null {
     if (!raw) return null;
     const v = JSON.parse(raw) as Partial<Stashed>;
     if (typeof v?.receipt !== "string" || typeof v?.address !== "string") return null;
-    return { address: v.address, receipt: v.receipt, scannedDaa: Number(v.scannedDaa ?? 0), at: Number(v.at ?? 0) };
+    const at = Number(v.at ?? 0);
+    if (!Number.isFinite(at) || Date.now() - at > MAX_STASH_AGE_MS) {
+      clear();
+      return null;
+    }
+    return {
+      address: v.address,
+      receipt: v.receipt,
+      scannedDaa: Number(v.scannedDaa ?? 0),
+      at,
+      from: typeof v.from === "string" ? v.from : "",
+    };
   } catch {
     return null;
   }
@@ -68,7 +90,7 @@ export async function captureScanReceipt(address?: string | null): Promise<boole
   try {
     const r = await api.scanReceiptExport();
     if (!r?.receipt || r.receipt.length > MAX_STASH_BYTES) return false;
-    const stash: Stashed = { address, receipt: r.receipt, scannedDaa: r.scannedDaa, at: Date.now() };
+    const stash: Stashed = { address, receipt: r.receipt, scannedDaa: r.scannedDaa, at: Date.now(), from: getBase() };
     localStorage.setItem(KEY, JSON.stringify(stash));
     return true;
   } catch {
@@ -88,6 +110,8 @@ export async function captureScanReceipt(address?: string | null): Promise<boole
 export async function adoptScanReceipt(address?: string | null): Promise<boolean> {
   const stash = read();
   if (!stash || !address || stash.address !== address) return false;
+  // Never hand it back to the daemon it came from (see `Stashed.from`).
+  if (stash.from && stash.from === getBase()) return false;
   try {
     const r = await api.scanReceiptImport(stash.receipt);
     clear();

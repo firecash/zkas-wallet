@@ -89,7 +89,7 @@ import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
 import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug, engineBusy, setEngineBusy, engineKeepAlive } from "./embedded";
-import { captureScanReceipt, adoptScanReceipt } from "./scanreceipt";
+import { captureScanReceipt, adoptScanReceipt, haveScanReceipt } from "./scanreceipt";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
@@ -859,6 +859,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         setWalletLost(true);
       }
       saveStatusCache(s);
+      if (s.has_wallet && s.address && !s.synced && haveScanReceipt(s.address)) void adoptScanReceipt(s.address);
       // Once per wallet per session: make the birthday travel with the wallet.
       // Wallets from before the per-address copy existed have it only under their
       // token; paired/restored ones may have it only under another token, under
@@ -1869,7 +1870,16 @@ function ConnectionButton() {
   };
   // Leaving the on-device engine for a server: forget the choice and stop it so
   // the next boot doesn't relaunch it.
-  const leaveEmbedded = async () => { if (embeddedChosen()) { setEmbeddedChosen(false); await stopEmbedded(); } };
+  const leaveEmbedded = async () => {
+    if (embeddedChosen()) {
+      // Take the engine's scan with us before it stops — the same move as arriving,
+      // in the other direction. Without this, going back to a server meant the server
+      // re-scanned whatever the phone had synced past.
+      await captureScanReceipt(loadStatusCache()?.address);
+      setEmbeddedChosen(false);
+      await stopEmbedded();
+    }
+  };
 
   // None of the switches below registers the wallet itself. The token is kept, and a
   // daemon that already holds it answers `has_wallet: true` and resumes from its
@@ -7118,7 +7128,13 @@ function NetworkPrivacyCard() {
       });
   };
   const startOnPhone = (node?: string, tor?: boolean) => run("phone", async () => { await captureScanReceipt(loadStatusCache()?.address); const u = await ensureEmbedded(node, tor); setEmbeddedChosen(true); markBackgroundPromptPending(); setBase(u); setWalletdBearer(""); });
-  const leaveEngine = async () => { if (embeddedChosen()) { setEmbeddedChosen(false); await stopEmbedded(); } };
+  const leaveEngine = async () => {
+    if (embeddedChosen()) {
+      await captureScanReceipt(loadStatusCache()?.address);
+      setEmbeddedChosen(false);
+      await stopEmbedded();
+    }
+  };
   const usePublic = () => run("public", async () => { await leaveEngine(); setBase(""); setWalletdBearer(""); });
   const useTor = () => run("tor", async () => { await leaveEngine(); const u = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000); setBase(u); setWalletdBearer(""); });
   const useCustom = () => {
