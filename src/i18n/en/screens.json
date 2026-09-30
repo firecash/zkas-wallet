@@ -142,18 +142,11 @@
     "nodesTitle": "Two nodes, with a fallback",
     "nodesDesc": "Pick the node you sync from, and an optional backup. If the first stops answering, the wallet moves to the backup on its own.",
     "onPhoneCaveat": "Worth knowing: the first sync reads the chain on your phone. For a wallet made recently that is quick; for an older one it can take a while, and you can switch back at any time.",
-    "setItUp": "Set it up",
-    "notNow": "Not now",
-    "oldEyebrow": "New in 1.0.17",
-    "phraseTitleLegacy": "Recovery phrases",
-    "phraseTitle": "🔑 12-word phrase (BIP-39)",
-    "phraseDesc": "New wallets use a standard BIP-39 phrase instead of a 64-character seed. Your existing seed keeps working.",
-    "accountsTitle": "🗂 Accounts",
-    "accountsDesc": "Add accounts from one phrase — one backup covers them all.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Connect over an onion so the service never sees your IP.",
-    "gotIt": "Got it",
-    "openSettings": "Open settings"
+    "switchNow": "Run it on my phone",
+    "switching": "Starting…",
+    "switchFailed": "Could not start the on-device engine. You are still on the previous service.",
+    "openSettings": "Open settings",
+    "notNow": "Not now"
   },
   "mainRoot": {
     "opening": "Opening…"

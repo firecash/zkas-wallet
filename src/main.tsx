@@ -23,7 +23,9 @@ import { adoptViewKeyFromUrl } from "./lib/watchadopt";
 import { BootLoader } from "./components/BootLoader";
 import { listWallets } from "./wallets";
 import { isNative, loadStatusCache, setBase } from "./api";
-import { embeddedChosen, ensureEmbedded } from "./embedded";
+import { embeddedChosen, ensureEmbedded, setEmbeddedChosen } from "./embedded";
+import { captureScanReceipt } from "./scanreceipt";
+import { bgSyncReconfigure } from "./bgsync";
 import { internalRouteFromLink, queuePaymentLink } from "./paymentlinks";
 import "./styles.css";
 
@@ -67,7 +69,22 @@ function Root({ locked, askNode, whatsNew }: { locked: boolean; askNode: boolean
 
   return (
     <>
-      {showWhatsNew && <WhatsNew onClose={() => setShowWhatsNew(false)} />}
+      {showWhatsNew && (
+        <WhatsNew
+          onClose={() => setShowWhatsNew(false)}
+          onSwitch={async () => {
+            // The same sequence the other two switch sites use, in the same order.
+            // Capturing the scan BEFORE the endpoint moves is the whole point of the
+            // receipt, and a one-tap path that skipped it would quietly hand the engine
+            // a rescan from birthday — the exact cost this notice promises is small.
+            await captureScanReceipt(loadStatusCache()?.address);
+            const url = await ensureEmbedded();
+            setEmbeddedChosen(true);
+            setBase(url);
+            void bgSyncReconfigure();
+          }}
+        />
+      )}
       <HashRouter>
       <Suspense fallback={<BootLoader label={t("mainRoot.opening")} />}>
         <Routes>

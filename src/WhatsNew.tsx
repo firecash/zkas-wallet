@@ -5,6 +5,7 @@
 // gain recovery phrases, accounts and Tor and the user would never know. Shown
 // once per release that needs it, gated by the version key below.
 
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { embeddedAvailable, embeddedChosen } from "./embedded";
 
@@ -21,7 +22,11 @@ const SEEN_KEY = "whatsnew_seen_v1_0_39_onphone";
  * running it — offering a thing you are already using is how a notice teaches people
  * to dismiss notices. */
 export function shouldShowWhatsNew(hasWalletHistory: boolean): boolean {
-  if (!hasWalletHistory || !embeddedAvailable() || embeddedChosen()) return false;
+  // Not `&& !embeddedChosen()`. That was the first version and it was too broad: it
+  // suppressed the notice for everyone ALREADY running on the phone, who are precisely
+  // the people the new node and backup controls are for. The card adapts instead —
+  // whoever is not on the engine is offered it, whoever is gets told about the nodes.
+  if (!hasWalletHistory || !embeddedAvailable()) return false;
   try {
     return !localStorage.getItem(SEEN_KEY);
   } catch {
@@ -29,8 +34,32 @@ export function shouldShowWhatsNew(hasWalletHistory: boolean): boolean {
   }
 }
 
-export function WhatsNew({ onClose }: { onClose: () => void }) {
+export function WhatsNew({ onClose, onSwitch }: { onClose: () => void; onSwitch?: () => void | Promise<void> }) {
   const { t } = useTranslation();
+  const [switching, setSwitching] = useState(false);
+  const [err, setErr] = useState("");
+  // Someone already on the engine does not need to be sold it; they need to know the
+  // node controls exist.
+  const alreadyOn = embeddedChosen();
+  const switchNow = () => {
+    if (switching || !onSwitch) return;
+    setSwitching(true);
+    setErr("");
+    // Mark it seen only once it WORKED. Writing the key first and closing in a
+    // `finally` meant a failed start left the user on the hosted service, with no
+    // explanation and no way back to this card.
+    void Promise.resolve(onSwitch()).then(
+      () => {
+        try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
+        setSwitching(false);
+        onClose();
+      },
+      (e: unknown) => {
+        setSwitching(false);
+        setErr((e as Error)?.message || t("whatsNew.switchFailed"));
+      },
+    );
+  };
   const dismiss = () => {
     try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
     onClose();
@@ -48,17 +77,25 @@ export function WhatsNew({ onClose }: { onClose: () => void }) {
         <span className="eyebrow">{t("whatsNew.eyebrow")}</span>
         <h2 style={{ margin: "6px 0 12px" }}>{t("whatsNew.title")}</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <b>{t("whatsNew.onPhoneTitle")}</b>
-            <span className="muted small">{t("whatsNew.onPhoneDesc")}</span>
-          </div>
+          {!alreadyOn && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <b>{t("whatsNew.onPhoneTitle")}</b>
+              <span className="muted small">{t("whatsNew.onPhoneDesc")}</span>
+            </div>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             <b>{t("whatsNew.nodesTitle")}</b>
             <span className="muted small">{t("whatsNew.nodesDesc")}</span>
           </div>
-          <span className="muted small">{t("whatsNew.onPhoneCaveat")}</span>
+          {!alreadyOn && <span className="muted small">{t("whatsNew.onPhoneCaveat")}</span>}
+          {err && <span className="small" style={{ color: "var(--bad, #fca5a5)" }}>{err}</span>}
           <div className="row" style={{ gap: 8 }}>
-            <button className="btn" onClick={openSettings}>{t("whatsNew.setItUp")}</button>
+            {!alreadyOn && onSwitch && (
+              <button className="btn" disabled={switching} onClick={switchNow}>
+                {switching ? t("whatsNew.switching") : t("whatsNew.switchNow")}
+              </button>
+            )}
+            <button className="btn ghost" onClick={openSettings}>{t("whatsNew.openSettings")}</button>
             <button className="btn ghost" onClick={dismiss}>{t("whatsNew.notNow")}</button>
           </div>
         </div>
