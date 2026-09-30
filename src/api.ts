@@ -727,6 +727,29 @@ export const api = {
   // when the wallet was made can skip the years before that.
   rescan: (birthday?: number) =>
     req<{ rescanning: boolean }>("POST", "/api/wallet/rescan", birthday ? { birthday } : {}, 30_000),
+  // Carry a finished scan between daemons. A checkpoint is ~572 MB and almost all of
+  // it is the public commitment stream — the same bytes for every wallet, and already
+  // on any node. What is this wallet's own is a few hundred bytes per note, so moving a
+  // synced wallet (hosted service → the engine inside this app) costs kilobytes instead
+  // of a rescan from birthday. Nothing secret travels: the daemon omits the nullifiers
+  // so the importer recomputes them from its own key.
+  scanReceiptExport: () =>
+    req<{ receipt: string; bytes: number; notes: number; scannedDaa: number; anchorLeaves: number }>(
+      "GET",
+      "/api/wallet/scan-receipt",
+      undefined,
+      120_000,
+    ),
+  // Adopt one into the wallet this token names. The daemon parses it under that
+  // wallet's own key and checks every note against the anchor the receipt names, so a
+  // receipt for another key — or a doctored one — yields nothing rather than a lie.
+  scanReceiptImport: (receipt: string) =>
+    req<{ adopted: boolean; notes: number; scannedDaa: number }>(
+      "POST",
+      "/api/wallet/scan-receipt",
+      { receipt },
+      120_000,
+    ),
   verify: (address: string, message: string, signature: string) =>
     req<{ valid: boolean; reason: string | null }>("POST", "/api/verify", { address, message, signature }, 15_000),
 };

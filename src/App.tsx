@@ -89,6 +89,7 @@ import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
 import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug, engineBusy, setEngineBusy, engineKeepAlive } from "./embedded";
+import { captureScanReceipt, adoptScanReceipt } from "./scanreceipt";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
@@ -827,8 +828,14 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             // service/Tor, phone → on-phone engine), and the token copy is exactly
             // what a paired/restored/orphaned wallet lacks. Sending 0 here is what
             // re-registered fully synced wallets at genesis.
-            if (seed) await api.watch(await fvkHex(seed), knownBirthday(addr));
-            else {
+            if (seed) {
+              await api.watch(await fvkHex(seed), knownBirthday(addr));
+              // Registered here, but this daemon has never scanned for it. If we kept a
+              // receipt from the service we just left, hand it over now: the finished
+              // scan travels as kilobytes instead of being redone from the birthday.
+              // Best effort — an older daemon simply does not know the endpoint.
+              await adoptScanReceipt(addr);
+            } else {
               // No key here and none orphaned under another token. Retrying cannot
               // change that — localStorage does not refill itself — so two more
               // rounds would only hold a wallet on screen for another 40 seconds
@@ -1846,6 +1853,9 @@ function ConnectionButton() {
   const connectEmbedded = async (node?: string, tor?: boolean) => {
     setBusy("phone");
     try {
+      // While we are still talking to the service being left: ask it for this wallet's
+      // finished scan, so the on-device engine resumes instead of starting over.
+      await captureScanReceipt(loadStatusCache()?.address);
       const url = await ensureEmbedded(node, tor);
       setEmbeddedChosen(true);
       markBackgroundPromptPending();
@@ -7107,7 +7117,7 @@ function NetworkPrivacyCard() {
         setBusy(null);
       });
   };
-  const startOnPhone = (node?: string, tor?: boolean) => run("phone", async () => { const u = await ensureEmbedded(node, tor); setEmbeddedChosen(true); markBackgroundPromptPending(); setBase(u); setWalletdBearer(""); });
+  const startOnPhone = (node?: string, tor?: boolean) => run("phone", async () => { await captureScanReceipt(loadStatusCache()?.address); const u = await ensureEmbedded(node, tor); setEmbeddedChosen(true); markBackgroundPromptPending(); setBase(u); setWalletdBearer(""); });
   const leaveEngine = async () => { if (embeddedChosen()) { setEmbeddedChosen(false); await stopEmbedded(); } };
   const usePublic = () => run("public", async () => { await leaveEngine(); setBase(""); setWalletdBearer(""); });
   const useTor = () => run("tor", async () => { await leaveEngine(); const u = await findReachableDaemon(ONION_WALLETD_URL, "", 20_000); setBase(u); setWalletdBearer(""); });
