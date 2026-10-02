@@ -15,10 +15,14 @@ You do not implement any cryptography. You pull in three ready-made pieces:
 
 **Trust model in one line:** you send the daemon a **viewing key** (it can watch), never
 the seed (only the seed can spend), and the device **re-checks and signs every payment**
-so a hostile daemon can neither redirect funds nor inflate the fee. Want the daemon to see
-nothing at all? Embed it: our Android app runs `zkas-walletd` in-process as a native
-library and the desktop app embeds the same crate, so the only outside party is a node
-serving compact blocks (see the *Fully local* tier).
+so a hostile daemon can neither redirect funds nor inflate the fee.
+
+**Prefer to give away nothing at all — not even a viewing key?** Then run the daemon *on
+the device*. `zkas-walletd-mobile` starts the same `zkas-walletd` inside your process on a
+loopback port, so the only outside party is a node serving compact blocks. The code you
+write is identical to the hosted case — only `baseUrl` changes. **Start there**; see
+[Run the daemon on the device](#run-the-daemon-on-the-device) below, and use the hosted
+shape when you cannot ship a native library.
 
 ---
 
@@ -163,6 +167,87 @@ await z.send(seedHex, "zkas:…", 5_000_000_000n, 10_000_000n); // 50 ZKAS, ≤0
 
 ---
 
+## Run the daemon on the device
+
+The daemon is packaged as a library, **`zkas-walletd-mobile`** (in `firecash/zkas-signer`,
+alongside `mobile/`). It runs **the same `zkas-walletd`** in your process, bound to a
+loopback port, and hands you the port. Everything after that — the REST calls, the SDK,
+the send flow above — is byte-for-byte what you would write against a hosted daemon.
+
+| Call | What it does |
+|---|---|
+| `start(nodeAddr, walletDir, secret?, socks?) -> u16` | binds a free `127.0.0.1` port, runs the daemon in-process, returns the port — or **`0` on failure**. Idempotent: called again while running it returns the live port |
+| `stop()` | shuts it down |
+| `port() -> u16` | the live port, `0` when not running |
+| `logs()` / `setDebugLogs(bool)` | the daemon's own log buffer — put this in your crash reports |
+
+`nodeAddr` is any ZKas node's gRPC `host:port` (your own, or a public one). `socks` routes
+that connection through a SOCKS proxy, which is how the shipped wallet offers Tor. The
+engine sizes its thread pool to every core, because on a phone the wallet is the only
+thing running.
+
+```kotlin
+val port = start(
+    nodeAddr  = "185.147.157.125:16110",        // or your own node
+    walletDir = context.filesDir.resolve("zkas").absolutePath,
+    secret    = null,
+    socks     = null,                            // "127.0.0.1:9050" for Tor
+)
+check(port != 0) { "engine failed to start - see logs()" }
+
+// From here it is just an HTTP server you happen to host.
+val client = ZKasClient(baseUrl = "http://127.0.0.1:$port", network = "mainnet")
+```
+
+| Platform | How the engine ships |
+|---|---|
+| Android | `scripts/build-engine.sh` builds `arm64-v8a`, `armeabi-v7a`, `x86_64` into `jniLibs` and generates the Kotlin bindings. **No published package — you build it into your app.** |
+| Desktop | the Tauri shell embeds the same `zkas_walletd` lib crate |
+| iOS | no engine artifact today |
+
+> **Two different mobile libraries. Do not mix them up.**
+> **`zkas-walletd-mobile`** is the *whole daemon*: it scans, **proves**, and serves the
+> REST API on loopback. You build it into your app yourself; nothing is published.
+> **`zkas-mobile`** (`mobile/`, `mobile-v0.1.3`) is the *device half only* — keys, viewing
+> key, `verifyAndSignPayment` — and **deliberately does not prove**. That one *is*
+> published for both platforms: a signed AAR (`info.zkas:zkas-mobile` on GitHub Packages)
+> and `ZkasMobile.xcframework` via SwiftPM. Consumption instructions: `mobile/README.md`.
+> Use `zkas-mobile` when a daemon proves for you; use `zkas-walletd-mobile` when you want
+> no daemon at all.
+
+> **If you generate the engine bindings yourself:** `uniffi-bindgen` reads the library's
+> full symbol table, not `.dynsym`, so build **unstripped** and strip on the way into
+> `jniLibs`. It also **exits 0 when it produces nothing** — assert the generated file
+> exists, or you ship an app whose engine cannot be called.
+
+---
+
+## Gate sending on the wallet, not on the chain
+
+A spend is rooted at an **anchor**: a past shielded tree state. Consensus accepts one only
+inside a window — at least `shielded_anchor_depth` deep so the note has matured, and at
+most `max_shielded_anchor_age` old. On mainnet at 1 BPS that is **600 to 27,000 blue
+units** (`max_shielded_anchor_age` is `pruning_depth / 4`, ~7.5 hours).
+
+A wallet still catching up can only anchor at its own scan position. Once that falls more
+than the window behind the tip, **every** payment it builds is rejected by every node —
+so check before you let anyone pay:
+
+```ts
+const s = await client.status();
+// Enable Send on spend_ready. NOT on synced.
+// spend_ready means: a tip is known, no reorg repair is in flight, the tree is usable,
+// AND the anchor this wallet would root a payment at is still inside the window.
+if (!s.spend_ready) showCatchingUp(s.blocks_behind);
+```
+
+If you ask anyway, `/api/wallet/prepare` refuses with **409** and a message naming the
+gap, *before* spending ~9 s building a proof that cannot land. **Show that message.** The
+failure is temporary and not the user's fault: it clears when the scan catches up.
+Rendering a bare 409 as a generic error is how a syncing wallet looks broken.
+
+---
+
 ## Map it onto your wallet
 
 | Our light wallet | What you write | Notes |
@@ -179,10 +264,10 @@ await z.send(seedHex, "zkas:…", 5_000_000_000n, 10_000_000n); // 50 ZKAS, ≤0
 
 | Tier | You get | You add |
 |---|---|---|
+| **On device** ← *start here* | nothing trusts a service — no server holds even the viewing key | **embed the daemon**: `zkas-walletd-mobile` on Android (built into your app, see [above](#run-the-daemon-on-the-device)), the `zkas_walletd` lib crate on desktop. The app talks to it on loopback over the same REST API, and it syncs from any node's gRPC |
+| **Non-custodial spend** ← *the quickstart* | private send, seed on device, daemon hosted | + `verify_and_sign_payment` (SDK, the drop-in above, or the published `zkas-mobile` AAR / xcframework) |
+| **Watch-only** | balance + history, including where the wallet sent (the daemon always records history and every send is OVK-recoverable) | register the FVK with a daemon (`/watch`), no signer |
 | **Receive** | show a `zkas:` address | signer's `address_from_seed` only — no daemon |
-| **Watch-only** | balance + history, including where the wallet sent (the daemon always records history and every send is OVK-recoverable) | + register the FVK with a daemon (`/watch`) |
-| **Non-custodial spend** ← *the quickstart* | private send, seed on device | + `verify_and_sign_payment` (SDK or drop-in) |
-| **Fully local** | nothing trusts a service — no server holds even the viewing key | run `zkas-walletd` yourself, or **embed it** the way our apps do: Android via the `zkas-walletd-mobile` UniFFI library (`firecash/zkas-signer`, AAR + xcframework published), desktop via the `zkas_walletd` lib crate; the app talks to it on loopback with the same REST API, and it syncs from any node's gRPC |
 
 ---
 
@@ -242,7 +327,7 @@ Every call carries `X-Wallet-Token`. A self-hosted daemon also enforces `--allow
 |---|---|---|
 | `POST` | `/api/wallet/watch` | register `{ fvk_hex, birthday }` — viewing key only; history is always recorded (a hosted daemon holding the FVK can read balance, history and send destinations) |
 | `GET`  | `/api/wallet/balance` · `/api/wallet/history` | state |
-| `GET`  | `/api/status` | node/sync status — check `missing_history` (balance is a lower bound if the node pruned) |
+| `GET`  | `/api/status` | node/sync status — gate Send on **`spend_ready`** (not `synced`; see [gating](#gate-sending-on-the-wallet-not-on-the-chain)), show `blocks_behind`, and treat `missing_history` as "balance is a lower bound" if the node pruned |
 | `POST` | `/api/wallet/prepare` → `/api/wallet/submit` | the non-custodial send pair |
 | `POST` | `/api/wallet/sign` · `/api/verify` | message sign/verify |
 | `POST` | `/api/wallet/create` · `import` · `GET /reveal` | **custodial only** — daemon holds the seed. Don't use these for a non-custodial wallet. |
