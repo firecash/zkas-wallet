@@ -787,6 +787,13 @@ impl Engine {
                 "https://wallet.zkas.info".into(),
             ],
             allow_default_token: false,
+            // Off, per the field's own guidance: the multi-party coordinator role
+            // sees every participant's viewing key, which is a deployment
+            // decision and not something a single-user desktop daemon should
+            // offer by accident. Added when walletd gained the field (zkas-rusty
+            // c4fc928) — the desktop shell embeds walletd as a library, so a new
+            // Config field breaks this build until it is set here.
+            enable_multiparty: false,
             // The passphrase the user unlocked with. `None` only in the
             // pre-passphrase (plaintext) case, which the UI pushes users off.
             wallet_secret: self.secret.clone(),
