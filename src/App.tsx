@@ -101,6 +101,9 @@ import { desktopServices } from "./desktop-services";
 import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, Eye, EyeOff, Server, Settings, ShieldAlert, Trash2, WalletCards } from "lucide-react";
 import { useHideBalances, toggleBalancesHidden, MASK } from "./hidebal";
+import { useBackClose } from "./lib/backclose";
+import { ChatConsent, ChatScreen } from "./Chat";
+import { chatEnabled, currentRoom, lastSeen, myChatPubkey } from "./lib/chatprefs";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
 // hidden textarea so "copy" never dies with an unhandled rejection on a phone.
@@ -533,6 +536,25 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // the 1s poll then corrects anything stale within a second.
   const [status, setStatus] = useState<Status | null>(() => loadStatusCache());
   const [showConsolidate, setShowConsolidate] = useState(false);
+  // Chat is a separate surface, not a tab: it opens full-screen over the wallet
+  // and is only reachable once the user has accepted what it costs them.
+  const [showChat, setShowChat] = useState(false);
+  const [showChatConsent, setShowChatConsent] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
+  // Unread badge. Counted with one short-lived connection on open, not a
+  // persistent background socket: holding the radio open and telling the relay
+  // whenever the wallet is running, for a number, is a bad trade. The chat
+  // client is imported lazily so a wallet with chat off never loads it.
+  useEffect(() => {
+    if (!chatEnabled()) return;
+    let alive = true;
+    const room = currentRoom();
+    void import("./chatclient")
+      .then((m) => m.countSince(room, lastSeen(room), myChatPubkey()))
+      .then((n) => { if (alive) setChatUnread(n); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
   const [reachable, setReachable] = useState<boolean | null>(() => (loadStatusCache() ? true : null));
   const [reachError, setReachError] = useState<string | null>(null);
   // Opens on History, not Receive. "Receive" is now a button, and landing inside it
@@ -1387,6 +1409,23 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 <span className="qa-label">{t("app.notes")}</span>
                 <span className="qa-detail">{t("app.notesManage", { n: status.note_count ?? 0 })}</span>
               </button>}
+              {/* Chat sits beside Notes rather than in the tab bar: it is a
+                  place you go, not a view of your wallet. A viewer gets it too —
+                  chatting needs no spend authority. */}
+              <button
+                className="qa qa-chat"
+                onClick={() => (chatEnabled() ? setShowChat(true) : setShowChatConsent(true))}
+                aria-label={t("app.chatAria")}
+              >
+                <span className="qa-label">{t("app.chat")}</span>
+                <span className="qa-detail">
+                  {!chatEnabled()
+                    ? t("app.chatOff")
+                    : chatUnread > 0
+                      ? t("app.chatUnread", { n: chatUnread })
+                      : t("app.chatOpen")}
+                </span>
+              </button>
               {viewOnly && (
                 <div className="qa qa-viewonly" aria-live="polite">
                   <span className="qa-label">{t("app.viewOnly")}</span>
@@ -1394,6 +1433,20 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 </div>
               )}
             </div>
+            {showChatConsent && (
+              <ChatConsent
+                onEnable={() => { setShowChatConsent(false); setShowChat(true); }}
+                onClose={() => setShowChatConsent(false)}
+              />
+            )}
+            {showChat && (
+              <ChatScreen
+                onClose={() => { setShowChat(false); setChatUnread(0); }}
+                // Tipping hands off to the normal send flow, prefilled. Chat
+                // never touches the spend path itself.
+                onTip={(addr) => onSendAnother(addr)}
+              />
+            )}
             {showConsolidate && (
               <ConsolidateDialog
                 status={status}
@@ -1798,31 +1851,10 @@ function WalletBar() {
 /// nest (the QR scanner opens inside the connection modal), and window listeners
 /// fire in registration order — the OUTER one first — so the open overlays are
 /// kept on a stack and only the one on top answers.
-const backStack: Array<() => void> = [];
 /// True while ConnectionButton has the shell restarting the embedded engine for a
 /// new chain source; the status poll reads it so the expected run of failed polls
 /// is not taken for an outage.
 let desktopSwitching = false;
-function useBackClose(open: boolean, close: () => void) {
-  const closeRef = useRef(close);
-  closeRef.current = close;
-  useEffect(() => {
-    if (!open) return;
-    const entry = () => closeRef.current();
-    backStack.push(entry);
-    const onBack = (event: Event) => {
-      if (backStack[backStack.length - 1] !== entry) return;
-      event.preventDefault();
-      entry();
-    };
-    window.addEventListener("zkas:back", onBack);
-    return () => {
-      const at = backStack.indexOf(entry);
-      if (at >= 0) backStack.splice(at, 1);
-      window.removeEventListener("zkas:back", onBack);
-    };
-  }, [open]);
-}
 
 function ConnectionButton() {
   const { t } = useTranslation();

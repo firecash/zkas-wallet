@@ -1,0 +1,92 @@
+{
+  "app": {
+    "chat": "Chat",
+    "chatAria": "ZKas community chat",
+    "chatOff": "off · tap to set up",
+    "chatOpen": "global room",
+    "chatUnread": "{{n}} new"
+  },
+  "chat": {
+    "consentTitle": "Turn on chat?",
+    "consentPublic": "Messages in the global room are public and permanent. There is no delete.",
+    "consentIp": "The relay server sees your IP address and when you are online. Your wallet does not.",
+    "consentSeparate": "Your chat name is separate from your wallet. Nobody can see your balance or your payments.",
+    "consentEnable": "Turn on chat",
+    "consentLater": "Not now",
+    "consentOff": "You can turn this off again in Settings.",
+    "back": "← Wallet",
+    "roomAria": "Community chat",
+    "state": {
+      "offline": "offline",
+      "connecting": "connecting…",
+      "live": "live",
+      "error": "no relay"
+    },
+    "empty": "Nothing here yet — say hello.",
+    "connecting": "Connecting to the relay…",
+    "anon": "anon",
+    "reply": "Reply",
+    "replyingTo": "Replying to {{name}}",
+    "cancel": "Cancel",
+    "placeholder": "Message the global room",
+    "send": "Send",
+    "sending": "Sending…",
+    "errSend": "That message did not go out. Check the connection and try again.",
+    "errEngine": "This build does not include the chat engine, so messages cannot be signed.",
+    "nameTitle": "Pick a name",
+    "nameWhy": "Shown next to your messages. You can change it later, and you can skip it and post as anon.",
+    "namePlaceholder": "Your name in chat",
+    "namePermanent": "Posts are public and permanent — anyone can read them, and they cannot be deleted.",
+    "nameSave": "Save and send",
+    "nameSkip": "Post as anon",
+    "readOnly": "This device has no key, so it can read the room but not post.",
+    "new": "new",
+    "newMessages": "New messages",
+    "failedTap": "Not sent — tap to retry",
+    "tipAddrLabel": "Address for tips (optional)",
+    "tipAddrWhy": "Publishing an address lets people tip you. It links this chat name to a payment destination, so leave it empty to stay unlinkable.",
+    "rooms": {
+      "title": "Rooms",
+      "main": "Everyone",
+      "languages": "Languages"
+    },
+    "actions": {
+      "reply": "Reply",
+      "react": "React",
+      "tip": "Send a tip",
+      "tipDetail": "private",
+      "copy": "Copy text",
+      "profile": "View profile",
+      "mute": "Mute this person",
+      "unmute": "Unmute",
+      "report": "Report",
+      "retry": "Try sending again",
+      "dm": "Message privately"
+    },
+    "profile": {
+      "copyKey": "Copy public key",
+      "wasKnownAs": "Previously used the name “{{name}}”",
+      "muteNote": "Muting is yours alone. It hides them for you; nobody can remove a person from the network."
+    },
+    "toast": {
+      "muted": "Muted. You will not see their messages.",
+      "unmuted": "Unmuted.",
+      "copied": "Copied",
+      "reported": "Reported and muted."
+    },
+    "dm": {
+      "title": "Messages",
+      "open": "Direct messages",
+      "openDetail": "private",
+      "none": "No private messages yet.",
+      "start": "Message privately",
+      "placeholder": "Private message",
+      "with": "with {{name}}",
+      "note": "Only the two of you can read this. Relays see a one-time key, not who is talking to whom.",
+      "needKey": "Ask them to post once so their key is known.",
+      "headerNote": "private"
+    },
+    "you": "you",
+    "intro": "Everyone here can read what you post, and posts cannot be deleted. Tap the room name to pick your language. Swipe a message to reply."
+  }
+}

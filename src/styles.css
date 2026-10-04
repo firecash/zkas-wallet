@@ -3074,3 +3074,270 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
 
 /* An inline caution under a control: the same muted small type, marked by a rule. */
 .warn-note { border-inline-start: 2px solid rgb(var(--ember-rgb) / 0.55); padding-inline-start: 9px; }
+
+/* ── Chat ───────────────────────────────────────────────────────────────── */
+/* The entry point sits in the quick-action grid. Full width, like Notes, so the
+   row keeps its shape in view-only mode where Notes is not rendered. */
+.qa-chat {
+  grid-column: 1 / -1;
+  min-height: 44px;
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border);
+  font-size: 14px;
+}
+.qa-chat:hover:not(:disabled) { background: var(--ember-soft); border-color: var(--ember); }
+
+.chat-consent-list {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.chat-consent-list li + li { margin-top: 7px; }
+
+/* Full-screen, not a modal card: a chat is somewhere you are, not a dialog you
+   dismiss. Fixed so the composer stays put when the keyboard opens. */
+.chat-screen {
+  position: fixed;
+  inset: 0;
+  /* `inset: 0` sizes to the LAYOUT viewport, which does not shrink when the
+     keyboard opens — the composer ends up behind it. `100dvh` handles the
+     collapsing URL bar but NOT the keyboard on iOS Safari, so the real height
+     comes from visualViewport via --chat-vh, with dvh as the fallback. */
+  height: var(--chat-vh, 100dvh);
+  max-height: var(--chat-vh, 100dvh);
+  /* Above the app chrome (.app-switcher 80, .action-sheet-wrap 150) but below
+     .modalwrap 180, so the consent and nickname dialogs still layer over the
+     room, and below .toasts 200 so notifications are never hidden by it. */
+  z-index: 160;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  /* Keep the composer clear of the home indicator / notch. */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.chat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  padding-top: calc(10px + env(safe-area-inset-top, 0));
+}
+/* `.btn` is width:100% by default — it is the app's full-width block action.
+   Inside these flex rows that is wrong: the back button swallowed the header and
+   pushed the room name off-screen, and Send crushed the composer input down to a
+   sliver. Every .btn inside the chat shell sizes to its content instead. */
+.chat-head .btn,
+.chat-compose .btn,
+.chat-replying .btn { width: auto; flex: 0 0 auto; }
+.chat-back { flex: 0 0 auto; padding: 9px 14px; font-size: 14px; }
+.chat-title { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.chat-room { font-weight: 650; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-state { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.chat-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.chat-dot.live { background: #39d98a; }
+.chat-dot.warm { background: #e0a526; }
+.chat-dot.off { background: var(--muted); }
+
+.chat-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  /* NO gap here. Spacing belongs to the message, because a grouped message must
+     sit tight under the one above it — a uniform gap made a run of short replies
+     from one person float down the screen with MORE air than separate messages,
+     which is the opposite of what grouping is for. */
+  overscroll-behavior: contain;
+}
+.chat-empty { text-align: center; margin: auto; }
+.chat-msg { display: flex; gap: 10px; align-items: flex-start; }
+.chat-avatar {
+  flex: 0 0 auto;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 700;
+  color: #fff;
+  text-transform: lowercase;
+  font-variant-numeric: tabular-nums;
+}
+.chat-body { min-width: 0; flex: 1 1 auto; }
+.chat-meta { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; flex-wrap: wrap; }
+.chat-meta b { font-weight: 650; }
+/* Always visible, never styled away: a nickname is not an identity. */
+.chat-fp { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 11.5px; }
+.chat-meta time { color: var(--muted); font-size: 11.5px; margin-left: auto; }
+.chat-quote {
+  border-left: 2px solid var(--border);
+  padding: 2px 0 2px 8px;
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-text {
+  margin: 2px 0 0;
+  font-size: 14.5px;
+  line-height: 1.45;
+  /* `break-word`, NOT `anywhere`: `anywhere` breaks a word the moment it helps
+     the line, so ordinary text like "#zkas-dev?" was split across lines for no
+     reason. `break-word` only breaks a token that genuinely cannot fit, which
+     is the case this exists for (a long URL or hash). */
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+.chat-msg.mine .chat-text { color: var(--ink); }
+.chat-reply {
+  background: none; border: 0; padding: 2px 0 0;
+  color: var(--muted); font-size: 12px; font-family: inherit;
+  cursor: pointer;
+}
+.chat-reply:hover { color: var(--ember); }
+
+.chat-replying {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--muted); font-size: 12.5px;
+}
+.chat-replying span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-replying .btn { margin-left: auto; }
+
+.chat-compose {
+  display: flex; gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+}
+.chat-compose textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Grows with the message up to a few lines, then scrolls — a chat input that
+     cannot hold a paragraph makes people send five messages instead of one. */
+  min-height: 42px;
+  max-height: 120px;
+  resize: none;
+  line-height: 1.4;
+  padding-top: 11px;
+  font-family: inherit;
+  font-size: 15px;
+}
+.chat-compose.readonly { justify-content: center; text-align: center; }
+.chat-compose .btn { flex: 0 0 auto; }
+
+/* Chat: density, sheets and states ───────────────────────────────────────── */
+/* The message row carries NO controls — tapping it opens the action sheet. A
+   visible Reply button on every line is N buttons of permanent clutter buying
+   one action; a tap target buys all of them. */
+.chat-msg { cursor: pointer; border-radius: 10px; padding: 3px 4px; margin: 10px -4px 0; }
+.chat-msg:active { background: rgb(var(--ember-rgb) / 0.07); }
+/* Grouped: consecutive messages from one author share a header. The spacer keeps
+   the text aligned under the first message's body. */
+/* A continuation of one person's turn: tight under the previous line. */
+.chat-msg.grouped { margin-top: 1px; }
+/* Alignment only: it reserves the avatar column so grouped text lines up, but
+   must have NO height — inheriting the avatar's 30px forced every continuation
+   line to be 30px tall, so a run of short replies floated down the screen. */
+.chat-avatar.spacer { background: none !important; height: 0; min-height: 0; }
+.chat-avatar.big { width: 44px; height: 44px; font-size: 15px; }
+.chat-msg.failed .chat-text { opacity: 0.6; }
+.chat-failed { color: var(--ember); font-size: 11.5px; }
+.chat-link { color: var(--ember); text-decoration: underline; overflow-wrap: anywhere; }
+
+.chat-day, .chat-unread-rule {
+  display: flex; align-items: center; gap: 10px;
+  margin: 10px 0 4px; color: var(--muted); font-size: 11.5px;
+}
+.chat-day::before, .chat-day::after,
+.chat-unread-rule::before, .chat-unread-rule::after {
+  content: ""; flex: 1 1 auto; height: 1px; background: var(--border);
+}
+.chat-unread-rule { color: var(--ember); }
+.chat-unread-rule::before, .chat-unread-rule::after { background: rgb(var(--ember-rgb) / 0.4); }
+
+.chat-jump {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 76px; z-index: 2;
+  background: var(--ember); color: var(--ember-ink);
+  border: 0; border-radius: 999px; padding: 7px 14px;
+  font-family: inherit; font-size: 13px; font-weight: 650; cursor: pointer;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+}
+
+.chat-reacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.chat-react {
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 1px 7px; font-size: 12px; color: var(--muted);
+}
+.chat-reactions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.chat-reaction-pick {
+  font-size: 26px; line-height: 1; background: none; border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 12px; cursor: pointer;
+}
+.chat-reaction-pick:active { transform: scale(0.94); }
+
+/* Sheets. Bottom-anchored on a phone, because the thumb is there. */
+.chat-sheet-wrap { align-items: flex-end; }
+.chat-sheet { width: 100%; max-width: 560px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.chat-sheet h2 { margin-top: 0; font-size: 16px; }
+.chat-sheet-quote {
+  border-left: 2px solid var(--border); padding-left: 9px; margin: 0 0 10px;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.chat-sheet-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-height: 46px; padding: 11px 13px;
+  background: transparent; color: var(--ink);
+  border: 1px solid var(--border); border-radius: 12px;
+  font-family: inherit; font-size: 14.5px; font-weight: 550; text-align: left; cursor: pointer;
+}
+.chat-sheet-row + .chat-sheet-row { margin-top: 7px; }
+.chat-sheet-row:active { background: rgb(var(--ember-rgb) / 0.09); }
+.chat-sheet-row.current { border-color: var(--ember); }
+.chat-sheet-row.danger { color: var(--bad); }
+.chat-sheet-detail { color: var(--muted); font-size: 12.5px; font-weight: 500; }
+.chat-profile-head { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.chat-profile-name { display: flex; align-items: baseline; gap: 6px; }
+
+/* The room name is a button (it opens the room switcher) but must not look or
+   size like one. */
+.chat-title {
+  background: none; border: 0; padding: 0; font-family: inherit;
+  text-align: left; cursor: pointer; color: inherit;
+}
+/* A sheet can now hold twenty rooms, so it scrolls instead of growing past the
+   screen — and stops short of the top so it still reads as a sheet. */
+.chat-sheet { max-height: 78dvh; overflow-y: auto; overscroll-behavior: contain; }
+.chat-sheet-group {
+  margin: 14px 0 6px; color: var(--muted);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+}
+
+/* A continuation line should read as the next line of the same turn, so it gets
+   no extra padding above it — one line-height apart, not two. */
+.chat-msg.grouped { padding-top: 0; }
+.chat-msg.grouped .chat-text { margin-top: 0; }
+
+/* Your own messages must be identifiable at a glance. A full right-aligned
+   bubble layout would cost the density this list is built on, so the marker is
+   an accent rule and an accent name — clear without reflowing anything. */
+.chat-msg.mine {
+  border-inline-start: 2px solid rgb(var(--ember-rgb) / 0.55);
+  padding-inline-start: 6px;
+  margin-inline-start: -2px;
+}
+.chat-msg.mine .chat-meta b { color: var(--ember); }
+.chat-intro {
+  text-align: center;
+  margin: 2px 0 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  line-height: 1.45;
+}
