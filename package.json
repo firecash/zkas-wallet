@@ -12,7 +12,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/check-signer-inline.mjs && tsc -b && vite build",
+    "build": "node scripts/check-signer-inline.mjs && node scripts/check-chat-engine-inline.mjs && tsc -b && vite build",
     "preview": "vite preview",
     "mobile:add:android": "cap add android",
     "mobile:add:ios": "cap add ios",
