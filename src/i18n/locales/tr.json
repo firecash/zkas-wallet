@@ -626,7 +626,12 @@
     "activityAria": "Cüzdan hareketleri",
     "sectionsAria": "Cüzdan bölümleri",
     "loading": "Yükleniyor…",
-    "close": "Kapat"
+    "close": "Kapat",
+    "chat": "Sohbet",
+    "chatAria": "ZKas topluluk sohbeti",
+    "chatOff": "kapalı · kurmak için dokun",
+    "chatOpen": "genel oda",
+    "chatUnread": "{{n}} yeni"
   },
   "hostedNotice": {
     "browserWallet": "Tarayıcı cüzdanı. <b><a>Daha güvenli uygulamayı alın</a></b>."
@@ -1729,7 +1734,8 @@
     "connect": "Bağlan",
     "accentEyebrow": "Vurgu rengi",
     "changeLater": "Bunları daha sonra Ayarlar'dan değiştirebilirsiniz, cüzdanınıza veya bakiyenize dokunmaz.",
-    "myService": "Hizmetim"
+    "myService": "Hizmetim",
+    "recommended": "Önerilen"
   },
   "mainNav": {
     "mine": "Madencilik",
@@ -1772,23 +1778,30 @@
   "runOnPhoneOption": {
     "title": "Bu telefonda çalıştır",
     "desc": "En gizli. Hiçbir arka plan işlemi işlemlerinizi görmez. Biraz daha pil tüketir.",
-    "nodeHint": "Eşitlenecek düğüm — host:port. Varsayılan, herkese açık ZKas düğümüdür.",
+    "nodeHint": "Eşitlenecek düğüm — host:port. Bu, paralarınızı sorduğunuz kişidir.",
     "torTitle": "Düğüme Tor üzerinden ulaş",
     "torDesc": "IP'nizi düğümden gizler. Bu telefonda Orbot (Tor) uygulamasının çalışmasını gerektirir.",
     "starting": "Başlatılıyor…",
-    "start": "Bu telefonda başlat"
+    "start": "Bu telefonda başlat",
+    "nodePlaceholder": "host:port",
+    "backupHint": "Yedek düğüm (isteğe bağlı) — yalnızca ilki yanıt vermezse kullanılır.",
+    "backupPlaceholder": "host:port — boş bırakın",
+    "onBackupNow": "Şu anda yedekten eşitleniyor: ilk düğüm yanıt vermiyordu."
   },
   "whatsNew": {
-    "eyebrow": "1.0.17'deki yenilikler",
-    "title": "Kurtarma ifadeleri",
-    "phraseTitle": "🔑 12 kelimelik ifade (BIP-39)",
-    "phraseDesc": "Yeni cüzdanlar 64 karakterlik tohum yerine standart BIP-39 ifadesi kullanır. Mevcut tohumunuz çalışmaya devam eder.",
-    "accountsTitle": "🗂 Hesaplar",
-    "accountsDesc": "Tek ifadeden hesap ekleyin — tek yedek hepsini kapsar.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Soğan üzerinden bağlanın, hizmet IP'nizi asla görmez.",
+    "eyebrow": "Yeni",
+    "title": "Cüzdanı telefonunuzda çalıştırın",
     "gotIt": "Anladım",
-    "openSettings": "Ayarları aç"
+    "titleOnPhone": "Düğümlerinizi seçin",
+    "onPhoneTitle": "Hiçbir sunucu cüzdanınızı görmez",
+    "onPhoneDesc": "Cüzdan motoru bu telefonda çalışır. Anahtarlarınız ve görüntüleme anahtarınız asla telefondan çıkmaz, bu nedenle hiçbir hizmet bakiyenizi veya ödemelerinizi göremez.",
+    "nodesTitle": "İki düğüm, yedekli",
+    "nodesDesc": "Eşitlenecek düğümü ve isteğe bağlı bir yedeği seçin. İlki yanıt vermezse cüzdan otomatik olarak yedeğe geçer.",
+    "onPhoneCaveat": "Bilmenizde fayda var: ilk eşitleme zinciri telefonunuzda okur. Yeni bir cüzdan için bu hızlıdır; eski bir cüzdan için biraz zaman alabilir ve istediğiniz zaman geri dönebilirsiniz.",
+    "switchNow": "Telefonumda çalıştır",
+    "switching": "Başlatılıyor…",
+    "switchFailed": "Cihaz içi motor başlatılamadı. Hâlâ önceki hizmeti kullanıyorsunuz.",
+    "notNow": "Şimdi değil"
   },
   "mainRoot": {
     "opening": "Açılıyor…"
@@ -1855,5 +1868,95 @@
     "confirmations_one": "{{count}} onay",
     "confirmations_other": "{{count}} onay",
     "verifyNote": "Kanıt, zincirdeki işleme karşı kontrol edilir: açıklanan alıcı ve miktar, bloğun kaydettiği taahhüdü yeniden üretmelidir."
+  },
+  "chat": {
+    "nameSkip": "Anonim gönder",
+    "readOnly": "Bu cihazda anahtar yok, odayı okuyabilir ama gönderemezsiniz.",
+    "new": "yeni",
+    "newMessages": "Yeni mesajlar",
+    "failedTap": "Gönderilemedi — tekrar dene",
+    "tipAddrLabel": "Bahşiş adresi (isteğe bağlı)",
+    "tipAddrWhy": "Adres yayınlamak, insanların size bahşiş göndermesini sağlar. Bu sohbet adını bir ödeme hedefine bağlar; bağlantısız kalmak için boş bırakın.",
+    "rooms": {
+      "title": "Odalar",
+      "main": "Herkes",
+      "languages": "Diller"
+    },
+    "actions": {
+      "reply": "Yanıtla",
+      "react": "Tepki ver",
+      "tip": "Bahşiş gönder",
+      "tipDetail": "gizli",
+      "copy": "Metni kopyala",
+      "profile": "Profili gör",
+      "mute": "Bu kişiyi sustur",
+      "unmute": "Sesi aç",
+      "report": "Bildir",
+      "retry": "Tekrar göndermeyi dene",
+      "dm": "Özel mesaj gönder"
+    },
+    "profile": {
+      "copyKey": "Açık anahtarı kopyala",
+      "wasKnownAs": "Daha önce “{{name}}” adını kullanmıştı",
+      "muteNote": "Susturma yalnızca size özeldir. Onu sizin için gizler; kimse bir kişiyi ağdan kaldıramaz."
+    },
+    "toast": {
+      "muted": "Susturuldu. Mesajlarını görmeyeceksiniz.",
+      "unmuted": "Ses açıldı.",
+      "copied": "Kopyalandı",
+      "reported": "Bildirildi ve susturuldu."
+    },
+    "dm": {
+      "title": "Mesajlar",
+      "open": "Doğrudan mesajlar",
+      "openDetail": "gizli",
+      "none": "Henüz özel mesaj yok.",
+      "start": "Özel mesaj gönder",
+      "placeholder": "Özel mesaj",
+      "with": "{{name}} ile",
+      "note": "Bunu yalnızca ikiniz okuyabilirsiniz. Aktarıcılar tek kullanımlık bir anahtar görür, kimin kiminle konuştuğunu değil.",
+      "needKey": "Anahtarının bilinmesi için bir kez gönderi yapmasını isteyin.",
+      "headerNote": "gizli"
+    },
+    "you": "siz",
+    "intro": "Buradaki herkes gönderinizi okuyabilir ve gönderiler silinemez. Dilinizi seçmek için oda adına dokunun. Yanıtlamak için bir mesajı kaydırın.",
+    "consentTitle": "Sohbet açılsın mı?",
+    "consentPublic": "Genel odadaki mesajlar herkese açık ve kalıcıdır. Silme yoktur.",
+    "consentIp": "Röle sunucusu IP adresinizi ve çevrimiçi olduğunuz zamanı görür. Cüzdanınız görmez.",
+    "consentSeparate": "Sohbet adınız cüzdanınızdan ayrıdır. Hiç kimse bakiyenizi veya ödemelerinizi göremez.",
+    "consentEnable": "Sohbeti aç",
+    "consentLater": "Şimdi değil",
+    "consentOff": "Bunu Ayarlar'dan tekrar kapatabilirsiniz.",
+    "back": "← Cüzdan",
+    "roomAria": "Topluluk sohbeti",
+    "state": {
+      "offline": "çevrimdışı",
+      "connecting": "bağlanıyor…",
+      "live": "canlı",
+      "error": "röle yok"
+    },
+    "empty": "Henüz bir şey yok — merhaba de.",
+    "connecting": "Röleye bağlanıyor…",
+    "anon": "anonim",
+    "reply": "Yanıtla",
+    "replyingTo": "{{name}}'e yanıt",
+    "cancel": "İptal",
+    "placeholder": "Genel odaya mesaj gönder",
+    "send": "Gönder",
+    "sending": "Gönderiliyor…",
+    "errSend": "Mesaj gitmedi. Bağlantıyı kontrol edip tekrar deneyin.",
+    "errEngine": "Bu yapı sohbet motorunu içermiyor, bu yüzden mesajlar imzalanamaz.",
+    "nameTitle": "Bir ad seçin",
+    "nameWhy": "Mesajlarınızın yanında görünür. Daha sonra değiştirebilir veya atlayıp anonim olarak gönderebilirsiniz.",
+    "namePlaceholder": "Sohbetteki adınız",
+    "namePermanent": "Gönderiler herkese açık ve kalıcıdır — herkes okuyabilir ve silinemez.",
+    "nameSave": "Kaydet ve gönder"
+  },
+  "backgroundPermission": {
+    "body": "Bu telefon artık cüzdanı kendisi çalıştırıyor. Android uyuyan uygulamaları kendi programına alır; bu izin olmazsa cüzdan saatlerce geri kalır ve bir sonraki açışınızda yetişmesini beklersiniz. İzin vermek, cüzdanın güncel kalmak için yaklaşık 15 dakikada bir uyanmasını sağlar. Bunu daha sonra Android ayarlarından değiştirebilirsiniz.",
+    "enable": "İzin ver",
+    "later": "Şimdi değil",
+    "never": "Bir daha sorma",
+    "noScreen": "Bu telefonda pil iyileştirme ekranı yok. Arka plan eşitlemesi yine de Android'in programına göre çalışır."
   }
 }

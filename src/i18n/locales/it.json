@@ -588,7 +588,12 @@
     "activityAria": "Attività portafoglio",
     "sectionsAria": "Sezioni portafoglio",
     "loading": "Caricamento…",
-    "close": "Chiudi"
+    "close": "Chiudi",
+    "chat": "Chat",
+    "chatAria": "Chat community ZKas",
+    "chatOff": "spento · tocca per configurare",
+    "chatOpen": "stanza globale",
+    "chatUnread": "{{n}} nuovi"
   },
   "hostedNotice": {
     "browserWallet": "Portafoglio browser. <b><a>Scarica l'app più sicura</a></b>."
@@ -1782,7 +1787,8 @@
     "connect": "Connetti",
     "accentEyebrow": "Colore accento",
     "changeLater": "Puoi modificare tutto in Impostazioni, senza toccare il portafoglio o il saldo.",
-    "myService": "Mio servizio"
+    "myService": "Mio servizio",
+    "recommended": "Consigliato"
   },
   "orbotHelp": {
     "nativeTitle": "Tor richiede Orbot",
@@ -1804,23 +1810,30 @@
   "runOnPhoneOption": {
     "title": "Esegui su questo telefono",
     "desc": "Massima privacy. Nessun demone vede le tue transazioni. Un po' più di batteria.",
-    "nodeHint": "Nodo da cui sincronizzare — host:porta. Il default è il nodo ZKas pubblico.",
+    "nodeHint": "Nodo da cui sincronizzare — host:port. È chi interroghi per le tue monete.",
     "torTitle": "Raggiungi il nodo via Tor",
     "torDesc": "Nasconde il tuo IP al nodo. Richiede l'app Orbot (Tor) in esecuzione su questo telefono.",
     "starting": "Avvio…",
-    "start": "Avvia su questo telefono"
+    "start": "Avvia su questo telefono",
+    "nodePlaceholder": "host:port",
+    "backupHint": "Nodo di backup (opzionale) — usato solo se il primo smette di rispondere.",
+    "backupPlaceholder": "host:port — lascia vuoto",
+    "onBackupNow": "Sincronizzazione in corso dal backup: il primo nodo non rispondeva."
   },
   "whatsNew": {
-    "eyebrow": "Novità nella 1.0.17",
-    "title": "Frasi di recupero",
-    "phraseTitle": "🔑 Frase 12 parole (BIP-39)",
-    "phraseDesc": "I nuovi portafogli usano una frase BIP-39 standard invece di un seed di 64 caratteri. Il tuo seed esistente continua a funzionare.",
-    "accountsTitle": "🗂 Account",
-    "accountsDesc": "Aggiungi account da una frase — un backup li copre tutti.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Connettiti via onion così il servizio non vede mai il tuo IP.",
+    "eyebrow": "Novità",
+    "title": "Avvia il portafoglio sul telefono",
     "gotIt": "Capito",
-    "openSettings": "Apri impostazioni"
+    "titleOnPhone": "Scegli i tuoi nodi",
+    "onPhoneTitle": "Nessun server vede il portafoglio",
+    "onPhoneDesc": "Il motore del portafoglio gira sul telefono. Le tue chiavi e la chiave di sola lettura non lo lasciano mai, quindi nessun servizio può vedere saldo o pagamenti.",
+    "nodesTitle": "Due nodi, con fallback",
+    "nodesDesc": "Scegli il nodo da cui sincronizzare e un backup opzionale. Se il primo smette di rispondere, il portafoglio passa al backup da solo.",
+    "onPhoneCaveat": "Da sapere: la prima sincronizzazione legge la catena sul telefono. Per un portafoglio recente è veloce; per uno più vecchio può richiedere un po', e puoi tornare indietro quando vuoi.",
+    "switchNow": "Avvia sul telefono",
+    "switching": "Avvio…",
+    "switchFailed": "Impossibile avviare il motore locale. Sei ancora sul servizio precedente.",
+    "notNow": "Non ora"
   },
   "mainRoot": {
     "opening": "Apertura…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} conferma",
     "confirmations_other": "{{count}} conferme",
     "verifyNote": "La prova è verificata sulla transazione in catena: il destinatario e l'importo rivelati devono riprodurre l'impegno registrato nel blocco."
+  },
+  "chat": {
+    "nameSkip": "Invia come anonimo",
+    "readOnly": "Questo dispositivo non ha chiavi, quindi può leggere ma non scrivere.",
+    "new": "nuovo",
+    "newMessages": "Nuovi messaggi",
+    "failedTap": "Non inviato — tocca per riprovare",
+    "tipAddrLabel": "Indirizzo per mance (opzionale)",
+    "tipAddrWhy": "Pubblicare un indirizzo permette di ricevere mance. Collega questo nome a una destinazione di pagamento, lascialo vuoto per restare anonimo.",
+    "rooms": {
+      "title": "Stanze",
+      "main": "Tutti",
+      "languages": "Lingue"
+    },
+    "actions": {
+      "reply": "Rispondi",
+      "react": "Reagisci",
+      "tip": "Invia mancia",
+      "tipDetail": "privato",
+      "copy": "Copia testo",
+      "profile": "Vedi profilo",
+      "mute": "Silenzia questa persona",
+      "unmute": "Riattiva",
+      "report": "Segnala",
+      "retry": "Prova a inviare",
+      "dm": "Messaggio privato"
+    },
+    "profile": {
+      "copyKey": "Copia chiave pubblica",
+      "wasKnownAs": "In precedenza usava il nome “{{name}}”",
+      "muteNote": "Silenziare è solo per te. Nasconde i loro messaggi; nessuno può rimuovere una persona dalla rete."
+    },
+    "toast": {
+      "muted": "Silenziato. Non vedrai i suoi messaggi.",
+      "unmuted": "Riattivato.",
+      "copied": "Copiato",
+      "reported": "Segnalato e silenziato."
+    },
+    "dm": {
+      "title": "Messaggi",
+      "open": "Messaggi diretti",
+      "openDetail": "privato",
+      "none": "Ancora nessun messaggio privato.",
+      "start": "Messaggio privato",
+      "placeholder": "Messaggio privato",
+      "with": "con {{name}}",
+      "note": "Solo voi due potete leggere. I relay vedono una chiave usa e getta, non chi parla con chi.",
+      "needKey": "Chiedigli di postare una volta per rendere nota la sua chiave.",
+      "headerNote": "privato"
+    },
+    "you": "tu",
+    "intro": "Tutti qui possono leggere i tuoi post e non possono essere cancellati. Tocca il nome della stanza per scegliere la lingua. Scorri un messaggio per rispondere.",
+    "consentTitle": "Attivare la chat?",
+    "consentPublic": "I messaggi nella stanza globale sono pubblici e permanenti. Non si possono cancellare.",
+    "consentIp": "Il server relay vede il tuo IP e quando sei online. Il tuo portafoglio no.",
+    "consentSeparate": "Il nome in chat è separato dal portafoglio. Nessuno vede il tuo saldo o i tuoi pagamenti.",
+    "consentEnable": "Attiva chat",
+    "consentLater": "Non ora",
+    "consentOff": "Puoi disattivarla dopo nelle Impostazioni.",
+    "back": "← Portafoglio",
+    "roomAria": "Chat community",
+    "state": {
+      "offline": "offline",
+      "connecting": "connessione…",
+      "live": "live",
+      "error": "nessun relay"
+    },
+    "empty": "Ancora nulla — saluta.",
+    "connecting": "Connessione al relay…",
+    "anon": "anon",
+    "reply": "Rispondi",
+    "replyingTo": "Rispondi a {{name}}",
+    "cancel": "Annulla",
+    "placeholder": "Messaggio per la stanza globale",
+    "send": "Invia",
+    "sending": "Invio…",
+    "errSend": "Il messaggio non è partito. Controlla la connessione e riprova.",
+    "errEngine": "Questa build non include il motore chat, quindi i messaggi non possono essere firmati.",
+    "nameTitle": "Scegli un nome",
+    "nameWhy": "Verrà mostrato accanto ai tuoi messaggi. Puoi cambiarlo dopo, o saltarlo e postare come anon.",
+    "namePlaceholder": "Il tuo nome in chat",
+    "namePermanent": "I post sono pubblici e permanenti — chiunque può leggerli e non possono essere cancellati.",
+    "nameSave": "Salva e invia"
+  },
+  "backgroundPermission": {
+    "title": "Sincronizzare il portafoglio in background?",
+    "body": "Questo telefono ora esegue il portafoglio. Android mette le app in pausa, quindi senza questo permesso il portafoglio può restare indietro di ore e alla prossima apertura dovrai aspettare che recuperi. Concederlo permette al portafoglio di svegliarsi ogni 15 minuti per restare aggiornato. Puoi cambiarlo dopo nelle impostazioni Android.",
+    "enable": "Consenti",
+    "later": "Non ora",
+    "never": "Non chiedere più",
+    "noScreen": "Questo telefono non ha la schermata di ottimizzazione batteria. La sincronizzazione in background funziona comunque, secondo i tempi di Android."
   }
 }

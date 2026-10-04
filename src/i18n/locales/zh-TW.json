@@ -588,7 +588,12 @@
     "activityAria": "錢包活動",
     "sectionsAria": "錢包區塊",
     "loading": "載入中…",
-    "close": "關閉"
+    "close": "關閉",
+    "chat": "聊天",
+    "chatAria": "ZKas 社群聊天",
+    "chatOff": "關閉 · 點按設定",
+    "chatOpen": "全球聊天室",
+    "chatUnread": "{{n}} 則新訊息"
   },
   "hostedNotice": {
     "browserWallet": "瀏覽器錢包。<b><a>下載更安全的應用程式</a></b>。"
@@ -1745,7 +1750,8 @@
     "customTitle": "我自己的 walletd",
     "customDesc": "你自行執行的錢包守護程式。",
     "placeholderNative": "主機:連接埠、http://<lan-ip>:8501 或 .onion",
-    "placeholderWeb": "https://your-walletd 或 .onion"
+    "placeholderWeb": "https://your-walletd 或 .onion",
+    "recommended": "推薦"
   },
   "orbotHelp": {
     "nativeTitle": "Tor 需要 Orbot",
@@ -1767,23 +1773,30 @@
   "runOnPhoneOption": {
     "title": "在此手機上執行",
     "desc": "最私密。沒有任何背景程式會看到你的交易。稍微耗電。",
-    "nodeHint": "要同步的節點 — host:port。預設為公開 ZKas 節點。",
+    "nodeHint": "同步來源節點 — host:port。你透過它查詢你的幣。",
     "torTitle": "透過 Tor 連接節點",
     "torDesc": "對節點隱藏你的 IP。需在此手機上執行 Orbot（Tor）應用程式。",
     "starting": "啟動中…",
-    "start": "在此手機上啟動"
+    "start": "在此手機上啟動",
+    "nodePlaceholder": "host:port",
+    "backupHint": "備用節點（選填）— 僅在第一個無回應時使用。",
+    "backupPlaceholder": "host:port — 留空則無",
+    "onBackupNow": "目前正從備用節點同步：第一個節點無回應。"
   },
   "whatsNew": {
-    "eyebrow": "1.0.17 版更新內容",
-    "title": "恢復短語",
-    "phraseTitle": "🔑 12 字助記詞 (BIP-39)",
-    "phraseDesc": "新錢包使用標準 BIP-39 助記詞，取代 64 字元種子。現有種子仍可繼續使用。",
-    "accountsTitle": "🗂 帳戶",
-    "accountsDesc": "從一組助記詞新增多個帳戶——一次備份即可涵蓋所有帳戶。",
-    "torTitle": "🧅 Tor",
-    "torDesc": "透過洋蔥路由連線，讓服務永遠無法得知你的 IP。",
+    "eyebrow": "新功能",
+    "title": "在手機上執行錢包",
     "gotIt": "知道了",
-    "openSettings": "開啟設定"
+    "titleOnPhone": "選擇你的節點",
+    "onPhoneTitle": "無伺服器可查看你的錢包",
+    "onPhoneDesc": "錢包引擎在此手機上執行。你的密鑰與查看密鑰絕不離開手機，因此沒有任何服務能看到你的餘額或付款。",
+    "nodesTitle": "兩個節點，附備援",
+    "nodesDesc": "選擇同步來源的節點，以及選用的備用節點。若第一個無回應，錢包會自動切換到備用節點。",
+    "onPhoneCaveat": "值得留意：首次同步會在此手機上讀取鏈。近期建立的錢包很快；較舊的錢包可能需要一些時間，你隨時可以切換回原本的服務。",
+    "switchNow": "在手機上執行",
+    "switching": "啟動中…",
+    "switchFailed": "無法啟動裝置端引擎。你仍在使用先前的服務。",
+    "notNow": "稍後再說"
   },
   "mainRoot": {
     "opening": "開啟中…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} 次確認",
     "confirmations_other": "{{count}} 次確認",
     "verifyNote": "此證明會與鏈上交易比對：揭露的收款方和金額必須重現區塊記錄的承諾值。"
+  },
+  "chat": {
+    "nameSkip": "匿名發文",
+    "readOnly": "此裝置無密鑰，可讀取聊天室但無法發文。",
+    "new": "新",
+    "newMessages": "新訊息",
+    "failedTap": "未送出—點按重試",
+    "tipAddrLabel": "小費地址（選填）",
+    "tipAddrWhy": "公開地址讓他人能打賞你。這會將聊天名稱與收款地址連結，留空則可保持匿名。",
+    "rooms": {
+      "title": "聊天室",
+      "main": "所有人",
+      "languages": "語言"
+    },
+    "actions": {
+      "reply": "回覆",
+      "react": "表情",
+      "tip": "打賞",
+      "tipDetail": "私密",
+      "copy": "複製文字",
+      "profile": "個人檔案",
+      "mute": "靜音此人",
+      "unmute": "取消靜音",
+      "report": "檢舉",
+      "retry": "重新傳送",
+      "dm": "私訊"
+    },
+    "profile": {
+      "copyKey": "複製公鑰",
+      "wasKnownAs": "先前使用名稱「{{name}}」",
+      "muteNote": "靜音僅對你有效。你會看不到對方的訊息；但無人能將他人從網路中移除。"
+    },
+    "toast": {
+      "muted": "已靜音。你將不會看到他們的訊息。",
+      "unmuted": "已取消靜音。",
+      "copied": "已複製",
+      "reported": "已檢舉並靜音。"
+    },
+    "dm": {
+      "title": "訊息",
+      "open": "私訊",
+      "openDetail": "私密",
+      "none": "尚無私訊。",
+      "start": "私訊",
+      "placeholder": "私訊",
+      "with": "與 {{name}}",
+      "note": "只有你們兩人能閱讀此內容。中繼站只會看到一次性密鑰，無法得知誰在與誰交談。",
+      "needKey": "請對方先發文一次，以便取得其密鑰。",
+      "headerNote": "私密"
+    },
+    "you": "你",
+    "intro": "此處所有人都能閱讀你的發文，且發文無法刪除。點按聊天室名稱可選擇語言。滑動訊息可回覆。",
+    "consentTitle": "開啟聊天？",
+    "consentPublic": "全球聊天室的訊息為公開且永久保存，無法刪除。",
+    "consentIp": "中繼伺服器會看到您的 IP 位址與上線時間，您的錢包則不會。",
+    "consentSeparate": "您的聊天名稱與錢包分開，沒有人能看到您的餘額或付款。",
+    "consentEnable": "開啟聊天",
+    "consentLater": "稍後再說",
+    "consentOff": "您之後可在設定中關閉此功能。",
+    "back": "← 錢包",
+    "roomAria": "社群聊天",
+    "state": {
+      "offline": "離線",
+      "connecting": "連線中…",
+      "live": "即時",
+      "error": "無中繼"
+    },
+    "empty": "這裡還沒有內容 — 打聲招呼吧。",
+    "connecting": "正在連線至中繼…",
+    "anon": "匿名",
+    "reply": "回覆",
+    "replyingTo": "回覆 {{name}}",
+    "cancel": "取消",
+    "placeholder": "傳送訊息至全球聊天室",
+    "send": "傳送",
+    "sending": "傳送中…",
+    "errSend": "該訊息未送出。請檢查連線後再試一次。",
+    "errEngine": "此版本未包含聊天引擎，因此無法簽署訊息。",
+    "nameTitle": "選擇名稱",
+    "nameWhy": "會顯示在您的訊息旁。您之後可以變更，也可以跳過並以匿名身分發文。",
+    "namePlaceholder": "您在聊天中的名稱",
+    "namePermanent": "發文為公開且永久保存 — 任何人都能閱讀，且無法刪除。",
+    "nameSave": "儲存並傳送"
+  },
+  "backgroundPermission": {
+    "title": "讓錢包在背景同步？",
+    "body": "這支手機正在自行執行錢包。Android 會自行排程休眠應用程式，因此若未允許，錢包可能落後數小時，下次開啟時需等待追趕進度。允許後，錢包約每 15 分鐘喚醒一次以保持最新狀態。您之後可在 Android 設定中變更。",
+    "enable": "允許",
+    "later": "稍後再說",
+    "never": "不再詢問",
+    "noScreen": "此手機無電池最佳化畫面。背景同步仍會依 Android 排程執行。"
   }
 }

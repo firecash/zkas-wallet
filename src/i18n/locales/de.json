@@ -548,7 +548,12 @@
     "activityAria": "Wallet-Aktivität",
     "sectionsAria": "Wallet-Bereiche",
     "loading": "Lädt…",
-    "close": "Schließen"
+    "close": "Schließen",
+    "chat": "Chat",
+    "chatAria": "ZKas Community-Chat",
+    "chatOff": "aus · tippen zum Einrichten",
+    "chatOpen": "Globaler Raum",
+    "chatUnread": "{{n}} neu"
   },
   "hostedNotice": {
     "browserWallet": "Browser-Wallet. <b><a>Hol dir die sicherere App</a></b>."
@@ -1572,7 +1577,8 @@
     "connect": "Verbinden",
     "accentEyebrow": "Akzentfarbe",
     "changeLater": "Alles später in den Einstellungen änderbar – ohne Wallet oder Guthaben zu berühren.",
-    "myService": "Mein Dienst"
+    "myService": "Mein Dienst",
+    "recommended": "Empfohlen"
   },
   "orbotHelp": {
     "nativeTitle": "Tor benötigt Orbot",
@@ -1594,23 +1600,30 @@
   "runOnPhoneOption": {
     "title": "Auf diesem Handy ausführen",
     "desc": "Am privatesten. Kein Daemon sieht deine Transaktionen. Etwas mehr Akku.",
-    "nodeHint": "Node zum Sync – Host:Port. Standard ist der öffentliche ZKas-Node.",
+    "nodeHint": "Node zum Synchronisieren — host:port. Hier fragst du nach deinen Münzen.",
     "torTitle": "Node über Tor erreichen",
     "torDesc": "Verbirgt deine IP vor dem Node. Erfordert die Orbot-App (Tor) auf diesem Telefon.",
     "starting": "Startet…",
-    "start": "Auf diesem Handy starten"
+    "start": "Auf diesem Handy starten",
+    "nodePlaceholder": "host:port",
+    "backupHint": "Backup-Node (optional) — nur genutzt, wenn der erste nicht antwortet.",
+    "backupPlaceholder": "host:port — leer lassen",
+    "onBackupNow": "Synchronisiert gerade vom Backup: der erste Node antwortete nicht."
   },
   "whatsNew": {
-    "eyebrow": "Neu in 1.0.17",
-    "title": "Wiederherstellungsphrasen",
-    "phraseTitle": "🔑 12-Wort-Phrase (BIP-39)",
-    "phraseDesc": "Neue Wallets nutzen eine standardmäßige BIP-39-Phrase statt eines 64-Zeichen-Seeds. Dein bestehender Seed funktioniert weiter.",
-    "accountsTitle": "🗂 Konten",
-    "accountsDesc": "Konten aus einer Phrase hinzufügen – ein Backup deckt alle ab.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Über eine Zwiebel verbinden, damit der Dienst nie deine IP sieht.",
+    "eyebrow": "Neu",
+    "title": "Wallet auf dem Handy ausführen",
     "gotIt": "Verstanden",
-    "openSettings": "Einstellungen öffnen"
+    "titleOnPhone": "Wähle deine Nodes",
+    "onPhoneTitle": "Kein Server sieht dein Wallet",
+    "onPhoneDesc": "Die Wallet-Engine läuft auf diesem Handy. Deine Schlüssel und dein Betrachtungsschlüssel verlassen es nie – kein Dienst sieht dein Guthaben oder deine Zahlungen.",
+    "nodesTitle": "Zwei Nodes, mit Fallback",
+    "nodesDesc": "Wähle den Node zum Synchronisieren und optional ein Backup. Antwortet der erste nicht, wechselt das Wallet automatisch zum Backup.",
+    "onPhoneCaveat": "Wissenswert: Die erste Synchronisierung liest die Chain auf deinem Handy. Bei einem frischen Wallet geht das schnell; bei einem älteren kann es dauern. Du kannst jederzeit zurückwechseln.",
+    "switchNow": "Auf meinem Handy",
+    "switching": "Startet…",
+    "switchFailed": "Konnte die On-Device-Engine nicht starten. Du bist noch beim vorherigen Dienst.",
+    "notNow": "Später"
   },
   "mainRoot": {
     "opening": "Öffnen…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} Bestätigung",
     "confirmations_other": "{{count}} Bestätigungen",
     "verifyNote": "Der Beweis wird gegen die Transaktion auf der Chain geprüft: Der offengelegte Empfänger und Betrag müssen die vom Block aufgezeichnete Verpflichtung reproduzieren."
+  },
+  "backgroundPermission": {
+    "title": "Wallet im Hintergrund synchronisieren? ",
+    "body": "Dieses Telefon betreibt jetzt das Wallet selbst. Android versetzt schlafende Apps in einen eigenen Zeitplan, daher kann das Wallet ohne diese Erlaubnis Stunden zurückfallen und beim nächsten Öffnen musst du aufholen lassen. Mit Erlaubnis darf das Wallet etwa alle 15 Minuten aufwachen, um aktuell zu bleiben. Du kannst das später in den Android-Einstellungen ändern.",
+    "enable": "Erlauben",
+    "later": "Nicht jetzt",
+    "never": "Nie wieder fragen",
+    "noScreen": "Dieses Telefon hat keinen Bildschirm zur Akku-Optimierung. Die Hintergrund-Synchronisierung läuft trotzdem nach Android-Plan."
+  },
+  "chat": {
+    "consentTitle": "Chat einschalten?",
+    "consentPublic": "Nachrichten im globalen Raum sind öffentlich und dauerhaft. Es gibt kein Löschen.",
+    "consentIp": "Der Relay-Server sieht deine IP-Adresse und wann du online bist. Dein Wallet nicht.",
+    "consentSeparate": "Dein Chat-Name ist getrennt von deinem Wallet. Niemand sieht dein Guthaben oder deine Zahlungen.",
+    "consentEnable": "Chat einschalten",
+    "consentLater": "Nicht jetzt",
+    "consentOff": "Du kannst das in den Einstellungen wieder ausschalten.",
+    "back": "← Wallet",
+    "roomAria": "Community-Chat",
+    "state": {
+      "offline": "offline",
+      "connecting": "verbinde…",
+      "live": "live",
+      "error": "kein Relay"
+    },
+    "empty": "Noch nichts da – sag Hallo.",
+    "connecting": "Verbinde zum Relay…",
+    "anon": "anon",
+    "reply": "Antworten",
+    "replyingTo": "Antworte an {{name}}",
+    "cancel": "Abbrechen",
+    "placeholder": "Nachricht an den globalen Raum",
+    "send": "Senden",
+    "sending": "Sende…",
+    "errSend": "Diese Nachricht ging nicht raus. Prüf die Verbindung und versuchs nochmal.",
+    "errEngine": "Dieser Build enthält keine Chat-Engine, daher können Nachrichten nicht signiert werden.",
+    "nameTitle": "Namen wählen",
+    "nameWhy": "Wird neben deinen Nachrichten angezeigt. Du kannst ihn später ändern oder überspringen und als anon posten.",
+    "namePlaceholder": "Dein Name im Chat",
+    "namePermanent": "Beiträge sind öffentlich und dauerhaft – jeder kann sie lesen, und sie können nicht gelöscht werden.",
+    "nameSave": "Speichern & senden",
+    "nameSkip": "Als Anon posten",
+    "readOnly": "Dieses Gerät hat keinen Schlüssel, kann den Raum also lesen, aber nicht posten.",
+    "new": "Neu",
+    "newMessages": "Neue Nachrichten",
+    "failedTap": "Nicht gesendet – tippen zum Wiederholen",
+    "tipAddrLabel": "Adresse für Trinkgeld (optional)",
+    "tipAddrWhy": "Wenn du eine Adresse veröffentlichst, können Leute dir Trinkgeld geben. Sie verknüpft diesen Chat-Namen mit einem Zahlungsziel – lass sie leer, um nicht verknüpfbar zu bleiben.",
+    "rooms": {
+      "title": "Räume",
+      "main": "Alle",
+      "languages": "Sprachen"
+    },
+    "actions": {
+      "reply": "Antworten",
+      "react": "Reagieren",
+      "tip": "Trinkgeld senden",
+      "tipDetail": "privat",
+      "copy": "Text kopieren",
+      "profile": "Profil ansehen",
+      "mute": "Person stummschalten",
+      "unmute": "Laut schalten",
+      "report": "Melden",
+      "retry": "Erneut senden",
+      "dm": "Privatnachricht"
+    },
+    "profile": {
+      "copyKey": "Öff. Schlüssel kopieren",
+      "wasKnownAs": "Hieß zuvor „{{name}}“",
+      "muteNote": "Stummschalten betrifft nur dich. Du siehst sie dann nicht; niemand kann jemanden aus dem Netzwerk entfernen."
+    },
+    "toast": {
+      "muted": "Stummgeschaltet. Du siehst ihre Nachrichten nicht.",
+      "unmuted": "Stummsch. aufg.",
+      "copied": "Kopiert",
+      "reported": "Gemeldet und stummgeschaltet."
+    },
+    "dm": {
+      "title": "Nachrichten",
+      "open": "Direktnachrichten",
+      "openDetail": "privat",
+      "none": "Noch keine privaten Nachrichten.",
+      "start": "Privatnachricht senden",
+      "placeholder": "Private Nachricht",
+      "with": "mit {{name}}",
+      "note": "Nur ihr beide könnt das lesen. Relays sehen einen Einmalschlüssel, nicht wer mit wem spricht.",
+      "needKey": "Bitte sie, einmal zu posten, damit ihr Schlüssel bekannt ist.",
+      "headerNote": "privat"
+    },
+    "you": "du",
+    "intro": "Alle hier können lesen, was du postest, und Beiträge können nicht gelöscht werden. Tippe auf den Raum-Namen, um deine Sprache zu wählen. Wische über eine Nachricht, um zu antworten."
   }
 }

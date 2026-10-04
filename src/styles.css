@@ -3075,6 +3075,11 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
 /* An inline caution under a control: the same muted small type, marked by a rule. */
 .warn-note { border-inline-start: 2px solid rgb(var(--ember-rgb) / 0.55); padding-inline-start: 9px; }
 
+/* Chat uses LOGICAL properties throughout (inline-start/end, text-align: start).
+   The app ships Arabic, Urdu and Persian with `rtl: true`, which flips the
+   document direction — physical left/right would put the timestamp, the reply
+   quote bar and the sheet text on the wrong side in those languages, so a
+   translated chat would still read as broken. */
 /* ── Chat ───────────────────────────────────────────────────────────────── */
 /* The entry point sits in the quick-action grid. Full width, like Notes, so the
    row keeps its shape in view-only mode where Notes is not rendered. */
@@ -3090,7 +3095,7 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
 
 .chat-consent-list {
   margin: 0 0 14px;
-  padding-left: 18px;
+  padding-inline-start: 18px;
   color: var(--muted);
   font-size: 13.5px;
   line-height: 1.5;
@@ -3171,10 +3176,11 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
 .chat-meta b { font-weight: 650; }
 /* Always visible, never styled away: a nickname is not an identity. */
 .chat-fp { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 11.5px; }
-.chat-meta time { color: var(--muted); font-size: 11.5px; margin-left: auto; }
+.chat-meta time { color: var(--muted); font-size: 11.5px; margin-inline-start: auto; }
 .chat-quote {
-  border-left: 2px solid var(--border);
-  padding: 2px 0 2px 8px;
+  border-inline-start: 2px solid var(--border);
+  padding: 2px 0 2px;
+  padding-inline-start: 8px;
   margin: 4px 0;
   color: var(--muted);
   font-size: 12.5px;
@@ -3208,7 +3214,7 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
   color: var(--muted); font-size: 12.5px;
 }
 .chat-replying span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-replying .btn { margin-left: auto; }
+.chat-replying .btn { margin-inline-start: auto; }
 
 .chat-compose {
   display: flex; gap: 8px;
@@ -3287,7 +3293,7 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
 .chat-sheet { width: 100%; max-width: 560px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .chat-sheet h2 { margin-top: 0; font-size: 16px; }
 .chat-sheet-quote {
-  border-left: 2px solid var(--border); padding-left: 9px; margin: 0 0 10px;
+  border-inline-start: 2px solid var(--border); padding-inline-start: 9px; margin: 0 0 10px;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .chat-sheet-row {
@@ -3295,7 +3301,7 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
   width: 100%; min-height: 46px; padding: 11px 13px;
   background: transparent; color: var(--ink);
   border: 1px solid var(--border); border-radius: 12px;
-  font-family: inherit; font-size: 14.5px; font-weight: 550; text-align: left; cursor: pointer;
+  font-family: inherit; font-size: 14.5px; font-weight: 550; text-align: start; cursor: pointer;
 }
 .chat-sheet-row + .chat-sheet-row { margin-top: 7px; }
 .chat-sheet-row:active { background: rgb(var(--ember-rgb) / 0.09); }
@@ -3309,7 +3315,7 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
    size like one. */
 .chat-title {
   background: none; border: 0; padding: 0; font-family: inherit;
-  text-align: left; cursor: pointer; color: inherit;
+  text-align: start; cursor: pointer; color: inherit;
 }
 /* A sheet can now hold twenty rooms, so it scrolls instead of growing past the
    screen — and stops short of the top so it still reads as a sheet. */

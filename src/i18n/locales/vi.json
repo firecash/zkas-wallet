@@ -588,7 +588,12 @@
     "activityAria": "Hoạt động của ví",
     "sectionsAria": "Mục trong ví",
     "loading": "Đang tải…",
-    "close": "Đóng"
+    "close": "Đóng",
+    "chat": "Trò chuyện",
+    "chatAria": "Trò chuyện cộng đồng ZKas",
+    "chatOff": "tắt · chạm để thiết lập",
+    "chatOpen": "phòng chung",
+    "chatUnread": "{{n}} mới"
   },
   "hostedNotice": {
     "browserWallet": "Ví trình duyệt. <b><a>Tải ứng dụng an toàn hơn</a></b>."
@@ -1729,7 +1734,8 @@
     "connect": "Kết nối",
     "accentEyebrow": "Màu nhấn",
     "changeLater": "Bạn có thể thay đổi mục này sau trong Cài đặt, không ảnh hưởng đến ví hay số dư.",
-    "myService": "Dịch vụ của tôi"
+    "myService": "Dịch vụ của tôi",
+    "recommended": "Khuyến nghị"
   },
   "orbotHelp": {
     "nativeTitle": "Tor cần Orbot",
@@ -1751,23 +1757,30 @@
   "runOnPhoneOption": {
     "title": "Chạy trên điện thoại này",
     "desc": "Riêng tư nhất. Không daemon nào thấy giao dịch. Tốn pin hơn chút.",
-    "nodeHint": "Nút để đồng bộ — host:port. Mặc định là nút ZKas công cộng.",
+    "nodeHint": "Nút để đồng bộ — host:port. Đây là nơi bạn hỏi về đồng của mình.",
     "torTitle": "Kết nối tới nút qua Tor",
     "torDesc": "Ẩn IP của bạn khỏi nút. Cần Orbot (Tor) chạy trên máy.",
     "starting": "Đang khởi động…",
-    "start": "Bắt đầu trên điện thoại này"
+    "start": "Bắt đầu trên điện thoại này",
+    "nodePlaceholder": "host:port",
+    "backupHint": "Nút dự phòng (tùy chọn) — chỉ dùng nếu nút đầu không trả lời.",
+    "backupPlaceholder": "host:port — để trống nếu không",
+    "onBackupNow": "Đang đồng bộ từ nút dự phòng: nút đầu không trả lời."
   },
   "whatsNew": {
-    "eyebrow": "Mới trong 1.0.17",
-    "title": "Cụm từ khôi phục",
-    "phraseTitle": "🔑 Cụm 12 từ (BIP-39)",
-    "phraseDesc": "Ví mới dùng cụm BIP-39 thay vì hạt giống 64 ký tự. Hạt giống cũ vẫn dùng được.",
-    "accountsTitle": "🗂 Tài khoản",
-    "accountsDesc": "Thêm tài khoản từ một cụm — một bản sao lưu cho tất cả.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Kết nối qua onion để dịch vụ không thấy IP của bạn.",
+    "eyebrow": "Mới",
+    "title": "Chạy ví trên điện thoại của bạn",
     "gotIt": "Đã hiểu",
-    "openSettings": "Mở cài đặt"
+    "titleOnPhone": "Chọn nút của bạn",
+    "onPhoneTitle": "Không máy chủ nào thấy ví của bạn",
+    "onPhoneDesc": "Công cụ ví chạy trên điện thoại này. Khóa và khóa xem của bạn không bao giờ rời khỏi nó, nên không dịch vụ nào thấy số dư hay khoản thanh toán của bạn.",
+    "nodesTitle": "Hai nút, có dự phòng",
+    "nodesDesc": "Chọn nút bạn đồng bộ từ đó và một nút dự phòng tùy chọn. Nếu nút đầu không trả lời, ví tự động chuyển sang nút dự phòng.",
+    "onPhoneCaveat": "Đáng biết: lần đồng bộ đầu đọc chuỗi trên điện thoại của bạn. Với ví mới tạo thì nhanh; với ví cũ có thể mất một lúc, và bạn có thể chuyển lại bất kỳ lúc nào.",
+    "switchNow": "Chạy trên điện thoại",
+    "switching": "Đang khởi động…",
+    "switchFailed": "Không thể khởi động công cụ trên thiết bị. Bạn vẫn đang dùng dịch vụ trước.",
+    "notNow": "Để sau"
   },
   "mainRoot": {
     "opening": "Đang mở…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} xác nhận",
     "confirmations_other": "{{count}} xác nhận",
     "verifyNote": "Bằng chứng được kiểm tra với giao dịch trên chuỗi: người nhận và số lượng được tiết lộ phải khớp với cam kết mà khối đã ghi lại."
+  },
+  "chat": {
+    "nameSkip": "Ẩn danh",
+    "readOnly": "Thiết bị này không có khóa, chỉ đọc được tin nhắn, không đăng được.",
+    "new": "Mới",
+    "newMessages": "Tin nhắn mới",
+    "failedTap": "Chưa gửi — chạm để thử lại",
+    "tipAddrLabel": "Địa chỉ nhận tip (không bắt buộc)",
+    "tipAddrWhy": "Đăng địa chỉ để người khác tip bạn. Nó liên kết tên chat này với một đích thanh toán, nên để trống để không bị liên kết.",
+    "rooms": {
+      "title": "Phòng",
+      "main": "Mọi người",
+      "languages": "Ngôn ngữ"
+    },
+    "actions": {
+      "reply": "Trả lời",
+      "react": "Thả cảm",
+      "tip": "Gửi tip",
+      "tipDetail": "riêng",
+      "copy": "Sao chép",
+      "profile": "Xem hồ sơ",
+      "mute": "Tắt tiếng người này",
+      "unmute": "Bật tiếng",
+      "report": "Báo cáo",
+      "retry": "Gửi lại",
+      "dm": "Nhắn riêng"
+    },
+    "profile": {
+      "copyKey": "Sao chép khóa công khai",
+      "wasKnownAs": "Trước đây dùng tên “{{name}}”",
+      "muteNote": "Tắt tiếng chỉ dành riêng bạn. Nó ẩn họ khỏi bạn; không ai có thể xóa một người khỏi mạng."
+    },
+    "toast": {
+      "muted": "Đã tắt tiếng. Bạn sẽ không thấy tin nhắn của họ.",
+      "unmuted": "Đã bật tiếng.",
+      "copied": "Đã sao chép",
+      "reported": "Đã báo cáo và tắt tiếng."
+    },
+    "dm": {
+      "title": "Tin nhắn",
+      "open": "Tin nhắn riêng",
+      "openDetail": "riêng",
+      "none": "Chưa có tin nhắn riêng nào.",
+      "start": "Nhắn riêng",
+      "placeholder": "Tin nhắn riêng",
+      "with": "với {{name}}",
+      "note": "Chỉ hai bạn đọc được. Relay thấy khóa dùng một lần, không biết ai nói với ai.",
+      "needKey": "Yêu cầu họ đăng một lần để khóa được biết.",
+      "headerNote": "riêng"
+    },
+    "you": "bạn",
+    "intro": "Mọi người ở đây đều đọc được bài bạn đăng, và bài không thể xóa. Chạm vào tên phòng để chọn ngôn ngữ. Vuốt tin nhắn để trả lời.",
+    "consentTitle": "Bật trò chuyện?",
+    "consentPublic": "Tin nhắn trong phòng chung là công khai và vĩnh viễn. Không thể xóa.",
+    "consentIp": "Máy chủ relay thấy địa chỉ IP và lúc bạn online. Ví của bạn thì không.",
+    "consentSeparate": "Tên trò chuyện tách biệt với ví. Không ai thấy số dư hay khoản thanh toán của bạn.",
+    "consentEnable": "Bật trò chuyện",
+    "consentLater": "Để sau",
+    "consentOff": "Bạn có thể tắt lại trong Cài đặt.",
+    "back": "← Ví",
+    "roomAria": "Trò chuyện cộng đồng",
+    "state": {
+      "offline": "ngoại tuyến",
+      "connecting": "đang kết nối…",
+      "live": "trực tiếp",
+      "error": "không relay"
+    },
+    "empty": "Chưa có gì — hãy chào hỏi.",
+    "connecting": "Đang kết nối relay…",
+    "anon": "nặc danh",
+    "reply": "Trả lời",
+    "replyingTo": "Đang trả lời {{name}}",
+    "cancel": "Hủy",
+    "placeholder": "Nhắn phòng chung",
+    "send": "Gửi",
+    "sending": "Đang gửi…",
+    "errSend": "Tin nhắn chưa gửi được. Kiểm tra kết nối và thử lại.",
+    "errEngine": "Bản dựng này không có công cụ trò chuyện nên không thể ký tin nhắn.",
+    "nameTitle": "Chọn tên",
+    "nameWhy": "Hiển thị cạnh tin nhắn. Bạn có thể đổi sau, hoặc bỏ qua và đăng với tư cách nặc danh.",
+    "namePlaceholder": "Tên của bạn trong trò chuyện",
+    "namePermanent": "Bài đăng là công khai và vĩnh viễn — ai cũng đọc được và không thể xóa.",
+    "nameSave": "Lưu và gửi"
+  },
+  "backgroundPermission": {
+    "title": "Cho phép ví đồng bộ trong nền?​",
+    "body": "Điện thoại này đang tự chạy ví. Android có thể tạm dừng ứng dụng, khiến ví bị chậm hàng giờ và lần sau mở bạn phải chờ bắt kịp. Cho phép sẽ giúp ví thức dậy ~15 phút/lần để luôn cập nhật. Bạn có thể thay đổi sau trong cài đặt Android.",
+    "enable": "Cho phép",
+    "later": "Để sau",
+    "never": "Đừng hỏi nữa",
+    "noScreen": "Điện thoại này không có màn hình tối ưu pin. Đồng bộ nền vẫn chạy theo lịch của Android."
   }
 }

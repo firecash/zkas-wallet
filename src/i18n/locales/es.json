@@ -588,7 +588,12 @@
     "activityAria": "Actividad de la billetera",
     "sectionsAria": "Secciones de la billetera",
     "loading": "Cargando…",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "chat": "Chat​",
+    "chatAria": "Chat comunitario ZKas​",
+    "chatOff": "apagado · toca para configurar​",
+    "chatOpen": "sala global​",
+    "chatUnread": "{{n}} nuevo​"
   },
   "hostedNotice": {
     "browserWallet": "Billetera web. <b><a>Consigue la app más segura</a></b>."
@@ -1782,7 +1787,8 @@
     "connect": "Conectar",
     "accentEyebrow": "Color de acento",
     "changeLater": "Puedes cambiar esto luego en Configuración, sin afectar tu billetera ni su saldo.",
-    "myService": "Mi servicio"
+    "myService": "Mi servicio",
+    "recommended": "Recomendado"
   },
   "orbotHelp": {
     "nativeTitle": "Tor necesita Orbot",
@@ -1804,23 +1810,30 @@
   "runOnPhoneOption": {
     "title": "Ejecutar en este teléfono",
     "desc": "Más privado. Ningún daemon ve tus transacciones. Un poco más de batería.",
-    "nodeHint": "Nodo para sincronizar — host:puerto. El predeterminado es el nodo público de ZKas.",
+    "nodeHint": "Nodo para sincronizar — host:puerto. A este le preguntas por tus monedas.",
     "torTitle": "Conectar al nodo por Tor",
     "torDesc": "Oculta tu IP del nodo. Requiere la app Orbot (Tor) funcionando en este teléfono.",
     "starting": "Iniciando…",
-    "start": "Iniciar en este teléfono"
+    "start": "Iniciar en este teléfono",
+    "nodePlaceholder": "host:puerto",
+    "backupHint": "Nodo de respaldo (opcional) — solo se usa si el primero deja de responder.",
+    "backupPlaceholder": "host:puerto — vacío si no",
+    "onBackupNow": "Sincronizando desde el respaldo: el primer nodo no respondía."
   },
   "whatsNew": {
-    "eyebrow": "Novedades en 1.0.17",
-    "title": "Frases de recuperación",
-    "phraseTitle": "🔑 Frase de 12 palabras (BIP-39)",
-    "phraseDesc": "Las billeteras nuevas usan una frase BIP-39 estándar en lugar de una semilla de 64 caracteres. Tu semilla actual sigue funcionando.",
-    "accountsTitle": "🗂 Cuentas",
-    "accountsDesc": "Añade cuentas desde una frase — una copia de seguridad las cubre todas.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Conecta por una onion para que el servicio nunca vea tu IP.",
+    "eyebrow": "Nuevo",
+    "title": "Ejecuta la billetera en tu teléfono",
     "gotIt": "Entendido",
-    "openSettings": "Abrir configuración"
+    "titleOnPhone": "Elige tus nodos",
+    "onPhoneTitle": "Ningún servidor ve tu billetera",
+    "onPhoneDesc": "El motor de la billetera corre en este teléfono. Tus claves y tu clave de visualización nunca lo abandonan, así que ningún servicio puede ver tu saldo ni tus pagos.",
+    "nodesTitle": "Dos nodos, con respaldo",
+    "nodesDesc": "Elige el nodo para sincronizar y un respaldo opcional. Si el primero deja de responder, la billetera cambia al respaldo sola.",
+    "onPhoneCaveat": "Para saber: la primera sincronización lee la cadena en tu teléfono. Para una billetera reciente es rápida; para una más vieja puede tardar, y puedes volver al servicio anterior cuando quieras.",
+    "switchNow": "Ejecutar en mi teléfono",
+    "switching": "Iniciando…",
+    "switchFailed": "No se pudo iniciar el motor local. Sigues en el servicio anterior.",
+    "notNow": "Ahora no"
   },
   "mainRoot": {
     "opening": "Abriendo…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} confirmación",
     "confirmations_other": "{{count}} confirmaciones",
     "verifyNote": "La prueba se verifica contra la transacción en la cadena: el destinatario y el monto revelados deben reproducir el compromiso que registró el bloque."
+  },
+  "chat": {
+    "nameSkip": "Anónimo",
+    "readOnly": "Sin clave, solo puedes leer, no publicar.",
+    "new": "nuevo",
+    "newMessages": "Mensajes nuevos",
+    "failedTap": "No enviado — toca para reintentar",
+    "tipAddrLabel": "Dirección para propinas (opcional)",
+    "tipAddrWhy": "Publicar una dirección permite que te den propinas. Vincula este nombre a un destino de pago; déjala vacía para no ser rastreable.",
+    "rooms": {
+      "title": "Salas",
+      "main": "Todos",
+      "languages": "Idiomas"
+    },
+    "actions": {
+      "reply": "Responder",
+      "react": "Reaccionar",
+      "tip": "Dar propina",
+      "tipDetail": "privado",
+      "copy": "Copiar texto",
+      "profile": "Ver perfil",
+      "mute": "Silenciar a esta persona",
+      "unmute": "Silenciar",
+      "report": "Reportar",
+      "retry": "Reintentar envío",
+      "dm": "Mensaje privado"
+    },
+    "profile": {
+      "copyKey": "Copiar clave pública",
+      "wasKnownAs": "Antes usaba el nombre “{{name}}”",
+      "muteNote": "Silenciar es solo para ti. Oculta a esa persona; nadie puede eliminar a alguien de la red."
+    },
+    "toast": {
+      "muted": "Silenciado. No verás sus mensajes.",
+      "unmuted": "Silenciado.",
+      "copied": "Copiado",
+      "reported": "Reportado y silenciado."
+    },
+    "dm": {
+      "title": "Mensajes",
+      "open": "Mensajes directos",
+      "openDetail": "privado",
+      "none": "Aún sin mensajes privados.",
+      "start": "Mensaje privado",
+      "placeholder": "Mensaje privado",
+      "with": "con {{name}}",
+      "note": "Solo ustedes dos pueden leerlo. Los relays ven una clave única, no quién habla con quién.",
+      "needKey": "Pídele que publique una vez para que su clave sea conocida.",
+      "headerNote": "privado"
+    },
+    "you": "tú",
+    "intro": "Todos aquí pueden leer lo que publicas y las publicaciones no se pueden eliminar. Toca el nombre de la sala para elegir tu idioma. Desliza un mensaje para responder.",
+    "consentTitle": "¿Activar el chat?​",
+    "consentPublic": "Los mensajes en la sala global son públicos y permanentes. No se pueden eliminar.​",
+    "consentIp": "El servidor relay ve tu IP y cuándo estás en línea. Tu billetera no.​",
+    "consentSeparate": "Tu nombre en el chat es independiente de tu billetera. Nadie puede ver tu saldo ni tus pagos.​",
+    "consentEnable": "Activar chat​",
+    "consentLater": "Ahora no​",
+    "consentOff": "Puedes desactivarlo después en Configuración.​",
+    "back": "← Billetera​",
+    "roomAria": "Chat comunitario​",
+    "state": {
+      "offline": "desconectado​",
+      "connecting": "conectando…​",
+      "live": "en vivo​",
+      "error": "sin relay​"
+    },
+    "empty": "Aún no hay nada — saluda.​",
+    "connecting": "Conectando al relay…​",
+    "anon": "anónimo​",
+    "reply": "Responder​",
+    "replyingTo": "Respondiendo a {{name}}​",
+    "cancel": "Cancelar​",
+    "placeholder": "Mensaje a la sala global​",
+    "send": "Enviar​",
+    "sending": "Enviando…​",
+    "errSend": "Ese mensaje no salió. Revisa la conexión e inténtalo de nuevo.​",
+    "errEngine": "Esta versión no incluye el motor de chat, así que los mensajes no pueden firmarse.​",
+    "nameTitle": "Elige un nombre​",
+    "nameWhy": "Se mostrará junto a tus mensajes. Puedes cambiarlo después, o saltarlo y publicar como anónimo.​",
+    "namePlaceholder": "Tu nombre en el chat​",
+    "namePermanent": "Las publicaciones son públicas y permanentes — cualquiera puede leerlas y no se pueden eliminar.​",
+    "nameSave": "Guardar y enviar​"
+  },
+  "backgroundPermission": {
+    "title": "¿Sincronizar la billetera en segundo plano?​",
+    "body": "Este teléfono ahora ejecuta la billetera. Android pone las apps en reposo, así que sin esto la billetera puede atrasarse horas y al abrirla tendrás que esperar que se ponga al día. Permitirlo deja que la billetera se active cada ~15 minutos para estar al día. Puedes cambiarlo después en Ajustes de Android.​",
+    "enable": "Permitir​",
+    "later": "Ahora no​",
+    "never": "No preguntar más​",
+    "noScreen": "Este teléfono no tiene pantalla de optimización de batería. La sincronización en segundo plano igual funciona, según el horario de Android.​"
   }
 }

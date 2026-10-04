@@ -588,7 +588,12 @@
     "activityAria": "Aktivitas dompet",
     "sectionsAria": "Bagian dompet",
     "loading": "Memuat…",
-    "close": "Tutup"
+    "close": "Tutup",
+    "chat": "Obrolan",
+    "chatAria": "Obrolan komunitas ZKas",
+    "chatOff": "mati · ketuk untuk atur",
+    "chatOpen": "ruang global",
+    "chatUnread": "{{n}} baru"
   },
   "hostedNotice": {
     "browserWallet": "Dompet browser. <b><a>Dapatkan aplikasi lebih aman</a></b>."
@@ -1761,7 +1766,8 @@
     "connect": "Hubungkan",
     "accentEyebrow": "Warna aksen",
     "changeLater": "Semua ini bisa diubah nanti di Pengaturan, tanpa menyentuh dompet atau saldo.",
-    "myService": "Layanan saya"
+    "myService": "Layanan saya",
+    "recommended": "Disarankan"
   },
   "mainNav": {
     "mine": "Tambang",
@@ -1804,23 +1810,30 @@
   "runOnPhoneOption": {
     "title": "Jalankan di ponsel ini",
     "desc": "Paling pribadi. Daemon tak pernah lihat transaksi Anda. Sedikit lebih boros baterai.",
-    "nodeHint": "Node untuk sinkron — host:port. Bawaan adalah node publik ZKas.",
+    "nodeHint": "Node untuk sinkron — host:port. Inilah yang Anda tanya tentang koin Anda.",
     "torTitle": "Jangkau node melalui Tor",
     "torDesc": "Sembunyikan IP dari node. Butuh aplikasi Orbot (Tor) berjalan di HP ini.",
     "starting": "Memulai…",
-    "start": "Mulai di ponsel ini"
+    "start": "Mulai di ponsel ini",
+    "nodePlaceholder": "host:port",
+    "backupHint": "Node cadangan (opsional) — hanya dipakai jika yang pertama berhenti merespons.",
+    "backupPlaceholder": "host:port — kosongkan jika tidak ada",
+    "onBackupNow": "Sedang menyinkron dari cadangan: node pertama tidak merespons."
   },
   "whatsNew": {
-    "eyebrow": "Baru di 1.0.17",
-    "title": "Frasa pemulihan",
-    "phraseTitle": "🔑 Frasa 12 kata (BIP-39)",
-    "phraseDesc": "Dompet baru pakai frasa BIP-39 standar, bukan seed 64 karakter. Seed lama tetap berfungsi.",
-    "accountsTitle": "🗂 Akun",
-    "accountsDesc": "Tambah akun dari satu frasa — satu cadangan mencakup semuanya.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Hubung lewat onion agar layanan tak pernah lihat IP Anda.",
+    "eyebrow": "Baru",
+    "title": "Jalankan dompet di ponsel Anda",
     "gotIt": "Mengerti",
-    "openSettings": "Buka pengaturan"
+    "titleOnPhone": "Pilih node Anda",
+    "onPhoneTitle": "Tak ada server yang lihat dompet Anda",
+    "onPhoneDesc": "Mesin dompet berjalan di ponsel ini. Kunci dan kunci lihat Anda tak pernah meninggalkannya, jadi tak ada layanan yang bisa melihat saldo atau pembayaran Anda.",
+    "nodesTitle": "Dua node, dengan cadangan",
+    "nodesDesc": "Pilih node untuk sinkron, dan cadangan opsional. Jika yang pertama berhenti merespons, dompet otomatis beralih ke cadangan.",
+    "onPhoneCaveat": "Perlu diketahui: sinkron pertama membaca rantai di ponsel Anda. Untuk dompet yang baru dibuat, itu cepat; untuk yang lama bisa memakan waktu, dan Anda bisa kembali kapan saja.",
+    "switchNow": "Jalankan di ponsel",
+    "switching": "Memulai…",
+    "switchFailed": "Gagal memulai mesin di perangkat. Anda masih di layanan sebelumnya.",
+    "notNow": "Nanti"
   },
   "mainRoot": {
     "opening": "Membuka…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} konfirmasi",
     "confirmations_other": "{{count}} konfirmasi",
     "verifyNote": "Bukti diperiksa terhadap transaksi di rantai: penerima dan jumlah yang diungkapkan harus mereproduksi komitmen yang dicatat oleh blok."
+  },
+  "chat": {
+    "nameSkip": "Anonim",
+    "readOnly": "Perangkat ini tidak memiliki kunci, jadi hanya bisa membaca ruangan, tidak bisa mengirim.",
+    "new": "baru",
+    "newMessages": "Pesan baru",
+    "failedTap": "Gagal kirim — ketuk untuk ulang",
+    "tipAddrLabel": "Alamat untuk tip (opsional)",
+    "tipAddrWhy": "Menerbitkan alamat memungkinkan orang memberi tip. Ini menghubungkan nama obrolan ke tujuan pembayaran; kosongkan agar tetap tidak terhubung.",
+    "rooms": {
+      "title": "Ruangan",
+      "main": "Semua",
+      "languages": "Bahasa"
+    },
+    "actions": {
+      "reply": "Balas",
+      "react": "Reaksi",
+      "tip": "Kirim tip",
+      "tipDetail": "pribadi",
+      "copy": "Salin teks",
+      "profile": "Lihat profil",
+      "mute": "Bisukan orang ini",
+      "unmute": "Aktifkan",
+      "report": "Laporkan",
+      "retry": "Coba kirim lagi",
+      "dm": "Pesan pribadi"
+    },
+    "profile": {
+      "copyKey": "Salin kunci publik",
+      "wasKnownAs": "Sebelumnya menggunakan nama “{{name}}”",
+      "muteNote": "Pembisuan hanya untuk Anda. Ini menyembunyikan mereka dari Anda; tidak ada yang bisa menghapus seseorang dari jaringan."
+    },
+    "toast": {
+      "muted": "Telah dibisukan. Anda tidak akan melihat pesan mereka.",
+      "unmuted": "Aktif kembali.",
+      "copied": "Tersalin",
+      "reported": "Dilaporkan dan dibisukan."
+    },
+    "dm": {
+      "title": "Pesan",
+      "open": "Pesan langsung",
+      "openDetail": "pribadi",
+      "none": "Belum ada pesan pribadi.",
+      "start": "Pesan pribadi",
+      "placeholder": "Pesan pribadi",
+      "with": "dengan {{name}}",
+      "note": "Hanya Anda berdua yang bisa membaca ini. Relay melihat kunci sekali pakai, bukan siapa bicara dengan siapa.",
+      "needKey": "Minta mereka mengirim sekali agar kunci mereka diketahui.",
+      "headerNote": "pribadi"
+    },
+    "you": "Anda",
+    "intro": "Semua orang di sini bisa membaca kiriman Anda, dan kiriman tidak bisa dihapus. Ketuk nama ruangan untuk memilih bahasa. Geser pesan untuk membalas.",
+    "consentTitle": "Aktifkan obrolan?",
+    "consentPublic": "Pesan di ruang global bersifat publik dan permanen. Tidak ada fitur hapus.",
+    "consentIp": "Server relay melihat alamat IP Anda dan kapan Anda daring. Dompet Anda tidak.",
+    "consentSeparate": "Nama obrolan Anda terpisah dari dompet. Tidak ada yang bisa melihat saldo atau pembayaran Anda.",
+    "consentEnable": "Aktifkan obrolan",
+    "consentLater": "Nanti",
+    "consentOff": "Fitur ini bisa dimatikan lagi di Pengaturan.",
+    "back": "← Dompet",
+    "roomAria": "Obrolan komunitas",
+    "state": {
+      "offline": "luring",
+      "connecting": "menghubungkan…",
+      "live": "daring",
+      "error": "tanpa relay"
+    },
+    "empty": "Belum ada apa-apa — sapa saja.",
+    "connecting": "Menghubungkan ke relay…",
+    "anon": "anonim",
+    "reply": "Balas",
+    "replyingTo": "Membalas {{name}}",
+    "cancel": "Batal",
+    "placeholder": "Kirim pesan ke ruang global",
+    "send": "Kirim",
+    "sending": "Mengirim…",
+    "errSend": "Pesan tidak terkirim. Periksa koneksi dan coba lagi.",
+    "errEngine": "Versi ini tidak menyertakan mesin obrolan, sehingga pesan tidak bisa ditandatangani.",
+    "nameTitle": "Pilih nama",
+    "nameWhy": "Ditampilkan di samping pesan Anda. Bisa diubah nanti, atau dilewati untuk tetap anonim.",
+    "namePlaceholder": "Nama Anda di obrolan",
+    "namePermanent": "Postingan bersifat publik dan permanen — siapa pun bisa membacanya dan tidak bisa dihapus.",
+    "nameSave": "Simpan & kirim"
+  },
+  "backgroundPermission": {
+    "title": "Sinkronkan dompet di latar belakang?",
+    "body": "Ponsel ini kini menjalankan dompet itu sendiri. Android menjadwalkan aplikasi yang tidak aktif, sehingga tanpa izin ini dompet bisa tertinggal berjam-jam dan saat dibuka Anda akan menunggu sinkronisasi. Dengan izin ini, dompet akan terbangun setiap ~15 menit untuk tetap mutakhir. Pengaturan ini bisa diubah nanti di setelan Android.",
+    "enable": "Izinkan",
+    "later": "Nanti",
+    "never": "Jangan tanya lagi",
+    "noScreen": "Ponsel ini tidak memiliki layar pengoptimalan baterai. Sinkronisasi latar tetap berjalan sesuai jadwal Android."
   }
 }

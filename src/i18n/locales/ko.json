@@ -588,7 +588,12 @@
     "activityAria": "거래 내역",
     "sectionsAria": "지갑 메뉴",
     "loading": "불러오는 중…",
-    "close": "닫기"
+    "close": "닫기",
+    "chat": "채팅",
+    "chatAria": "ZKas 커뮤니티 채팅",
+    "chatOff": "꺼짐 · 탭하여 설정",
+    "chatOpen": "전체방",
+    "chatUnread": "{{n}}개 새 메시지"
   },
   "hostedNotice": {
     "browserWallet": "브라우저 지갑입니다. <b><a>더 안전한 앱 받기</a></b>."
@@ -1782,7 +1787,8 @@
     "connect": "연결",
     "accentEyebrow": "강조 색상",
     "changeLater": "이 설정은 나중에 설정에서 변경 가능하며, 지갑이나 잔액에는 영향이 없습니다.",
-    "myService": "내 서비스"
+    "myService": "내 서비스",
+    "recommended": "추천"
   },
   "orbotHelp": {
     "nativeTitle": "Tor에 Orbot 필요",
@@ -1804,23 +1810,30 @@
   "runOnPhoneOption": {
     "title": "이 휴대폰에서 실행",
     "desc": "가장 프라이빗함. 데몬이 거래를 보지 않음. 배터리 소모 약간 증가.",
-    "nodeHint": "동기화할 노드 — host:port. 기본값은 공개 ZKas 노드입니다.",
+    "nodeHint": "동기화할 노드 — host:port. 코인 정보를 요청할 대상입니다.",
     "torTitle": "Tor로 노드에 연결",
     "torDesc": "IP를 노드로부터 숨깁니다. 휴대폰에서 Orbot 앱(Tor)이 실행 중이어야 합니다.",
     "starting": "시작 중…",
-    "start": "이 휴대폰에서 시작"
+    "start": "이 휴대폰에서 시작",
+    "nodePlaceholder": "host:port",
+    "backupHint": "백업 노드(선택) — 첫 노드가 응답하지 않을 때만 사용합니다.",
+    "backupPlaceholder": "host:port — 비우면 없음",
+    "onBackupNow": "현재 백업 노드에서 동기화 중입니다. 첫 노드가 응답하지 않았습니다."
   },
   "whatsNew": {
-    "eyebrow": "1.0.17의 새로운 기능",
-    "title": "복구 구문",
-    "phraseTitle": "🔑 12단어 구문 (BIP-39)",
-    "phraseDesc": "새 지갑은 64자 시드 대신 표준 BIP-39 구문을 사용합니다. 기존 시드는 계속 작동합니다.",
-    "accountsTitle": "🗂 계정",
-    "accountsDesc": "하나의 구문에서 계정을 추가하세요. 하나의 백업으로 모두 커버됩니다.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "onion을 통해 연결하여 서비스가 IP를 보지 못하게 합니다.",
+    "eyebrow": "새로움",
+    "title": "휴대폰에서 지갑 실행",
     "gotIt": "확인",
-    "openSettings": "설정 열기"
+    "titleOnPhone": "노드 선택",
+    "onPhoneTitle": "서버가 지갑을 볼 수 없음",
+    "onPhoneDesc": "지갑 엔진이 이 휴대폰에서 실행됩니다. 키와 보기 키가 기기를 떠나지 않아, 어떤 서비스도 잔액이나 결제를 볼 수 없습니다.",
+    "nodesTitle": "두 개 노드, 자동 전환",
+    "nodesDesc": "동기화할 노드와 선택적 백업을 선택하세요. 첫 노드가 응답하지 않으면 지갑이 자동으로 백업으로 전환됩니다.",
+    "onPhoneCaveat": "참고: 첫 동기화는 휴대폰에서 체인을 읽습니다. 최근 생성된 지갑은 빠르지만, 오래된 지갑은 시간이 걸릴 수 있습니다. 언제든지 이전 서비스로 전환할 수 있습니다.",
+    "switchNow": "휴대폰에서 실행",
+    "switching": "시작 중…",
+    "switchFailed": "기기 내 엔진을 시작할 수 없습니다. 이전 서비스를 계속 사용합니다.",
+    "notNow": "나중에"
   },
   "mainRoot": {
     "opening": "여는 중…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}}회 확인",
     "confirmations_other": "{{count}}회 확인",
     "verifyNote": "증명은 체인 상의 거래와 대조됩니다. 공개된 수신자와 금액이 블록에 기록된 커밋먼트를 재현해야 합니다."
+  },
+  "chat": {
+    "nameSkip": "익명으로",
+    "readOnly": "이 기기에는 키가 없어서 읽기만 가능하고 글을 쓸 수 없어요.",
+    "new": "새글",
+    "newMessages": "새 메시지",
+    "failedTap": "전송 실패 — 탭하여 재시도",
+    "tipAddrLabel": "팁 받을 주소 (선택)",
+    "tipAddrWhy": "주소를 공개하면 팁을 받을 수 있어요. 이 채팅 이름을 결제 대상과 연결하므로, 연결을 원하지 않으면 비워두세요.",
+    "rooms": {
+      "title": "방",
+      "main": "전체",
+      "languages": "언어별"
+    },
+    "actions": {
+      "reply": "답글",
+      "react": "반응",
+      "tip": "팁 보내기",
+      "tipDetail": "비공개",
+      "copy": "텍스트 복사",
+      "profile": "프로필 보기",
+      "mute": "이 사람 음소거",
+      "unmute": "음소거 해제",
+      "report": "신고",
+      "retry": "다시 보내기",
+      "dm": "비공개 메시지"
+    },
+    "profile": {
+      "copyKey": "공개 키 복사",
+      "wasKnownAs": "이전에 “{{name}}” 이름을 사용했어요",
+      "muteNote": "음소거는 나만 적용돼요. 상대방이 보이지 않게 숨길 뿐, 네트워크에서 누군가를 제거할 수는 없어요."
+    },
+    "toast": {
+      "muted": "음소거됨. 상대방의 메시지가 보이지 않아요.",
+      "unmuted": "음소거 해제됨.",
+      "copied": "복사됨",
+      "reported": "신고 및 음소거됨."
+    },
+    "dm": {
+      "title": "메시지",
+      "open": "비공개 메시지",
+      "openDetail": "비공개",
+      "none": "아직 비공개 메시지가 없어요.",
+      "start": "비공개 메시지 보내기",
+      "placeholder": "비공개 메시지",
+      "with": "{{name}} 님과",
+      "note": "둘만 읽을 수 있어요. 릴레이는 일회용 키만 볼 뿐, 누가 누구에게 말하는지는 알 수 없어요.",
+      "needKey": "상대방이 한 번 글을 올려야 키를 알 수 있어요.",
+      "headerNote": "비공개"
+    },
+    "you": "나",
+    "intro": "여기 있는 모든 사람이 당신의 글을 읽을 수 있으며, 글은 삭제할 수 없어요. 방 이름을 탭하여 언어를 선택하세요. 메시지를 스와이프하면 답글을 달 수 있어요.",
+    "consentTitle": "채팅을 켤까요?​",
+    "consentPublic": "전체방 메시지는 공개되며 영구 저장됩니다. 삭제할 수 없습니다.",
+    "consentIp": "릴레이 서버가 사용자의 IP 주소와 온라인 상태를 확인합니다. 지갑은 확인하지 않습니다.",
+    "consentSeparate": "채팅 이름은 지갑과 별개입니다. 아무도 잔액이나 결제 내역을 볼 수 없습니다.",
+    "consentEnable": "채팅 켜기",
+    "consentLater": "나중에",
+    "consentOff": "설정에서 다시 끌 수 있습니다.",
+    "back": "← 지갑",
+    "roomAria": "커뮤니티 채팅",
+    "state": {
+      "offline": "오프라인",
+      "connecting": "연결 중…",
+      "live": "실시간",
+      "error": "릴레이 없음"
+    },
+    "empty": "아직 아무것도 없습니다 — 인사해 보세요.",
+    "connecting": "릴레이에 연결 중…",
+    "anon": "익명",
+    "reply": "답글",
+    "replyingTo": "{{name}}에게 답글",
+    "cancel": "취소",
+    "placeholder": "전체방에 메시지 보내기",
+    "send": "보내기",
+    "sending": "보내는 중…",
+    "errSend": "메시지가 전송되지 않았습니다. 연결을 확인하고 다시 시도하세요.",
+    "errEngine": "이 빌드에는 채팅 엔진이 포함되지 않아 메시지에 서명할 수 없습니다.",
+    "nameTitle": "이름 선택",
+    "nameWhy": "메시지 옆에 표시됩니다. 나중에 변경할 수 있으며, 건너뛰고 익명으로 게시할 수 있습니다.",
+    "namePlaceholder": "채팅에서 사용할 이름",
+    "namePermanent": "게시물은 공개되며 영구 저장됩니다. 누구나 읽을 수 있고 삭제할 수 없습니다.",
+    "nameSave": "저장 및 보내기"
+  },
+  "backgroundPermission": {
+    "title": "지갑 동기화를 백그라운드에서 허용할까요?​",
+    "body": "이 휴대폰에서 지갑을 직접 실행 중입니다. Android는 대기 앱을 자체 일정에 따라 관리하므로, 이 권한이 없으면 지갑이 몇 시간 뒤처질 수 있으며 다음에 열 때 따라잡을 때까지 기다려야 합니다. 허용하면 약 15분마다 깨어나 최신 상태를 유지합니다. 나중에 Android 설정에서 변경할 수 있습니다.",
+    "enable": "허용",
+    "later": "나중에",
+    "never": "다시 묻지 않음",
+    "noScreen": "이 휴대폰에는 배터리 최적화 화면이 없습니다. 백그라운드 동기화는 Android 일정에 따라 계속 실행됩니다."
   }
 }

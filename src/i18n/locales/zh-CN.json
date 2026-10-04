@@ -626,7 +626,12 @@
     "activityAria": "钱包活动",
     "sectionsAria": "钱包分区",
     "loading": "加载中…",
-    "close": "关闭"
+    "close": "关闭",
+    "chat": "聊天",
+    "chatAria": "ZKas 社区聊天",
+    "chatOff": "关闭 · 点击设置",
+    "chatOpen": "全球房间",
+    "chatUnread": "{{n}} 条新"
   },
   "hostedNotice": {
     "browserWallet": "浏览器钱包。<b><a>下载更安全的 App</a></b>。"
@@ -1782,7 +1787,8 @@
     "connect": "连接",
     "accentEyebrow": "强调色",
     "changeLater": "这些稍后可在设置中更改，不影响钱包或余额。",
-    "myService": "我的服务"
+    "myService": "我的服务",
+    "recommended": "推荐"
   },
   "orbotHelp": {
     "nativeTitle": "Tor 需要 Orbot",
@@ -1804,23 +1810,30 @@
   "runOnPhoneOption": {
     "title": "在本机上运行",
     "desc": "最私密。守护进程看不到你的交易。耗电稍多。",
-    "nodeHint": "同步节点——主机:端口。默认是公共 ZKas 节点。",
+    "nodeHint": "同步节点 — host:port。这是你查询币的节点。",
     "torTitle": "通过 Tor 访问节点",
     "torDesc": "对节点隐藏你的 IP。需要此手机上运行 Orbot（Tor）应用。",
     "starting": "启动中…",
-    "start": "在本机上启动"
+    "start": "在本机上启动",
+    "nodePlaceholder": "host:port",
+    "backupHint": "备份节点（可选）— 仅当第一个节点无响应时使用。",
+    "backupPlaceholder": "host:port — 留空则无",
+    "onBackupNow": "当前正从备份节点同步：第一个节点无响应。"
   },
   "whatsNew": {
-    "eyebrow": "1.0.17 新功能",
-    "title": "恢复短语",
-    "phraseTitle": "🔑 12 词助记词（BIP-39）",
-    "phraseDesc": "新钱包使用标准 BIP-39 助记词，而非 64 字符种子。现有种子仍可使用。",
-    "accountsTitle": "🗂 账户",
-    "accountsDesc": "从一个助记词添加多个账户——一个备份覆盖所有。",
-    "torTitle": "🧅 Tor",
-    "torDesc": "通过洋葱网络连接，服务端看不到你的 IP。",
+    "eyebrow": "新",
+    "title": "在手机上运行钱包",
     "gotIt": "知道了",
-    "openSettings": "打开设置"
+    "titleOnPhone": "选择你的节点",
+    "onPhoneTitle": "无服务器查看你的钱包",
+    "onPhoneDesc": "钱包引擎在此手机上运行。你的密钥和查看密钥从不离开手机，因此任何服务都无法看到你的余额或支付记录。",
+    "nodesTitle": "双节点，带备用",
+    "nodesDesc": "选择同步的节点，以及可选的备份节点。若第一个节点无响应，钱包会自动切换到备份节点。",
+    "onPhoneCaveat": "值得了解：首次同步会在手机上读取链。对于近期创建的钱包，这很快；对于较旧的钱包，可能需要一些时间，你可以随时切换回去。",
+    "switchNow": "在手机上运行",
+    "switching": "启动中…",
+    "switchFailed": "无法启动设备端引擎。你仍在使用之前的服务。",
+    "notNow": "稍后"
   },
   "mainRoot": {
     "opening": "打开中…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} 次确认",
     "confirmations_other": "{{count}} 次确认",
     "verifyNote": "该证明根据链上交易进行查验：披露的收款方和金额必须能重现区块中记录的承诺。"
+  },
+  "chat": {
+    "nameSkip": "匿名发布",
+    "readOnly": "此设备无密钥，只能阅读聊天室，无法发布消息。",
+    "new": "新消息",
+    "newMessages": "新消息",
+    "failedTap": "发送失败，点击重试",
+    "tipAddrLabel": "打赏地址（可选）",
+    "tipAddrWhy": "公开地址可让别人打赏你。这会将聊天名称与支付地址关联，留空可保持匿名。",
+    "rooms": {
+      "title": "聊天室",
+      "main": "所有人",
+      "languages": "语言"
+    },
+    "actions": {
+      "reply": "回复",
+      "react": "回应",
+      "tip": "打赏",
+      "tipDetail": "私密",
+      "copy": "复制文本",
+      "profile": "查看资料",
+      "mute": "屏蔽此人",
+      "unmute": "取消屏蔽",
+      "report": "举报",
+      "retry": "重新发送",
+      "dm": "私信"
+    },
+    "profile": {
+      "copyKey": "复制公钥",
+      "wasKnownAs": "曾用名“{{name}}”",
+      "muteNote": "屏蔽仅对你生效。你无法看到对方消息，但无法将其从网络中移除。"
+    },
+    "toast": {
+      "muted": "已屏蔽。你将看不到其消息。",
+      "unmuted": "已取消屏蔽。",
+      "copied": "已复制",
+      "reported": "已举报并屏蔽。"
+    },
+    "dm": {
+      "title": "消息",
+      "open": "私信",
+      "openDetail": "私密",
+      "none": "暂无私信。",
+      "start": "发送私信",
+      "placeholder": "私信",
+      "with": "与{{name}}",
+      "note": "只有你们两人可阅读。中继仅看到一次性密钥，无法得知对话双方。",
+      "needKey": "请对方先发布一条消息，以便获取其密钥。",
+      "headerNote": "私密"
+    },
+    "you": "你",
+    "intro": "这里所有人都能看到你的发言，且发言无法删除。点击聊天室名称选择语言。滑动消息可回复。",
+    "consentTitle": "开启聊天？",
+    "consentPublic": "全球房间中的消息公开且永久保存，无法删除。",
+    "consentIp": "中继服务器会看到你的 IP 地址和在线状态，但你的钱包不会。",
+    "consentSeparate": "聊天名称与钱包无关，无人能看到你的余额或付款。",
+    "consentEnable": "开启聊天",
+    "consentLater": "稍后",
+    "consentOff": "你稍后可在设置中关闭。",
+    "back": "← 钱包",
+    "roomAria": "社区聊天",
+    "state": {
+      "offline": "离线",
+      "connecting": "连接中…",
+      "live": "在线",
+      "error": "无中继"
+    },
+    "empty": "暂无消息 — 打个招呼吧。",
+    "connecting": "正在连接中继…",
+    "anon": "匿名",
+    "reply": "回复",
+    "replyingTo": "回复 {{name}}",
+    "cancel": "取消",
+    "placeholder": "发送消息到全球房间",
+    "send": "发送",
+    "sending": "发送中…",
+    "errSend": "消息未发出，请检查连接后重试。",
+    "errEngine": "此版本不含聊天引擎，无法签名消息。",
+    "nameTitle": "取个名字",
+    "nameWhy": "显示在你的消息旁。可随时更改，也可跳过并以匿名身份发帖。",
+    "namePlaceholder": "你的聊天名称",
+    "namePermanent": "帖子公开且永久保存——任何人都可阅读，且无法删除。",
+    "nameSave": "保存并发送"
+  },
+  "backgroundPermission": {
+    "title": "允许钱包在后台同步？",
+    "body": "此手机正在运行钱包本身。Android 会按自己的计划休眠应用，因此若不授权，钱包可能落后数小时，下次打开时需等待追赶。授权后，钱包大约每 15 分钟唤醒一次以保持最新。你稍后可在 Android 设置中更改。",
+    "enable": "允许",
+    "later": "稍后",
+    "never": "不再询问",
+    "noScreen": "此手机无电池优化界面。后台同步仍按 Android 计划运行。"
   }
 }

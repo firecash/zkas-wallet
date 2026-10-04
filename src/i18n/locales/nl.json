@@ -588,7 +588,12 @@
     "activityAria": "Walletactiviteit",
     "sectionsAria": "Walletsecties",
     "loading": "Laden…",
-    "close": "Sluiten"
+    "close": "Sluiten",
+    "chat": "Chat",
+    "chatAria": "ZKas-communitychat",
+    "chatOff": "uit · tik om in te stellen",
+    "chatOpen": "globale ruimte",
+    "chatUnread": "{{n}} nieuw"
   },
   "hostedNotice": {
     "browserWallet": "Browser-portemonnee. <b><a>Download de veiligere app</a></b>."
@@ -1761,7 +1766,8 @@
     "connect": "Verbinden",
     "accentEyebrow": "Accentkleur",
     "changeLater": "Dit kun je later wijzigen in Instellingen, zonder je portemonnee of saldo aan te raken.",
-    "myService": "Mijn service"
+    "myService": "Mijn service",
+    "recommended": "Aanbevolen"
   },
   "orbotHelp": {
     "nativeTitle": "Tor heeft Orbot nodig",
@@ -1783,23 +1789,30 @@
   "runOnPhoneOption": {
     "title": "Op deze telefoon draaien",
     "desc": "Meest privé. Geen daemon ziet je transacties. Iets meer batterij.",
-    "nodeHint": "Node om mee te syncen — host:poort. Standaard de publieke ZKas-node.",
+    "nodeHint": "Node om te synchroniseren — host:poort. Hier vraag je naar je munten.",
     "torTitle": "Verbind met de node via Tor",
     "torDesc": "Verbergt je IP voor de node. Vereist de Orbot-app (Tor) op deze telefoon.",
     "starting": "Starten…",
-    "start": "Start op deze telefoon"
+    "start": "Start op deze telefoon",
+    "nodePlaceholder": "host:poort",
+    "backupHint": "Back-upnode (optioneel) — alleen gebruikt als de eerste niet reageert.",
+    "backupPlaceholder": "host:poort — leeglaten voor geen",
+    "onBackupNow": "Synchroniseert nu van de back-up: de eerste node reageerde niet."
   },
   "whatsNew": {
-    "eyebrow": "Nieuw in 1.0.17",
-    "title": "Herstelzinnen",
-    "phraseTitle": "🔑 12-woordzin (BIP-39)",
-    "phraseDesc": "Nieuwe portemonnees gebruiken een standaard BIP-39-zin in plaats van een 64-teken seed. Je bestaande seed blijft werken.",
-    "accountsTitle": "🗂 Accounts",
-    "accountsDesc": "Voeg accounts toe vanuit één zin — één back-up dekt ze allemaal.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Verbind via een onion zodat de service je IP nooit ziet.",
+    "eyebrow": "Nieuw",
+    "title": "Draai de wallet op je telefoon",
     "gotIt": "Begrepen",
-    "openSettings": "Open instellingen"
+    "titleOnPhone": "Kies je nodes",
+    "onPhoneTitle": "Geen server ziet je wallet",
+    "onPhoneDesc": "De wallet-engine draait op deze telefoon. Je sleutels en kijksleutel verlaten het nooit, dus geen dienst kan je saldo of betalingen zien.",
+    "nodesTitle": "Twee nodes, met een back-up",
+    "nodesDesc": "Kies de node waarvan je synchroniseert en een optionele back-up. Stopt de eerste met reageren, dan schakelt de wallet automatisch over naar de back-up.",
+    "onPhoneCaveat": "Goed om te weten: de eerste synchronisatie leest de keten op je telefoon. Voor een recente wallet is dat snel; voor een oudere kan het even duren, en je kunt altijd terugschakelen.",
+    "switchNow": "Op mijn telefoon",
+    "switching": "Starten…",
+    "switchFailed": "Kon de on-device-engine niet starten. Je zit nog op de vorige dienst.",
+    "notNow": "Niet nu"
   },
   "mainRoot": {
     "opening": "Openen…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} bevestiging",
     "confirmations_other": "{{count}} bevestigingen",
     "verifyNote": "Het bewijs wordt gecontroleerd tegen de transactie op de keten: de onthulde ontvanger en het bedrag moeten de commitment reproduceren die het blok heeft vastgelegd."
+  },
+  "backgroundPermission": {
+    "title": "Wallet op achtergrond synchroniseren?​",
+    "body": "Deze telefoon draait nu zelf de wallet. Android zet slapende apps op een eigen schema, dus zonder deze toestemming kan de wallet uren achterlopen en moet je wachten tot hij bij is als je hem opent. Met toestemming wordt de wallet ongeveer elke 15 minuten wakker om bij te blijven. Je kunt dit later wijzigen in de Android-instellingen.",
+    "enable": "Toestaan",
+    "later": "Niet nu",
+    "never": "Niet meer vragen",
+    "noScreen": "Deze telefoon heeft geen batterijoptimalisatiescherm. Achtergrondsynchronisatie werkt nog steeds, op het schema van Android."
+  },
+  "chat": {
+    "consentTitle": "Chat inschakelen?",
+    "consentPublic": "Berichten in de globale ruimte zijn openbaar en permanent. Er is geen verwijderen.",
+    "consentIp": "De relayserver ziet je IP-adres en wanneer je online bent. Je wallet niet.",
+    "consentSeparate": "Je chatnaam staat los van je wallet. Niemand kan je saldo of betalingen zien.",
+    "consentEnable": "Chat inschakelen",
+    "consentLater": "Niet nu",
+    "consentOff": "Je kunt dit later uitschakelen in Instellingen.",
+    "back": "← Wallet",
+    "roomAria": "Communitychat",
+    "state": {
+      "offline": "offline",
+      "connecting": "verbinden…",
+      "live": "live",
+      "error": "geen relay"
+    },
+    "empty": "Nog niets — zeg hallo.",
+    "connecting": "Verbinden met de relay…",
+    "anon": "anon",
+    "reply": "Antwoord",
+    "replyingTo": "Antwoord aan {{name}}",
+    "cancel": "Annuleren",
+    "placeholder": "Bericht de globale ruimte",
+    "send": "Verzenden",
+    "sending": "Verzenden…",
+    "errSend": "Dat bericht is niet verzonden. Controleer de verbinding en probeer het opnieuw.",
+    "errEngine": "Deze build heeft geen chat-engine, dus berichten kunnen niet worden ondertekend.",
+    "nameTitle": "Kies een naam",
+    "nameWhy": "Wordt naast je berichten getoond. Je kunt het later wijzigen, of overslaan en als anon posten.",
+    "namePlaceholder": "Je naam in de chat",
+    "namePermanent": "Berichten zijn openbaar en permanent — iedereen kan ze lezen en ze kunnen niet worden verwijderd.",
+    "nameSave": "Opslaan en verzenden",
+    "nameSkip": "Anoniem plaatsen",
+    "readOnly": "Dit apparaat heeft geen sleutel, dus je kunt de ruimte lezen maar niet plaatsen.",
+    "new": "Nieuw",
+    "newMessages": "Nieuwe berichten",
+    "failedTap": "Niet verzonden — tik om opnieuw te proberen",
+    "tipAddrLabel": "Adres voor fooien (optioneel)",
+    "tipAddrWhy": "Door een adres te publiceren kunnen mensen je fooien geven. Het koppelt deze chatnaam aan een betalingsbestemming, dus laat het leeg om onkoppelbaar te blijven.",
+    "rooms": {
+      "title": "Ruimtes",
+      "main": "Iedereen",
+      "languages": "Talen"
+    },
+    "actions": {
+      "reply": "Antwoorden",
+      "react": "Reageren",
+      "tip": "Fooi sturen",
+      "tipDetail": "privé",
+      "copy": "Tekst kopiëren",
+      "profile": "Profiel bekijken",
+      "mute": "Dempen",
+      "unmute": "Dempen opheffen",
+      "report": "Melden",
+      "retry": "Opnieuw proberen",
+      "dm": "Privébericht sturen"
+    },
+    "profile": {
+      "copyKey": "Openbare sleutel kopiëren",
+      "wasKnownAs": "Voorheen gebruikt als naam “{{name}}”",
+      "muteNote": "Dempen is alleen voor jou. Het verbergt hen voor jou; niemand kan iemand van het netwerk verwijderen."
+    },
+    "toast": {
+      "muted": "Gedempt. Je ziet hun berichten niet.",
+      "unmuted": "Dempen opgeheven.",
+      "copied": "Gekopieerd",
+      "reported": "Gemeld en gedempt."
+    },
+    "dm": {
+      "title": "Berichten",
+      "open": "Directe berichten",
+      "openDetail": "privé",
+      "none": "Nog geen privéberichten.",
+      "start": "Privébericht sturen",
+      "placeholder": "Privébericht",
+      "with": "met {{name}}",
+      "note": "Alleen jullie twee kunnen dit lezen. Relais zien een eenmalige sleutel, niet wie met wie praat.",
+      "needKey": "Vraag hen een keer te plaatsen zodat hun sleutel bekend is.",
+      "headerNote": "privé"
+    },
+    "you": "jij",
+    "intro": "Iedereen hier kan lezen wat je plaatst, en berichten kunnen niet worden verwijderd. Tik op de ruimtenaam om je taal te kiezen. Veeg over een bericht om te antwoorden."
   }
 }

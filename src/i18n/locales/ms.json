@@ -626,7 +626,12 @@
     "activityAria": "Aktiviti dompet",
     "sectionsAria": "Bahagian dompet",
     "loading": "Memuat…",
-    "close": "Tutup"
+    "close": "Tutup",
+    "chat": "Sembang",
+    "chatAria": "Sembang komuniti ZKas",
+    "chatOff": "mati · ketik untuk sediakan",
+    "chatOpen": "bilik global",
+    "chatUnread": "{{n}} baharu"
   },
   "hostedNotice": {
     "browserWallet": "Dompet pelayar. <b><a>Dapatkan aplikasi lebih selamat</a></b>."
@@ -1729,7 +1734,8 @@
     "connect": "Sambung",
     "accentEyebrow": "Warna aksen",
     "changeLater": "Semua ini boleh diubah dalam Tetapan, tanpa sentuh dompet atau baki.",
-    "myService": "Perkhidmatan saya"
+    "myService": "Perkhidmatan saya",
+    "recommended": "Disyorkan"
   },
   "mainNav": {
     "mine": "Lombong",
@@ -1772,23 +1778,30 @@
   "runOnPhoneOption": {
     "title": "Jalankan pada telefon ini",
     "desc": "Paling peribadi. Tiada daemon lihat transaksi anda. Sedikit lebih bateri.",
-    "nodeHint": "Nod untuk selaras — host:port. Lalai ialah nod ZKas awam.",
+    "nodeHint": "Nod untuk menyegerak — host:port. Ini yang anda tanya tentang syiling anda.",
     "torTitle": "Sambung nod melalui Tor",
     "torDesc": "Sembunyikan IP anda dari nod. Perlukan aplikasi Orbot (Tor) berjalan di telefon ini.",
     "starting": "Bermula…",
-    "start": "Mula pada telefon ini"
+    "start": "Mula pada telefon ini",
+    "nodePlaceholder": "host:port",
+    "backupHint": "Nod sandaran (pilihan) — hanya digunakan jika yang pertama berhenti menjawab.",
+    "backupPlaceholder": "host:port — kosongkan jika tiada",
+    "onBackupNow": "Sedang menyegerak dari sandaran: nod pertama tidak menjawab."
   },
   "whatsNew": {
-    "eyebrow": "Baharu dalam 1.0.17",
-    "title": "Frasa pemulihan",
-    "phraseTitle": "🔑 Frasa 12 patah (BIP-39)",
-    "phraseDesc": "Dompet baru guna frasa BIP-39 standard, bukan benih 64 aksara. Benih sedia ada masih berfungsi.",
-    "accountsTitle": "🗂 Akaun",
-    "accountsDesc": "Tambah akaun dari satu frasa — satu sandaran meliputi semuanya.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Sambung melalui onion supaya perkhidmatan tidak nampak IP anda.",
+    "eyebrow": "Baru",
+    "title": "Jalankan dompet pada telefon anda",
     "gotIt": "Faham",
-    "openSettings": "Buka tetapan"
+    "titleOnPhone": "Pilih nod anda",
+    "onPhoneTitle": "Tiada pelayan lihat dompet anda",
+    "onPhoneDesc": "Enjin dompet berjalan pada telefon ini. Kunci dan kunci lihat anda tidak pernah meninggalkannya, jadi tiada perkhidmatan boleh melihat baki atau bayaran anda.",
+    "nodesTitle": "Dua nod, dengan sandaran",
+    "nodesDesc": "Pilih nod untuk menyegerak, dan sandaran pilihan. Jika yang pertama berhenti menjawab, dompet beralih ke sandaran sendiri.",
+    "onPhoneCaveat": "Perlu tahu: segerakan pertama membaca rantaian pada telefon anda. Untuk dompet yang baru dibuat, ia cepat; untuk yang lama, ia boleh mengambil masa, dan anda boleh bertukar balik bila-bila masa.",
+    "switchNow": "Jalankan pada telefon saya",
+    "switching": "Memulakan…",
+    "switchFailed": "Gagal memulakan enjin pada peranti. Anda masih menggunakan perkhidmatan sebelumnya.",
+    "notNow": "Nanti dulu"
   },
   "mainRoot": {
     "opening": "Membuka…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} pengesahan",
     "confirmations_other": "{{count}} pengesahan",
     "verifyNote": "Bukti disemak terhadap transaksi pada rantaian: penerima dan jumlah yang didedahkan mesti menghasilkan komitmen yang direkodkan oleh blok."
+  },
+  "backgroundPermission": {
+    "title": "Biarkan dompet menyegerak di latar belakang?",
+    "body": "Telefon ini kini menjalankan dompet itu sendiri. Android menjadualkan aplikasi tidur mengikut jadualnya sendiri, jadi tanpa ini dompet boleh ketinggalan berjam-jam dan kali seterusnya anda membukanya anda akan menunggu ia mengejar. Membenarkannya membolehkan dompet bangun kira-kira setiap 15 minit untuk kekal terkini. Anda boleh menukar ini kemudian dalam tetapan Android.",
+    "enable": "Benarkan",
+    "later": "Tidak sekarang",
+    "never": "Jangan tanya lagi",
+    "noScreen": "Telefon ini tiada skrin pengoptimuman bateri. Segerak latar belakang masih berjalan, mengikut jadual Android."
+  },
+  "chat": {
+    "consentTitle": "Hidupkan sembang?",
+    "consentPublic": "Mesej dalam bilik global adalah awam dan kekal. Tiada padam.",
+    "consentIp": "Pelayan geganti melihat alamat IP anda dan bila anda dalam talian. Dompet anda tidak.",
+    "consentSeparate": "Nama sembang anda berasingan daripada dompet anda. Tiada siapa boleh lihat baki atau bayaran anda.",
+    "consentEnable": "Hidupkan sembang",
+    "consentLater": "Tidak sekarang",
+    "consentOff": "Anda boleh matikan ini semula dalam Tetapan.",
+    "back": "← Dompet",
+    "roomAria": "Sembang komuniti",
+    "state": {
+      "offline": "luar talian",
+      "connecting": "menyambung…",
+      "live": "langsung",
+      "error": "tiada geganti"
+    },
+    "empty": "Tiada apa-apa lagi — ucap hai.",
+    "connecting": "Menyambung ke geganti…",
+    "anon": "anon",
+    "reply": "Balas",
+    "replyingTo": "Membalas {{name}}",
+    "cancel": "Batal",
+    "placeholder": "Mesej bilik global",
+    "send": "Hantar",
+    "sending": "Menghantar…",
+    "errSend": "Mesej itu tidak terhantar. Periksa sambungan dan cuba lagi.",
+    "errEngine": "Binaan ini tidak termasuk enjin sembang, jadi mesej tidak boleh ditandatangani.",
+    "nameTitle": "Pilih nama",
+    "nameWhy": "Dipaparkan di sebelah mesej anda. Anda boleh menukarnya kemudian, dan anda boleh langkau dan hantar sebagai anon.",
+    "namePlaceholder": "Nama anda dalam sembang",
+    "namePermanent": "Kiriman adalah awam dan kekal — sesiapa boleh bacanya, dan ia tidak boleh dipadam.",
+    "nameSave": "Simpan dan hantar",
+    "nameSkip": "Siaran tanpa nama",
+    "readOnly": "Peranti ini tiada kunci, jadi boleh baca bilik tetapi tidak boleh hantar.",
+    "new": "baru",
+    "newMessages": "Mesej baharu",
+    "failedTap": "Tidak dihantar — ketik untuk cuba semula",
+    "tipAddrLabel": "Alamat untuk tip (pilihan)",
+    "tipAddrWhy": "Menerbitkan alamat membolehkan orang memberi tip. Ia memautkan nama sembang ini ke destinasi pembayaran, jadi biarkan kosong untuk kekal tidak boleh dipaut.",
+    "rooms": {
+      "title": "Bilik",
+      "main": "Semua",
+      "languages": "Bahasa"
+    },
+    "actions": {
+      "reply": "Balas",
+      "react": "Reaksi",
+      "tip": "Hantar tip",
+      "tipDetail": "peribadi",
+      "copy": "Salin teks",
+      "profile": "Lihat profil",
+      "mute": "Senyapkan orang ini",
+      "unmute": "Nyahsenyap",
+      "report": "Lapor",
+      "retry": "Cuba hantar semula",
+      "dm": "Mesej secara peribadi"
+    },
+    "profile": {
+      "copyKey": "Salin kunci awam",
+      "wasKnownAs": "Sebelum ini menggunakan nama “{{name}}”",
+      "muteNote": "Menyenyapkan hanya untuk anda. Ia menyembunyikan mereka; tiada siapa boleh mengeluarkan seseorang dari rangkaian."
+    },
+    "toast": {
+      "muted": "Disenyapkan. Anda tidak akan melihat mesej mereka.",
+      "unmuted": "Nyahsenyap.",
+      "copied": "Disalin",
+      "reported": "Dilapor dan disenyapkan."
+    },
+    "dm": {
+      "title": "Mesej",
+      "open": "Mesej terus",
+      "openDetail": "peribadi",
+      "none": "Belum ada mesej peribadi.",
+      "start": "Mesej secara peribadi",
+      "placeholder": "Mesej peribadi",
+      "with": "dengan {{name}}",
+      "note": "Hanya anda berdua boleh membaca ini. Geganti melihat kunci sekali guna, bukan siapa bercakap dengan siapa.",
+      "needKey": "Minta mereka hantar sekali supaya kunci mereka diketahui.",
+      "headerNote": "peribadi"
+    },
+    "you": "anda",
+    "intro": "Semua orang di sini boleh membaca apa yang anda hantar, dan hantaran tidak boleh dipadam. Ketik nama bilik untuk memilih bahasa anda. Leret mesej untuk membalas."
   }
 }

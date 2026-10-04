@@ -588,7 +588,12 @@
     "activityAria": "Activité du portefeuille",
     "sectionsAria": "Sections du portefeuille",
     "loading": "Chargement…",
-    "close": "Fermer"
+    "close": "Fermer",
+    "chat": "Discussion",
+    "chatAria": "Discussion communautaire ZKas",
+    "chatOff": "désactivé · appuyer pour configurer",
+    "chatOpen": "salon global",
+    "chatUnread": "{{n}} nouveau"
   },
   "hostedNotice": {
     "browserWallet": "Portefeuille navigateur. <b><a>Obtenez l'app plus sûre</a></b>."
@@ -1761,7 +1766,8 @@
     "connect": "Connecter",
     "accentEyebrow": "Couleur d’accent",
     "changeLater": "Vous pourrez modifier tout ça dans Paramètres, sans toucher au portefeuille ni au solde.",
-    "myService": "Mon service"
+    "myService": "Mon service",
+    "recommended": "Recommandé"
   },
   "mainNav": {
     "mine": "Miner",
@@ -1804,23 +1810,30 @@
   "runOnPhoneOption": {
     "title": "Exécuter sur ce téléphone",
     "desc": "Le plus privé. Aucun démon ne voit vos transactions. Un peu plus de batterie.",
-    "nodeHint": "Nœud pour la synchronisation — hôte:port. Par défaut, le nœud public ZKas.",
+    "nodeHint": "Nœud de synchronisation — hôte:port. C'est à lui que vous demandez vos pièces.",
     "torTitle": "Atteindre le nœud via Tor",
     "torDesc": "Cache votre IP au nœud. Nécessite l'appli Orbot (Tor) sur ce téléphone.",
     "starting": "Démarrage…",
-    "start": "Démarrer sur ce téléphone"
+    "start": "Démarrer sur ce téléphone",
+    "nodePlaceholder": "hôte:port",
+    "backupHint": "Nœud de secours (facultatif) — utilisé seulement si le premier ne répond plus.",
+    "backupPlaceholder": "hôte:port — laisser vide",
+    "onBackupNow": "Synchronisation en cours depuis le nœud de secours : le premier ne répondait pas."
   },
   "whatsNew": {
-    "eyebrow": "Nouveau dans la 1.0.17",
-    "title": "Phrases de récupération",
-    "phraseTitle": "🔑 Phrase 12 mots (BIP-39)",
-    "phraseDesc": "Les nouveaux portefeuilles utilisent une phrase BIP-39 standard au lieu d'une graine 64 caractères. Votre graine actuelle reste valide.",
-    "accountsTitle": "🗂 Comptes",
-    "accountsDesc": "Ajoutez des comptes depuis une phrase — une sauvegarde les couvre tous.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Connectez-vous via un oignon pour que le service ne voie jamais votre IP.",
+    "eyebrow": "Nouveau",
+    "title": "Exécutez le portefeuille sur votre téléphone",
     "gotIt": "Compris",
-    "openSettings": "Ouvrir les paramètres"
+    "titleOnPhone": "Choisissez vos nœuds",
+    "onPhoneTitle": "Aucun serveur ne voit votre portefeuille",
+    "onPhoneDesc": "Le moteur du portefeuille tourne sur ce téléphone. Vos clés et votre clé de visualisation ne le quittent jamais, donc aucun service ne peut voir votre solde ni vos paiements.",
+    "nodesTitle": "Deux nœuds, avec un basculement",
+    "nodesDesc": "Choisissez le nœud de synchronisation et un nœud de secours facultatif. Si le premier ne répond plus, le portefeuille bascule automatiquement sur le second.",
+    "onPhoneCaveat": "À savoir : la première synchronisation lit la chaîne sur votre téléphone. Pour un portefeuille récent, c'est rapide ; pour un plus ancien, cela peut prendre du temps, et vous pouvez revenir en arrière à tout moment.",
+    "switchNow": "Exécuter sur mon téléphone",
+    "switching": "Démarrage…",
+    "switchFailed": "Impossible de démarrer le moteur sur l'appareil. Vous êtes toujours sur le service précédent.",
+    "notNow": "Pas maintenant"
   },
   "mainRoot": {
     "opening": "Ouverture…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} confirmation",
     "confirmations_other": "{{count}} confirmations",
     "verifyNote": "La preuve est vérifiée par rapport à la transaction sur la chaîne : le destinataire et le montant divulgués doivent reproduire l’engagement enregistré par le bloc."
+  },
+  "backgroundPermission": {
+    "title": "Synchroniser le portefeuille en arrière-plan ?",
+    "body": "Ce téléphone exécute désormais le portefeuille lui-même. Android met les applications en veille selon son propre calendrier, sans cette autorisation le portefeuille peut prendre des heures de retard et à la prochaine ouverture vous devrez attendre le rattrapage. L’activer permet au portefeuille de se réveiller environ toutes les 15 minutes pour rester à jour. Vous pourrez modifier cela plus tard dans les paramètres Android.",
+    "enable": "Autoriser",
+    "later": "Pas maintenant",
+    "never": "Ne plus demander",
+    "noScreen": "Cet écran d’optimisation de la batterie est absent. La synchronisation en arrière-plan fonctionne quand même, selon le calendrier d’Android."
+  },
+  "chat": {
+    "consentTitle": "Activer la discussion ?",
+    "consentPublic": "Les messages du salon global sont publics et permanents. Pas de suppression possible.",
+    "consentIp": "Le serveur relais voit votre adresse IP et votre présence en ligne. Votre portefeuille, non.",
+    "consentSeparate": "Votre nom de discussion est distinct de votre portefeuille. Personne ne peut voir votre solde ni vos paiements.",
+    "consentEnable": "Activer la discussion",
+    "consentLater": "Pas maintenant",
+    "consentOff": "Vous pourrez la désactiver dans les Paramètres.",
+    "back": "← Portefeuille",
+    "roomAria": "Discussion communautaire",
+    "state": {
+      "offline": "hors ligne",
+      "connecting": "connexion…",
+      "live": "en direct",
+      "error": "pas de relais"
+    },
+    "empty": "Rien ici pour l’instant — dites bonjour.",
+    "connecting": "Connexion au relais…",
+    "anon": "anonyme",
+    "reply": "Répondre",
+    "replyingTo": "Réponse à {{name}}",
+    "cancel": "Annuler",
+    "placeholder": "Message pour le salon global",
+    "send": "Envoyer",
+    "sending": "Envoi…",
+    "errSend": "Ce message n’est pas parti. Vérifiez la connexion et réessayez.",
+    "errEngine": "Cette version n’inclut pas le moteur de discussion, les messages ne peuvent pas être signés.",
+    "nameTitle": "Choisir un nom",
+    "nameWhy": "Affiché à côté de vos messages. Vous pourrez le changer plus tard, ou le sauter et publier en anonyme.",
+    "namePlaceholder": "Votre nom dans la discussion",
+    "namePermanent": "Les publications sont publiques et permanentes — tout le monde peut les lire, et elles ne peuvent pas être supprimées.",
+    "nameSave": "Enregistrer et envoyer",
+    "nameSkip": "Anonyme",
+    "readOnly": "Cet appareil n'a pas de clé, il peut donc lire le salon mais pas publier.",
+    "new": "Nouveau",
+    "newMessages": "Nouveaux messages",
+    "failedTap": "Non envoyé — appuyez pour réessayer",
+    "tipAddrLabel": "Adresse pour les pourboires (facultatif)",
+    "tipAddrWhy": "Publier une adresse permet aux autres de vous donner un pourboire. Cela lie ce nom de chat à une destination de paiement, laissez donc vide pour rester non lié.",
+    "rooms": {
+      "title": "Salons",
+      "main": "Tout le monde",
+      "languages": "Langues"
+    },
+    "actions": {
+      "reply": "Répondre",
+      "react": "Réagir",
+      "tip": "Donner un pourboire",
+      "tipDetail": "privé",
+      "copy": "Copier le texte",
+      "profile": "Voir le profil",
+      "mute": "Masquer cette personne",
+      "unmute": "Afficher",
+      "report": "Signaler",
+      "retry": "Réessayer l'envoi",
+      "dm": "Message privé"
+    },
+    "profile": {
+      "copyKey": "Copier la clé publique",
+      "wasKnownAs": "Anciennement connu sous le nom « {{name}} »",
+      "muteNote": "Le masquage est personnel. Il le cache pour vous ; personne ne peut retirer quelqu'un du réseau."
+    },
+    "toast": {
+      "muted": "Masqué. Vous ne verrez plus ses messages.",
+      "unmuted": "Affiché.",
+      "copied": "Copié",
+      "reported": "Signalé et masqué."
+    },
+    "dm": {
+      "title": "Messages",
+      "open": "Messages directs",
+      "openDetail": "privé",
+      "none": "Aucun message privé pour l'instant.",
+      "start": "Message privé",
+      "placeholder": "Message privé",
+      "with": "avec {{name}}",
+      "note": "Seuls vous deux pouvez lire ceci. Les relais voient une clé unique, pas qui parle à qui.",
+      "needKey": "Demandez-lui de publier une fois pour que sa clé soit connue.",
+      "headerNote": "privé"
+    },
+    "you": "vous",
+    "intro": "Tout le monde ici peut lire ce que vous publiez, et les publications ne peuvent pas être supprimées. Appuyez sur le nom du salon pour choisir votre langue. Balayez un message pour répondre."
   }
 }

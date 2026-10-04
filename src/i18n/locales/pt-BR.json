@@ -588,7 +588,12 @@
     "activityAria": "Atividade da carteira",
     "sectionsAria": "Seções da carteira",
     "loading": "Carregando…",
-    "close": "Fechar"
+    "close": "Fechar",
+    "chat": "Chat",
+    "chatAria": "Chat da comunidade ZKas",
+    "chatOff": "desligado · toque para configurar",
+    "chatOpen": "sala global",
+    "chatUnread": "{{n}} novo"
   },
   "hostedNotice": {
     "browserWallet": "Carteira no navegador. <b><a>Baixe o app mais seguro</a></b>."
@@ -1711,7 +1716,8 @@
     "connect": "Conectar",
     "accentEyebrow": "Cor de destaque",
     "changeLater": "Você pode alterar isso depois em Configurações, sem mexer na carteira ou no saldo.",
-    "myService": "Meu serviço"
+    "myService": "Meu serviço",
+    "recommended": "Recomendado"
   },
   "orbotHelp": {
     "nativeTitle": "Tor precisa do Orbot",
@@ -1733,23 +1739,30 @@
   "runOnPhoneOption": {
     "title": "Executar neste celular",
     "desc": "Mais privado. Nenhum daemon vê suas transações. Um pouco mais de bateria.",
-    "nodeHint": "Nó para sincronizar — host:porta. O padrão é o nó público ZKas.",
+    "nodeHint": "Nó para sincronizar — host:porta. É quem consulta suas moedas.",
     "torTitle": "Acessar o nó via Tor",
     "torDesc": "Esconde seu IP do nó. Requer o app Orbot (Tor) rodando neste telefone.",
     "starting": "Iniciando…",
-    "start": "Iniciar neste celular"
+    "start": "Iniciar neste celular",
+    "nodePlaceholder": "host:porta",
+    "backupHint": "Nó de backup (opcional) — usado só se o primeiro parar de responder.",
+    "backupPlaceholder": "host:porta — vazio se não tiver",
+    "onBackupNow": "Sincronizando do backup: o primeiro nó não estava respondendo."
   },
   "whatsNew": {
-    "eyebrow": "Novo na 1.0.17",
-    "title": "Frases de recuperação",
-    "phraseTitle": "🔑 Frase de 12 palavras (BIP-39)",
-    "phraseDesc": "Carteiras novas usam uma frase BIP-39 padrão em vez de uma semente de 64 caracteres. Sua semente atual continua funcionando.",
-    "accountsTitle": "🗂 Contas",
-    "accountsDesc": "Adicione contas de uma frase — um backup cobre todas.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Conecte-se via cebola para o serviço nunca ver seu IP.",
+    "eyebrow": "Novo",
+    "title": "Rode a carteira no seu celular",
     "gotIt": "Entendi",
-    "openSettings": "Abrir configurações"
+    "titleOnPhone": "Escolha seus nós",
+    "onPhoneTitle": "Nenhum servidor vê sua carteira",
+    "onPhoneDesc": "O motor da carteira roda neste celular. Suas chaves e chave de visualização nunca saem dele, então nenhum serviço vê seu saldo ou pagamentos.",
+    "nodesTitle": "Dois nós, com fallback",
+    "nodesDesc": "Escolha o nó para sincronizar e um backup opcional. Se o primeiro parar de responder, a carteira muda pro backup sozinha.",
+    "onPhoneCaveat": "Vale saber: a primeira sincronização lê a cadeia no seu celular. Para uma carteira recente é rápido; para uma antiga pode demorar, e você pode voltar quando quiser.",
+    "switchNow": "Rodar no celular",
+    "switching": "Iniciando…",
+    "switchFailed": "Não foi possível iniciar o motor local. Você ainda está no serviço anterior.",
+    "notNow": "Agora não"
   },
   "mainRoot": {
     "opening": "Abrindo…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} confirmação",
     "confirmations_other": "{{count}} confirmações",
     "verifyNote": "A prova é verificada contra a transação na cadeia: o destinatário e o valor revelados devem reproduzir o compromisso registrado no bloco."
+  },
+  "backgroundPermission": {
+    "title": "Deixar a carteira sincronizar em segundo plano?",
+    "body": "Este telefone agora está executando a própria carteira. O Android coloca apps inativos em sua própria programação, então, sem isso, a carteira pode ficar horas atrasada e, na próxima vez que você abri-la, terá que esperar que ela se atualize. Permitir isso faz com que a carteira acorde a cada 15 minutos para se manter atualizada. Você pode alterar isso depois nas configurações do Android.",
+    "enable": "Permitir",
+    "later": "Agora não",
+    "never": "Não perguntar de novo",
+    "noScreen": "Este telefone não tem tela de otimização de bateria. A sincronização em segundo plano ainda funciona, na programação do Android."
+  },
+  "chat": {
+    "consentTitle": "Ativar chat?",
+    "consentPublic": "As mensagens na sala global são públicas e permanentes. Não há exclusão.",
+    "consentIp": "O servidor de retransmissão vê seu IP e quando você está online. Sua carteira não.",
+    "consentSeparate": "Seu nome no chat é separado da sua carteira. Ninguém pode ver seu saldo ou seus pagamentos.",
+    "consentEnable": "Ativar chat",
+    "consentLater": "Agora não",
+    "consentOff": "Você pode desligar isso novamente em Configurações.",
+    "back": "← Carteira",
+    "roomAria": "Chat da comunidade",
+    "state": {
+      "offline": "offline",
+      "connecting": "conectando…",
+      "live": "ao vivo",
+      "error": "sem relay"
+    },
+    "empty": "Nada aqui ainda — diga olá.",
+    "connecting": "Conectando ao relay…",
+    "anon": "anon",
+    "reply": "Responder",
+    "replyingTo": "Respondendo a {{name}}",
+    "cancel": "Cancelar",
+    "placeholder": "Mensagem para a sala global",
+    "send": "Enviar",
+    "sending": "Enviando…",
+    "errSend": "Essa mensagem não foi enviada. Verifique a conexão e tente novamente.",
+    "errEngine": "Esta versão não inclui o motor de chat, então as mensagens não podem ser assinadas.",
+    "nameTitle": "Escolha um nome",
+    "nameWhy": "Exibido ao lado de suas mensagens. Você pode alterá-lo depois, ou pular e postar como anon.",
+    "namePlaceholder": "Seu nome no chat",
+    "namePermanent": "As postagens são públicas e permanentes — qualquer um pode lê-las e elas não podem ser excluídas.",
+    "nameSave": "Salvar e enviar",
+    "nameSkip": "Anônimo",
+    "readOnly": "Este dispositivo não tem chave, então pode ler a sala, mas não postar.",
+    "new": "novo",
+    "newMessages": "Novas mensagens",
+    "failedTap": "Não enviada — toque para reenviar",
+    "tipAddrLabel": "Endereço para gorjetas (opcional)",
+    "tipAddrWhy": "Publicar um endereço permite que te dêem gorjetas. Isso vincula este nome de chat a um destino de pagamento; deixe vazio para permanecer sem vínculo.",
+    "rooms": {
+      "title": "Salas",
+      "main": "Todos",
+      "languages": "Idiomas"
+    },
+    "actions": {
+      "reply": "Responder",
+      "react": "Reagir",
+      "tip": "Dar gorjeta",
+      "tipDetail": "privado",
+      "copy": "Copiar texto",
+      "profile": "Ver perfil",
+      "mute": "Silenciar esta pessoa",
+      "unmute": "Ativar som",
+      "report": "Denunciar",
+      "retry": "Tentar enviar de novo",
+      "dm": "Enviar mensagem privada"
+    },
+    "profile": {
+      "copyKey": "Copiar chave pública",
+      "wasKnownAs": "Antes usava o nome “{{name}}”",
+      "muteNote": "Silenciar é só para você. Oculta a pessoa para você; ninguém pode remover alguém da rede."
+    },
+    "toast": {
+      "muted": "Silenciado. Você não verá as mensagens dele.",
+      "unmuted": "Som ativado.",
+      "copied": "Copiado",
+      "reported": "Denunciado e silenciado."
+    },
+    "dm": {
+      "title": "Mensagens",
+      "open": "Mensagens diretas",
+      "openDetail": "privado",
+      "none": "Nenhuma mensagem privada ainda.",
+      "start": "Enviar mensagem privada",
+      "placeholder": "Mensagem privada",
+      "with": "com {{name}}",
+      "note": "Só vocês dois podem ler isto. Os relays veem uma chave única, não quem fala com quem.",
+      "needKey": "Peça para ele postar uma vez para que a chave seja conhecida.",
+      "headerNote": "privado"
+    },
+    "you": "você",
+    "intro": "Todos aqui podem ler o que você posta, e as postagens não podem ser excluídas. Toque no nome da sala para escolher o idioma. Deslize uma mensagem para responder."
   }
 }

@@ -626,7 +626,12 @@
     "activityAria": "Aktywność portfela",
     "sectionsAria": "Sekcje portfela",
     "loading": "Ładowanie…",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "chat": "Czat",
+    "chatAria": "Czat społeczności ZKas",
+    "chatOff": "wył. · dotknij, by skonfigurować",
+    "chatOpen": "pokój globalny",
+    "chatUnread": "{{n}} nowe"
   },
   "hostedNotice": {
     "browserWallet": "Portfel przeglądarkowy. <b><a>Pobierz bezpieczniejszą aplikację</a></b>."
@@ -1782,7 +1787,8 @@
     "connect": "Połącz",
     "accentEyebrow": "Kolor akcentu",
     "changeLater": "Możesz to zmienić później w Ustawieniach, bez wpływu na portfel lub saldo.",
-    "myService": "Moja usługa"
+    "myService": "Moja usługa",
+    "recommended": "Zalecany"
   },
   "orbotHelp": {
     "nativeTitle": "Tor wymaga Orbot",
@@ -1804,23 +1810,30 @@
   "runOnPhoneOption": {
     "title": "Uruchom na tym telefonie",
     "desc": "Maksymalna prywatność. Żaden demon nie widzi transakcji. Większe zużycie baterii.",
-    "nodeHint": "Węzeł do synchronizacji — host:port. Domyślnie publiczny węzeł ZKas.",
+    "nodeHint": "Węzeł do synchronizacji — host:port. To jego pytasz o swoje monety.",
     "torTitle": "Połącz z węzłem przez Tor",
     "torDesc": "Ukrywa Twój adres IP przed węzłem. Wymaga Orbota (Tor) na telefonie.",
     "starting": "Uruchamianie…",
-    "start": "Uruchom na tym telefonie"
+    "start": "Uruchom na tym telefonie",
+    "nodePlaceholder": "host:port",
+    "backupHint": "Zapasowy węzeł (opcjonalnie) — używany tylko gdy pierwszy przestanie odpowiadać.",
+    "backupPlaceholder": "host:port — zostaw puste",
+    "onBackupNow": "Obecnie synchronizujesz z zapasowego: pierwszy węzeł nie odpowiadał."
   },
   "whatsNew": {
-    "eyebrow": "Nowości w 1.0.17",
-    "title": "Frazy odzyskiwania",
-    "phraseTitle": "🔑 12-wyrazowa fraza (BIP-39)",
-    "phraseDesc": "Nowe portfele używają standardowej frazy BIP-39 zamiast 64-znakowego seeda. Twój dotychczasowy seed nadal działa.",
-    "accountsTitle": "🗂 Konta",
-    "accountsDesc": "Dodaj konta z jednej frazy — jedna kopia zapasowa obejmuje wszystkie.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Połącz przez adres .onion, aby usługa nie widziała Twojego adresu IP.",
+    "eyebrow": "Nowość",
+    "title": "Uruchom portfel na telefonie",
     "gotIt": "Rozumiem",
-    "openSettings": "Otwórz ustawienia"
+    "titleOnPhone": "Wybierz swoje węzły",
+    "onPhoneTitle": "Żaden serwer nie widzi portfela",
+    "onPhoneDesc": "Silnik portfela działa na tym telefonie. Twoje klucze i klucz podglądu nigdy go nie opuszczają, więc żadna usługa nie widzi salda ani płatności.",
+    "nodesTitle": "Dwa węzły z zapasowym",
+    "nodesDesc": "Wybierz węzeł do synchronizacji i opcjonalny zapasowy. Gdy pierwszy przestanie odpowiadać, portfel sam przełączy się na zapasowy.",
+    "onPhoneCaveat": "Warto wiedzieć: pierwsza synchronizacja odczytuje łańcuch na telefonie. Dla nowego portfela to szybkie; dla starszego może potrwać, a w każdej chwili możesz wrócić do poprzedniego.",
+    "switchNow": "Uruchom na telefonie",
+    "switching": "Uruchamianie…",
+    "switchFailed": "Nie udało się uruchomić silnika na urządzeniu. Nadal korzystasz z poprzedniej usługi.",
+    "notNow": "Nie teraz"
   },
   "mainRoot": {
     "opening": "Otwieranie…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} potwierdzenie",
     "confirmations_other": "{{count}} potwierdzeń",
     "verifyNote": "Dowód jest sprawdzany względem transakcji w łańcuchu: ujawniony odbiorca i kwota muszą odtworzyć zobowiązanie zapisane w bloku."
+  },
+  "chat": {
+    "nameSkip": "Anonimowo",
+    "readOnly": "Brak klucza – możesz czytać, ale nie pisać.",
+    "new": "Nowe",
+    "newMessages": "Nowe wiadomości",
+    "failedTap": "Nie wysłano — dotknij, by ponowić",
+    "tipAddrLabel": "Adres na napiwki (opcjonalnie)",
+    "tipAddrWhy": "Podanie adresu pozwala innym dawać ci napiwki. Łączy tę nazwę z miejscem płatności – zostaw puste, by pozostać anonimowym.",
+    "rooms": {
+      "title": "Pokoje",
+      "main": "Wszyscy",
+      "languages": "Języki"
+    },
+    "actions": {
+      "reply": "Odpowiedz",
+      "react": "Reaguj",
+      "tip": "Wyślij napiwek",
+      "tipDetail": "prywatnie",
+      "copy": "Kopiuj tekst",
+      "profile": "Profil",
+      "mute": "Wycisz tę osobę",
+      "unmute": "Wycisz",
+      "report": "Zgłoś",
+      "retry": "Spróbuj wysłać ponownie",
+      "dm": "Napisz prywatnie"
+    },
+    "profile": {
+      "copyKey": "Kopiuj klucz publiczny",
+      "wasKnownAs": "Wcześniej używał(a) nazwy „{{name}}”",
+      "muteNote": "Wyciszanie dotyczy tylko ciebie. Ukrywa tę osobę przed tobą – nikt nie może usunąć kogoś z sieci."
+    },
+    "toast": {
+      "muted": "Wyciszono. Nie zobaczysz ich wiadomości.",
+      "unmuted": "Wyciszono.",
+      "copied": "Skopiowano",
+      "reported": "Zgłoszono i wyciszono."
+    },
+    "dm": {
+      "title": "Wiadomości",
+      "open": "Wiadomości prywatne",
+      "openDetail": "prywatnie",
+      "none": "Brak prywatnych wiadomości.",
+      "start": "Napisz prywatnie",
+      "placeholder": "Wiadomość prywatna",
+      "with": "z {{name}}",
+      "note": "Tylko wy dwoje to czytacie. Przekaźniki widzą jednorazowy klucz, nie kto z kim rozmawia.",
+      "needKey": "Poproś, by napisał(a) raz – wtedy jego/jej klucz będzie znany.",
+      "headerNote": "prywatnie"
+    },
+    "you": "ty",
+    "intro": "Każdy tu widzi, co piszesz, a postów nie da się usunąć. Dotknij nazwy pokoju, by wybrać język. Przesuń wiadomość, by odpowiedzieć.",
+    "consentTitle": "Włączyć czat?",
+    "consentPublic": "Wiadomości w pokoju globalnym są publiczne i trwałe. Nie ma opcji usunięcia.",
+    "consentIp": "Serwer przekaźnika widzi Twój adres IP i czas aktywności. Twój portfel – nie.",
+    "consentSeparate": "Nazwa na czacie jest niezależna od portfela. Nikt nie widzi Twojego salda ani płatności.",
+    "consentEnable": "Włącz czat",
+    "consentLater": "Nie teraz",
+    "consentOff": "Możesz to wyłączyć w Ustawieniach.",
+    "back": "← Portfel",
+    "roomAria": "Czat społeczności",
+    "state": {
+      "offline": "offline",
+      "connecting": "łączenie…",
+      "live": "na żywo",
+      "error": "brak przekaźnika"
+    },
+    "empty": "Na razie pusto – przywitaj się.",
+    "connecting": "Łączenie z przekaźnikiem…",
+    "anon": "anonim",
+    "reply": "Odpowiedz",
+    "replyingTo": "Odpowiadasz {{name}}",
+    "cancel": "Anuluj",
+    "placeholder": "Napisz do pokoju globalnego",
+    "send": "Wyślij",
+    "sending": "Wysyłanie…",
+    "errSend": "Wiadomość nie została wysłana. Sprawdź połączenie i spróbuj ponownie.",
+    "errEngine": "Ta wersja nie zawiera silnika czatu – nie można podpisywać wiadomości.",
+    "nameTitle": "Wybierz nazwę",
+    "nameWhy": "Wyświetlana przy Twoich wiadomościach. Możesz ją zmienić później lub pominąć i pisać jako anonim.",
+    "namePlaceholder": "Twoja nazwa na czacie",
+    "namePermanent": "Wpisy są publiczne i trwałe – każdy może je czytać, nie można ich usunąć.",
+    "nameSave": "Zapisz i wyślij"
+  },
+  "backgroundPermission": {
+    "title": "Zsynchronizować portfel w tle?",
+    "body": "Telefon sam uruchamia portfel. Android usypia aplikacje, więc bez tego portfel może się opóźnić o godziny, a przy otwarciu będziesz czekać na nadrobienie. Zgoda pozwoli portfelowi budzić się co ~15 minut, by być na bieżąco. Zmienisz to później w ustawieniach Androida.",
+    "enable": "Zezwól",
+    "later": "Nie teraz",
+    "never": "Nie pytaj więcej",
+    "noScreen": "Ten telefon nie ma ekranu optymalizacji baterii. Synchronizacja w tle działa według harmonogramu Androida."
   }
 }

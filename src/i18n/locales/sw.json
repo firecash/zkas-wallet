@@ -588,7 +588,12 @@
     "activityAria": "Shughuli za pochi",
     "sectionsAria": "Sehemu za pochi",
     "loading": "Inapakia…",
-    "close": "Funga"
+    "close": "Funga",
+    "chat": "Soga",
+    "chatAria": "Soga ya jamii ya ZKas",
+    "chatOff": "mbali · gusa kusanidi",
+    "chatOpen": "chumba cha wote",
+    "chatUnread": "{{n}} mpya"
   },
   "hostedNotice": {
     "browserWallet": "Mkoba wa kivinjari. <b><a>Pata programu salama zaidi</a></b>."
@@ -1745,7 +1750,8 @@
     "customTitle": "Walletd yangu mwenyewe",
     "customDesc": "Huduma ya mkoba unayoendesha wewe mwenyewe.",
     "placeholderNative": "host:port, http://<lan-ip>:8501, au .onion",
-    "placeholderWeb": "https://your-walletd au .onion"
+    "placeholderWeb": "https://your-walletd au .onion",
+    "recommended": "Inayopendekezwa"
   },
   "orbotHelp": {
     "nativeTitle": "Tor inahitaji Orbot",
@@ -1767,23 +1773,30 @@
   "runOnPhoneOption": {
     "title": "Endesha kwenye simu hii",
     "desc": "Faragha zaidi. Hakuna daemon anayeona miamala yako. Betri kidogo zaidi.",
-    "nodeHint": "Nodi ya kusawazisha — host:port. Chaguomsingi ni nodi ya umma ya ZKas.",
+    "nodeHint": "Nodi ya kusawazisha — host:port. Huyu ndiye unayeuliza kuhusu sarafu zako.",
     "torTitle": "Fikia nodi kupitia Tor",
     "torDesc": "Huficha IP yako kutoka kwa nodi. Inahitaji programu ya Orbot (Tor) ikiendesha kwenye simu hii.",
     "starting": "Inaanza…",
-    "start": "Anza kwenye simu hii"
+    "start": "Anza kwenye simu hii",
+    "nodePlaceholder": "host:port",
+    "backupHint": "Nodi nakala (si lazima) — inatumika tu ikiwa ya kwanza haijibu.",
+    "backupPlaceholder": "host:port — acha wazi",
+    "onBackupNow": "Inasawazisha kutoka kwa nakala: nodi ya kwanza haikujibu."
   },
   "whatsNew": {
-    "eyebrow": "Mapya katika 1.0.17",
-    "title": "Maneno ya kurejesha",
-    "phraseTitle": "🔑 Maneno 12 (BIP-39)",
-    "phraseDesc": "Mikoba mipya inatumia maneno ya kawaida ya BIP-39 badala ya mbegu ya herufi 64. Mbegu yako iliyopo inaendelea kufanya kazi.",
-    "accountsTitle": "🗂 Akaunti",
-    "accountsDesc": "Ongeza akaunti kutoka kwa maneno moja — hifadhi rudufu moja inazifunika zote.",
-    "torTitle": "🧅 Tor",
-    "torDesc": "Unganisha kupitia kitunguu ili huduma isione IP yako kamwe.",
+    "eyebrow": "Mpya",
+    "title": "Endesha pochi kwenye simu yako",
     "gotIt": "Nimeelewa",
-    "openSettings": "Fungua mipangilio"
+    "titleOnPhone": "Chagua nodi zako",
+    "onPhoneTitle": "Hakuna seva inayoona pochi yako",
+    "onPhoneDesc": "Injini ya pochi inaendeshwa kwenye simu hii. Funguo zako na ufunguo wako wa kutazama haviondoki humo, kwa hivyo hakuna huduma inayoweza kuona salio lako au malipo yako.",
+    "nodesTitle": "Nodi mbili, na nakala rudufu",
+    "nodesDesc": "Chagua nodi unayosawazisha kutoka, na nakala rudufu (si lazima). Ikiwa ya kwanza haijibu, pochi inahamia kwenye nakala yenyewe.",
+    "onPhoneCaveat": "Jambo la kujua: usawazishaji wa kwanza unasoma mnyororo kwenye simu yako. Kwa pochi iliyotengenezwa hivi karibuni ni haraka; kwa ya zamani inaweza kuchukua muda, na unaweza kurudi nyuma wakati wowote.",
+    "switchNow": "Endesha kwenye simu yangu",
+    "switching": "Inaanza…",
+    "switchFailed": "Haikuweza kuanzisha injini ya kifaa. Bado uko kwenye huduma ya awali.",
+    "notNow": "Sio sasa"
   },
   "mainRoot": {
     "opening": "Inafungua…"
@@ -1855,5 +1868,96 @@
     "confirmations_one": "{{count}} uthibitisho",
     "confirmations_other": "{{count}} uthibitisho",
     "verifyNote": "Uthibitisho unakaguliwa dhidi ya muamala kwenye mnyororo: mpokeaji na kiasi vilivyofichuliwa lazima vizalike ahadi iliyorekodiwa na bloku."
+  },
+  "chat": {
+    "nameSkip": "Tuma bila jina",
+    "readOnly": "Kifaa hiki hakina ufunguo, kwa hivyo kinaweza kusoma lakini si kutuma.",
+    "new": "mpya",
+    "newMessages": "Ujumbe mpya",
+    "failedTap": "Haikutumwa — gusa tena",
+    "tipAddrLabel": "Anwani ya kutoa bakshishi (si lazima)",
+    "tipAddrWhy": "Kuchapisha anwani kunawawezesha watu kukupa bakshishi. Inaunganisha jina hili la mazungumzo na mahali pa malipo, kwa hivyo iachie tupu ili usiweze kuunganishwa.",
+    "rooms": {
+      "title": "Vyumba",
+      "main": "Kila mtu",
+      "languages": "Lugha"
+    },
+    "actions": {
+      "reply": "Jibu",
+      "react": "Jibu hisia",
+      "tip": "Toa bakshishi",
+      "tipDetail": "binafsi",
+      "copy": "Nakili maandishi",
+      "profile": "Tazama wasifu",
+      "mute": "Nyamazisha mtu huyu",
+      "unmute": "Ondoa kimya",
+      "report": "Ripoti",
+      "retry": "Jaribu kutuma tena",
+      "dm": "Tuma ujumbe faragha"
+    },
+    "profile": {
+      "copyKey": "Nakili ufunguo wa umma",
+      "wasKnownAs": "Hapo awali alitumia jina “{{name}}”",
+      "muteNote": "Kunyamazisha ni kwako pekee. Inamficha kwa ajili yako; hakuna mtu anayeweza kumwondoa mtu kwenye mtandao."
+    },
+    "toast": {
+      "muted": "Umenyamazishwa. Hutayaona ujumbe wake.",
+      "unmuted": "Imewashwa.",
+      "copied": "Imenakiliwa",
+      "reported": "Imeripotiwa na kunyamazishwa."
+    },
+    "dm": {
+      "title": "Ujumbe",
+      "open": "Ujumbe wa moja kwa moja",
+      "openDetail": "binafsi",
+      "none": "Hakuna ujumbe faragha bado.",
+      "start": "Tuma ujumbe faragha",
+      "placeholder": "Ujumbe faragha",
+      "with": "pamoja na {{name}}",
+      "note": "Ni nyinyi wawili pekee mnaoweza kusoma hili. Vipeperushi huona ufunguo wa mara moja, si nani anayezungumza na nani.",
+      "needKey": "Muulize atume mara moja ili ufunguo wake ujulikane.",
+      "headerNote": "binafsi"
+    },
+    "you": "wewe",
+    "intro": "Kila mtu hapa anaweza kusoma unachotuma, na ujumbe hauwezi kufutwa. Gusa jina la chumba kuchagua lugha yako. Telezesha ujumbe kujibu.",
+    "consentTitle": "Washa soga?",
+    "consentPublic": "Ujumbe katika chumba cha wote ni wa umma na wa kudumu. Hakuna kufuta.",
+    "consentIp": "Seva ya relay inaona anwani yako ya IP na wakati uko mtandaoni. Pochi yako haioni.",
+    "consentSeparate": "Jina lako la soga ni tofauti na pochi yako. Hakuna anayeweza kuona salio lako au malipo yako.",
+    "consentEnable": "Washa soga",
+    "consentLater": "Sio sasa",
+    "consentOff": "Unaweza kuizima tena katika Mipangilio.",
+    "back": "← Pochi",
+    "roomAria": "Soga ya jamii",
+    "state": {
+      "offline": "nje ya mtandao",
+      "connecting": "inaunganisha…",
+      "live": "moja kwa moja",
+      "error": "hakuna relay"
+    },
+    "empty": "Hakuna chochote bado — sema hello.",
+    "connecting": "Inaunganisha kwenye relay…",
+    "anon": "bila jina",
+    "reply": "Jibu",
+    "replyingTo": "Unamjibu {{name}}",
+    "cancel": "Ghairi",
+    "placeholder": "Tuma ujumbe kwa chumba cha wote",
+    "send": "Tuma",
+    "sending": "Inatuma…",
+    "errSend": "Ujumbe huo haukutoka. Angalia muunganisho na ujaribu tena.",
+    "errEngine": "Toleo hili halina injini ya soga, kwa hivyo ujumbe hauwezi kutiwa sahihi.",
+    "nameTitle": "Chagua jina",
+    "nameWhy": "Linaonyeshwa karibu na ujumbe wako. Unaweza kubadilisha baadaye, au kuruka na kuchapisha kama wasiojulikana.",
+    "namePlaceholder": "Jina lako kwenye soga",
+    "namePermanent": "Machapisho ni ya umma na ya kudumu — mtu yeyote anaweza kuyasoma, na hayawezi kufutwa.",
+    "nameSave": "Hifadhi na tuma"
+  },
+  "backgroundPermission": {
+    "title": "Ruhusu pochi isawazishe chinichini?",
+    "body": "Simu hii sasa inaendesha pochi yenyewe. Android huweka programu zinazolala kwenye ratiba yake, kwa hivyo bila hii pochi inaweza kuwa nyuma kwa masaa na utakapoifungua tena utasubiri ijipatie. Kuidhinisha huruhusu pochi kuamka kila baada ya dakika 15 ili kusasishwa. Unaweza kubadilisha baadaye katika mipangilio ya Android.",
+    "enable": "Ruhusu",
+    "later": "Sio sasa",
+    "never": "Usiulize tena",
+    "noScreen": "Simu hii haina skrini ya kuboresha betri. Usawazishaji chinichini bado unafanya kazi kwa ratiba ya Android."
   }
 }
