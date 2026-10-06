@@ -204,6 +204,7 @@ export function ProfileSheet({
           )}
         </div>
       </div>
+      {person.about && <p className="chat-profile-about">{person.about}</p>}
       <Row label={t("chat.dm.start")} onClick={onDm} detail={t("chat.dm.openDetail")} />
       <Row label={t("chat.profile.copyKey")} onClick={onCopyKey} />
       {person.zkas && <Row label={t("chat.actions.tip")} onClick={onTip} detail={t("chat.actions.tipDetail")} />}
@@ -229,6 +230,7 @@ export function RoomsSheet({
   onClose,
   onDms,
   onMuted,
+  onProfile,
 }: {
   current: string;
   unread: Record<string, number>;
@@ -237,6 +239,7 @@ export function RoomsSheet({
   onClose: () => void;
   onDms: () => void;
   onMuted: () => void;
+  onProfile: () => void;
 }) {
   const { t } = useTranslation();
   // Grouped, because twenty flat rows is a list you scan rather than read.
@@ -249,6 +252,12 @@ export function RoomsSheet({
       <button className="chat-sheet-row" onClick={onDms}>
         <span>{t("chat.dm.open")}</span>
         <span className="chat-sheet-detail">{t("chat.dm.openDetail")}</span>
+      </button>
+      {/* Editing your own name, bio and tip address was reachable ONLY in the
+          prompt before your first message — after that there was no way back to
+          it at all. */}
+      <button className="chat-sheet-row" onClick={onProfile}>
+        <span>{t("chat.profileTitle")}</span>
       </button>
       <button className="chat-sheet-row" onClick={onMuted}>
         <span>{t("chat.muted.title")}</span>

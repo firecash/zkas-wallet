@@ -1960,14 +1960,19 @@
       "headerNote": "peribadi"
     },
     "you": "anda",
-    "intro": "Semua orang di sini boleh baca kiriman anda, dan kiriman tidak boleh dipadam. Guna baris di atas untuk tukar bilik. Tekan lama mesej untuk pilihan, ketik dua kali untuk suka, leret untuk balas.",
+    "intro": "Semua orang di sini boleh baca apa yang anda pos, dan pos tidak boleh dipadam. Guna baris di atas untuk tukar bilik. Ketik mesej untuk reaksi atau balas, atau leret untuk balas.",
     "torBlocked": "Sembang dimatikan kerana Tor hidup. Geganti dicapai terus, bukan melalui Tor, jadi sambungan akan mendedahkan alamat IP sebenar anda. Matikan Tor, atau tetapkan geganti dengan alamat .onion dalam Tetapan.",
     "torBlockedShort": "Tidak bersambung semasa Tor hidup.",
     "muted": {
       "title": "Orang dibisukan",
       "none": "Anda belum bisukan sesiapa.",
       "note": "Bisu hanya kesan dompet ini. Nyahbisu bawa balik mesej mereka di mana-mana anda log masuk dengan biji ini."
-    }
+    },
+    "profileTitle": "Profil anda",
+    "profileSave": "Simpan",
+    "bioLabel": "Bio (opsyen)",
+    "bioPlaceholder": "Sepatah tentang anda",
+    "bioWhy": "Dipaparkan pada profil anda kepada sesiapa di dalam bilik. Awam dan kekal, seperti mesej. {{n}} aksara lagi."
   },
   "confirmWatch": {
     "title": "Pantau dompet ini?",

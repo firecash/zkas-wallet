@@ -1960,14 +1960,19 @@
       "headerNote": "privado"
     },
     "you": "você",
-    "intro": "Todos aqui podem ler o que você posta, e posts não podem ser deletados. Use a linha acima para trocar de sala. Segure uma mensagem para opções, toque duas vezes para curtir, deslize para responder.",
+    "intro": "Todos aqui podem ler o que você publica, e as publicações não podem ser excluídas. Use a linha acima para trocar de sala. Toque em uma mensagem para reagir ou responder, ou deslize para responder. ",
     "torBlocked": "O chat está desligado porque o Tor está ativo. O relay é acessado diretamente, não pelo Tor, então conectar mostraria seu IP real. Desligue o Tor ou configure um relay com endereço .onion em Configurações.",
     "torBlockedShort": "Desconectado com Tor ativo.",
     "muted": {
       "title": "Pessoas silenciadas",
       "none": "Você não silenciou ninguém.",
       "note": "Silenciar só afeta esta carteira. Reativar traz as mensagens de volta em todos os lugares onde você está logado com esta semente."
-    }
+    },
+    "profileTitle": "Seu perfil",
+    "profileSave": "Salvar",
+    "bioLabel": "Bio (opcional)",
+    "bioPlaceholder": "Uma linha sobre você",
+    "bioWhy": "Exibida no seu perfil para todos na sala. Pública e permanente, como uma mensagem. Restam {{n}} caracteres."
   },
   "confirmWatch": {
     "title": "Observar esta carteira?",

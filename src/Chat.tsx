@@ -33,6 +33,7 @@ import {
   noteTags,
   parseProfile,
   profileContent,
+  ABOUT_MAX,
   reactionTags,
   reportTags,
   signAs,
@@ -44,8 +45,11 @@ import {
   markDmWrapsSeen,
   seenDmWraps,
   mutedKeys,
+  myBio,
   myZkasAddress,
   nickname,
+  setMyBio,
+  setMyZkasAddress,
   setChatEnabled,
   setCurrentRoom,
   setMutedKeys,
@@ -159,7 +163,7 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
   const [room, setRoom] = useState(currentRoom());
   const [state, setState] = useState<ConnectionState>("offline");
   const [notes, setNotes] = useState<Map<string, ChatEvent>>(new Map());
-  const [profiles, setProfiles] = useState<Map<string, { name?: string; zkas?: string }>>(new Map());
+  const [profiles, setProfiles] = useState<Map<string, { name?: string; zkas?: string; about?: string }>>(new Map());
   const [reactions, setReactions] = useState<Map<string, Map<string, Set<string>>>>(new Map());
   const [muted, setMuted] = useState<string[]>(() => mutedKeys());
   const [firstNames, setFirstNames] = useState<Record<string, string>>(loadFirstNames);
@@ -171,6 +175,7 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
   const [askName, setAskName] = useState(false);
   const [nameDraft, setNameDraft] = useState(nickname());
   const [addrDraft, setAddrDraft] = useState(myZkasAddress());
+  const [aboutDraft, setAboutDraft] = useState(myBio());
   const [me, setMe] = useState("");
   const [sheet, setSheet] = useState<null | { kind: "msg" | "profile" | "rooms" | "muted"; id?: string; pubkey?: string }>(null);
   const [atBottom, setAtBottom] = useState(true);
@@ -209,9 +214,7 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
   // one action common enough that making it cost two taps was a regression from
   // the visible button it replaced — so it also gets a gesture.
   const swipe = useRef<{ id: string; x: number; y: number; at: number; held: boolean } | null>(null);
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** Last message tapped, and when — for recognising a double tap. */
-  const lastTap = useRef<{ id: string; at: number } | null>(null);
+
   const client = useRef<ChatClient | null>(null);
   const bottom = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -441,75 +444,62 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
    *
    *  Hold is cancelled by movement, so scrolling the list never opens anything.
    */
-  const HOLD_MS = 450;
-  const DOUBLE_TAP_MS = 320;
-  /** Movement past this is a scroll or a swipe, not a press. */
+  /** Movement past this is a scroll or a swipe, not a tap. */
   const SLOP_PX = 12;
 
-  const cancelHold = useCallback(() => {
-    if (holdTimer.current) clearTimeout(holdTimer.current);
-    holdTimer.current = null;
-  }, []);
-
+  /** How a message is operated.
+   *
+   *  A tap opens the action sheet, immediately — waiting on a long press to
+   *  read someone's message is a delay with nothing to show for it.
+   *
+   *  What a tap must NOT do is run something. The sheet opens under the finger,
+   *  so a second tap used to land on a row, and "Mute this person" is one of
+   *  them: people muted strangers without ever seeing the menu. That is fixed
+   *  where it belongs — the sheet ignores taps for its first 350ms, and mute and
+   *  report take two deliberate taps with the second one spelled out — not by
+   *  making every reader hold their thumb down.
+   *
+   *  The pointer handlers exist only for swipe-to-reply; a swipe suppresses the
+   *  click that would otherwise follow it.
+   */
   const gestures = useCallback(
     (m: ChatMessage) => ({
       onPointerDown: (e: ReactPointerEvent) => {
         swipe.current = { id: m.id, x: e.clientX, y: e.clientY, at: Date.now(), held: false };
-        cancelHold();
-        holdTimer.current = setTimeout(() => {
-          const st = swipe.current;
-          if (!st || st.id !== m.id) return;
-          st.held = true;
-          // The press itself is the confirmation that this is deliberate, so a
-          // short buzz acknowledges it where the hardware can.
-          try { navigator.vibrate?.(12); } catch { /* not available */ }
-          setSheet({ kind: "msg", id: m.id, pubkey: m.pubkey });
-        }, HOLD_MS);
-      },
-      onPointerMove: (e: ReactPointerEvent) => {
-        const st = swipe.current;
-        if (!st) return;
-        if (Math.abs(e.clientX - st.x) > SLOP_PX || Math.abs(e.clientY - st.y) > SLOP_PX) cancelHold();
       },
       onPointerCancel: () => {
-        cancelHold();
         swipe.current = null;
       },
       onPointerUp: (e: ReactPointerEvent) => {
-        cancelHold();
         const st = swipe.current;
-        swipe.current = null;
-        if (!st || st.id !== m.id || st.held) return;
+        if (!st || st.id !== m.id) return;
         const dx = e.clientX - st.x;
         const dy = e.clientY - st.y;
         // Rightward and far enough to be deliberate rather than a sloppy tap.
         if (dx > 60 && Math.abs(dy) < 60) {
+          st.held = true; // reuse: "this gesture was handled, swallow the click"
           setReplyTo(m);
           return;
         }
-        if (Math.abs(dx) > SLOP_PX || Math.abs(dy) > SLOP_PX) return; // a scroll
-        const prevTap = lastTap.current;
-        const now = Date.now();
-        if (prevTap && prevTap.id === m.id && now - prevTap.at < DOUBLE_TAP_MS) {
-          lastTap.current = null;
-          void publishSigned(KIND_REACTION, reactionTags(m, room), "+").catch(() => undefined);
-          try { navigator.vibrate?.(8); } catch { /* not available */ }
-          return;
-        }
-        lastTap.current = { id: m.id, at: now };
+        // A scroll that began on this message is not a tap on it either.
+        if (Math.abs(dx) > SLOP_PX || Math.abs(dy) > SLOP_PX) st.held = true;
       },
-      // A desktop has no long press; the menu key and right-click are its equivalent.
+      onClick: () => {
+        const handled = swipe.current?.held;
+        swipe.current = null;
+        if (handled) return;
+        setSheet({ kind: "msg", id: m.id, pubkey: m.pubkey });
+      },
+      // Right-click reaches the same menu, so a desktop context menu does not
+      // sit on top of the app's own.
       onContextMenu: (e: ReactMouseEvent) => {
         e.preventDefault();
-        cancelHold();
+        swipe.current = null;
         setSheet({ kind: "msg", id: m.id, pubkey: m.pubkey });
       },
     }),
-    [cancelHold, room],
+    [],
   );
-
-  // A pending hold must not fire after the list has gone.
-  useEffect(() => cancelHold, [cancelHold]);
 
   /** Open a private conversation. Used by the message sheet, the profile sheet
    *  and the conversation list, so all three land in the same state — the list
@@ -573,6 +563,7 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
         pubkey,
         name: p?.name,
         zkas: p?.zkas,
+        about: p?.about,
         firstName: firstNames[pubkey],
         fingerprint: fingerprintOf(pubkey),
         hue: hueOf(pubkey),
@@ -684,10 +675,13 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
   async function saveName() {
     const name = nameDraft.trim().slice(0, 32);
     const addr = addrDraft.trim();
+    const about = aboutDraft.trim().slice(0, ABOUT_MAX);
     setNickname(name);
+    setMyZkasAddress(addr);
+    setMyBio(about);
     setAskName(false);
     try {
-      await publishSigned(KIND_PROFILE, [], profileContent(name, addr || undefined));
+      await publishSigned(KIND_PROFILE, [], profileContent(name, addr || undefined, about || undefined));
     } catch {
       /* stored locally either way; it publishes with the next send */
     }
@@ -1016,6 +1010,15 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
           onDms={() => { setSheet(null); setView({ k: "dms" }); }}
           mutedCount={muted.length}
           onMuted={() => setSheet({ kind: "muted" })}
+          onProfile={() => {
+            // Reopen the editor with what was last saved, not a stale draft from
+            // an earlier visit to this screen.
+            setNameDraft(nickname());
+            setAddrDraft(myZkasAddress());
+            setAboutDraft(myBio());
+            setSheet(null);
+            setAskName(true);
+          }}
           onPick={pickRoom}
         />
       )}
@@ -1023,16 +1026,38 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
       {askName && (
         <div className="modalwrap" onClick={() => setAskName(false)}>
           <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ marginTop: 0 }}>{t("chat.nameTitle")}</h2>
+            <h2 style={{ marginTop: 0 }}>{nickname() ? t("chat.profileTitle") : t("chat.nameTitle")}</h2>
             <p className="muted small" style={{ marginTop: 0 }}>{t("chat.nameWhy")}</p>
             <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder={t("chat.namePlaceholder")} maxLength={32} aria-label={t("chat.nameTitle")} />
+            <label style={{ marginTop: 10 }}>{t("chat.bioLabel")}</label>
+            <textarea
+              className="chat-bio-input"
+              value={aboutDraft}
+              onChange={(e) => setAboutDraft(e.target.value)}
+              placeholder={t("chat.bioPlaceholder")}
+              maxLength={ABOUT_MAX}
+              rows={2}
+              aria-label={t("chat.bioLabel")}
+            />
+            <p className="muted small">{t("chat.bioWhy", { n: ABOUT_MAX - aboutDraft.trim().length })}</p>
             <label style={{ marginTop: 10 }}>{t("chat.tipAddrLabel")}</label>
             <input value={addrDraft} onChange={(e) => setAddrDraft(e.target.value)} placeholder="zkas:…" aria-label={t("chat.tipAddrLabel")} />{/* i18n-ignore: `zkas:` is the address prefix itself, not prose */}
             <p className="muted small">{t("chat.tipAddrWhy")}</p>
             <div className="msg warn small">{t("chat.namePermanent")}</div>
-            <button className="btn" onClick={() => void saveName()}>{t("chat.nameSave")}</button>
-            <button className="btn ghost" style={{ marginTop: 8 }} onClick={() => { setNickname(""); setAskName(false); void send(draft); }}>
-              {t("chat.nameSkip")}
+            <button className="btn" onClick={() => void saveName()}>
+              {nickname() ? t("chat.profileSave") : t("chat.nameSave")}
+            </button>
+            <button
+              className="btn ghost"
+              style={{ marginTop: 8 }}
+              onClick={() => {
+                if (nickname()) { setAskName(false); return; }
+                setNickname("");
+                setAskName(false);
+                void send(draft);
+              }}
+            >
+              {nickname() ? t("chat.cancel") : t("chat.nameSkip")}
             </button>
           </div>
         </div>

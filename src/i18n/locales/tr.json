@@ -1920,7 +1920,7 @@
       "headerNote": "gizli"
     },
     "you": "siz",
-    "intro": "Burada herkes yazdıklarını okuyabilir ve gönderiler silinemez. Odayı değiştirmek için üstteki satırı kullan. Seçenekler için mesajı basılı tut, beğenmek için çift dokun, yanıtlamak için kaydır.",
+    "intro": "Buradaki herkes yazdıklarınızı okuyabilir ve mesajlar silinemez. Odayı değiştirmek için üstteki satırı kullanın. Tepki vermek veya yanıtlamak için bir mesaja dokunun veya yanıtlamak için kaydırın.",
     "consentTitle": "Sohbet açılsın mı?",
     "consentPublic": "Genel odadaki mesajlar herkese açık ve kalıcıdır. Silme yoktur.",
     "consentIp": "Röle sunucusu IP adresinizi ve çevrimiçi olduğunuz zamanı görür. Cüzdanınız görmez.",
@@ -1959,7 +1959,12 @@
       "title": "Sessize alınanlar",
       "none": "Henüz kimseyi sessize almadın.",
       "note": "Sessize alma yalnızca bu cüzdanı etkiler. Sessizi kaldırmak, bu tohumla giriş yaptığın her yerde mesajlarını geri getirir."
-    }
+    },
+    "profileTitle": "Profiliniz",
+    "profileSave": "Kaydet",
+    "bioLabel": "Biyografi (isteğe bağlı)",
+    "bioPlaceholder": "Sizi anlatan bir satır",
+    "bioWhy": "Odadaki herkese profilinizde gösterilir. Bir mesaj gibi herkese açık ve kalıcıdır. {{n}} karakter kaldı."
   },
   "backgroundPermission": {
     "body": "Bu telefon artık cüzdanı kendisi çalıştırıyor. Android uyuyan uygulamaları kendi programına alır; bu izin olmazsa cüzdan saatlerce geri kalır ve bir sonraki açışınızda yetişmesini beklersiniz. İzin vermek, cüzdanın güncel kalmak için yaklaşık 15 dakikada bir uyanmasını sağlar. Bunu daha sonra Android ayarlarından değiştirebilirsiniz.",

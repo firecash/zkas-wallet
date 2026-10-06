@@ -1920,7 +1920,7 @@
       "headerNote": "binafsi"
     },
     "you": "wewe",
-    "intro": "Kila mtu hapa anaweza kusoma unachochapisha, na machapisho hayawezi kufutwa. Tumia safu iliyo juu kubadilisha chumba. Shikilia ujumbe kwa chaguo, gusa mara mbili kupenda, telezesha kujibu.",
+    "intro": "Kila mtu hapa anaweza kusoma unachochapisha, na machapisho hayawezi kufutwa. Tumia safu iliyo juu kubadilisha chumba. Gusa ujumbe kujibu au kuitikia, au telezesha ili kujibu.",
     "consentTitle": "Washa soga?",
     "consentPublic": "Ujumbe katika chumba cha wote ni wa umma na wa kudumu. Hakuna kufuta.",
     "consentIp": "Seva ya relay inaona anwani yako ya IP na wakati uko mtandaoni. Pochi yako haioni.",
@@ -1959,7 +1959,12 @@
       "title": "Watu walionyamazishwa",
       "none": "Hujamnyamazisha mtu yeyote.",
       "note": "Kunyamazisha kunaathiri pochi hii pekee. Kuondoa unyamazishaji hurejesha ujumbe wao kila ulipoingia kwa mbegu hii."
-    }
+    },
+    "profileTitle": "Wasifu wako",
+    "profileSave": "Hifadhi",
+    "bioLabel": "Bio (si lazima)",
+    "bioPlaceholder": "Mstari kukuhusu",
+    "bioWhy": "Inaonekana kwenye wasifu wako kwa mtu yeyote kwenye chumba. Ya umma na ya kudumu, kama ujumbe. {{n}} herufi zimesalia."
   },
   "backgroundPermission": {
     "title": "Ruhusu pochi isawazishe chinichini?",

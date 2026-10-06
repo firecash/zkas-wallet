@@ -15,6 +15,7 @@ const RELAY_KEY = "zkas_chat_relay_v1";
 const SEEN_KEY = "zkas_chat_lastseen_v1";
 const MUTE_KEY = "zkas_chat_muted_v1";
 const ADDR_KEY = "zkas_chat_zkasaddr_v1";
+const BIO_KEY = "zkas_chat_bio_v1";
 const ROOM_KEY = "zkas_chat_room_v1";
 const PUBKEY_KEY = "zkas_chat_pubkey_v1";
 const RECENT_KEY = "zkas_chat_recent_v1";
@@ -190,6 +191,16 @@ export function setMyZkasAddress(addr: string): void {
   write(ADDR_KEY, addr.trim());
 }
 
+/** This user's own bio, kept locally so the editor can be reopened with what
+ *  they last wrote. Published as the standard Nostr `about` field. */
+export function myBio(): string {
+  return read(BIO_KEY);
+}
+
+export function setMyBio(text: string): void {
+  write(BIO_KEY, text.trim());
+}
+
 /** The rooms shown in the switcher strip, most recently opened first.
  *
  *  Persisted so the strip is the same on every open. It deliberately does NOT
@@ -235,7 +246,7 @@ export function setMyChatPubkey(k: string): void {
  *  a mute list and read cursors behind after someone opts out is not "off". */
 export function forgetChat(): void {
   try {
-    [CONSENT_KEY, NICK_KEY, MUTE_KEY, ADDR_KEY, ROOM_KEY, PUBKEY_KEY, RECENT_KEY, DM_SEEN_KEY].forEach((k) =>
+    [CONSENT_KEY, NICK_KEY, MUTE_KEY, ADDR_KEY, ROOM_KEY, PUBKEY_KEY, RECENT_KEY, DM_SEEN_KEY, BIO_KEY].forEach((k) =>
       localStorage.removeItem(k),
     );
     Object.keys(localStorage)

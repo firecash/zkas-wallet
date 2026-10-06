@@ -1920,7 +1920,7 @@
       "headerNote": "privado"
     },
     "you": "tú",
-    "intro": "Todos pueden leer lo que publicas y los mensajes no se borran. Usa la fila de arriba para cambiar de sala. Mantén un mensaje para opciones, toca dos veces para dar like, desliza para responder.",
+    "intro": "Aquí todos ven lo que publicas y no se puede borrar. Usa la fila de arriba para cambiar de sala. Toca un mensaje para reaccionar o responder, o deslízalo para responder.",
     "consentTitle": "¿Activar el chat?​",
     "consentPublic": "Los mensajes en la sala global son públicos y permanentes. No se pueden eliminar.​",
     "consentIp": "El servidor relay ve tu IP y cuándo estás en línea. Tu billetera no.​",
@@ -1959,7 +1959,12 @@
       "title": "Silenciados",
       "none": "No has silenciado a nadie.",
       "note": "Silenciar solo afecta a esta billetera. Al desilenciar, sus mensajes vuelven donde hayas iniciado sesión con esta semilla."
-    }
+    },
+    "profileTitle": "Tu perfil",
+    "profileSave": "Guardar",
+    "bioLabel": "Bio (opcional)",
+    "bioPlaceholder": "Una línea sobre ti",
+    "bioWhy": "Aparece en tu perfil para todos en la sala. Público y permanente, como un mensaje. {{n}} caracteres restantes."
   },
   "backgroundPermission": {
     "title": "¿Sincronizar la billetera en segundo plano?​",

@@ -1920,7 +1920,7 @@
       "headerNote": "pribadi"
     },
     "you": "Anda",
-    "intro": "Semua orang di sini bisa membaca postingan Anda, dan postingan tidak bisa dihapus. Gunakan baris di atas untuk ganti ruang. Tahan pesan untuk opsi, ketuk dua kali untuk suka, geser untuk balas.",
+    "intro": "Semua orang di sini bisa membaca yang Anda tulis, dan kiriman tidak bisa dihapus. Gunakan baris di atas untuk ganti ruang. Ketuk pesan untuk bereaksi atau membalas, atau geser untuk membalas.",
     "consentTitle": "Aktifkan obrolan?",
     "consentPublic": "Pesan di ruang global bersifat publik dan permanen. Tidak ada fitur hapus.",
     "consentIp": "Server relay melihat alamat IP Anda dan kapan Anda daring. Dompet Anda tidak.",
@@ -1959,7 +1959,12 @@
       "title": "Orang Dibisukan",
       "none": "Anda belum membisukan siapa pun.",
       "note": "Membisukan hanya memengaruhi dompet ini. Membuka bisu akan mengembalikan pesan mereka di mana pun Anda masuk dengan seed ini."
-    }
+    },
+    "profileTitle": "Profil Anda",
+    "profileSave": "Simpan",
+    "bioLabel": "Bio (opsional)",
+    "bioPlaceholder": "Tentang Anda",
+    "bioWhy": "Ditampilkan di profil Anda untuk semua orang di ruang. Publik dan permanen, seperti pesan. {{n}} karakter tersisa."
   },
   "backgroundPermission": {
     "title": "Sinkronkan dompet di latar belakang?",

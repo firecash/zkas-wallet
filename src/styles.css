@@ -3429,3 +3429,13 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
   border-color: color-mix(in srgb, var(--danger, #e0556a) 60%, transparent);
   font-weight: 650;
 }
+
+/* The bio field, and a bio as read on someone's profile. */
+.chat-bio-input { width: 100%; resize: vertical; min-height: 54px; font: inherit; }
+.chat-profile-about {
+  margin: 10px 0 0;
+  /* A stranger wrote this: it must wrap rather than stretch the sheet, and a
+     single unbroken 160-character "word" is a thing a stranger can write. */
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}

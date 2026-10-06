@@ -68,6 +68,8 @@ export interface Person {
   /** The first name we ever saw them use. A later change is surfaced rather than
    *  silently accepted, which is what defeats rename impersonation. */
   firstName?: string;
+  /** Free text the person wrote about themselves. */
+  about?: string;
 }
 
 export interface ChatMessage extends ChatEvent {
@@ -356,10 +358,17 @@ export function muteTags(keys: string[]): string[][] {
   return keys.map((k) => ["p", k]);
 }
 
+/** Maximum bio length. Long enough for a sentence or two, short enough that a
+ *  profile sheet stays a profile sheet and a room of them stays readable. */
+export const ABOUT_MAX = 160;
+
 /** Profile, including the optional address that makes tipping possible. */
-export function profileContent(name: string, zkas?: string): string {
+export function profileContent(name: string, zkas?: string, about?: string): string {
   const body: Record<string, string> = {};
   if (name) body.name = name;
+  // `about` is the standard Nostr field for this, so a bio written here shows up
+  // in every other client, and theirs shows up here.
+  if (about) body.about = about.slice(0, ABOUT_MAX);
   // Publishing an address is opt-in and reversible. It links this chat identity
   // to a payment destination, which is exactly what a tip needs and exactly what
   // someone wanting to stay unlinkable must not do.
@@ -368,12 +377,16 @@ export function profileContent(name: string, zkas?: string): string {
 }
 
 /** Parse a kind-0 profile defensively — it is a stranger's JSON. */
-export function parseProfile(content: string): { name?: string; zkas?: string } {
+export function parseProfile(content: string): { name?: string; zkas?: string; about?: string } {
   try {
     const d = JSON.parse(content) as Record<string, unknown>;
     const name = typeof d.name === "string" ? d.name.trim().slice(0, 32) : undefined;
     const zkas = typeof d.zkas === "string" && d.zkas.startsWith("zkas:") ? d.zkas.trim() : undefined;
-    return { name: name || undefined, zkas };
+    // Truncated AND stripped of line breaks: a stranger controls this string, and
+    // a hundred newlines in it would push every other row off the sheet.
+    const about =
+      typeof d.about === "string" ? d.about.replace(/\s+/g, " ").trim().slice(0, ABOUT_MAX) : undefined;
+    return { name: name || undefined, zkas, about: about || undefined };
   } catch {
     return {};
   }

@@ -1960,14 +1960,19 @@
       "headerNote": "privé"
     },
     "you": "jij",
-    "intro": "Iedereen hier kan lezen wat je plaatst en berichten kunnen niet worden verwijderd. Gebruik de rij boven om van kamer te wisselen. Houd een bericht vast voor opties, dubbeltik om te liken, veeg om te antwoorden.",
+    "intro": "Iedereen hier kan lezen wat je plaatst, en berichten kunnen niet worden verwijderd. Gebruik de rij hierboven om van ruimte te wisselen. Tik op een bericht om te reageren of te antwoorden, of veeg het om te antwoorden. ",
     "torBlocked": "Chat staat uit omdat Tor aan staat. De relay wordt direct bereikt, niet via Tor, dus verbinden zou je echte IP-adres tonen. Zet Tor uit of stel een relay met een .onion-adres in bij Instellingen.",
     "torBlockedShort": "Niet verbonden terwijl Tor aan staat.",
     "muted": {
       "title": "Gedempte personen",
       "none": "Je hebt niemand gedempt.",
       "note": "Dempen geldt alleen voor deze wallet. Ontdempen brengt hun berichten overal terug waar je met dit seed bent ingelogd."
-    }
+    },
+    "profileTitle": "Jouw profiel",
+    "profileSave": "Opslaan",
+    "bioLabel": "Bio (optioneel)",
+    "bioPlaceholder": "Een regel over jou",
+    "bioWhy": "Zichtbaar op je profiel voor iedereen in de ruimte. Openbaar en permanent, net als een bericht. Nog {{n}} tekens."
   },
   "confirmWatch": {
     "title": "Deze wallet bekijken?",

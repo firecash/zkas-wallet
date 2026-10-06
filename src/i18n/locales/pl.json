@@ -1920,7 +1920,7 @@
       "headerNote": "prywatnie"
     },
     "you": "ty",
-    "intro": "Każdy tu widzi twoje posty, a postów nie można usunąć. Użyj wiersza u góry, by zmienić pokój. Przytrzymaj wiadomość, by zobaczyć opcje, dotknij dwukrotnie, by polubić, przesuń, by odpowiedzieć.",
+    "intro": "Każdy tutaj widzi, co piszesz, a postów nie można usunąć. Użyj górnego wiersza, by zmienić pokój. Stuknij wiadomość, by zareagować lub odpowiedzieć, albo przesuń ją, by odpisać.",
     "consentTitle": "Włączyć czat?",
     "consentPublic": "Wiadomości w pokoju globalnym są publiczne i trwałe. Nie ma opcji usunięcia.",
     "consentIp": "Serwer przekaźnika widzi Twój adres IP i czas aktywności. Twój portfel – nie.",
@@ -1959,7 +1959,12 @@
       "title": "Wyciszeni",
       "none": "Nikogo nie wyciszyłeś.",
       "note": "Wyciszanie dotyczy tylko tego portfela. Cofnięcie wyciszenia przywraca ich wiadomości wszędzie tam, gdzie jesteś zalogowany tym ziarnem."
-    }
+    },
+    "profileTitle": "Twój profil",
+    "profileSave": "Zapisz",
+    "bioLabel": "Bio (opcjonalne)",
+    "bioPlaceholder": "Linijka o Tobie",
+    "bioWhy": "Widoczne na Twoim profilu dla wszystkich w pokoju. Publiczne i trwałe, jak wiadomość. Pozostało {{n}} znaków."
   },
   "backgroundPermission": {
     "title": "Zsynchronizować portfel w tle?",

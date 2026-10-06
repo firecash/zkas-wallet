@@ -1960,14 +1960,19 @@
       "headerNote": "privat"
     },
     "you": "du",
-    "intro": "Alle hier können lesen, was du postest, und Beiträge können nicht gelöscht werden. Nutze die Zeile oben, um den Raum zu wechseln. Halte eine Nachricht für Optionen, doppeltippen zum Liken, wischen zum Antworten.",
+    "intro": "Alle hier können lesen, was du postest, und Beiträge können nicht gelöscht werden. Wechsle oben den Raum. Tippe auf eine Nachricht, um zu reagieren oder zu antworten, oder wische sie zum Antworten.",
     "torBlocked": "Chat ist aus, weil Tor an ist. Der Relay wird direkt erreicht, nicht über Tor, daher würde die Verbindung deine echte IP-Adresse zeigen. Schalte Tor aus oder setze in den Einstellungen einen Relay mit einer .onion-Adresse.",
     "torBlockedShort": "Nicht verbunden bei Tor an.",
     "muted": {
       "title": "Stummgeschaltete",
       "none": "Du hast niemanden stummgeschaltet.",
       "note": "Stummschalten betrifft nur dieses Wallet. Aufheben bringt ihre Nachrichten überall zurück, wo du mit diesem Seed angemeldet bist."
-    }
+    },
+    "profileTitle": "Dein Profil",
+    "profileSave": "Speichern",
+    "bioLabel": "Bio (optional)",
+    "bioPlaceholder": "Eine Zeile über dich",
+    "bioWhy": "Wird auf deinem Profil für alle im Raum angezeigt. Öffentlich und dauerhaft, wie eine Nachricht. {{n}} Zeichen übrig."
   },
   "confirmWatch": {
     "title": "Wallet beobachten? ",

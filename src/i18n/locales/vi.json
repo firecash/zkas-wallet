@@ -1920,7 +1920,7 @@
       "headerNote": "riêng"
     },
     "you": "bạn",
-    "intro": "Mọi người ở đây đều đọc được bài bạn đăng và bài không thể xóa. Dùng hàng trên để đổi phòng. Giữ tin nhắn để xem tùy chọn, chạm đúp để thích, vuốt để trả lời.",
+    "intro": "Mọi người ở đây đều đọc được bài bạn đăng và bài không thể xóa. Dùng hàng trên để đổi phòng. Chạm vào tin nhắn để phản hồi hoặc trả lời, hoặc vuốt để trả lời.",
     "consentTitle": "Bật trò chuyện?",
     "consentPublic": "Tin nhắn trong phòng chung là công khai và vĩnh viễn. Không thể xóa.",
     "consentIp": "Máy chủ relay thấy địa chỉ IP và lúc bạn online. Ví của bạn thì không.",
@@ -1959,7 +1959,12 @@
       "title": "Người bị tắt tiếng",
       "none": "Bạn chưa tắt tiếng ai.",
       "note": "Tắt tiếng chỉ ảnh hưởng ví này. Bỏ tắt tiếng sẽ hiện lại tin nhắn của họ ở mọi nơi bạn đăng nhập bằng seed này."
-    }
+    },
+    "profileTitle": "Hồ sơ của bạn",
+    "profileSave": "Lưu",
+    "bioLabel": "Tiểu sử (tùy chọn)",
+    "bioPlaceholder": "Một dòng về bạn",
+    "bioWhy": "Hiển thị trên hồ sơ của bạn cho mọi người trong phòng. Công khai và vĩnh viễn, như một tin nhắn. Còn {{n}} ký tự."
   },
   "backgroundPermission": {
     "title": "Cho phép ví đồng bộ trong nền?​",
