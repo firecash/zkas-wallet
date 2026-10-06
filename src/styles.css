@@ -3433,7 +3433,7 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
 /* The bio field, and a bio as read on someone's profile. */
 .chat-bio-input { width: 100%; resize: vertical; min-height: 54px; font: inherit; }
 .chat-profile-about {
-  margin: 10px 0 0;
+  margin: 10px 0 12px;
   /* A stranger wrote this: it must wrap rather than stretch the sheet, and a
      single unbroken 160-character "word" is a thing a stranger can write. */
   overflow-wrap: anywhere;
