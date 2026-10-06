@@ -1875,8 +1875,8 @@
     "new": "Mới",
     "newMessages": "Tin nhắn mới",
     "failedTap": "Chưa gửi — chạm để thử lại",
-    "tipAddrLabel": "Địa chỉ nhận tip (không bắt buộc)",
-    "tipAddrWhy": "Đăng địa chỉ để người khác tip bạn. Nó liên kết tên chat này với một đích thanh toán, nên để trống để không bị liên kết.",
+    "tipAddrLabel": "Địa chỉ ZKAS của bạn (không bắt buộc)",
+    "tipAddrWhy": "Đăng địa chỉ sẽ thêm nút Gửi ZKAS vào trang cá nhân của bạn. Nó liên kết tên chat này với một đích thanh toán, nên để trống nếu muốn ẩn danh. (216)",
     "rooms": {
       "title": "Phòng",
       "main": "Mọi người",
@@ -1915,9 +1915,7 @@
       "none": "Chưa có tin nhắn riêng nào.",
       "start": "Nhắn riêng",
       "placeholder": "Tin nhắn riêng",
-      "with": "với {{name}}",
       "note": "Chỉ hai bạn đọc được. Relay thấy khóa dùng một lần, không biết ai nói với ai.",
-      "needKey": "Yêu cầu họ đăng một lần để khóa được biết.",
       "headerNote": "riêng"
     },
     "you": "bạn",
@@ -1941,7 +1939,6 @@
     "empty": "Chưa có gì — hãy chào hỏi.",
     "connecting": "Đang kết nối relay…",
     "anon": "nặc danh",
-    "reply": "Trả lời",
     "replyingTo": "Đang trả lời {{name}}",
     "cancel": "Hủy",
     "placeholder": "Nhắn {{room}}",
@@ -1965,7 +1962,11 @@
     "profileSave": "Lưu",
     "bioLabel": "Tiểu sử (tùy chọn)",
     "bioPlaceholder": "Một dòng về bạn",
-    "bioWhy": "Hiển thị trên hồ sơ của bạn cho mọi người trong phòng. Công khai và vĩnh viễn, như một tin nhắn. Còn {{n}} ký tự."
+    "bioWhy": "Hiển thị trên hồ sơ của bạn cho mọi người trong phòng. Công khai và vĩnh viễn, như một tin nhắn. Còn {{n}} ký tự.",
+    "profileWhy": "Tên, dòng giới thiệu và địa chỉ để người khác gửi ZKAS. Tất cả đều công khai và có thể thay đổi bất kỳ lúc nào. (153)",
+    "nameLabel": "Tên (8)",
+    "useMyAddress": "Dùng địa chỉ ví (34)",
+    "clearAddress": "Xóa địa chỉ (23)"
   },
   "backgroundPermission": {
     "title": "Cho phép ví đồng bộ trong nền?​",

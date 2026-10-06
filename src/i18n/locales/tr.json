@@ -1875,8 +1875,8 @@
     "new": "yeni",
     "newMessages": "Yeni mesajlar",
     "failedTap": "Gönderilemedi — tekrar dene",
-    "tipAddrLabel": "Bahşiş adresi (isteğe bağlı)",
-    "tipAddrWhy": "Adres yayınlamak, insanların size bahşiş göndermesini sağlar. Bu sohbet adını bir ödeme hedefine bağlar; bağlantısız kalmak için boş bırakın.",
+    "tipAddrLabel": "ZKAS adresiniz (isteğe bağlı)",
+    "tipAddrWhy": "Adres yayınlamak, profilinizde çalışan bir Gönder ZKAS düğmesi oluşturur. Bu sohbet adını bir ödeme hedefine bağlar; bağlantısız kalmak için boş bırakın.",
     "rooms": {
       "title": "Odalar",
       "main": "Herkes",
@@ -1915,9 +1915,7 @@
       "none": "Henüz özel mesaj yok.",
       "start": "Özel mesaj gönder",
       "placeholder": "Özel mesaj",
-      "with": "{{name}} ile",
       "note": "Bunu yalnızca ikiniz okuyabilirsiniz. Aktarıcılar tek kullanımlık bir anahtar görür, kimin kiminle konuştuğunu değil.",
-      "needKey": "Anahtarının bilinmesi için bir kez gönderi yapmasını isteyin.",
       "headerNote": "gizli"
     },
     "you": "siz",
@@ -1941,7 +1939,6 @@
     "empty": "Henüz bir şey yok — merhaba de.",
     "connecting": "Röleye bağlanıyor…",
     "anon": "anonim",
-    "reply": "Yanıtla",
     "replyingTo": "{{name}}'e yanıt",
     "cancel": "İptal",
     "placeholder": "{{room}} mesajı",
@@ -1965,7 +1962,11 @@
     "profileSave": "Kaydet",
     "bioLabel": "Biyografi (isteğe bağlı)",
     "bioPlaceholder": "Sizi anlatan bir satır",
-    "bioWhy": "Odadaki herkese profilinizde gösterilir. Bir mesaj gibi herkese açık ve kalıcıdır. {{n}} karakter kaldı."
+    "bioWhy": "Odadaki herkese profilinizde gösterilir. Bir mesaj gibi herkese açık ve kalıcıdır. {{n}} karakter kaldı.",
+    "profileWhy": "Adınız, sizi anlatan bir satır ve insanların ZKAS gönderebileceği bir adres. Tümü herkese açıktır ve istediğiniz zaman değiştirilebilir.",
+    "nameLabel": "Ad",
+    "useMyAddress": "Cüzdan adresimi kullan",
+    "clearAddress": "Adresi kaldır"
   },
   "backgroundPermission": {
     "body": "Bu telefon artık cüzdanı kendisi çalıştırıyor. Android uyuyan uygulamaları kendi programına alır; bu izin olmazsa cüzdan saatlerce geri kalır ve bir sonraki açışınızda yetişmesini beklersiniz. İzin vermek, cüzdanın güncel kalmak için yaklaşık 15 dakikada bir uyanmasını sağlar. Bunu daha sonra Android ayarlarından değiştirebilirsiniz.",

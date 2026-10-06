@@ -1897,7 +1897,6 @@
     "empty": "Nada aqui ainda — diga olá.",
     "connecting": "Conectando ao relay…",
     "anon": "anon",
-    "reply": "Responder",
     "replyingTo": "Respondendo a {{name}}",
     "cancel": "Cancelar",
     "placeholder": "Mensagem {{room}}",
@@ -1915,8 +1914,8 @@
     "new": "novo",
     "newMessages": "Novas mensagens",
     "failedTap": "Não enviada — toque para reenviar",
-    "tipAddrLabel": "Endereço para gorjetas (opcional)",
-    "tipAddrWhy": "Publicar um endereço permite que te dêem gorjetas. Isso vincula este nome de chat a um destino de pagamento; deixe vazio para permanecer sem vínculo.",
+    "tipAddrLabel": "Seu endereço ZKAS (opcional) ",
+    "tipAddrWhy": "Publicar um endereço coloca um botão Enviar ZKAS no seu perfil. Ele vincula este nome de chat a um destino de pagamento; deixe vazio para permanecer anônimo.",
     "rooms": {
       "title": "Salas",
       "main": "Todos",
@@ -1955,9 +1954,7 @@
       "none": "Nenhuma mensagem privada ainda.",
       "start": "Enviar mensagem privada",
       "placeholder": "Mensagem privada",
-      "with": "com {{name}}",
       "note": "Só vocês dois podem ler isto. Os relays veem uma chave única, não quem fala com quem.",
-      "needKey": "Peça para ele postar uma vez para que a chave seja conhecida.",
       "headerNote": "privado"
     },
     "you": "você",
@@ -1973,7 +1970,11 @@
     "profileSave": "Salvar",
     "bioLabel": "Bio (opcional)",
     "bioPlaceholder": "Uma linha sobre você",
-    "bioWhy": "Exibida no seu perfil para todos na sala. Pública e permanente, como uma mensagem. Restam {{n}} caracteres."
+    "bioWhy": "Exibida no seu perfil para todos na sala. Pública e permanente, como uma mensagem. Restam {{n}} caracteres.",
+    "profileWhy": "Seu nome, uma linha sobre você e um endereço para receber ZKAS. Tudo é público e pode ser alterado a qualquer momento.",
+    "nameLabel": "Nome",
+    "useMyAddress": "Usar meu endereço",
+    "clearAddress": "Remover endereço"
   },
   "confirmWatch": {
     "title": "Observar esta carteira?",

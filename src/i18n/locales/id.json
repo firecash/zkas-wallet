@@ -1875,8 +1875,8 @@
     "new": "baru",
     "newMessages": "Pesan baru",
     "failedTap": "Gagal kirim — ketuk untuk ulang",
-    "tipAddrLabel": "Alamat untuk tip (opsional)",
-    "tipAddrWhy": "Menerbitkan alamat memungkinkan orang memberi tip. Ini menghubungkan nama obrolan ke tujuan pembayaran; kosongkan agar tetap tidak terhubung.",
+    "tipAddrLabel": "Alamat ZKAS Anda (opsional)",
+    "tipAddrWhy": "Menerbitkan alamat akan menempatkan tombol Kirim ZKAS di profil Anda. Ini menghubungkan nama obrolan ke tujuan pembayaran, jadi biarkan kosong agar tetap tidak tertaut.",
     "rooms": {
       "title": "Ruangan",
       "main": "Semua",
@@ -1915,9 +1915,7 @@
       "none": "Belum ada pesan pribadi.",
       "start": "Pesan pribadi",
       "placeholder": "Pesan pribadi",
-      "with": "dengan {{name}}",
       "note": "Hanya Anda berdua yang bisa membaca ini. Relay melihat kunci sekali pakai, bukan siapa bicara dengan siapa.",
-      "needKey": "Minta mereka mengirim sekali agar kunci mereka diketahui.",
       "headerNote": "pribadi"
     },
     "you": "Anda",
@@ -1941,7 +1939,6 @@
     "empty": "Belum ada apa-apa — sapa saja.",
     "connecting": "Menghubungkan ke relay…",
     "anon": "anonim",
-    "reply": "Balas",
     "replyingTo": "Membalas {{name}}",
     "cancel": "Batal",
     "placeholder": "Pesan {{room}}",
@@ -1965,7 +1962,11 @@
     "profileSave": "Simpan",
     "bioLabel": "Bio (opsional)",
     "bioPlaceholder": "Tentang Anda",
-    "bioWhy": "Ditampilkan di profil Anda untuk semua orang di ruang. Publik dan permanen, seperti pesan. {{n}} karakter tersisa."
+    "bioWhy": "Ditampilkan di profil Anda untuk semua orang di ruang. Publik dan permanen, seperti pesan. {{n}} karakter tersisa.",
+    "profileWhy": "Nama Anda, baris tentang Anda, dan alamat untuk menerima ZKAS. Semuanya publik dan dapat diubah kapan saja.",
+    "nameLabel": "Nama",
+    "useMyAddress": "Gunakan alamat dompet",
+    "clearAddress": "Hapus alamat"
   },
   "backgroundPermission": {
     "title": "Sinkronkan dompet di latar belakang?",

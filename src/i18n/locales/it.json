@@ -1875,8 +1875,8 @@
     "new": "nuovo",
     "newMessages": "Nuovi messaggi",
     "failedTap": "Non inviato — tocca per riprovare",
-    "tipAddrLabel": "Indirizzo per mance (opzionale)",
-    "tipAddrWhy": "Pubblicare un indirizzo permette di ricevere mance. Collega questo nome a una destinazione di pagamento, lascialo vuoto per restare anonimo.",
+    "tipAddrLabel": "Il tuo indirizzo ZKAS (opzionale)",
+    "tipAddrWhy": "Pubblicare un indirizzo aggiunge il pulsante Invia ZKAS al tuo profilo. Collega questo nome chat a una destinazione di pagamento, quindi lascialo vuoto per restare non collegabile.",
     "rooms": {
       "title": "Stanze",
       "main": "Tutti",
@@ -1915,9 +1915,7 @@
       "none": "Ancora nessun messaggio privato.",
       "start": "Messaggio privato",
       "placeholder": "Messaggio privato",
-      "with": "con {{name}}",
       "note": "Solo voi due potete leggere. I relay vedono una chiave usa e getta, non chi parla con chi.",
-      "needKey": "Chiedigli di postare una volta per rendere nota la sua chiave.",
       "headerNote": "privato"
     },
     "you": "tu",
@@ -1941,7 +1939,6 @@
     "empty": "Ancora nulla — saluta.",
     "connecting": "Connessione al relay…",
     "anon": "anon",
-    "reply": "Rispondi",
     "replyingTo": "Rispondi a {{name}}",
     "cancel": "Annulla",
     "placeholder": "Messaggio stanza {{room}}",
@@ -1965,7 +1962,11 @@
     "profileSave": "Salva",
     "bioLabel": "Bio (opzionale)",
     "bioPlaceholder": "Una riga su di te",
-    "bioWhy": "Visibile sul tuo profilo a tutti nella stanza. Pubblico e permanente, come un messaggio. {{n}} caratteri rimasti."
+    "bioWhy": "Visibile sul tuo profilo a tutti nella stanza. Pubblico e permanente, come un messaggio. {{n}} caratteri rimasti.",
+    "profileWhy": "Il tuo nome, una riga su di te e un indirizzo a cui inviare ZKAS. Tutto è pubblico e modificabile in qualsiasi momento.",
+    "nameLabel": "Nome",
+    "useMyAddress": "Usa indirizzo portafoglio",
+    "clearAddress": "Rimuovi indirizzo"
   },
   "backgroundPermission": {
     "title": "Sincronizzare il portafoglio in background?",

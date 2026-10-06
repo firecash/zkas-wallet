@@ -3476,3 +3476,7 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
   .chat-sheet-row + .chat-sheet-row { margin-top: 4px; }
   .chat-reaction-pick { font-size: 19px; padding: 6px 0; }
 }
+
+/* Your own avatar in the chat header: the way to your profile. */
+.chat-me { flex: 0 0 auto; background: none; border: 0; padding: 0; cursor: pointer; line-height: 0; }
+.chat-me .chat-avatar { width: 28px; height: 28px; font-size: 10px; }

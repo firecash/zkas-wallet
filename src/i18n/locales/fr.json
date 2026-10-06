@@ -1897,7 +1897,6 @@
     "empty": "Rien ici pour l’instant — dites bonjour.",
     "connecting": "Connexion au relais…",
     "anon": "anonyme",
-    "reply": "Répondre",
     "replyingTo": "Réponse à {{name}}",
     "cancel": "Annuler",
     "placeholder": "Message {{room}}",
@@ -1915,8 +1914,8 @@
     "new": "Nouveau",
     "newMessages": "Nouveaux messages",
     "failedTap": "Non envoyé — appuyez pour réessayer",
-    "tipAddrLabel": "Adresse pour les pourboires (facultatif)",
-    "tipAddrWhy": "Publier une adresse permet aux autres de vous donner un pourboire. Cela lie ce nom de chat à une destination de paiement, laissez donc vide pour rester non lié.",
+    "tipAddrLabel": "Votre adresse ZKAS (facultatif)",
+    "tipAddrWhy": "Publier une adresse ajoute un bouton Envoyer ZKAS à votre profil. Elle lie ce nom de chat à une destination de paiement ; laissez-la vide pour rester non traçable.",
     "rooms": {
       "title": "Salons",
       "main": "Tout le monde",
@@ -1955,9 +1954,7 @@
       "none": "Aucun message privé pour l'instant.",
       "start": "Message privé",
       "placeholder": "Message privé",
-      "with": "avec {{name}}",
       "note": "Seuls vous deux pouvez lire ceci. Les relais voient une clé unique, pas qui parle à qui.",
-      "needKey": "Demandez-lui de publier une fois pour que sa clé soit connue.",
       "headerNote": "privé"
     },
     "you": "vous",
@@ -1973,7 +1970,11 @@
     "profileSave": "Enregistrer",
     "bioLabel": "Bio (facultatif)",
     "bioPlaceholder": "Une ligne sur vous",
-    "bioWhy": "Affichée sur votre profil pour tous les participants. Publique et permanente, comme un message. {{n}} caractères restants."
+    "bioWhy": "Affichée sur votre profil pour tous les participants. Publique et permanente, comme un message. {{n}} caractères restants.",
+    "profileWhy": "Votre nom, une ligne de présentation et une adresse pour recevoir des ZKAS. Le tout est public et modifiable à tout moment.",
+    "nameLabel": "Nom",
+    "useMyAddress": "Utiliser mon adresse",
+    "clearAddress": "Retirer l'adresse"
   },
   "confirmWatch": {
     "title": "Surveiller ce portefeuille ?",

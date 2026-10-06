@@ -157,7 +157,16 @@ export function ChatConsent({ onEnable, onClose }: { onEnable: () => void; onClo
   );
 }
 
-export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (addr: string) => void }) {
+export function ChatScreen({
+  onClose,
+  onTip,
+  myAddress,
+}: {
+  onClose: () => void;
+  onTip?: (addr: string) => void;
+  /** This wallet's own receiving address, for one-tap publishing. */
+  myAddress?: string;
+}) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
   const [room, setRoom] = useState(currentRoom());
@@ -501,6 +510,16 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
     [],
   );
 
+  /** Open your own profile for editing, loaded with what was last saved rather
+   *  than a stale draft from earlier in this session. */
+  const openMyProfile = useCallback(() => {
+    setNameDraft(nickname());
+    setAddrDraft(myZkasAddress());
+    setAboutDraft(myBio());
+    setSheet(null);
+    setAskName(true);
+  }, []);
+
   /** Open a private conversation. Used by the message sheet, the profile sheet
    *  and the conversation list, so all three land in the same state — the list
    *  reset `atBottom`, the profile did not, and a thread opened from a profile
@@ -737,6 +756,14 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
           <span className="chat-state">
             <i className={dot} aria-hidden="true" />
             {view.k === "dm" ? t("chat.dm.headerNote") : t(STATE_LABEL[state])}
+          </span>
+        </button>
+        {/* Your own profile, where every messenger puts it: your avatar, in the
+            header. It was only reachable through a row inside the "All rooms"
+            sheet — a sheet about ROOMS — so nobody found it. */}
+        <button className="chat-me" onClick={openMyProfile} aria-label={t("chat.profileTitle")} title={t("chat.profileTitle")}>
+          <span className="chat-avatar" style={{ background: me ? `hsl(${hueOf(me)} 58% 42%)` : "var(--line)" }}>
+            {me ? me.slice(0, 2) : "·"}
           </span>
         </button>
         {/* On the header line, opposite Wallet — not at the end of the room
@@ -1010,15 +1037,7 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
           onDms={() => { setSheet(null); setView({ k: "dms" }); }}
           mutedCount={muted.length}
           onMuted={() => setSheet({ kind: "muted" })}
-          onProfile={() => {
-            // Reopen the editor with what was last saved, not a stale draft from
-            // an earlier visit to this screen.
-            setNameDraft(nickname());
-            setAddrDraft(myZkasAddress());
-            setAboutDraft(myBio());
-            setSheet(null);
-            setAskName(true);
-          }}
+          onProfile={openMyProfile}
           onPick={pickRoom}
         />
       )}
@@ -1027,7 +1046,12 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
         <div className="modalwrap" onClick={() => setAskName(false)}>
           <div className="card modalcard" onClick={(e) => e.stopPropagation()}>
             <h2 style={{ marginTop: 0 }}>{nickname() ? t("chat.profileTitle") : t("chat.nameTitle")}</h2>
-            <p className="muted small" style={{ marginTop: 0 }}>{t("chat.nameWhy")}</p>
+            {/* First run is being ASKED for a name before a first message; every
+                later visit is editing. The same sentence cannot do both — it was
+                telling people who already had a profile that they could "skip it
+                and post as anon". */}
+            <p className="muted small" style={{ marginTop: 0 }}>{nickname() ? t("chat.profileWhy") : t("chat.nameWhy")}</p>
+            <label>{t("chat.nameLabel")}</label>
             <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder={t("chat.namePlaceholder")} maxLength={32} aria-label={t("chat.nameTitle")} />
             <label style={{ marginTop: 10 }}>{t("chat.bioLabel")}</label>
             <textarea
@@ -1042,6 +1066,18 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
             <p className="muted small">{t("chat.bioWhy", { n: ABOUT_MAX - aboutDraft.trim().length })}</p>
             <label style={{ marginTop: 10 }}>{t("chat.tipAddrLabel")}</label>
             <input value={addrDraft} onChange={(e) => setAddrDraft(e.target.value)} placeholder="zkas:…" aria-label={t("chat.tipAddrLabel")} />{/* i18n-ignore: `zkas:` is the address prefix itself, not prose */}
+            {/* Publishing your address meant going to Receive, copying it, and
+                coming back. The wallet already knows it. */}
+            {myAddress && addrDraft.trim() !== myAddress && (
+              <button className="btn ghost small" style={{ marginTop: 8, width: "auto" }} onClick={() => setAddrDraft(myAddress)}>
+                {t("chat.useMyAddress")}
+              </button>
+            )}
+            {addrDraft.trim() && (
+              <button className="btn ghost small" style={{ marginTop: 8, width: "auto" }} onClick={() => setAddrDraft("")}>
+                {t("chat.clearAddress")}
+              </button>
+            )}
             <p className="muted small">{t("chat.tipAddrWhy")}</p>
             <div className="msg warn small">{t("chat.namePermanent")}</div>
             <button className="btn" onClick={() => void saveName()}>

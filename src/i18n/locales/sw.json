@@ -1875,8 +1875,8 @@
     "new": "mpya",
     "newMessages": "Ujumbe mpya",
     "failedTap": "Haikutumwa — gusa tena",
-    "tipAddrLabel": "Anwani ya kutoa bakshishi (si lazima)",
-    "tipAddrWhy": "Kuchapisha anwani kunawawezesha watu kukupa bakshishi. Inaunganisha jina hili la mazungumzo na mahali pa malipo, kwa hivyo iachie tupu ili usiweze kuunganishwa.",
+    "tipAddrLabel": "Anwani yako ya ZKAS (si lazima)",
+    "tipAddrWhy": "Kuchapisha anwani huweka kitufe cha Tuma ZKAS kwenye wasifu wako. Inaunganisha jina hili la gumzo na mahali pa kulipia, hivyo acha tupu ili usiweze kuunganishwa.",
     "rooms": {
       "title": "Vyumba",
       "main": "Kila mtu",
@@ -1915,9 +1915,7 @@
       "none": "Hakuna ujumbe faragha bado.",
       "start": "Tuma ujumbe faragha",
       "placeholder": "Ujumbe faragha",
-      "with": "pamoja na {{name}}",
       "note": "Ni nyinyi wawili pekee mnaoweza kusoma hili. Vipeperushi huona ufunguo wa mara moja, si nani anayezungumza na nani.",
-      "needKey": "Muulize atume mara moja ili ufunguo wake ujulikane.",
       "headerNote": "binafsi"
     },
     "you": "wewe",
@@ -1941,7 +1939,6 @@
     "empty": "Hakuna chochote bado — sema hello.",
     "connecting": "Inaunganisha kwenye relay…",
     "anon": "bila jina",
-    "reply": "Jibu",
     "replyingTo": "Unamjibu {{name}}",
     "cancel": "Ghairi",
     "placeholder": "Ujumbe {{room}}",
@@ -1965,7 +1962,11 @@
     "profileSave": "Hifadhi",
     "bioLabel": "Bio (si lazima)",
     "bioPlaceholder": "Mstari kukuhusu",
-    "bioWhy": "Inaonekana kwenye wasifu wako kwa mtu yeyote kwenye chumba. Ya umma na ya kudumu, kama ujumbe. {{n}} herufi zimesalia."
+    "bioWhy": "Inaonekana kwenye wasifu wako kwa mtu yeyote kwenye chumba. Ya umma na ya kudumu, kama ujumbe. {{n}} herufi zimesalia.",
+    "profileWhy": "Jina lako, maelezo mafupi, na anwani ambayo watu wanaweza kutuma ZKAS. Yote ni ya umma na yanaweza kubadilishwa wakati wowote.",
+    "nameLabel": "Jina",
+    "useMyAddress": "Tumia anwani yangu",
+    "clearAddress": "Ondoa anwani"
   },
   "backgroundPermission": {
     "title": "Ruhusu pochi isawazishe chinichini?",

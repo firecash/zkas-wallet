@@ -1465,6 +1465,9 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 // Tipping hands off to the normal send flow, prefilled. Chat
                 // never touches the spend path itself.
                 onTip={(addr) => onSendAnother(addr)}
+                // So "publish an address so people can pay me" is one tap
+                // instead of a trip to Receive and a paste.
+                myAddress={status?.address ?? undefined}
               />
             )}
             {showConsolidate && (

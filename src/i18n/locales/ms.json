@@ -1897,7 +1897,6 @@
     "empty": "Tiada apa-apa lagi — ucap hai.",
     "connecting": "Menyambung ke geganti…",
     "anon": "anon",
-    "reply": "Balas",
     "replyingTo": "Membalas {{name}}",
     "cancel": "Batal",
     "placeholder": "Mesej {{room}}",
@@ -1915,8 +1914,8 @@
     "new": "baru",
     "newMessages": "Mesej baharu",
     "failedTap": "Tidak dihantar — ketik untuk cuba semula",
-    "tipAddrLabel": "Alamat untuk tip (pilihan)",
-    "tipAddrWhy": "Menerbitkan alamat membolehkan orang memberi tip. Ia memautkan nama sembang ini ke destinasi pembayaran, jadi biarkan kosong untuk kekal tidak boleh dipaut.",
+    "tipAddrLabel": "Alamat ZKAS anda (pilihan)",
+    "tipAddrWhy": "Menerbitkan alamat meletakkan butang Hantar ZKAS pada profil anda. Ia memautkan nama sembang ini ke destinasi pembayaran, jadi biarkan kosong untuk kekal tidak boleh dipautkan.",
     "rooms": {
       "title": "Bilik",
       "main": "Semua",
@@ -1955,9 +1954,7 @@
       "none": "Belum ada mesej peribadi.",
       "start": "Mesej secara peribadi",
       "placeholder": "Mesej peribadi",
-      "with": "dengan {{name}}",
       "note": "Hanya anda berdua boleh membaca ini. Geganti melihat kunci sekali guna, bukan siapa bercakap dengan siapa.",
-      "needKey": "Minta mereka hantar sekali supaya kunci mereka diketahui.",
       "headerNote": "peribadi"
     },
     "you": "anda",
@@ -1973,7 +1970,11 @@
     "profileSave": "Simpan",
     "bioLabel": "Bio (opsyen)",
     "bioPlaceholder": "Sepatah tentang anda",
-    "bioWhy": "Dipaparkan pada profil anda kepada sesiapa di dalam bilik. Awam dan kekal, seperti mesej. {{n}} aksara lagi."
+    "bioWhy": "Dipaparkan pada profil anda kepada sesiapa di dalam bilik. Awam dan kekal, seperti mesej. {{n}} aksara lagi.",
+    "profileWhy": "Nama anda, baris tentang anda, dan alamat untuk orang hantar ZKAS. Semuanya awam dan boleh diubah bila-bila masa.",
+    "nameLabel": "Nama",
+    "useMyAddress": "Guna alamat dompet",
+    "clearAddress": "Buang alamat"
   },
   "confirmWatch": {
     "title": "Pantau dompet ini?",

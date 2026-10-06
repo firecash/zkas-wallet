@@ -1897,7 +1897,6 @@
     "empty": "Nog niets — zeg hallo.",
     "connecting": "Verbinden met de relay…",
     "anon": "anon",
-    "reply": "Antwoord",
     "replyingTo": "Antwoord aan {{name}}",
     "cancel": "Annuleren",
     "placeholder": "Bericht {{room}}",
@@ -1915,8 +1914,8 @@
     "new": "Nieuw",
     "newMessages": "Nieuwe berichten",
     "failedTap": "Niet verzonden — tik om opnieuw te proberen",
-    "tipAddrLabel": "Adres voor fooien (optioneel)",
-    "tipAddrWhy": "Door een adres te publiceren kunnen mensen je fooien geven. Het koppelt deze chatnaam aan een betalingsbestemming, dus laat het leeg om onkoppelbaar te blijven.",
+    "tipAddrLabel": "Je ZKAS-adres (optioneel)",
+    "tipAddrWhy": "Een adres publiceren plaatst een werkende 'ZKAS verzenden'-knop op je profiel. Het koppelt deze chatnaam aan een betaalbestemming, dus laat het leeg om onkoppelbaar te blijven.",
     "rooms": {
       "title": "Ruimtes",
       "main": "Iedereen",
@@ -1955,9 +1954,7 @@
       "none": "Nog geen privéberichten.",
       "start": "Privébericht sturen",
       "placeholder": "Privébericht",
-      "with": "met {{name}}",
       "note": "Alleen jullie twee kunnen dit lezen. Relais zien een eenmalige sleutel, niet wie met wie praat.",
-      "needKey": "Vraag hen een keer te plaatsen zodat hun sleutel bekend is.",
       "headerNote": "privé"
     },
     "you": "jij",
@@ -1973,7 +1970,11 @@
     "profileSave": "Opslaan",
     "bioLabel": "Bio (optioneel)",
     "bioPlaceholder": "Een regel over jou",
-    "bioWhy": "Zichtbaar op je profiel voor iedereen in de ruimte. Openbaar en permanent, net als een bericht. Nog {{n}} tekens."
+    "bioWhy": "Zichtbaar op je profiel voor iedereen in de ruimte. Openbaar en permanent, net als een bericht. Nog {{n}} tekens.",
+    "profileWhy": "Je naam, een regel over jou en een adres waar mensen ZKAS naartoe kunnen sturen. Alles is openbaar en kan altijd worden gewijzigd.",
+    "nameLabel": "Naam",
+    "useMyAddress": "Gebruik mijn walletadres",
+    "clearAddress": "Adres verwijderen"
   },
   "confirmWatch": {
     "title": "Deze wallet bekijken?",

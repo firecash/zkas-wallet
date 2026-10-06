@@ -1897,7 +1897,6 @@
     "empty": "Noch nichts da – sag Hallo.",
     "connecting": "Verbinde zum Relay…",
     "anon": "anon",
-    "reply": "Antworten",
     "replyingTo": "Antworte an {{name}}",
     "cancel": "Abbrechen",
     "placeholder": "Nachricht {{room}}",
@@ -1915,8 +1914,8 @@
     "new": "Neu",
     "newMessages": "Neue Nachrichten",
     "failedTap": "Nicht gesendet – tippen zum Wiederholen",
-    "tipAddrLabel": "Adresse für Trinkgeld (optional)",
-    "tipAddrWhy": "Wenn du eine Adresse veröffentlichst, können Leute dir Trinkgeld geben. Sie verknüpft diesen Chat-Namen mit einem Zahlungsziel – lass sie leer, um nicht verknüpfbar zu bleiben.",
+    "tipAddrLabel": "Deine ZKAS-Adresse (optional)",
+    "tipAddrWhy": "Eine veröffentlichte Adresse platziert den Senden-ZKAS-Button auf deinem Profil. Sie verknüpft diesen Chat-Namen mit einem Zahlungsziel – leer lassen, um nicht verknüpfbar zu bleiben.",
     "rooms": {
       "title": "Räume",
       "main": "Alle",
@@ -1955,9 +1954,7 @@
       "none": "Noch keine privaten Nachrichten.",
       "start": "Privatnachricht senden",
       "placeholder": "Private Nachricht",
-      "with": "mit {{name}}",
       "note": "Nur ihr beide könnt das lesen. Relays sehen einen Einmalschlüssel, nicht wer mit wem spricht.",
-      "needKey": "Bitte sie, einmal zu posten, damit ihr Schlüssel bekannt ist.",
       "headerNote": "privat"
     },
     "you": "du",
@@ -1973,7 +1970,11 @@
     "profileSave": "Speichern",
     "bioLabel": "Bio (optional)",
     "bioPlaceholder": "Eine Zeile über dich",
-    "bioWhy": "Wird auf deinem Profil für alle im Raum angezeigt. Öffentlich und dauerhaft, wie eine Nachricht. {{n}} Zeichen übrig."
+    "bioWhy": "Wird auf deinem Profil für alle im Raum angezeigt. Öffentlich und dauerhaft, wie eine Nachricht. {{n}} Zeichen übrig.",
+    "profileWhy": "Dein Name, ein Satz über dich und eine Adresse für ZKAS-Zahlungen. Alles ist öffentlich und jederzeit änderbar.",
+    "nameLabel": "Name",
+    "useMyAddress": "Wallet-Adresse nutzen",
+    "clearAddress": "Adresse entfernen"
   },
   "confirmWatch": {
     "title": "Wallet beobachten? ",

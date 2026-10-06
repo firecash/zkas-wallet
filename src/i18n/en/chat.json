@@ -26,7 +26,6 @@
     "empty": "Nothing here yet — say hello.",
     "connecting": "Connecting to the relay…",
     "anon": "anon",
-    "reply": "Reply",
     "replyingTo": "Replying to {{name}}",
     "cancel": "Cancel",
     "placeholder": "Message {{room}}",
@@ -44,8 +43,8 @@
     "new": "new",
     "newMessages": "New messages",
     "failedTap": "Not sent — tap to retry",
-    "tipAddrLabel": "Address for tips (optional)",
-    "tipAddrWhy": "Publishing an address lets people tip you. It links this chat name to a payment destination, so leave it empty to stay unlinkable.",
+    "tipAddrLabel": "Your ZKAS address (optional)",
+    "tipAddrWhy": "Publishing an address is what puts a working Send ZKAS button on your profile. It links this chat name to a payment destination, so leave it empty to stay unlinkable.",
     "rooms": {
       "title": "Rooms",
       "main": "Everyone",
@@ -84,9 +83,7 @@
       "none": "No private messages yet.",
       "start": "Message privately",
       "placeholder": "Private message",
-      "with": "with {{name}}",
       "note": "Only the two of you can read this. Relays see a one-time key, not who is talking to whom.",
-      "needKey": "Ask them to post once so their key is known.",
       "headerNote": "private"
     },
     "you": "you",
@@ -102,6 +99,10 @@
     "profileSave": "Save",
     "bioLabel": "Bio (optional)",
     "bioPlaceholder": "A line about you",
-    "bioWhy": "Shown on your profile to anyone in the room. Public and permanent, like a message. {{n}} characters left."
+    "bioWhy": "Shown on your profile to anyone in the room. Public and permanent, like a message. {{n}} characters left.",
+    "profileWhy": "Your name, a line about you, and an address people can send ZKAS to. All of it is public and can be changed any time.",
+    "nameLabel": "Name",
+    "useMyAddress": "Use my wallet address",
+    "clearAddress": "Remove address"
   }
 }

@@ -1875,8 +1875,8 @@
     "new": "Nowe",
     "newMessages": "Nowe wiadomości",
     "failedTap": "Nie wysłano — dotknij, by ponowić",
-    "tipAddrLabel": "Adres na napiwki (opcjonalnie)",
-    "tipAddrWhy": "Podanie adresu pozwala innym dawać ci napiwki. Łączy tę nazwę z miejscem płatności – zostaw puste, by pozostać anonimowym.",
+    "tipAddrLabel": "Twój adres ZKAS (opcjonalnie)",
+    "tipAddrWhy": "Opublikowanie adresu umieszcza przycisk Wyślij ZKAS na Twoim profilu. Łączy tę nazwę czatu z docelową płatnością, więc pozostaw puste, by pozostać niepowiązanym.",
     "rooms": {
       "title": "Pokoje",
       "main": "Wszyscy",
@@ -1915,9 +1915,7 @@
       "none": "Brak prywatnych wiadomości.",
       "start": "Napisz prywatnie",
       "placeholder": "Wiadomość prywatna",
-      "with": "z {{name}}",
       "note": "Tylko wy dwoje to czytacie. Przekaźniki widzą jednorazowy klucz, nie kto z kim rozmawia.",
-      "needKey": "Poproś, by napisał(a) raz – wtedy jego/jej klucz będzie znany.",
       "headerNote": "prywatnie"
     },
     "you": "ty",
@@ -1941,7 +1939,6 @@
     "empty": "Na razie pusto – przywitaj się.",
     "connecting": "Łączenie z przekaźnikiem…",
     "anon": "anonim",
-    "reply": "Odpowiedz",
     "replyingTo": "Odpowiadasz {{name}}",
     "cancel": "Anuluj",
     "placeholder": "Wiadomość {{room}}",
@@ -1965,7 +1962,11 @@
     "profileSave": "Zapisz",
     "bioLabel": "Bio (opcjonalne)",
     "bioPlaceholder": "Linijka o Tobie",
-    "bioWhy": "Widoczne na Twoim profilu dla wszystkich w pokoju. Publiczne i trwałe, jak wiadomość. Pozostało {{n}} znaków."
+    "bioWhy": "Widoczne na Twoim profilu dla wszystkich w pokoju. Publiczne i trwałe, jak wiadomość. Pozostało {{n}} znaków.",
+    "profileWhy": "Twoja nazwa, krótki opis i adres, na który ludzie mogą wysłać ZKAS. Wszystko jest publiczne i można to zmienić w każdej chwili.",
+    "nameLabel": "Nazwa",
+    "useMyAddress": "Użyj adresu portfela",
+    "clearAddress": "Usuń adres"
   },
   "backgroundPermission": {
     "title": "Zsynchronizować portfel w tle?",

@@ -1875,8 +1875,8 @@
     "new": "nuevo",
     "newMessages": "Mensajes nuevos",
     "failedTap": "No enviado — toca para reintentar",
-    "tipAddrLabel": "Dirección para propinas (opcional)",
-    "tipAddrWhy": "Publicar una dirección permite que te den propinas. Vincula este nombre a un destino de pago; déjala vacía para no ser rastreable.",
+    "tipAddrLabel": "Tu dirección ZKAS (opcional)",
+    "tipAddrWhy": "Publicar una dirección agrega un botón Enviar ZKAS a tu perfil. Vincula este nombre de chat a un destino de pago; déjalo vacío para no ser vinculable.",
     "rooms": {
       "title": "Salas",
       "main": "Todos",
@@ -1915,9 +1915,7 @@
       "none": "Aún sin mensajes privados.",
       "start": "Mensaje privado",
       "placeholder": "Mensaje privado",
-      "with": "con {{name}}",
       "note": "Solo ustedes dos pueden leerlo. Los relays ven una clave única, no quién habla con quién.",
-      "needKey": "Pídele que publique una vez para que su clave sea conocida.",
       "headerNote": "privado"
     },
     "you": "tú",
@@ -1941,7 +1939,6 @@
     "empty": "Aún no hay nada — saluda.​",
     "connecting": "Conectando al relay…​",
     "anon": "anónimo​",
-    "reply": "Responder​",
     "replyingTo": "Respondiendo a {{name}}​",
     "cancel": "Cancelar​",
     "placeholder": "Mensaje {{room}}",
@@ -1965,7 +1962,11 @@
     "profileSave": "Guardar",
     "bioLabel": "Bio (opcional)",
     "bioPlaceholder": "Una línea sobre ti",
-    "bioWhy": "Aparece en tu perfil para todos en la sala. Público y permanente, como un mensaje. {{n}} caracteres restantes."
+    "bioWhy": "Aparece en tu perfil para todos en la sala. Público y permanente, como un mensaje. {{n}} caracteres restantes.",
+    "profileWhy": "Tu nombre, una línea sobre ti y una dirección para recibir ZKAS. Todo es público y se puede cambiar en cualquier momento.",
+    "nameLabel": "Nombre",
+    "useMyAddress": "Usar mi dirección",
+    "clearAddress": "Quitar dirección"
   },
   "backgroundPermission": {
     "title": "¿Sincronizar la billetera en segundo plano?​",

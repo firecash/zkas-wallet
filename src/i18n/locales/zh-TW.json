@@ -1875,8 +1875,8 @@
     "new": "新",
     "newMessages": "新訊息",
     "failedTap": "未送出—點按重試",
-    "tipAddrLabel": "小費地址（選填）",
-    "tipAddrWhy": "公開地址讓他人能打賞你。這會將聊天名稱與收款地址連結，留空則可保持匿名。",
+    "tipAddrLabel": "你的 ZKAS 地址（選填）",
+    "tipAddrWhy": "公開地址會在個人檔案上顯示「發送 ZKAS」按鈕，並將此聊天名稱連結到收款目的地；留空則可保持不可連結。",
     "rooms": {
       "title": "聊天室",
       "main": "所有人",
@@ -1915,9 +1915,7 @@
       "none": "尚無私訊。",
       "start": "私訊",
       "placeholder": "私訊",
-      "with": "與 {{name}}",
       "note": "只有你們兩人能閱讀此內容。中繼站只會看到一次性密鑰，無法得知誰在與誰交談。",
-      "needKey": "請對方先發文一次，以便取得其密鑰。",
       "headerNote": "私密"
     },
     "you": "你",
@@ -1941,7 +1939,6 @@
     "empty": "這裡還沒有內容 — 打聲招呼吧。",
     "connecting": "正在連線至中繼…",
     "anon": "匿名",
-    "reply": "回覆",
     "replyingTo": "回覆 {{name}}",
     "cancel": "取消",
     "placeholder": "訊息 {{room}}",
@@ -1965,7 +1962,11 @@
     "profileSave": "儲存",
     "bioLabel": "個人簡介（選填）",
     "bioPlaceholder": "關於你的一句話",
-    "bioWhy": "顯示在你的個人檔案上，房間內所有人都能看到。公開且永久保存，就像訊息一樣。還剩 {{n}} 個字。"
+    "bioWhy": "顯示在你的個人檔案上，房間內所有人都能看到。公開且永久保存，就像訊息一樣。還剩 {{n}} 個字。",
+    "profileWhy": "你的名稱、自我介紹及收款地址皆為公開資訊，可隨時變更。",
+    "nameLabel": "名稱",
+    "useMyAddress": "使用錢包地址",
+    "clearAddress": "移除地址"
   },
   "backgroundPermission": {
     "title": "讓錢包在背景同步？",
