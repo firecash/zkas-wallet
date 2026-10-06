@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Jibu",
-      "tip": "Toa bakshishi",
       "tipDetail": "binafsi",
       "copy": "Nakili maandishi",
       "profile": "Tazama wasifu",
@@ -1894,7 +1893,9 @@
       "report": "Ripoti",
       "retry": "Jaribu kutuma tena",
       "muteConfirm": "Gusa tena ili kunyamazisha {{name}}",
-      "reportConfirm": "Gusa tena ili kuripoti na kunyamazisha"
+      "reportConfirm": "Gusa tena ili kuripoti na kunyamazisha",
+      "sendZkas": "Tuma ZKAS",
+      "noAddress": "Hakuna anwani bado."
     },
     "profile": {
       "copyKey": "Nakili ufunguo wa umma",

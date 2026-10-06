@@ -54,7 +54,6 @@
     },
     "actions": {
       "reply": "Reply",
-      "tip": "Send a tip",
       "tipDetail": "private",
       "copy": "Copy text",
       "profile": "View profile",
@@ -63,7 +62,9 @@
       "report": "Report",
       "retry": "Try sending again",
       "muteConfirm": "Tap again to mute {{name}}",
-      "reportConfirm": "Tap again to report and mute"
+      "reportConfirm": "Tap again to report and mute",
+      "sendZkas": "Send ZKAS",
+      "noAddress": "No address published yet."
     },
     "profile": {
       "copyKey": "Copy public key",

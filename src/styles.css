@@ -3439,3 +3439,40 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+
+/* ---------------------------------------------------------------- chat sheet
+   Compact everywhere, and a DIALOG rather than a phone sheet once there is a
+   mouse and room for one.
+
+   The sheet was built bottom-anchored, full-bleed and 560px wide, which is
+   right on a phone and wrong on a desktop: a menu for one message filled a
+   third of a 1280px window. Pointer + width decide the shape; the rows get
+   denser in both. */
+.chat-sheet-row { min-height: 40px; padding: 8px 12px; font-size: 14px; }
+.chat-sheet-row + .chat-sheet-row { margin-top: 5px; }
+.chat-sheet-row.off { opacity: 0.45; cursor: default; }
+.chat-sheet-note { margin: 5px 2px 8px; }
+.chat-sheet-addr { word-break: break-all; }
+.chat-reactions { margin-bottom: 8px; }
+.chat-reaction-pick { font-size: 21px; padding: 7px 0; }
+
+/* Width alone decides. Keying this on `pointer: fine` as well looked right and
+   was not: a device that reports no fine pointer — which includes headless
+   Chrome, and some touch laptops and TV browsers — kept the full-bleed phone
+   sheet on a 1280px window. Width is the thing actually being adapted to. */
+@media (min-width: 640px) {
+  /* Centred, small, fully rounded — a normal dialog. */
+  .chat-sheet-wrap { align-items: center; }
+  .chat-sheet {
+    width: auto;
+    min-width: 320px;
+    max-width: 380px;
+    max-height: 80vh;
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+  .chat-sheet h2 { font-size: 15px; }
+  .chat-sheet-row { min-height: 36px; padding: 7px 11px; font-size: 13.5px; }
+  .chat-sheet-row + .chat-sheet-row { margin-top: 4px; }
+  .chat-reaction-pick { font-size: 19px; padding: 6px 0; }
+}

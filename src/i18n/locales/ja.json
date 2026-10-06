@@ -1925,7 +1925,6 @@
     },
     "actions": {
       "reply": "返信",
-      "tip": "チップを送る",
       "tipDetail": "非公開",
       "copy": "テキストをコピー",
       "profile": "プロフィール表示",
@@ -1934,7 +1933,9 @@
       "report": "報告",
       "retry": "再送信",
       "muteConfirm": "もう一度タップで{{name}}をミュート",
-      "reportConfirm": "もう一度タップで報告＆ミュート"
+      "reportConfirm": "もう一度タップで報告＆ミュート",
+      "sendZkas": "ZKASを送信",
+      "noAddress": "アドレス未公開。"
     },
     "profile": {
       "copyKey": "公開鍵をコピー",

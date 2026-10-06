@@ -83,18 +83,44 @@ function Row({
   onClick,
   danger,
   detail,
+  disabled,
 }: {
   label: string;
   onClick: () => void;
   danger?: boolean;
   detail?: string;
+  disabled?: boolean;
 }) {
   return (
-    <button className={danger ? "chat-sheet-row danger" : "chat-sheet-row"} onClick={onClick}>
+    <button
+      className={(danger ? "chat-sheet-row danger" : "chat-sheet-row") + (disabled ? " off" : "")}
+      onClick={onClick}
+      disabled={disabled}
+    >
       <span>{label}</span>
       {detail && <span className="chat-sheet-detail">{detail}</span>}
     </button>
   );
+}
+
+/** "Send ZKAS" wherever a person is on screen.
+ *
+ *  Paying someone was previously offered only when they had published an
+ *  address, so to everyone else the feature simply did not exist — there was
+ *  nothing on screen to say a payment was possible at all, or why it was not.
+ *  The row is now always present and says which of the two it is. */
+function SendZkasRow({ zkas, mine, onSend }: { zkas?: string; mine: boolean; onSend: () => void }) {
+  const { t } = useTranslation();
+  if (mine) return null;
+  if (!zkas) {
+    return (
+      <>
+        <Row label={t("chat.actions.sendZkas")} onClick={() => {}} disabled />
+        <p className="muted small chat-sheet-note">{t("chat.actions.noAddress")}</p>
+      </>
+    );
+  }
+  return <Row label={t("chat.actions.sendZkas")} onClick={onSend} detail={t("chat.actions.tipDetail")} />;
 }
 
 export function MessageSheet({
@@ -140,16 +166,13 @@ export function MessageSheet({
       </div>
       {message.failed && <Row label={t("chat.actions.retry")} onClick={onRetry} />}
       <Row label={t("chat.actions.reply")} onClick={onReply} />
+      <SendZkasRow zkas={p.zkas} mine={message.mine} onSend={onTip} />
       {/* Writing to this person privately is reached from the message itself,
           not only from "View profile" — reaching it through the profile was two
           taps and a screen that exists to show a key. Deliberately the SAME key
           and detail as the profile's row, so the two cannot read differently:
           one action, one name, wherever it is offered. */}
       {!message.mine && <Row label={t("chat.dm.start")} onClick={onDm} detail={t("chat.dm.openDetail")} />}
-      {/* Only offered when the author published an address: a chat key is
-          secp256k1 and an address is Orchard, so one cannot be derived from the
-          other, and a tip button that cannot pay would be a lie. */}
-      {p.zkas && !message.mine && <Row label={t("chat.actions.tip")} onClick={onTip} detail={t("chat.actions.tipDetail")} />}
       <Row label={t("chat.actions.copy")} onClick={onCopy} />
       <Row label={t("chat.actions.profile")} onClick={onProfile} />
       {!message.mine && (
@@ -205,9 +228,16 @@ export function ProfileSheet({
         </div>
       </div>
       {person.about && <p className="chat-profile-about">{person.about}</p>}
+      <SendZkasRow zkas={person.zkas} mine={false} onSend={onTip} />
+      {/* Where the money would actually go. A chat name is not an identity, so
+          seeing the destination before tapping is the only check there is. */}
+      {person.zkas && (
+        <p className="muted small chat-sheet-note mono chat-sheet-addr">
+          {person.zkas.slice(0, 18)}…{person.zkas.slice(-8)}
+        </p>
+      )}
       <Row label={t("chat.dm.start")} onClick={onDm} detail={t("chat.dm.openDetail")} />
       <Row label={t("chat.profile.copyKey")} onClick={onCopyKey} />
-      {person.zkas && <Row label={t("chat.actions.tip")} onClick={onTip} detail={t("chat.actions.tipDetail")} />}
       {person.muted ? (
         <Row label={t("chat.actions.unmute")} onClick={onMute} />
       ) : (

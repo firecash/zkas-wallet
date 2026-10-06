@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Trả lời",
-      "tip": "Gửi tip",
       "tipDetail": "riêng",
       "copy": "Sao chép",
       "profile": "Xem hồ sơ",
@@ -1894,7 +1893,9 @@
       "report": "Báo cáo",
       "retry": "Gửi lại",
       "muteConfirm": "Chạm lại để tắt tiếng {{name}}",
-      "reportConfirm": "Chạm lại để báo cáo và tắt tiếng"
+      "reportConfirm": "Chạm lại để báo cáo và tắt tiếng",
+      "sendZkas": "Gửi ZKAS",
+      "noAddress": "Chưa có địa chỉ nào."
     },
     "profile": {
       "copyKey": "Sao chép khóa công khai",

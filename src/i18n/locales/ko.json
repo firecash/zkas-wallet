@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "답글",
-      "tip": "팁 보내기",
       "tipDetail": "비공개",
       "copy": "텍스트 복사",
       "profile": "프로필 보기",
@@ -1894,7 +1893,9 @@
       "report": "신고",
       "retry": "다시 보내기",
       "muteConfirm": "다시 탭하여 {{name}} 음소거",
-      "reportConfirm": "다시 탭하여 신고 및 음소거"
+      "reportConfirm": "다시 탭하여 신고 및 음소거",
+      "sendZkas": "ZKAS 보내기",
+      "noAddress": "아직 주소가 없습니다."
     },
     "profile": {
       "copyKey": "공개 키 복사",

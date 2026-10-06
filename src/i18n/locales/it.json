@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Rispondi",
-      "tip": "Invia mancia",
       "tipDetail": "privato",
       "copy": "Copia testo",
       "profile": "Vedi profilo",
@@ -1894,7 +1893,9 @@
       "report": "Segnala",
       "retry": "Prova a inviare",
       "muteConfirm": "Tocca ancora per silenziare {{name}}",
-      "reportConfirm": "Tocca ancora per segnalare e silenziare"
+      "reportConfirm": "Tocca ancora per segnalare e silenziare",
+      "sendZkas": "Invia ZKAS",
+      "noAddress": "Nessun indirizzo pubblicato."
     },
     "profile": {
       "copyKey": "Copia chiave pubblica",

@@ -1925,7 +1925,6 @@
     },
     "actions": {
       "reply": "Antworten",
-      "tip": "Trinkgeld senden",
       "tipDetail": "privat",
       "copy": "Text kopieren",
       "profile": "Profil ansehen",
@@ -1934,7 +1933,9 @@
       "report": "Melden",
       "retry": "Erneut senden",
       "muteConfirm": "Nochmal tippen, um {{name}} stummzuschalten",
-      "reportConfirm": "Nochmal tippen, um zu melden & stummzuschalten"
+      "reportConfirm": "Nochmal tippen, um zu melden & stummzuschalten",
+      "sendZkas": "ZKAS senden",
+      "noAddress": "Noch keine Adresse veröffentlicht."
     },
     "profile": {
       "copyKey": "Öff. Schlüssel kopieren",

@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Balas",
-      "tip": "Kirim tip",
       "tipDetail": "pribadi",
       "copy": "Salin teks",
       "profile": "Lihat profil",
@@ -1894,7 +1893,9 @@
       "report": "Laporkan",
       "retry": "Coba kirim lagi",
       "muteConfirm": "Ketuk lagi untuk membisukan {{name}}",
-      "reportConfirm": "Ketuk lagi untuk lapor & bisukan"
+      "reportConfirm": "Ketuk lagi untuk lapor & bisukan",
+      "sendZkas": "Kirim ZKAS",
+      "noAddress": "Belum ada alamat."
     },
     "profile": {
       "copyKey": "Salin kunci publik",

@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Yanıtla",
-      "tip": "Bahşiş gönder",
       "tipDetail": "gizli",
       "copy": "Metni kopyala",
       "profile": "Profili gör",
@@ -1894,7 +1893,9 @@
       "report": "Bildir",
       "retry": "Tekrar göndermeyi dene",
       "muteConfirm": "Sessize almak için tekrar dokun {{name}}",
-      "reportConfirm": "Bildirip sessize almak için tekrar dokun"
+      "reportConfirm": "Bildirip sessize almak için tekrar dokun",
+      "sendZkas": "ZKAS Gönder",
+      "noAddress": "Henüz adres yayınlanmadı."
     },
     "profile": {
       "copyKey": "Açık anahtarı kopyala",

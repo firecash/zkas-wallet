@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "回复",
-      "tip": "打赏",
       "tipDetail": "私密",
       "copy": "复制文本",
       "profile": "查看资料",
@@ -1894,7 +1893,9 @@
       "report": "举报",
       "retry": "重新发送",
       "muteConfirm": "再次点击以静音{{name}}",
-      "reportConfirm": "再次点击以举报并静音"
+      "reportConfirm": "再次点击以举报并静音",
+      "sendZkas": "发送ZKAS",
+      "noAddress": "尚未发布地址。"
     },
     "profile": {
       "copyKey": "复制公钥",
