@@ -103,7 +103,7 @@ describe("the welcome screen", () => {
     await mountApp();
     expect(await screen.findByRole("button", { name: /Watch a wallet/i }, { timeout: 8000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Create new wallet|Connecting/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Import from seed/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Import a recovery phrase/i })).toBeInTheDocument();
   });
 
   it("takes a view key and starts watching", async () => {

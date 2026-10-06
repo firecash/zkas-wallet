@@ -57,8 +57,31 @@ describe("services directory", () => {
       cache: "no-cache",
       credentials: "omit",
     }));
-    expect(services[0].id).toBe("merchant-one");
-    expect(readCachedServices(localStorage)?.[0].id).toBe("merchant-one");
+    // The remote entry is present and the bundled list is still underneath it:
+    // bundled services are a floor (20a76c2) so the Use tab cannot go empty, so
+    // the remote document ADDS to them rather than replacing them. Asserting an
+    // index asserted the merge order, which is not a promise to anyone.
+    expect(services.map((s) => s.id)).toContain("merchant-one");
+    expect(services.map((s) => s.id)).toContain("ai-uncensored");
+    expect(readCachedServices(localStorage)?.map((s) => s.id)).toContain("merchant-one");
+  });
+
+  it("lets the remote directory override a bundled entry of the same id", async () => {
+    // Otherwise the "floor" would be a ceiling: a bundled description could never
+    // be corrected remotely.
+    const override = {
+      ...validDocument,
+      services: [{ ...validDocument.services[0], id: "ai-uncensored", name: "Renamed Remotely" }],
+    };
+    const fetcher = vi.fn(async () => new Response(JSON.stringify(override), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    })) as unknown as typeof fetch;
+
+    const services = await refreshServicesDirectory(fetcher, localStorage);
+    const hit = services.filter((s) => s.id === "ai-uncensored");
+    expect(hit).toHaveLength(1);
+    expect(hit[0].name).toBe("Renamed Remotely");
   });
 
   it("does not replace the cache when an update is malformed", async () => {
@@ -66,6 +89,6 @@ describe("services directory", () => {
     const fetcher = vi.fn(async () => new Response("{}", { status: 200 })) as unknown as typeof fetch;
 
     await expect(refreshServicesDirectory(fetcher, localStorage)).rejects.toThrow("failed validation");
-    expect(readCachedServices(localStorage)?.[0].id).toBe("merchant-one");
+    expect(readCachedServices(localStorage)?.map((s) => s.id)).toContain("merchant-one");
   });
 });

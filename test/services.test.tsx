@@ -41,10 +41,16 @@ describe("services directory", () => {
     }));
     try {
       mount();
-      expect(screen.getByRole("button", { name: "Use 0" })).not.toHaveClass("active");
-      expect(screen.getByRole("button", { name: "All 1" })).toHaveClass("active");
+      // The guarantee is "never opens on an empty category", so assert THAT and
+      // not a pair of counts. The counts moved when bundled services became a
+      // floor under the remote directory (20a76c2), which is also what makes a
+      // truly empty category impossible — so pinning "Use 0" / "All 1" was
+      // pinning arithmetic that is not a promise to anyone.
+      const active = screen.getAllByRole("button").filter((b) => b.classList.contains("active"));
+      expect(active).toHaveLength(1);
+      expect(active[0].textContent).not.toMatch(/\b0$/);
       expect(screen.queryByText("No matching services.")).not.toBeInTheDocument();
-      expect(screen.getAllByRole("article")).toHaveLength(1);
+      expect(screen.getAllByRole("article").length).toBeGreaterThan(0);
     } finally {
       localStorage.removeItem("zkas_services_directory_v1");
     }

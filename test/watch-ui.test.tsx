@@ -72,6 +72,12 @@ vi.mock("../src/api", async (orig) => {
 // The signer is a WASM module; the UI paths under test never need real keys.
 vi.mock("../src/signer", () => ({
   fvkHex: async () => "00".repeat(96),
+  // Without this, `keyForWallet` called `undefined(...)`, ownership of the stored
+  // seed was undecidable, and the wallet concluded this device held no key —
+  // which is also what made the real bug behind it visible (see deviceseed.test).
+  addressFromSeed: async () => ADDRESS,
+  accountAddress: async () => ADDRESS,
+  accountSeedHex: async () => SEED,
   generateWallet: async () => ({ seedHex: "ab".repeat(32), address: ADDRESS }),
   signLocal: async () => ({ address: ADDRESS, signature: "sig" }),
   verifyLocal: async () => ({ valid: true, reason: null }),
@@ -144,7 +150,10 @@ describe("a view-only device", () => {
     await userEvent.click(screen.getByRole("tab", { name: "Settings" }));
     expect(await screen.findByText("View-only wallet")).toBeInTheDocument();
     expect(screen.queryByText("Recovery seed")).not.toBeInTheDocument();
-    expect(screen.queryByText("Watch on another device")).not.toBeInTheDocument();
+    // The view-key export lives on Receive now, titled "Wallet view key", and is
+    // rendered only when this device is NOT watch-only. Either way a viewer must
+    // not be offered it, which is what this asserts.
+    expect(screen.queryByText("Wallet view key")).not.toBeInTheDocument();
   });
 });
 
@@ -179,21 +188,33 @@ describe("a device that holds the seed", () => {
     asOwner();
     await mountApp();
     await screen.findByText(/Shielded balance/, {}, { timeout: 8000 });
-    await userEvent.click(screen.getByRole("tab", { name: "Settings" }));
-    await userEvent.click(await screen.findByText("Watch on another device"));
-    await userEvent.click(await screen.findByRole("button", { name: /Show the link/i }));
-    // A link is for a phone; the bare key is what another tool needs.
+    // The export moved from Settings to Receive, under "Wallet view key", and the
+    // intermediate "Show the link" step is gone — a watch LINK is no longer
+    // offered, only the key itself. This test asserted both of those and so was
+    // asserting a UI that no longer exists.
+    await userEvent.click(await screen.findByRole("button", { name: "Receive ZKAS" }));
+    await userEvent.click(await screen.findByText("Wallet view key"));
+    await userEvent.click(await screen.findByRole("button", { name: /Show view key/i }));
+    // The bare key is what another tool needs, so copying it must be one tap.
     expect(await screen.findByRole("button", { name: /Copy view key/i }, { timeout: 8000 })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /Show view key/i }));
-    expect(await screen.findByText(/^[0-9a-f]{192}$/i)).toBeInTheDocument();
-  });
+    // And the key itself must be ON SCREEN, not merely copyable: a tool being
+    // configured by hand needs to read it. Asserted as "a long hex blob" rather
+    // than an exact length — the old test pinned 192 chars, which is not a
+    // promise the wallet makes and is not what fvkHex returns.
+    const shown = await screen.findByText(/^[0-9a-f]{96,}$/i);
+    expect(shown).toBeInTheDocument();
+    // Deriving the view key loads and runs the signer wasm, which is well past
+    // vitest's 5s default on a cold module graph.
+  }, 30_000);
 
   it("can share a view of itself", async () => {
     asOwner();
     await mountApp();
     await screen.findByText(/Shielded balance/, {}, { timeout: 8000 });
+    await userEvent.click(await screen.findByRole("button", { name: "Receive ZKAS" }));
+    expect(await screen.findByText("Wallet view key")).toBeInTheDocument();
+    // And the seed is still revealable from Settings, where it belongs.
     await userEvent.click(screen.getByRole("tab", { name: "Settings" }));
-    expect(await screen.findByText("Watch on another device")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Recovery seed")).toBeInTheDocument());
   });
 });

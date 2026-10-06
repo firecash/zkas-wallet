@@ -126,7 +126,9 @@ describe("receive", () => {
     // The address itself, and the one-tap copy the sharing flow depends on.
     expect(await screen.findByText(/Copy address/)).toBeInTheDocument();
     // The privacy promise that distinguishes this wallet, right where you share.
-    expect(screen.getByText(/Nobody can see this coming/i)).toBeInTheDocument();
+    // Asserted on the live string (`receive.sealed`); the old wording "Nobody can
+    // see this coming" was replaced and this test kept asserting the dead copy.
+    expect(screen.getByText(/Amounts, sender, recipient/i)).toBeInTheDocument();
     // The removed "request a specific amount" flow must be gone, not merely hidden.
     expect(screen.queryByText(/Request a specific amount/i)).toBeNull();
   });
@@ -182,14 +184,14 @@ describe("onboarding", () => {
     current = base({ has_wallet: false, address: null });
     await mountApp();
     expect(await screen.findByText(/Create new wallet/)).toBeInTheDocument();
-    expect(screen.getByText(/Import from seed/)).toBeInTheDocument();
+    expect(screen.getByText(/Import a recovery phrase/)).toBeInTheDocument();
   });
 
   it("import accepts a pasted seed and keeps it", async () => {
     const user = userEvent.setup();
     current = base({ has_wallet: false, address: null });
     await mountApp();
-    await user.click(await screen.findByText(/Import from seed/));
+    await user.click(await screen.findByText(/Import a recovery phrase/));
     const box = await screen.findByPlaceholderText(/12-word phrase, or a 64-hex seed/i);
     const seed = "ab".repeat(32);
     await user.click(box);

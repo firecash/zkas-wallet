@@ -58,15 +58,23 @@ afterEach(() => {
 });
 
 describe("managed node", () => {
-  it("asks for the mode at launch, defaults to mining, and passes peer access explicitly", async () => {
+  it("asks for the mode at launch, defaults to the last-used one, and passes peer access explicitly", async () => {
     const user = userEvent.setup();
     render(<NodeRunner />);
 
     await user.click(await screen.findByRole("button", { name: "Run node" }));
     const dialog = screen.getByRole("dialog", { name: "Choose how to run it" });
     expect(dialog).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /Mining/ })).toHaveAttribute("aria-checked", "true");
+    // The mode is NOT hardcoded to Mining any more (5b73561, #3): it opens on the
+    // mode the node last ran in, so a wallet user does not re-pick "Shielded
+    // history" on every launch. This mock's config says "shielded".
+    expect(screen.getByRole("radio", { name: /Shielded history/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: /Mining/ })).toHaveAttribute("aria-checked", "false");
     expect(screen.getByText("No firewall changes needed")).toBeInTheDocument();
+
+    // And an explicit pick still wins over that default.
+    await user.click(screen.getByRole("radio", { name: /Mining/ }));
+    expect(screen.getByRole("radio", { name: /Mining/ })).toHaveAttribute("aria-checked", "true");
 
     await user.click(screen.getByRole("checkbox", { name: /Accept inbound peers/ }));
     expect(screen.getByText("Firewall setup")).toBeInTheDocument();

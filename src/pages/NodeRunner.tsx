@@ -268,9 +268,10 @@ export function NodeRunner() {
   };
 
   const openStartDialog = () => {
-    // Starting is an explicit choice each time. Mining is the requested safe
-    // default for a standalone node; a user who wants wallet history opts in.
-    setPreset("mining");
+    // Starting is an explicit choice each time. The mode shown is the node's
+    // last-used one, applied by the effect above — setting "mining" here as well
+    // was dead (the effect overrode it immediately) and the comment that went
+    // with it described behaviour that was removed in #3.
     setPublicP2p(config?.settings.node_public_p2p ?? false);
     setError(null);
     setShowStart(true);
