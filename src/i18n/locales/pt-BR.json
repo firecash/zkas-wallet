@@ -1963,5 +1963,13 @@
     "intro": "Todos aqui podem ler o que você posta, e as postagens não podem ser excluídas. Use a linha acima para trocar de canal. Deslize uma mensagem para responder.",
     "torBlocked": "O chat está desligado porque o Tor está ativo. O relay é acessado diretamente, não pelo Tor, então conectar mostraria seu IP real. Desligue o Tor ou configure um relay com endereço .onion em Configurações.",
     "torBlockedShort": "Desconectado com Tor ativo."
+  },
+  "confirmWatch": {
+    "title": "Observar esta carteira?",
+    "body": "Este link contém a chave de visualização de alguém. Adicioná-lo cria uma carteira somente leitura neste dispositivo e pede ao seu serviço de carteira que escaneie as moedas dessa carteira.",
+    "warn": "Não é sua carteira e não pode enviar. Se não esperava este link, recuse — uma carteira observada se parece com a sua, inclusive o saldo.",
+    "accept": "Observar carteira",
+    "adding": "Adicionando…",
+    "decline": "Não, descartar link"
   }
 }

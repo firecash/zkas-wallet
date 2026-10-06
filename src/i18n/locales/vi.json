@@ -1963,5 +1963,13 @@
     "later": "Để sau",
     "never": "Đừng hỏi nữa",
     "noScreen": "Điện thoại này không có màn hình tối ưu pin. Đồng bộ nền vẫn chạy theo lịch của Android."
+  },
+  "confirmWatch": {
+    "title": "Theo dõi ví này?",
+    "body": "Đường dẫn này chứa khóa xem của ai đó. Thêm nó sẽ tạo một ví chỉ xem trên thiết bị này và yêu cầu dịch vụ ví quét tìm các đồng của ví đó.",
+    "warn": "Đây không phải ví của bạn và không thể gửi. Nếu bạn không mong đợi đường dẫn này, hãy từ chối — ví được theo dõi trông giống hệt ví của bạn, kể cả số dư.",
+    "accept": "Theo dõi ví này",
+    "adding": "Đang thêm…",
+    "decline": "Không, bỏ đường dẫn"
   }
 }

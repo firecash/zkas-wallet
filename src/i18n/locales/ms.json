@@ -1963,5 +1963,13 @@
     "intro": "Semua orang di sini boleh baca apa yang anda pos, dan pos tidak boleh dipadam. Gunakan baris di atas untuk tukar bilik. Leret mesej untuk balas.",
     "torBlocked": "Sembang dimatikan kerana Tor hidup. Geganti dicapai terus, bukan melalui Tor, jadi sambungan akan mendedahkan alamat IP sebenar anda. Matikan Tor, atau tetapkan geganti dengan alamat .onion dalam Tetapan.",
     "torBlockedShort": "Tidak bersambung semasa Tor hidup."
+  },
+  "confirmWatch": {
+    "title": "Pantau dompet ini?",
+    "body": "Pautan ini membawa kunci lihat seseorang. Menambahnya akan mencipta dompet lihat sahaja pada peranti ini dan meminta perkhidmatan dompet anda mengimbas syiling dompet tersebut.",
+    "warn": "Ia bukan dompet anda dan tidak boleh menghantar. Jika anda tidak menjangkakan pautan ini, tolak — dompet yang dipantau kelihatan sama seperti dompet anda sendiri, termasuk bakinya.",
+    "accept": "Pantau dompet ini",
+    "adding": "Menambah…",
+    "decline": "Tidak, buang pautan"
   }
 }

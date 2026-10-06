@@ -1963,5 +1963,13 @@
     "later": "Nie teraz",
     "never": "Nie pytaj więcej",
     "noScreen": "Ten telefon nie ma ekranu optymalizacji baterii. Synchronizacja w tle działa według harmonogramu Androida."
+  },
+  "confirmWatch": {
+    "title": "Obserwować ten portfel?​",
+    "body": "Ten link zawiera klucz podglądu innej osoby. Dodanie go utworzy portfel tylko do odczytu na tym urządzeniu i poprosi usługę portfela o zeskanowanie monet tego portfela.​",
+    "warn": "To nie jest twój portfel i nie może wysyłać. Jeśli nie spodziewałeś się tego linku, odrzuć go – obserwowany portfel wygląda tak samo jak twój, łącznie z saldem.​",
+    "accept": "Obserwuj ten portfel​",
+    "adding": "Dodawanie…​",
+    "decline": "Nie, odrzuć link"
   }
 }

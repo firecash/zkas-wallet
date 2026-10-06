@@ -1963,5 +1963,13 @@
     "intro": "Iedereen hier kan lezen wat je plaatst, en berichten kunnen niet worden verwijderd. Gebruik de rij hierboven om van kamer te wisselen. Veeg een bericht om te antwoorden.",
     "torBlocked": "Chat staat uit omdat Tor aan staat. De relay wordt direct bereikt, niet via Tor, dus verbinden zou je echte IP-adres tonen. Zet Tor uit of stel een relay met een .onion-adres in bij Instellingen.",
     "torBlockedShort": "Niet verbonden terwijl Tor aan staat."
+  },
+  "confirmWatch": {
+    "title": "Deze wallet bekijken?",
+    "body": "Deze link bevat iemands kijksleutel. Toevoegen maakt een alleen-bekijken wallet op dit apparaat en vraagt je walletservice om te scannen naar de munten van die wallet.",
+    "warn": "Het is niet jouw wallet en kan niet verzenden. Als je deze link niet verwachtte, wijs hem af — een bekeken wallet ziet er hetzelfde uit als je eigen, inclusief het saldo.",
+    "accept": "Deze wallet bekijken",
+    "adding": "Toevoegen…",
+    "decline": "Nee, link weggooien"
   }
 }

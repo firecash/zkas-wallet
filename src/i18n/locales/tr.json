@@ -1963,5 +1963,13 @@
     "never": "Bir daha sorma",
     "noScreen": "Bu telefonda pil iyileştirme ekranı yok. Arka plan eşitlemesi yine de Android'in programına göre çalışır.",
     "title": "Cüzdan arka planda eşitlensin mi?​"
+  },
+  "confirmWatch": {
+    "title": "Bu cüzdan izlensin mi?​",
+    "body": "Bu bağlantı birinin görüntüleme anahtarını taşıyor. Eklenmesi bu cihazda salt izleme cüzdanı oluşturur ve cüzdan hizmetinizden o cüzdanın jetonlarını taramasını ister.",
+    "warn": "Bu sizin cüzdanınız değildir ve gönderim yapamaz. Bu bağlantıyı beklemiyorsanız reddedin — izlenen bir cüzdan, bakiyesi dahil kendi cüzdanınızla aynı görünür.",
+    "accept": "Bu cüzdanı izle",
+    "adding": "Ekleniyor…",
+    "decline": "Hayır, bağlantıyı at"
   }
 }

@@ -1963,5 +1963,13 @@
     "later": "Non ora",
     "never": "Non chiedere più",
     "noScreen": "Questo telefono non ha la schermata di ottimizzazione batteria. La sincronizzazione in background funziona comunque, secondo i tempi di Android."
+  },
+  "confirmWatch": {
+    "title": "Osservare questo portafoglio?",
+    "body": "Questo link contiene la chiave di sola lettura di qualcuno. Aggiungerlo crea un portafoglio solo osservazione su questo dispositivo e chiede al tuo servizio portafoglio di scansionare le monete di quel portafoglio.",
+    "warn": "Non è il tuo portafoglio e non può inviare. Se non ti aspettavi questo link, rifiuta — un portafoglio osservato appare identico al tuo, incluso il saldo.",
+    "accept": "Osserva portafoglio",
+    "adding": "Aggiungo…",
+    "decline": "No, scarta link"
   }
 }

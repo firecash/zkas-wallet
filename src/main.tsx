@@ -19,7 +19,8 @@ import { WhatsNew, shouldShowWhatsNew } from "./WhatsNew";
 import { WalletRoute } from "./WalletRoute";
 import { useHashRouterSync } from "./hashsync";
 import { versionLine, versionTag } from "./version";
-import { adoptViewKeyFromUrl } from "./lib/watchadopt";
+import { takePendingViewKey, type PendingWatch } from "./lib/watchadopt";
+import { ConfirmWatch } from "./ConfirmWatch";
 import { BootLoader } from "./components/BootLoader";
 import { listWallets } from "./wallets";
 import { isNative, loadStatusCache, setBase } from "./api";
@@ -44,9 +45,10 @@ const SelfHost = lazy(() => import("./pages/SelfHost").then((module) => ({ defau
 // order is — ask the shell whether this device is locked, show the lock screen if
 // it is, and only mount the wallet once the daemon is up. In the browser there is
 // no vault and this resolves straight to the app.
-function Root({ locked, askNode, whatsNew }: { locked: boolean; askNode: boolean; whatsNew: boolean }) {
+function Root({ locked, askNode, whatsNew, pendingWatch }: { locked: boolean; askNode: boolean; whatsNew: boolean; pendingWatch: PendingWatch | null }) {
   const { t } = useTranslation();
   const [unlocked, setUnlocked] = useState(!locked);
+  const [watchAsk, setWatchAsk] = useState(pendingWatch);
   const [nodeChosen, setNodeChosen] = useState(!askNode);
   const [showWhatsNew, setShowWhatsNew] = useState(whatsNew);
   // The app lock (PIN/passphrase over the on-device seed) is independent of the
@@ -66,6 +68,9 @@ function Root({ locked, askNode, whatsNew }: { locked: boolean; askNode: boolean
     return isDesktop()
       ? <FirstRunNode onDone={() => setNodeChosen(true)} />
       : <FirstRunConnect onDone={() => setNodeChosen(true)} />;
+  // Asked after the lock and the service choice: adopting registers the key with
+  // whichever wallet service this device uses, so that has to be settled first.
+  if (watchAsk) return <ConfirmWatch pending={watchAsk} onDone={() => setWatchAsk(null)} />;
 
   return (
     <>
@@ -277,13 +282,13 @@ async function boot() {
   // it before the first-run gate: the link IS the user's choice of service, and
   // asking them to pick one first would be asking a question they already
   // answered by opening the link.
+  // A viewing key in the URL is HELD, not acted on: the user is asked first.
+  // See `takePendingViewKey`. Nothing is contacted until they say yes.
+  let pendingWatch: PendingWatch | null = null;
   try {
-    if (await adoptViewKeyFromUrl()) {
-      location.reload();
-      return;
-    }
+    pendingWatch = takePendingViewKey();
   } catch (e) {
-    console.error("could not adopt the view key:", (e as Error)?.message ?? e);
+    console.error("could not read the view key from the link:", (e as Error)?.message ?? e);
   }
 
   // First-run connection gate. It matters where the app bundle is LOCAL and its
@@ -362,7 +367,7 @@ async function boot() {
     <StrictMode>
       <ToastHost>
         <Boundary>
-          <Root locked={locked} askNode={askNode} whatsNew={whatsNew} />
+          <Root locked={locked} askNode={askNode} whatsNew={whatsNew} pendingWatch={pendingWatch} />
         </Boundary>
       </ToastHost>
     </StrictMode>,

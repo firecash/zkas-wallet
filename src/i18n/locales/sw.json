@@ -1963,5 +1963,13 @@
     "later": "Sio sasa",
     "never": "Usiulize tena",
     "noScreen": "Simu hii haina skrini ya kuboresha betri. Usawazishaji chinichini bado unafanya kazi kwa ratiba ya Android."
+  },
+  "confirmWatch": {
+    "title": "Tazama pochi hii?",
+    "body": "Kiungo hiki kina ufunguo wa kutazama wa mtu. Kukiongeza kunatengeneza pochi ya kutazama tu kwenye kifaa hiki na inaomba huduma yako ya pochi ichunguze sarafu za pochi hiyo.",
+    "warn": "Sio pochi yako na haiwezi kutuma. Kama hukutarajia kiungo hiki, kataa — pochi inayotazamwa inaonekana sawa na yako, ikiwemo salio lake.",
+    "accept": "Tazama pochi hii",
+    "adding": "Inaongeza…",
+    "decline": "Hapana, tupa kiungo"
   }
 }

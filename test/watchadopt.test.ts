@@ -15,6 +15,7 @@ const SEED = "cd".repeat(32);
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
   watch.mockClear();
   location.hash = "#/";
 });
@@ -46,25 +47,37 @@ describe("adopting a view key", () => {
     expect(watch).not.toHaveBeenCalled();
   });
 
-  it("takes the key out of the address bar once adopted", async () => {
+  it("holds the key for confirmation instead of adopting it, and scrubs the bar", async () => {
+    // The link must not act on its own: opening one someone sent used to
+    // register THEIR key with this device's wallet service and start scanning,
+    // with nothing asked. It is now held until the user answers.
     location.hash = `#/watch?key=${FVK}&b=99`;
-    const { adoptViewKeyFromUrl } = await import("../src/lib/watchadopt");
-    expect(await adoptViewKeyFromUrl()).toBe(true);
-    expect(watch).toHaveBeenCalledWith(FVK, 99);
+    const { takePendingViewKey, readPendingViewKey } = await import("../src/lib/watchadopt");
+    expect(takePendingViewKey()).toEqual({ key: FVK, birthday: 99 });
+    expect(watch).not.toHaveBeenCalled();
     expect(location.hash).not.toContain(FVK);
+    // And it survives the reload that follows, so the question can still be asked.
+    expect(readPendingViewKey()).toEqual({ key: FVK, birthday: 99 });
   });
 
-  it("scrubs the key even when registering fails", async () => {
-    watch.mockRejectedValueOnce(new Error("service down"));
+  it("forgets a declined key", async () => {
     location.hash = `#/watch?key=${FVK}`;
-    const { adoptViewKeyFromUrl } = await import("../src/lib/watchadopt");
-    await expect(adoptViewKeyFromUrl()).rejects.toThrow(/service down/);
-    expect(location.hash).not.toContain(FVK);
+    const { takePendingViewKey, clearPendingViewKey, readPendingViewKey } = await import("../src/lib/watchadopt");
+    takePendingViewKey();
+    clearPendingViewKey();
+    expect(readPendingViewKey()).toBeNull();
+    expect(watch).not.toHaveBeenCalled();
+  });
+
+  it("does not resurrect a key that is not a view key", async () => {
+    sessionStorage.setItem("zkas_pending_view_key", JSON.stringify({ key: SEED, birthday: 0 }));
+    const { readPendingViewKey } = await import("../src/lib/watchadopt");
+    expect(readPendingViewKey()).toBeNull();
   });
 
   it("does nothing when the URL carries no key", async () => {
-    const { adoptViewKeyFromUrl } = await import("../src/lib/watchadopt");
-    expect(await adoptViewKeyFromUrl()).toBe(false);
+    const { takePendingViewKey } = await import("../src/lib/watchadopt");
+    expect(takePendingViewKey()).toBeNull();
     expect(watch).not.toHaveBeenCalled();
   });
 });

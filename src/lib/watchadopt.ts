@@ -28,18 +28,59 @@ export async function adoptViewKey(key: string, birthday = 0): Promise<string> {
   return address;
 }
 
-/// Adopt a viewing key carried by the URL, then scrub it from the address bar.
+const PENDING_KEY = "zkas_pending_view_key";
+
+export interface PendingWatch {
+  key: string;
+  birthday: number;
+}
+
+/// Take a viewing key carried by the URL and HOLD it for confirmation, scrubbing
+/// it from the address bar.
 ///
-/// Returns true when one was adopted. The scrub matters: the fragment is never
-/// sent to a server, but leaving it in the address bar invites it into a
-/// screenshot, a shared link or a synced tab.
-export async function adoptViewKeyFromUrl(): Promise<boolean> {
+/// It used to be adopted here, on boot, with no question asked: opening a link
+/// someone sent registered THEIR viewing key with the wallet service, created a
+/// wallet for it on this device and started scanning — all from a URL, which is
+/// the one thing a user can be talked into clicking. No seed is involved so
+/// nothing can be spent, but a wallet appearing that the user did not add, and
+/// their service scanning a stranger's key, are not things to do unasked. A key
+/// that is only watched also looks exactly like one that is owned, which is how
+/// a victim is persuaded a payment arrived.
+///
+/// Held in sessionStorage, deliberately: an unanswered question must not survive
+/// the browser being closed and reappear days later with no link to explain it.
+///
+/// The scrub matters either way: the fragment is never sent to a server, but
+/// leaving it in the address bar invites it into a screenshot, a shared link or
+/// a synced tab.
+export function takePendingViewKey(): PendingWatch | null {
   const key = viewKeyFromUrl();
-  if (!key) return false;
+  if (!key) return readPendingViewKey();
+  const pending: PendingWatch = { key, birthday: birthdayFromUrl() };
   try {
-    await adoptViewKey(key, birthdayFromUrl());
-    return true;
-  } finally {
-    history.replaceState(null, "", `${location.pathname}${location.search}#/`);
+    sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+  } catch {
+    /* storage blocked: the key is still returned, it just will not survive a reload */
+  }
+  history.replaceState(null, "", `${location.pathname}${location.search}#/`);
+  return pending;
+}
+
+export function readPendingViewKey(): PendingWatch | null {
+  try {
+    const raw = sessionStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as PendingWatch;
+    return isViewKey(v?.key) ? { key: v.key, birthday: Number(v.birthday) || 0 } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingViewKey(): void {
+  try {
+    sessionStorage.removeItem(PENDING_KEY);
+  } catch {
+    /* nothing to clear */
   }
 }

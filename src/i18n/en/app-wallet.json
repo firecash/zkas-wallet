@@ -210,5 +210,13 @@
     "restoreFromFile": "Restore from a backup file",
     "importPhrase": "Import a recovery phrase",
     "watchWallet": "Watch a wallet (view-only)"
+  },
+  "confirmWatch": {
+    "title": "Watch this wallet?",
+    "body": "This link carries someone's view key. Adding it creates a watch-only wallet on this device and asks your wallet service to scan for that wallet's notes.",
+    "warn": "It is not your wallet and it cannot send. If you did not expect this link, decline — a watched wallet looks the same as your own, including its balance.",
+    "accept": "Watch this wallet",
+    "adding": "Adding…",
+    "decline": "No, discard the link"
   }
 }

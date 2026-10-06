@@ -1963,5 +1963,13 @@
     "later": "Ahora no​",
     "never": "No preguntar más​",
     "noScreen": "Este teléfono no tiene pantalla de optimización de batería. La sincronización en segundo plano igual funciona, según el horario de Android.​"
+  },
+  "confirmWatch": {
+    "title": "¿Ver esta billetera?​",
+    "body": "Este enlace lleva la clave de visualización de alguien. Al agregarlo, se crea una billetera de solo lectura en este dispositivo y se le pide a tu servicio de billetera que escanee las monedas de esa billetera.​",
+    "warn": "No es tu billetera y no puede enviar. Si no esperabas este enlace, recházalo: una billetera vigilada se ve igual que la tuya, incluido su saldo.​",
+    "accept": "Ver esta billetera​",
+    "adding": "Agregando…​",
+    "decline": "No, descartar enlace"
   }
 }

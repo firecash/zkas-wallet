@@ -1963,5 +1963,13 @@
     "intro": "Tout le monde ici peut lire vos messages, et ils ne peuvent pas être supprimés. Utilisez la ligne ci-dessus pour changer de salon. Balayez un message pour répondre.",
     "torBlocked": "Le chat est désactivé car Tor est activé. Le relais est atteint directement, pas via Tor, donc la connexion montrerait votre véritable adresse IP. Désactivez Tor ou définissez un relais avec une adresse .onion dans les Paramètres.",
     "torBlockedShort": "Non connecté avec Tor activé."
+  },
+  "confirmWatch": {
+    "title": "Surveiller ce portefeuille ?",
+    "body": "Ce lien contient la clé de visualisation de quelqu’un. L’ajouter crée un portefeuille en lecture seule sur cet appareil et demande à votre service de portefeuille d’analyser les pièces de ce portefeuille.",
+    "warn": "Ce n’est pas votre portefeuille et il ne peut pas envoyer. Si vous n’attendiez pas ce lien, refusez : un portefeuille surveillé ressemble au vôtre, y compris son solde.",
+    "accept": "Surveiller ce portefeuille",
+    "adding": "Ajout…",
+    "decline": "Non, ignorer le lien"
   }
 }

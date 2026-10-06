@@ -1963,5 +1963,13 @@
     "later": "Nanti",
     "never": "Jangan tanya lagi",
     "noScreen": "Ponsel ini tidak memiliki layar pengoptimalan baterai. Sinkronisasi latar tetap berjalan sesuai jadwal Android."
+  },
+  "confirmWatch": {
+    "title": "Pantau dompet ini?",
+    "body": "Tautan ini berisi kunci lihat seseorang. Menambahkannya akan membuat dompet hanya lihat di perangkat ini dan meminta layanan dompet Anda memindai koin dompet tersebut.",
+    "warn": "Ini bukan dompet Anda dan tidak bisa mengirim. Jika Anda tidak menduga tautan ini, tolak — dompet yang dipantau tampak sama seperti milik Anda, termasuk saldonya.",
+    "accept": "Pantau dompet ini",
+    "adding": "Menambahkan…",
+    "decline": "Tidak, buang tautan"
   }
 }

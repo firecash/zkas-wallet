@@ -1963,5 +1963,13 @@
     "intro": "Alle hier können lesen, was du postest, und Beiträge können nicht gelöscht werden. Wechsle den Raum mit der Zeile oben. Wische auf eine Nachricht, um zu antworten.",
     "torBlocked": "Chat ist aus, weil Tor an ist. Der Relay wird direkt erreicht, nicht über Tor, daher würde die Verbindung deine echte IP-Adresse zeigen. Schalte Tor aus oder setze in den Einstellungen einen Relay mit einer .onion-Adresse.",
     "torBlockedShort": "Nicht verbunden bei Tor an."
+  },
+  "confirmWatch": {
+    "title": "Wallet beobachten? ",
+    "body": "Dieser Link enthält den Betrachtungsschlüssel einer Person. Wenn du ihn hinzufügst, wird ein Beobachtungs-Wallet auf diesem Gerät erstellt und dein Wallet-Dienst wird nach den Münzen dieses Wallets suchen.",
+    "warn": "Es ist nicht dein Wallet und es kann nichts senden. Falls du diesen Link nicht erwartet hast, lehne ihn ab – ein beobachtetes Wallet sieht genauso aus wie dein eigenes, inklusive Guthaben.",
+    "accept": "Wallet beobachten",
+    "adding": "Füge hinzu…",
+    "decline": "Nein, Link verwerfen"
   }
 }
