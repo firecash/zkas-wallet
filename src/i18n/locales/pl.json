@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Odpowiedz",
-      "react": "Reaguj",
       "tip": "Wyślij napiwek",
       "tipDetail": "prywatnie",
       "copy": "Kopiuj tekst",
@@ -1894,7 +1893,8 @@
       "unmute": "Wycisz",
       "report": "Zgłoś",
       "retry": "Spróbuj wysłać ponownie",
-      "dm": "Napisz prywatnie"
+      "muteConfirm": "Dotknij ponownie, by wyciszyć {{name}}",
+      "reportConfirm": "Dotknij ponownie, by zgłosić i wyciszyć"
     },
     "profile": {
       "copyKey": "Kopiuj klucz publiczny",
@@ -1920,7 +1920,7 @@
       "headerNote": "prywatnie"
     },
     "you": "ty",
-    "intro": "Każdy tu widzi, co piszesz, a postów nie da się usunąć. Górnym wierszem zmienisz pokój. Przesuń wiadomość, by odpowiedzieć.",
+    "intro": "Każdy tu widzi twoje posty, a postów nie można usunąć. Użyj wiersza u góry, by zmienić pokój. Przytrzymaj wiadomość, by zobaczyć opcje, dotknij dwukrotnie, by polubić, przesuń, by odpowiedzieć.",
     "consentTitle": "Włączyć czat?",
     "consentPublic": "Wiadomości w pokoju globalnym są publiczne i trwałe. Nie ma opcji usunięcia.",
     "consentIp": "Serwer przekaźnika widzi Twój adres IP i czas aktywności. Twój portfel – nie.",
@@ -1954,7 +1954,12 @@
     "namePermanent": "Wpisy są publiczne i trwałe – każdy może je czytać, nie można ich usunąć.",
     "nameSave": "Zapisz i wyślij",
     "torBlocked": "Czat jest wyłączony, bo Tor jest włączony. Przekaźnik jest osiągany bezpośrednio, nie przez Tora, więc połączenie ujawniłoby mu Twój prawdziwy adres IP. Wyłącz Tora lub ustaw przekaźnik z adresem .onion w Ustawieniach.",
-    "torBlockedShort": "Brak połączenia przy Torze."
+    "torBlockedShort": "Brak połączenia przy Torze.",
+    "muted": {
+      "title": "Wyciszeni",
+      "none": "Nikogo nie wyciszyłeś.",
+      "note": "Wyciszanie dotyczy tylko tego portfela. Cofnięcie wyciszenia przywraca ich wiadomości wszędzie tam, gdzie jesteś zalogowany tym ziarnem."
+    }
   },
   "backgroundPermission": {
     "title": "Zsynchronizować portfel w tle?",

@@ -1925,7 +1925,6 @@
     },
     "actions": {
       "reply": "Répondre",
-      "react": "Réagir",
       "tip": "Donner un pourboire",
       "tipDetail": "privé",
       "copy": "Copier le texte",
@@ -1934,7 +1933,8 @@
       "unmute": "Afficher",
       "report": "Signaler",
       "retry": "Réessayer l'envoi",
-      "dm": "Message privé"
+      "muteConfirm": "Rappuyez pour masquer {{name}}",
+      "reportConfirm": "Rappuyez pour signaler et masquer"
     },
     "profile": {
       "copyKey": "Copier la clé publique",
@@ -1960,9 +1960,14 @@
       "headerNote": "privé"
     },
     "you": "vous",
-    "intro": "Tout le monde ici peut lire vos messages, et ils ne peuvent pas être supprimés. Utilisez la ligne ci-dessus pour changer de salon. Balayez un message pour répondre.",
+    "intro": "Tout le monde ici peut lire vos messages, et ils ne peuvent pas être supprimés. Utilisez la ligne ci-dessus pour changer de salon. Maintenez un message pour les options, double-tapez pour aimer, glissez pour répondre.",
     "torBlocked": "Le chat est désactivé car Tor est activé. Le relais est atteint directement, pas via Tor, donc la connexion montrerait votre véritable adresse IP. Désactivez Tor ou définissez un relais avec une adresse .onion dans les Paramètres.",
-    "torBlockedShort": "Non connecté avec Tor activé."
+    "torBlockedShort": "Non connecté avec Tor activé.",
+    "muted": {
+      "title": "Personnes masquées",
+      "none": "Vous n'avez masqué personne.",
+      "note": "Le masquage n'affecte que ce portefeuille. Démasquer rétablit leurs messages partout où vous êtes connecté avec cette phrase."
+    }
   },
   "confirmWatch": {
     "title": "Surveiller ce portefeuille ?",

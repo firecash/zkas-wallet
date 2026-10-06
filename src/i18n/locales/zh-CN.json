@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "回复",
-      "react": "回应",
       "tip": "打赏",
       "tipDetail": "私密",
       "copy": "复制文本",
@@ -1894,7 +1893,8 @@
       "unmute": "取消屏蔽",
       "report": "举报",
       "retry": "重新发送",
-      "dm": "私信"
+      "muteConfirm": "再次点击以静音{{name}}",
+      "reportConfirm": "再次点击以举报并静音"
     },
     "profile": {
       "copyKey": "复制公钥",
@@ -1920,7 +1920,7 @@
       "headerNote": "私密"
     },
     "you": "你",
-    "intro": "这里所有人都能看到你发布的内容，且帖子无法删除。使用上方行切换房间。滑动消息可回复。",
+    "intro": "这里的每个人都能看到你的帖子，且帖子无法删除。使用上方行切换房间。长按消息查看选项，双击点赞，滑动回复。",
     "consentTitle": "开启聊天？",
     "consentPublic": "全球房间中的消息公开且永久保存，无法删除。",
     "consentIp": "中继服务器会看到你的 IP 地址和在线状态，但你的钱包不会。",
@@ -1954,7 +1954,12 @@
     "namePermanent": "帖子公开且永久保存——任何人都可阅读，且无法删除。",
     "nameSave": "保存并发送",
     "torBlocked": "聊天已关闭，因为 Tor 已开启。中继是直接连接而非通过 Tor，因此连接会暴露你的真实 IP 地址。请关闭 Tor，或在设置中设置一个 .onion 地址的中继。",
-    "torBlockedShort": "Tor 开启时无法连接。"
+    "torBlockedShort": "Tor 开启时无法连接。",
+    "muted": {
+      "title": "已静音用户",
+      "none": "你还没有静音任何人。",
+      "note": "静音仅影响此钱包。取消静音后，使用此种子登录的所有地方都会恢复显示他们的消息。"
+    }
   },
   "backgroundPermission": {
     "title": "允许钱包在后台同步？",

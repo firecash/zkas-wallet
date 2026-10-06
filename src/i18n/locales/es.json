@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Responder",
-      "react": "Reaccionar",
       "tip": "Dar propina",
       "tipDetail": "privado",
       "copy": "Copiar texto",
@@ -1894,7 +1893,8 @@
       "unmute": "Silenciar",
       "report": "Reportar",
       "retry": "Reintentar envío",
-      "dm": "Mensaje privado"
+      "muteConfirm": "Toca otra vez para silenciar a {{name}}",
+      "reportConfirm": "Toca otra vez para reportar y silenciar"
     },
     "profile": {
       "copyKey": "Copiar clave pública",
@@ -1920,7 +1920,7 @@
       "headerNote": "privado"
     },
     "you": "tú",
-    "intro": "Todo lo que publiques aquí lo verán todos y no se puede borrar. Usa la fila de arriba para cambiar de sala. Desliza un mensaje para responder.",
+    "intro": "Todos pueden leer lo que publicas y los mensajes no se borran. Usa la fila de arriba para cambiar de sala. Mantén un mensaje para opciones, toca dos veces para dar like, desliza para responder.",
     "consentTitle": "¿Activar el chat?​",
     "consentPublic": "Los mensajes en la sala global son públicos y permanentes. No se pueden eliminar.​",
     "consentIp": "El servidor relay ve tu IP y cuándo estás en línea. Tu billetera no.​",
@@ -1954,7 +1954,12 @@
     "namePermanent": "Las publicaciones son públicas y permanentes — cualquiera puede leerlas y no se pueden eliminar.​",
     "nameSave": "Guardar y enviar​",
     "torBlocked": "El chat está desactivado porque Tor está activo. El relay se alcanza directamente, no a través de Tor, por lo que conectarse mostraría tu IP real. Desactiva Tor o configura un relay con dirección .onion en Configuración.",
-    "torBlockedShort": "Sin conexión con Tor activo."
+    "torBlockedShort": "Sin conexión con Tor activo.",
+    "muted": {
+      "title": "Silenciados",
+      "none": "No has silenciado a nadie.",
+      "note": "Silenciar solo afecta a esta billetera. Al desilenciar, sus mensajes vuelven donde hayas iniciado sesión con esta semilla."
+    }
   },
   "backgroundPermission": {
     "title": "¿Sincronizar la billetera en segundo plano?​",

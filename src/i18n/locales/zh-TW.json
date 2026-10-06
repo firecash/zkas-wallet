@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "回覆",
-      "react": "表情",
       "tip": "打賞",
       "tipDetail": "私密",
       "copy": "複製文字",
@@ -1894,7 +1893,8 @@
       "unmute": "取消靜音",
       "report": "檢舉",
       "retry": "重新傳送",
-      "dm": "私訊"
+      "muteConfirm": "再按一次即可靜音 {{name}}",
+      "reportConfirm": "再按一次即可檢舉並靜音"
     },
     "profile": {
       "copyKey": "複製公鑰",
@@ -1920,7 +1920,7 @@
       "headerNote": "私密"
     },
     "you": "你",
-    "intro": "這裡所有人都能看到你的發文，且發文無法刪除。使用上方列切換聊天室。滑動訊息即可回覆。",
+    "intro": "這裡所有人都能看到你的發文，且發文無法刪除。使用上方列切換聊天室。長按訊息可選操作，點兩下按讚，滑動回覆。",
     "consentTitle": "開啟聊天？",
     "consentPublic": "全球聊天室的訊息為公開且永久保存，無法刪除。",
     "consentIp": "中繼伺服器會看到您的 IP 位址與上線時間，您的錢包則不會。",
@@ -1954,7 +1954,12 @@
     "namePermanent": "發文為公開且永久保存 — 任何人都能閱讀，且無法刪除。",
     "nameSave": "儲存並傳送",
     "torBlocked": "聊天功能因 Tor 開啟而關閉。中繼站是直接連線，而非透過 Tor，因此連線會暴露你的真實 IP。請關閉 Tor，或在設定中設定 .onion 位址的中繼站。",
-    "torBlockedShort": "Tor 開啟時無法連線。"
+    "torBlockedShort": "Tor 開啟時無法連線。",
+    "muted": {
+      "title": "已靜音的人",
+      "none": "你尚未靜音任何人。",
+      "note": "靜音僅影響此錢包。取消靜音後，使用此種子登入的所有地方都會恢復顯示他們的訊息。"
+    }
   },
   "backgroundPermission": {
     "title": "讓錢包在背景同步？",

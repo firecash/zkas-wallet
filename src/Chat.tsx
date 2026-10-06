@@ -7,13 +7,13 @@
 // message, a person, the room name — so the message row itself stays free of
 // controls. See ChatSheets.tsx.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { getDeviceSeed } from "./lib/deviceseed";
 import { useBackClose } from "./lib/backclose";
 import { useToast } from "./toast";
-import { MessageSheet, ProfileSheet, ReactionSheet, RoomsSheet } from "./ChatSheets";
+import { MessageSheet, MutedSheet, ProfileSheet, RoomsSheet } from "./ChatSheets";
 import {
   ChatClient,
   type ChatEvent,
@@ -41,6 +41,8 @@ import {
   currentRoom,
   lastSeen,
   markSeen,
+  markDmWrapsSeen,
+  seenDmWraps,
   mutedKeys,
   myZkasAddress,
   nickname,
@@ -170,12 +172,17 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
   const [nameDraft, setNameDraft] = useState(nickname());
   const [addrDraft, setAddrDraft] = useState(myZkasAddress());
   const [me, setMe] = useState("");
-  const [sheet, setSheet] = useState<null | { kind: "msg" | "profile" | "rooms" | "react"; id?: string; pubkey?: string }>(null);
+  const [sheet, setSheet] = useState<null | { kind: "msg" | "profile" | "rooms" | "muted"; id?: string; pubkey?: string }>(null);
   const [atBottom, setAtBottom] = useState(true);
   // One screen, three views: the room, the list of private conversations, and
   // one conversation. Keeping them here means one socket and one layout.
   const [view, setView] = useState<{ k: "room" } | { k: "dms" } | { k: "dm"; peer: string }>({ k: "room" });
   const [dms, setDms] = useState<Map<string, Array<{ id: string; sender: string; content: string; created_at: number }>>>(new Map());
+  /** Every gift wrap addressed to us that this session has seen arrive, by id.
+   *  Unread is decided on these ids — see `seenDmWraps`, and note that a wrap's
+   *  own timestamp is randomised and cannot be compared against a cursor. */
+  const [wrapIds, setWrapIds] = useState<string[]>([]);
+  const [dmSeen, setDmSeen] = useState<Set<string>>(() => new Set(seenDmWraps()));
   /** The read cursor for the room on screen, used to place the "New messages"
    *  rule. Per ROOM, not per screen: it was captured once when chat opened, so
    *  after switching rooms the rule was drawn from the previous room's cursor
@@ -201,7 +208,10 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
   // Swipe-right-to-reply. The action sheet holds everything, but replying is the
   // one action common enough that making it cost two taps was a regression from
   // the visible button it replaced — so it also gets a gesture.
-  const swipe = useRef<{ id: string; x: number } | null>(null);
+  const swipe = useRef<{ id: string; x: number; y: number; at: number; held: boolean } | null>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Last message tapped, and when — for recognising a double tap. */
+  const lastTap = useRef<{ id: string; at: number } | null>(null);
   const client = useRef<ChatClient | null>(null);
   const bottom = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -283,6 +293,10 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
       return;
     }
     if (ev.kind === KIND_GIFT_WRAP) {
+      // Recorded before any attempt to open it: the subscription filters on our
+      // pubkey, so every wrap delivered here is addressed to us, and the count
+      // must not depend on the engine having loaded.
+      setWrapIds((prev) => (prev.includes(ev.id) ? prev : [...prev, ev.id]));
       // Opening it needs our key, so this is async and best-effort: a wrap we
       // cannot open is simply not for us, which is normal and not an error.
       void (async () => {
@@ -336,6 +350,24 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
     c.connect();
     return () => c.close();
   }, [ingest]);
+
+  /** The newest message seen in the open room, so leaving it can mark it read.
+   *  Fed by an effect below, once `messages` exists. */
+  const newestInRoom = useRef(0);
+
+  /** Leaving a room — switching away, or closing chat — marks it read.
+   *
+   *  Marking only happened while scrolled to the bottom, so a room read from
+   *  anywhere else kept its unread count and the wallet screen went on showing
+   *  "1 new" for a message already read. Closing the room is as clear a
+   *  statement that it was read as reaching the bottom of it. */
+  useEffect(() => {
+    const leaving = room;
+    newestInRoom.current = 0;
+    return () => {
+      if (newestInRoom.current) markSeen(leaving, newestInRoom.current);
+    };
+  }, [room]);
 
   useEffect(() => {
     client.current?.setRoom(room);
@@ -395,13 +427,118 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
     setVisited((n) => n + 1);
   }, []);
 
-  /** Private messages that arrived since this screen opened, for the DMs chip. */
-  const dmUnread = useMemo(() => {
-    if (!me) return 0;
-    let n = 0;
-    for (const thread of dms.values()) n += thread.filter((m) => m.sender !== me && m.created_at > sinceOpen).length;
-    return n;
-  }, [dms, me, sinceOpen]);
+  /** How a message is operated.
+   *
+   *  A single tap used to open the action sheet, and the sheet opened under the
+   *  finger — so tapping a message twice landed the second tap on a row, and
+   *  "Mute this person" is one of them. People muted strangers without ever
+   *  seeing the menu. A single tap now does nothing at all, and the two
+   *  gestures every messenger already trains people in do the work:
+   *
+   *    hold        → the action sheet (right-click on a desktop)
+   *    double tap  → 👍, the one reaction common enough to deserve a gesture
+   *    swipe right → reply
+   *
+   *  Hold is cancelled by movement, so scrolling the list never opens anything.
+   */
+  const HOLD_MS = 450;
+  const DOUBLE_TAP_MS = 320;
+  /** Movement past this is a scroll or a swipe, not a press. */
+  const SLOP_PX = 12;
+
+  const cancelHold = useCallback(() => {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+  }, []);
+
+  const gestures = useCallback(
+    (m: ChatMessage) => ({
+      onPointerDown: (e: ReactPointerEvent) => {
+        swipe.current = { id: m.id, x: e.clientX, y: e.clientY, at: Date.now(), held: false };
+        cancelHold();
+        holdTimer.current = setTimeout(() => {
+          const st = swipe.current;
+          if (!st || st.id !== m.id) return;
+          st.held = true;
+          // The press itself is the confirmation that this is deliberate, so a
+          // short buzz acknowledges it where the hardware can.
+          try { navigator.vibrate?.(12); } catch { /* not available */ }
+          setSheet({ kind: "msg", id: m.id, pubkey: m.pubkey });
+        }, HOLD_MS);
+      },
+      onPointerMove: (e: ReactPointerEvent) => {
+        const st = swipe.current;
+        if (!st) return;
+        if (Math.abs(e.clientX - st.x) > SLOP_PX || Math.abs(e.clientY - st.y) > SLOP_PX) cancelHold();
+      },
+      onPointerCancel: () => {
+        cancelHold();
+        swipe.current = null;
+      },
+      onPointerUp: (e: ReactPointerEvent) => {
+        cancelHold();
+        const st = swipe.current;
+        swipe.current = null;
+        if (!st || st.id !== m.id || st.held) return;
+        const dx = e.clientX - st.x;
+        const dy = e.clientY - st.y;
+        // Rightward and far enough to be deliberate rather than a sloppy tap.
+        if (dx > 60 && Math.abs(dy) < 60) {
+          setReplyTo(m);
+          return;
+        }
+        if (Math.abs(dx) > SLOP_PX || Math.abs(dy) > SLOP_PX) return; // a scroll
+        const prevTap = lastTap.current;
+        const now = Date.now();
+        if (prevTap && prevTap.id === m.id && now - prevTap.at < DOUBLE_TAP_MS) {
+          lastTap.current = null;
+          void publishSigned(KIND_REACTION, reactionTags(m, room), "+").catch(() => undefined);
+          try { navigator.vibrate?.(8); } catch { /* not available */ }
+          return;
+        }
+        lastTap.current = { id: m.id, at: now };
+      },
+      // A desktop has no long press; the menu key and right-click are its equivalent.
+      onContextMenu: (e: ReactMouseEvent) => {
+        e.preventDefault();
+        cancelHold();
+        setSheet({ kind: "msg", id: m.id, pubkey: m.pubkey });
+      },
+    }),
+    [cancelHold, room],
+  );
+
+  // A pending hold must not fire after the list has gone.
+  useEffect(() => cancelHold, [cancelHold]);
+
+  /** Open a private conversation. Used by the message sheet, the profile sheet
+   *  and the conversation list, so all three land in the same state — the list
+   *  reset `atBottom`, the profile did not, and a thread opened from a profile
+   *  could therefore open scrolled away from its newest message. */
+  const openDm = useCallback((peer: string) => {
+    setAtBottom(true);
+    setSheet(null);
+    setView({ k: "dm", peer });
+  }, []);
+
+  /** Unread private messages, for the DMs chip.
+   *
+   *  Counted by wrap id against what this device has already seen. It used to
+   *  compare each message against `sinceOpen` — the read cursor of the chat
+   *  ROOM — so private messages were marked read by looking at a public room,
+   *  and vice versa. */
+  const dmUnread = useMemo(() => wrapIds.filter((id) => !dmSeen.has(id)).length, [wrapIds, dmSeen]);
+
+  // Opening the conversations, or any one of them, is reading them.
+  useEffect(() => {
+    if (view.k !== "dms" && view.k !== "dm") return;
+    if (!wrapIds.length) return;
+    if (wrapIds.every((id) => dmSeen.has(id))) return;
+    markDmWrapsSeen(wrapIds);
+    // A NEW Set, not a mutation: mutating one in state re-renders nothing, so
+    // the chip would have kept its count until the next wrap happened to arrive.
+    setDmSeen((prev) => new Set([...prev, ...wrapIds]));
+  }, [view, wrapIds, dmSeen]);
 
   useEffect(() => {
     if (me && client.current?.live) {
@@ -462,9 +599,13 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
   }, [notes, muted, me, person, failed]);
 
   useEffect(() => {
-    const unknown = [...new Set(messages.map((m) => m.pubkey))].filter((p) => !profiles.has(p));
+    // Muted authors are filtered out of `messages`, so asking only about those
+    // left meant a muted person's name was never fetched — and the muted list
+    // could then only ever show "anon".
+    const want = [...new Set([...messages.map((m) => m.pubkey), ...muted])];
+    const unknown = want.filter((p) => !profiles.has(p));
     if (unknown.length) client.current?.requestProfiles(unknown);
-  }, [messages, profiles]);
+  }, [messages, profiles, muted]);
 
   useEffect(() => {
     // Set scrollTop so the movement stays INSIDE the list. `scrollIntoView`
@@ -474,6 +615,11 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
     const newest = messages[messages.length - 1];
     if (newest && atBottom) markSeen(room, newest.created_at);
   }, [messages, atBottom, room, view, dms]);
+
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (last) newestInRoom.current = Math.max(newestInRoom.current, last.created_at);
+  }, [messages]);
 
   const unreadCount = messages.filter((m) => m.created_at > sinceOpen && !m.mine).length;
 
@@ -599,6 +745,13 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
             {view.k === "dm" ? t("chat.dm.headerNote") : t(STATE_LABEL[state])}
           </span>
         </button>
+        {/* On the header line, opposite Wallet — not at the end of the room
+            strip, where it sat past the right edge and had to be scrolled to.
+            The strip is for the rooms you move between; the full list is a
+            different kind of thing and belongs with the other navigation. */}
+        <button className="chat-chip more" onClick={() => setSheet({ kind: "rooms" })}>
+          {t("chat.rooms.all")}
+        </button>
       </header>
 
       {/* The switcher, always on screen. Rooms AND the open conversation at once,
@@ -627,9 +780,6 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
             {r !== room && peek[r] > 0 && <span className="chat-chip-n">{peek[r]}</span>}
           </button>
         ))}
-        <button className="chat-chip more" onClick={() => setSheet({ kind: "rooms" })}>
-          {t("chat.rooms.all")}
-        </button>
       </nav>
 
       {error === "engine" && <div className="msg warn small">{t("chat.errEngine")}</div>}
@@ -643,7 +793,7 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
               const who = person(peer);
               const last = thread[thread.length - 1];
               return (
-                <article key={peer} className="chat-msg" onClick={() => { setAtBottom(true); setView({ k: "dm", peer }); }}>
+                <article key={peer} className="chat-msg" onClick={() => openDm(peer)}>
                   <Avatar person={who} />
                   <div className="chat-body">
                     <div className="chat-meta">
@@ -724,19 +874,7 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
               {firstUnread && <div className="chat-unread-rule"><span>{t("chat.newMessages")}</span></div>}
               <article
                 className={"chat-msg" + (m.mine ? " mine" : "") + (grouped ? " grouped" : "") + (m.failed ? " failed" : "")}
-                onClick={() => setSheet({ kind: "msg", id: m.id, pubkey: m.pubkey })}
-                onTouchStart={(e) => { swipe.current = { id: m.id, x: e.touches[0].clientX }; }}
-                onTouchEnd={(e) => {
-                  const st = swipe.current;
-                  swipe.current = null;
-                  if (!st || st.id !== m.id) return;
-                  // Rightward only, and far enough to be deliberate rather than a
-                  // sloppy tap or a horizontal scroll.
-                  if (e.changedTouches[0].clientX - st.x > 60) {
-                    setReplyTo(m);
-                    e.preventDefault();
-                  }
-                }}
+                {...gestures(m)}
               >
                 {grouped ? <span className="chat-avatar spacer" aria-hidden="true" /> : <Avatar person={m.person} />}
                 <div className="chat-body">
@@ -836,7 +974,11 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
           message={openMessage}
           onClose={() => setSheet(null)}
           onReply={() => { setReplyTo(openMessage); setSheet(null); }}
-          onReact={() => setSheet({ kind: "react", id: openMessage.id, pubkey: openMessage.pubkey })}
+          onReact={(emoji) => {
+            setSheet(null);
+            void publishSigned(KIND_REACTION, reactionTags(openMessage, room), emoji).catch(() => undefined);
+          }}
+          onDm={() => openDm(openMessage.pubkey)}
           onTip={() => { setSheet(null); onClose(); if (openMessage.person.zkas) onTip?.(openMessage.person.zkas); }}
           onProfile={() => setSheet({ kind: "profile", pubkey: openMessage.pubkey })}
           onMute={() => void toggleMute(openMessage.pubkey)}
@@ -849,14 +991,11 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
           }}
         />
       )}
-      {sheet?.kind === "react" && sheet.id && (
-        <ReactionSheet
+      {sheet?.kind === "muted" && (
+        <MutedSheet
+          people={muted.map(person)}
           onClose={() => setSheet(null)}
-          onPick={(emoji) => {
-            const target = notes.get(sheet.id as string);
-            setSheet(null);
-            if (target) void publishSigned(KIND_REACTION, reactionTags(target, room), emoji).catch(() => undefined);
-          }}
+          onUnmute={(pubkey) => void toggleMute(pubkey)}
         />
       )}
       {openPerson && (
@@ -866,7 +1005,7 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
           onMute={() => void toggleMute(openPerson.pubkey)}
           onTip={() => { setSheet(null); onClose(); if (openPerson.zkas) onTip?.(openPerson.zkas); }}
           onCopyKey={() => { void navigator.clipboard?.writeText(openPerson.pubkey); setSheet(null); toast.show("good", t("chat.toast.copied")); }}
-          onDm={() => { setSheet(null); setView({ k: "dm", peer: openPerson.pubkey }); }}
+          onDm={() => openDm(openPerson.pubkey)}
         />
       )}
       {sheet?.kind === "rooms" && (
@@ -875,6 +1014,8 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
           unread={peek}
           onClose={() => setSheet(null)}
           onDms={() => { setSheet(null); setView({ k: "dms" }); }}
+          mutedCount={muted.length}
+          onMuted={() => setSheet({ kind: "muted" })}
           onPick={pickRoom}
         />
       )}

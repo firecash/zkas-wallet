@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Balas",
-      "react": "Reaksi",
       "tip": "Kirim tip",
       "tipDetail": "pribadi",
       "copy": "Salin teks",
@@ -1894,7 +1893,8 @@
       "unmute": "Aktifkan",
       "report": "Laporkan",
       "retry": "Coba kirim lagi",
-      "dm": "Pesan pribadi"
+      "muteConfirm": "Ketuk lagi untuk membisukan {{name}}",
+      "reportConfirm": "Ketuk lagi untuk lapor & bisukan"
     },
     "profile": {
       "copyKey": "Salin kunci publik",
@@ -1920,7 +1920,7 @@
       "headerNote": "pribadi"
     },
     "you": "Anda",
-    "intro": "Semua orang di sini bisa membaca kiriman Anda, dan kiriman tidak bisa dihapus. Gunakan baris di atas untuk ganti ruang. Geser pesan untuk membalas.",
+    "intro": "Semua orang di sini bisa membaca postingan Anda, dan postingan tidak bisa dihapus. Gunakan baris di atas untuk ganti ruang. Tahan pesan untuk opsi, ketuk dua kali untuk suka, geser untuk balas.",
     "consentTitle": "Aktifkan obrolan?",
     "consentPublic": "Pesan di ruang global bersifat publik dan permanen. Tidak ada fitur hapus.",
     "consentIp": "Server relay melihat alamat IP Anda dan kapan Anda daring. Dompet Anda tidak.",
@@ -1954,7 +1954,12 @@
     "namePermanent": "Postingan bersifat publik dan permanen — siapa pun bisa membacanya dan tidak bisa dihapus.",
     "nameSave": "Simpan & kirim",
     "torBlocked": "Obrolan mati karena Tor menyala. Relai dijangkau langsung, bukan lewat Tor, jadi menghubungkan akan memperlihatkan alamat IP asli Anda ke relai. Matikan Tor, atau atur relai dengan alamat .onion di Pengaturan.",
-    "torBlockedShort": "Tidak terhubung saat Tor nyala."
+    "torBlockedShort": "Tidak terhubung saat Tor nyala.",
+    "muted": {
+      "title": "Orang Dibisukan",
+      "none": "Anda belum membisukan siapa pun.",
+      "note": "Membisukan hanya memengaruhi dompet ini. Membuka bisu akan mengembalikan pesan mereka di mana pun Anda masuk dengan seed ini."
+    }
   },
   "backgroundPermission": {
     "title": "Sinkronkan dompet di latar belakang?",

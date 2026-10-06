@@ -103,7 +103,7 @@ import { ArrowDownLeft, ArrowUpRight, ChevronDown, Eye, EyeOff, Server, Settings
 import { useHideBalances, toggleBalancesHidden, MASK } from "./hidebal";
 import { useBackClose } from "./lib/backclose";
 import { ChatConsent, ChatScreen } from "./Chat";
-import { chatEnabled, currentRoom, lastSeen, myChatPubkey } from "./lib/chatprefs";
+import { chatEnabled, followedRooms, lastSeen, myChatPubkey, seenDmWraps } from "./lib/chatprefs";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
 // hidden textarea so "copy" never dies with an unhandled rejection on a phone.
@@ -545,15 +545,35 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // persistent background socket: holding the radio open and telling the relay
   // whenever the wallet is running, for a number, is a bad trade. The chat
   // client is imported lazily so a wallet with chat off never loads it.
+  //
+  // Counted across every room the user follows AND their private messages: it
+  // used to count the one room that happened to be open last, so a message in
+  // your own language's room or a private message never showed up here.
+  //
+  // Recounted rather than assumed. It ran once per mount, so after reading
+  // everything the badge kept its old number until the whole app remounted —
+  // "1 new" for a message already read. `chatUnreadTick` is bumped on closing
+  // chat and on coming back to the tab, and the count is REDONE, not zeroed:
+  // zeroing is a guess, and it is wrong whenever something arrived while chat
+  // was open in another room.
+  const [chatUnreadTick, setChatUnreadTick] = useState(0);
   useEffect(() => {
     if (!chatEnabled()) return;
     let alive = true;
-    const room = currentRoom();
+    const rooms = followedRooms(i18n.language);
     void import("./chatclient")
-      .then((m) => m.countSince(room, lastSeen(room), myChatPubkey()))
-      .then((n) => { if (alive) setChatUnread(n); })
+      .then((m) => m.countUnread({ rooms, since: lastSeen, mine: myChatPubkey(), seenWraps: seenDmWraps() }))
+      .then((n) => { if (alive) setChatUnread(n.rooms + n.dms); })
       .catch(() => undefined);
     return () => { alive = false; };
+  }, [chatUnreadTick]);
+
+  // Coming back to a backgrounded wallet is exactly when the number is stale.
+  useEffect(() => {
+    if (!chatEnabled()) return;
+    const onVisible = () => { if (!document.hidden) setChatUnreadTick((n) => n + 1); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
   const [reachable, setReachable] = useState<boolean | null>(() => (loadStatusCache() ? true : null));
   const [reachError, setReachError] = useState<string | null>(null);
@@ -1441,7 +1461,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             )}
             {showChat && (
               <ChatScreen
-                onClose={() => { setShowChat(false); setChatUnread(0); }}
+                onClose={() => { setShowChat(false); setChatUnreadTick((n) => n + 1); }}
                 // Tipping hands off to the normal send flow, prefilled. Chat
                 // never touches the spend path itself.
                 onTip={(addr) => onSendAnother(addr)}

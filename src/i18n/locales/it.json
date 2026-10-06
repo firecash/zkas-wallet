@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Rispondi",
-      "react": "Reagisci",
       "tip": "Invia mancia",
       "tipDetail": "privato",
       "copy": "Copia testo",
@@ -1894,7 +1893,8 @@
       "unmute": "Riattiva",
       "report": "Segnala",
       "retry": "Prova a inviare",
-      "dm": "Messaggio privato"
+      "muteConfirm": "Tocca ancora per silenziare {{name}}",
+      "reportConfirm": "Tocca ancora per segnalare e silenziare"
     },
     "profile": {
       "copyKey": "Copia chiave pubblica",
@@ -1920,7 +1920,7 @@
       "headerNote": "privato"
     },
     "you": "tu",
-    "intro": "Tutti qui possono leggere i tuoi messaggi e non possono essere cancellati. Usa la riga sopra per cambiare stanza. Scorri un messaggio per rispondere.",
+    "intro": "Tutti qui possono leggere i tuoi post, e i post non possono essere cancellati. Usa la riga sopra per cambiare stanza. Tieni premuto un messaggio per le opzioni, doppio tocco per mettere mi piace, scorri per rispondere.",
     "consentTitle": "Attivare la chat?",
     "consentPublic": "I messaggi nella stanza globale sono pubblici e permanenti. Non si possono cancellare.",
     "consentIp": "Il server relay vede il tuo IP e quando sei online. Il tuo portafoglio no.",
@@ -1954,7 +1954,12 @@
     "namePermanent": "I post sono pubblici e permanenti — chiunque può leggerli e non possono essere cancellati.",
     "nameSave": "Salva e invia",
     "torBlocked": "La chat è disattivata perché Tor è acceso. Il relay viene raggiunto direttamente, non tramite Tor, quindi connettersi mostrerebbe il tuo vero indirizzo IP. Disattiva Tor o imposta un relay con indirizzo .onion in Impostazioni.",
-    "torBlockedShort": "Non connesso con Tor acceso."
+    "torBlockedShort": "Non connesso con Tor acceso.",
+    "muted": {
+      "title": "Persone silenziate",
+      "none": "Non hai silenziato nessuno.",
+      "note": "Silenziare riguarda solo questo portafoglio. Togliere il silenzio riporta i loro messaggi ovunque tu abbia effettuato l'accesso con questo seed."
+    }
   },
   "backgroundPermission": {
     "title": "Sincronizzare il portafoglio in background?",

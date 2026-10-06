@@ -54,7 +54,6 @@
     },
     "actions": {
       "reply": "Reply",
-      "react": "React",
       "tip": "Send a tip",
       "tipDetail": "private",
       "copy": "Copy text",
@@ -63,7 +62,8 @@
       "unmute": "Unmute",
       "report": "Report",
       "retry": "Try sending again",
-      "dm": "Message privately"
+      "muteConfirm": "Tap again to mute {{name}}",
+      "reportConfirm": "Tap again to report and mute"
     },
     "profile": {
       "copyKey": "Copy public key",
@@ -89,8 +89,13 @@
       "headerNote": "private"
     },
     "you": "you",
-    "intro": "Everyone here can read what you post, and posts cannot be deleted. Use the row above to change room. Swipe a message to reply.",
+    "intro": "Everyone here can read what you post, and posts cannot be deleted. Use the row above to change room. Hold a message for options, double-tap to like, swipe to reply.",
     "torBlocked": "Chat is off because Tor is on. The relay is reached directly, not through Tor, so connecting would show it your real IP address. Either switch Tor off, or set a relay with an .onion address in Settings.",
-    "torBlockedShort": "Not connected while Tor is on."
+    "torBlockedShort": "Not connected while Tor is on.",
+    "muted": {
+      "title": "Muted people",
+      "none": "You have not muted anyone.",
+      "note": "Muting only affects this wallet. Unmuting brings their messages back everywhere you are signed in with this seed."
+    }
   }
 }

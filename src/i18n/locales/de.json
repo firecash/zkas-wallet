@@ -1925,7 +1925,6 @@
     },
     "actions": {
       "reply": "Antworten",
-      "react": "Reagieren",
       "tip": "Trinkgeld senden",
       "tipDetail": "privat",
       "copy": "Text kopieren",
@@ -1934,7 +1933,8 @@
       "unmute": "Laut schalten",
       "report": "Melden",
       "retry": "Erneut senden",
-      "dm": "Privatnachricht"
+      "muteConfirm": "Nochmal tippen, um {{name}} stummzuschalten",
+      "reportConfirm": "Nochmal tippen, um zu melden & stummzuschalten"
     },
     "profile": {
       "copyKey": "Öff. Schlüssel kopieren",
@@ -1960,9 +1960,14 @@
       "headerNote": "privat"
     },
     "you": "du",
-    "intro": "Alle hier können lesen, was du postest, und Beiträge können nicht gelöscht werden. Wechsle den Raum mit der Zeile oben. Wische auf eine Nachricht, um zu antworten.",
+    "intro": "Alle hier können lesen, was du postest, und Beiträge können nicht gelöscht werden. Nutze die Zeile oben, um den Raum zu wechseln. Halte eine Nachricht für Optionen, doppeltippen zum Liken, wischen zum Antworten.",
     "torBlocked": "Chat ist aus, weil Tor an ist. Der Relay wird direkt erreicht, nicht über Tor, daher würde die Verbindung deine echte IP-Adresse zeigen. Schalte Tor aus oder setze in den Einstellungen einen Relay mit einer .onion-Adresse.",
-    "torBlockedShort": "Nicht verbunden bei Tor an."
+    "torBlockedShort": "Nicht verbunden bei Tor an.",
+    "muted": {
+      "title": "Stummgeschaltete",
+      "none": "Du hast niemanden stummgeschaltet.",
+      "note": "Stummschalten betrifft nur dieses Wallet. Aufheben bringt ihre Nachrichten überall zurück, wo du mit diesem Seed angemeldet bist."
+    }
   },
   "confirmWatch": {
     "title": "Wallet beobachten? ",

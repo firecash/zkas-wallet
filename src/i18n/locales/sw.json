@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Jibu",
-      "react": "Jibu hisia",
       "tip": "Toa bakshishi",
       "tipDetail": "binafsi",
       "copy": "Nakili maandishi",
@@ -1894,7 +1893,8 @@
       "unmute": "Ondoa kimya",
       "report": "Ripoti",
       "retry": "Jaribu kutuma tena",
-      "dm": "Tuma ujumbe faragha"
+      "muteConfirm": "Gusa tena ili kunyamazisha {{name}}",
+      "reportConfirm": "Gusa tena ili kuripoti na kunyamazisha"
     },
     "profile": {
       "copyKey": "Nakili ufunguo wa umma",
@@ -1920,7 +1920,7 @@
       "headerNote": "binafsi"
     },
     "you": "wewe",
-    "intro": "Kila mtu hapa anaweza kusoma unachochapisha, na machapisho hayawezi kufutwa. Tumia safu iliyo juu kubadilisha chumba. Telezesha ujumbe kujibu.",
+    "intro": "Kila mtu hapa anaweza kusoma unachochapisha, na machapisho hayawezi kufutwa. Tumia safu iliyo juu kubadilisha chumba. Shikilia ujumbe kwa chaguo, gusa mara mbili kupenda, telezesha kujibu.",
     "consentTitle": "Washa soga?",
     "consentPublic": "Ujumbe katika chumba cha wote ni wa umma na wa kudumu. Hakuna kufuta.",
     "consentIp": "Seva ya relay inaona anwani yako ya IP na wakati uko mtandaoni. Pochi yako haioni.",
@@ -1954,7 +1954,12 @@
     "namePermanent": "Machapisho ni ya umma na ya kudumu — mtu yeyote anaweza kuyasoma, na hayawezi kufutwa.",
     "nameSave": "Hifadhi na tuma",
     "torBlocked": "Mazungumzo yamezimwa kwa sababu Tor imewashwa. Relay inafikiwa moja kwa moja, si kupitia Tor, hivyo kuunganisha kunaweza kuionyesha anwani yako halisi ya IP. Zima Tor, au weka relay yenye anwani ya .onion katika Mipangilio.",
-    "torBlockedShort": "Haijaunganishwa Tor ikiwa."
+    "torBlockedShort": "Haijaunganishwa Tor ikiwa.",
+    "muted": {
+      "title": "Watu walionyamazishwa",
+      "none": "Hujamnyamazisha mtu yeyote.",
+      "note": "Kunyamazisha kunaathiri pochi hii pekee. Kuondoa unyamazishaji hurejesha ujumbe wao kila ulipoingia kwa mbegu hii."
+    }
   },
   "backgroundPermission": {
     "title": "Ruhusu pochi isawazishe chinichini?",

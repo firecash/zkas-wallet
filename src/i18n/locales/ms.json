@@ -1925,7 +1925,6 @@
     },
     "actions": {
       "reply": "Balas",
-      "react": "Reaksi",
       "tip": "Hantar tip",
       "tipDetail": "peribadi",
       "copy": "Salin teks",
@@ -1934,7 +1933,8 @@
       "unmute": "Nyahsenyap",
       "report": "Lapor",
       "retry": "Cuba hantar semula",
-      "dm": "Mesej secara peribadi"
+      "muteConfirm": "Tekan lagi untuk bisukan {{name}}",
+      "reportConfirm": "Tekan lagi untuk lapor dan bisukan"
     },
     "profile": {
       "copyKey": "Salin kunci awam",
@@ -1960,9 +1960,14 @@
       "headerNote": "peribadi"
     },
     "you": "anda",
-    "intro": "Semua orang di sini boleh baca apa yang anda pos, dan pos tidak boleh dipadam. Gunakan baris di atas untuk tukar bilik. Leret mesej untuk balas.",
+    "intro": "Semua orang di sini boleh baca kiriman anda, dan kiriman tidak boleh dipadam. Guna baris di atas untuk tukar bilik. Tekan lama mesej untuk pilihan, ketik dua kali untuk suka, leret untuk balas.",
     "torBlocked": "Sembang dimatikan kerana Tor hidup. Geganti dicapai terus, bukan melalui Tor, jadi sambungan akan mendedahkan alamat IP sebenar anda. Matikan Tor, atau tetapkan geganti dengan alamat .onion dalam Tetapan.",
-    "torBlockedShort": "Tidak bersambung semasa Tor hidup."
+    "torBlockedShort": "Tidak bersambung semasa Tor hidup.",
+    "muted": {
+      "title": "Orang dibisukan",
+      "none": "Anda belum bisukan sesiapa.",
+      "note": "Bisu hanya kesan dompet ini. Nyahbisu bawa balik mesej mereka di mana-mana anda log masuk dengan biji ini."
+    }
   },
   "confirmWatch": {
     "title": "Pantau dompet ini?",

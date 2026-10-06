@@ -3281,10 +3281,13 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
   border: 1px solid var(--border); border-radius: 999px;
   padding: 1px 7px; font-size: 12px; color: var(--muted);
 }
-.chat-reactions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+/* One row, always. Six choices wrapping to 4 + 2 reads as a grid that ran out
+   of space rather than a set of options, so each shares the width instead. */
+.chat-reactions { display: flex; gap: 6px; justify-content: space-between; margin-bottom: 10px; }
 .chat-reaction-pick {
-  font-size: 26px; line-height: 1; background: none; border: 1px solid var(--border);
-  border-radius: 12px; padding: 10px 12px; cursor: pointer;
+  flex: 1 1 0; min-width: 0;
+  font-size: 23px; line-height: 1; background: none; border: 1px solid var(--border);
+  border-radius: 12px; padding: 9px 0; cursor: pointer; text-align: center;
 }
 .chat-reaction-pick:active { transform: scale(0.94); }
 
@@ -3391,7 +3394,11 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
   color: var(--fg);
   font-weight: 600;
 }
+/* "All rooms" lives on the header line, not in the strip. Dashed, because it
+   opens a list rather than selecting a room — the chips are a choice, this is a
+   door. */
 .chat-chip.more { color: var(--muted); border-style: dashed; }
+.chat-head .chat-chip { flex: 0 0 auto; padding: 9px 12px; }
 .chat-chip-n {
   min-width: 17px;
   padding: 0 4px;
@@ -3401,4 +3408,24 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
   font-size: 0.72rem;
   font-weight: 700;
   text-align: center;
+}
+
+/* One muted person, in the list that is the only way back from a mute. */
+.chat-muted-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-block: 8px;
+  border-block-end: 1px solid var(--line);
+}
+.chat-muted-row:last-of-type { border-block-end: 0; }
+.chat-muted-who { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 6px; }
+.chat-muted-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-muted-row .btn { width: auto; flex: 0 0 auto; }
+/* The armed half of a two-step destructive row: it must look different from the
+   row that only asked, or the confirmation is indistinguishable from the ask. */
+.chat-sheet-row.arming {
+  background: color-mix(in srgb, var(--danger, #e0556a) 18%, transparent);
+  border-color: color-mix(in srgb, var(--danger, #e0556a) 60%, transparent);
+  font-weight: 650;
 }

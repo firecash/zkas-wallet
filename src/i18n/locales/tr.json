@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Yanıtla",
-      "react": "Tepki ver",
       "tip": "Bahşiş gönder",
       "tipDetail": "gizli",
       "copy": "Metni kopyala",
@@ -1894,7 +1893,8 @@
       "unmute": "Sesi aç",
       "report": "Bildir",
       "retry": "Tekrar göndermeyi dene",
-      "dm": "Özel mesaj gönder"
+      "muteConfirm": "Sessize almak için tekrar dokun {{name}}",
+      "reportConfirm": "Bildirip sessize almak için tekrar dokun"
     },
     "profile": {
       "copyKey": "Açık anahtarı kopyala",
@@ -1920,7 +1920,7 @@
       "headerNote": "gizli"
     },
     "you": "siz",
-    "intro": "Burada herkes yazdıklarınızı okuyabilir ve yazılanlar silinemez. Oda değiştirmek için üstteki satırı kullanın. Yanıtlamak için bir mesajı kaydırın.",
+    "intro": "Burada herkes yazdıklarını okuyabilir ve gönderiler silinemez. Odayı değiştirmek için üstteki satırı kullan. Seçenekler için mesajı basılı tut, beğenmek için çift dokun, yanıtlamak için kaydır.",
     "consentTitle": "Sohbet açılsın mı?",
     "consentPublic": "Genel odadaki mesajlar herkese açık ve kalıcıdır. Silme yoktur.",
     "consentIp": "Röle sunucusu IP adresinizi ve çevrimiçi olduğunuz zamanı görür. Cüzdanınız görmez.",
@@ -1954,7 +1954,12 @@
     "namePermanent": "Gönderiler herkese açık ve kalıcıdır — herkes okuyabilir ve silinemez.",
     "nameSave": "Kaydet ve gönder",
     "torBlocked": "Tor açık olduğu için sohbet kapalı. Aktarıcıya Tor üzerinden değil doğrudan erişilir, bu nedenle bağlanmak gerçek IP adresinizi gösterir. Tor'u kapatın veya Ayarlar'da .onion adresli bir aktarıcı belirleyin.",
-    "torBlockedShort": "Tor açıkken bağlı değil."
+    "torBlockedShort": "Tor açıkken bağlı değil.",
+    "muted": {
+      "title": "Sessize alınanlar",
+      "none": "Henüz kimseyi sessize almadın.",
+      "note": "Sessize alma yalnızca bu cüzdanı etkiler. Sessizi kaldırmak, bu tohumla giriş yaptığın her yerde mesajlarını geri getirir."
+    }
   },
   "backgroundPermission": {
     "body": "Bu telefon artık cüzdanı kendisi çalıştırıyor. Android uyuyan uygulamaları kendi programına alır; bu izin olmazsa cüzdan saatlerce geri kalır ve bir sonraki açışınızda yetişmesini beklersiniz. İzin vermek, cüzdanın güncel kalmak için yaklaşık 15 dakikada bir uyanmasını sağlar. Bunu daha sonra Android ayarlarından değiştirebilirsiniz.",

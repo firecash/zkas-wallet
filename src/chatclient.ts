@@ -379,48 +379,86 @@ export function parseProfile(content: string): { name?: string; zkas?: string } 
   }
 }
 
-/** Count what has arrived in the room since `since`, then disconnect.
+/** Unread across every room this user follows, plus private messages.
  *
- *  Used for the unread badge on the wallet screen. A persistent background
- *  socket would be the obvious implementation and the wrong one: it would hold
- *  the radio open and tell the relay when the wallet is running, for a number. */
-export function countSince(room: string, since: number, mine: string): Promise<number> {
+ *  One short-lived connection, two subscriptions, then disconnect. A persistent
+ *  background socket would be the obvious implementation and the wrong one: it
+ *  would hold the radio open and tell the relay whenever the wallet is running,
+ *  for a number.
+ *
+ *  It used to take a single room — the one last open — so a message in your own
+ *  language's room, or a private message, never reached the badge at all.
+ *
+ *  Private messages are counted by gift-wrap ID, never by time: a wrap carries a
+ *  randomised timestamp up to two days in the past, and the real one is inside,
+ *  behind the key and the engine. An id needs neither.
+ */
+export function countUnread(opts: {
+  rooms: string[];
+  /** Per-room read cursor. */
+  since: (room: string) => number;
+  /** Our own chat pubkey; "" when this device has not derived one yet. */
+  mine: string;
+  /** Gift-wrap ids already accounted for. */
+  seenWraps: string[];
+  timeoutMs?: number;
+}): Promise<{ rooms: number; dms: number }> {
+  const { rooms, since, mine, seenWraps, timeoutMs = 6000 } = opts;
   return new Promise((resolve) => {
+    const empty = { rooms: 0, dms: 0 };
     // The unread badge is not worth a clearnet socket from a Tor user.
-    if (!relayReachable()) {
-      resolve(0);
+    if (!relayReachable() || !rooms.length) {
+      resolve(empty);
       return;
     }
     let ws: WebSocket;
     try {
       ws = new WebSocket(relayUrl());
     } catch {
-      resolve(0);
+      resolve(empty);
       return;
     }
     const muted = new Set(mutedKeys());
-    let n = 0;
-    const done = (v: number) => {
+    const seen = new Set(seenWraps);
+    // By event id, because the two subscriptions can both deliver a given event
+    // and a relay may replay one; counting frames would double-count.
+    const roomHits = new Set<string>();
+    const dmHits = new Set<string>();
+    let open = mine ? 2 : 1; // no pubkey, no DM subscription to wait for
+    const out = () => ({ rooms: roomHits.size, dms: dmHits.size });
+    const done = () => {
       try {
         ws.close();
       } catch {
         /* already closing */
       }
-      resolve(v);
+      resolve(out());
     };
-    const timer = setTimeout(() => done(n), 6000);
-    ws.onopen = () =>
-      ws.send(JSON.stringify(["REQ", "unread", { kinds: [KIND_NOTE], "#t": [room], since, limit: 100 }]));
+    const timer = setTimeout(done, timeoutMs);
+    ws.onopen = () => {
+      // One filter covers every followed room; `since` is the OLDEST cursor and
+      // each event is then checked against its own room's cursor below.
+      const oldest = Math.min(...rooms.map((r) => since(r)));
+      ws.send(JSON.stringify(["REQ", "unread", { kinds: [KIND_NOTE], "#t": rooms, since: oldest, limit: 300 }]));
+      if (mine) ws.send(JSON.stringify(["REQ", "unread-dm", { kinds: [KIND_GIFT_WRAP], "#p": [mine], limit: 300 }]));
+    };
     ws.onmessage = (msg) => {
       try {
         const f = JSON.parse(String(msg.data));
         if (f[0] === "EVENT" && f[2]) {
           const ev = f[2] as ChatEvent;
+          if (ev.kind === KIND_GIFT_WRAP) {
+            if (!seen.has(ev.id)) dmHits.add(ev.id);
+            return;
+          }
+          const where = ev.tags.find((tg) => tg[0] === "t")?.[1];
           // Our own messages and muted authors are not unread.
-          if (ev.pubkey !== mine && !muted.has(ev.pubkey) && ev.created_at > since) n += 1;
-        } else if (f[0] === "EOSE") {
+          if (!where || ev.pubkey === mine || muted.has(ev.pubkey)) return;
+          if (ev.created_at > since(where)) roomHits.add(ev.id);
+        } else if (f[0] === "EOSE" || f[0] === "CLOSED") {
+          if (--open > 0) return;
           clearTimeout(timer);
-          done(n);
+          done();
         }
       } catch {
         /* ignore malformed frames */
@@ -428,7 +466,12 @@ export function countSince(room: string, since: number, mine: string): Promise<n
     };
     ws.onerror = () => {
       clearTimeout(timer);
-      done(0);
+      resolve(out());
+      try {
+        ws.close();
+      } catch {
+        /* already closing */
+      }
     };
   });
 }

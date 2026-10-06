@@ -18,6 +18,7 @@ const ADDR_KEY = "zkas_chat_zkasaddr_v1";
 const ROOM_KEY = "zkas_chat_room_v1";
 const PUBKEY_KEY = "zkas_chat_pubkey_v1";
 const RECENT_KEY = "zkas_chat_recent_v1";
+const DM_SEEN_KEY = "zkas_chat_dmseen_v1";
 
 /** The room everyone lands in. A room is a hashtag, so this is also a public
  *  Nostr feed — other clients can see it without us doing anything. */
@@ -53,6 +54,14 @@ export const LANGUAGE_ROOMS: Room[] = LANGUAGES.map((l) => ({
 }));
 
 export const ROOMS: Room[] = [{ id: GLOBAL_ROOM, label: "Global", flag: "🌍", group: "main" }, ...LANGUAGE_ROOMS];
+
+/** The rooms this user follows: the global room, their language's room and the
+ *  last few they opened. One definition, used by the chat's room strip AND by
+ *  the wallet screen's unread badge — the badge used to count the CURRENT room
+ *  only, so a message in your own language's room never showed up at all. */
+export function followedRooms(locale: string): string[] {
+  return [...new Set([GLOBAL_ROOM, roomForLocale(locale), ...recentRooms()].filter((r): r is string => !!r))].slice(0, 6);
+}
 
 /** The language room matching the active locale, if the app has one. */
 export function roomForLocale(code: string): string | undefined {
@@ -119,6 +128,39 @@ export function lastSeen(room: string): number {
 
 export function markSeen(room: string, at: number): void {
   if (at > lastSeen(room)) write(`${SEEN_KEY}_${room}`, String(at));
+}
+
+/** Private messages already accounted for, by gift-wrap id.
+ *
+ *  By ID, not by timestamp. A NIP-17 wrap carries a randomised `created_at` up
+ *  to two days in the PAST (that is the point — a shared timestamp would re-link
+ *  the conversation the wrap exists to hide), so "newer than my cursor" cannot
+ *  decide whether a wrap has been seen. Only the real timestamp inside is
+ *  usable, and reading that needs the key and the 500 KB engine — far too much
+ *  for a badge on the wallet screen. An id is visible without opening anything.
+ *
+ *  Bounded: the newest DM_SEEN_MAX ids are kept. Trimming can only make an old
+ *  conversation look unread once, never hide a new one. */
+const DM_SEEN_MAX = 400;
+
+export function seenDmWraps(): string[] {
+  const raw = read(DM_SEEN_KEY);
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Record wrap ids as seen. Newest-last, so the trim drops the oldest. */
+export function markDmWrapsSeen(ids: string[]): void {
+  if (!ids.length) return;
+  const have = seenDmWraps();
+  const set = new Set(have);
+  const next = [...have, ...ids.filter((i) => !set.has(i))];
+  write(DM_SEEN_KEY, JSON.stringify(next.slice(-DM_SEEN_MAX)));
 }
 
 /** Muted pubkeys. Mirrored to a NIP-51 list so a block set on one device
@@ -193,7 +235,9 @@ export function setMyChatPubkey(k: string): void {
  *  a mute list and read cursors behind after someone opts out is not "off". */
 export function forgetChat(): void {
   try {
-    [CONSENT_KEY, NICK_KEY, MUTE_KEY, ADDR_KEY, ROOM_KEY, PUBKEY_KEY, RECENT_KEY].forEach((k) => localStorage.removeItem(k));
+    [CONSENT_KEY, NICK_KEY, MUTE_KEY, ADDR_KEY, ROOM_KEY, PUBKEY_KEY, RECENT_KEY, DM_SEEN_KEY].forEach((k) =>
+      localStorage.removeItem(k),
+    );
     Object.keys(localStorage)
       .filter((k) => k.startsWith(SEEN_KEY))
       .forEach((k) => localStorage.removeItem(k));

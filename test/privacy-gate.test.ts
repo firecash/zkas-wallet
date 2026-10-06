@@ -156,8 +156,10 @@ describe("the gate is actually wired into the call sites", () => {
     localStorage.setItem(TOR_KEY, "1");
     const ctor = vi.fn();
     vi.stubGlobal("WebSocket", ctor);
-    const { countSince } = await import("../src/chatclient");
-    await expect(countSince("zkas-global", 0, "me")).resolves.toBe(0);
+    const { countUnread } = await import("../src/chatclient");
+    await expect(
+      countUnread({ rooms: ["zkas-global"], since: () => 0, mine: "me", seenWraps: [] }),
+    ).resolves.toEqual({ rooms: 0, dms: 0 });
     expect(ctor).not.toHaveBeenCalled();
   });
 

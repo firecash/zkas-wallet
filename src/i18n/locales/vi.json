@@ -1885,7 +1885,6 @@
     },
     "actions": {
       "reply": "Trả lời",
-      "react": "Thả cảm",
       "tip": "Gửi tip",
       "tipDetail": "riêng",
       "copy": "Sao chép",
@@ -1894,7 +1893,8 @@
       "unmute": "Bật tiếng",
       "report": "Báo cáo",
       "retry": "Gửi lại",
-      "dm": "Nhắn riêng"
+      "muteConfirm": "Chạm lại để tắt tiếng {{name}}",
+      "reportConfirm": "Chạm lại để báo cáo và tắt tiếng"
     },
     "profile": {
       "copyKey": "Sao chép khóa công khai",
@@ -1920,7 +1920,7 @@
       "headerNote": "riêng"
     },
     "you": "bạn",
-    "intro": "Mọi người ở đây đều đọc được bài bạn đăng và bài không thể xóa. Dùng hàng trên để đổi phòng. Vuốt tin nhắn để trả lời.",
+    "intro": "Mọi người ở đây đều đọc được bài bạn đăng và bài không thể xóa. Dùng hàng trên để đổi phòng. Giữ tin nhắn để xem tùy chọn, chạm đúp để thích, vuốt để trả lời.",
     "consentTitle": "Bật trò chuyện?",
     "consentPublic": "Tin nhắn trong phòng chung là công khai và vĩnh viễn. Không thể xóa.",
     "consentIp": "Máy chủ relay thấy địa chỉ IP và lúc bạn online. Ví của bạn thì không.",
@@ -1954,7 +1954,12 @@
     "namePermanent": "Bài đăng là công khai và vĩnh viễn — ai cũng đọc được và không thể xóa.",
     "nameSave": "Lưu và gửi",
     "torBlocked": "Tính năng trò chuyện tắt vì Tor đang bật. Relay được truy cập trực tiếp, không qua Tor, nên kết nối sẽ lộ địa chỉ IP thật của bạn. Hãy tắt Tor hoặc đặt relay có địa chỉ .onion trong Cài đặt.",
-    "torBlockedShort": "Không kết nối khi Tor bật."
+    "torBlockedShort": "Không kết nối khi Tor bật.",
+    "muted": {
+      "title": "Người bị tắt tiếng",
+      "none": "Bạn chưa tắt tiếng ai.",
+      "note": "Tắt tiếng chỉ ảnh hưởng ví này. Bỏ tắt tiếng sẽ hiện lại tin nhắn của họ ở mọi nơi bạn đăng nhập bằng seed này."
+    }
   },
   "backgroundPermission": {
     "title": "Cho phép ví đồng bộ trong nền?​",
