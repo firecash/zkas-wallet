@@ -1880,7 +1880,8 @@
     "rooms": {
       "title": "Phòng",
       "main": "Mọi người",
-      "languages": "Ngôn ngữ"
+      "languages": "Ngôn ngữ",
+      "all": "Tất cả phòng"
     },
     "actions": {
       "reply": "Trả lời",
@@ -1919,7 +1920,7 @@
       "headerNote": "riêng"
     },
     "you": "bạn",
-    "intro": "Mọi người ở đây đều đọc được bài bạn đăng, và bài không thể xóa. Chạm vào tên phòng để chọn ngôn ngữ. Vuốt tin nhắn để trả lời.",
+    "intro": "Mọi người ở đây đều đọc được bài bạn đăng và bài không thể xóa. Dùng hàng trên để đổi phòng. Vuốt tin nhắn để trả lời.",
     "consentTitle": "Bật trò chuyện?",
     "consentPublic": "Tin nhắn trong phòng chung là công khai và vĩnh viễn. Không thể xóa.",
     "consentIp": "Máy chủ relay thấy địa chỉ IP và lúc bạn online. Ví của bạn thì không.",
@@ -1933,7 +1934,8 @@
       "offline": "ngoại tuyến",
       "connecting": "đang kết nối…",
       "live": "trực tiếp",
-      "error": "không relay"
+      "error": "không relay",
+      "blocked": "Tor bật"
     },
     "empty": "Chưa có gì — hãy chào hỏi.",
     "connecting": "Đang kết nối relay…",
@@ -1941,7 +1943,7 @@
     "reply": "Trả lời",
     "replyingTo": "Đang trả lời {{name}}",
     "cancel": "Hủy",
-    "placeholder": "Nhắn phòng chung",
+    "placeholder": "Nhắn {{room}}",
     "send": "Gửi",
     "sending": "Đang gửi…",
     "errSend": "Tin nhắn chưa gửi được. Kiểm tra kết nối và thử lại.",
@@ -1950,7 +1952,9 @@
     "nameWhy": "Hiển thị cạnh tin nhắn. Bạn có thể đổi sau, hoặc bỏ qua và đăng với tư cách nặc danh.",
     "namePlaceholder": "Tên của bạn trong trò chuyện",
     "namePermanent": "Bài đăng là công khai và vĩnh viễn — ai cũng đọc được và không thể xóa.",
-    "nameSave": "Lưu và gửi"
+    "nameSave": "Lưu và gửi",
+    "torBlocked": "Tính năng trò chuyện tắt vì Tor đang bật. Relay được truy cập trực tiếp, không qua Tor, nên kết nối sẽ lộ địa chỉ IP thật của bạn. Hãy tắt Tor hoặc đặt relay có địa chỉ .onion trong Cài đặt.",
+    "torBlockedShort": "Không kết nối khi Tor bật."
   },
   "backgroundPermission": {
     "title": "Cho phép ví đồng bộ trong nền?​",

@@ -1880,7 +1880,8 @@
     "rooms": {
       "title": "Odalar",
       "main": "Herkes",
-      "languages": "Diller"
+      "languages": "Diller",
+      "all": "Tüm odalar"
     },
     "actions": {
       "reply": "Yanıtla",
@@ -1919,7 +1920,7 @@
       "headerNote": "gizli"
     },
     "you": "siz",
-    "intro": "Buradaki herkes gönderinizi okuyabilir ve gönderiler silinemez. Dilinizi seçmek için oda adına dokunun. Yanıtlamak için bir mesajı kaydırın.",
+    "intro": "Burada herkes yazdıklarınızı okuyabilir ve yazılanlar silinemez. Oda değiştirmek için üstteki satırı kullanın. Yanıtlamak için bir mesajı kaydırın.",
     "consentTitle": "Sohbet açılsın mı?",
     "consentPublic": "Genel odadaki mesajlar herkese açık ve kalıcıdır. Silme yoktur.",
     "consentIp": "Röle sunucusu IP adresinizi ve çevrimiçi olduğunuz zamanı görür. Cüzdanınız görmez.",
@@ -1933,7 +1934,8 @@
       "offline": "çevrimdışı",
       "connecting": "bağlanıyor…",
       "live": "canlı",
-      "error": "röle yok"
+      "error": "röle yok",
+      "blocked": "Tor açık"
     },
     "empty": "Henüz bir şey yok — merhaba de.",
     "connecting": "Röleye bağlanıyor…",
@@ -1941,7 +1943,7 @@
     "reply": "Yanıtla",
     "replyingTo": "{{name}}'e yanıt",
     "cancel": "İptal",
-    "placeholder": "Genel odaya mesaj gönder",
+    "placeholder": "{{room}} mesajı",
     "send": "Gönder",
     "sending": "Gönderiliyor…",
     "errSend": "Mesaj gitmedi. Bağlantıyı kontrol edip tekrar deneyin.",
@@ -1950,13 +1952,16 @@
     "nameWhy": "Mesajlarınızın yanında görünür. Daha sonra değiştirebilir veya atlayıp anonim olarak gönderebilirsiniz.",
     "namePlaceholder": "Sohbetteki adınız",
     "namePermanent": "Gönderiler herkese açık ve kalıcıdır — herkes okuyabilir ve silinemez.",
-    "nameSave": "Kaydet ve gönder"
+    "nameSave": "Kaydet ve gönder",
+    "torBlocked": "Tor açık olduğu için sohbet kapalı. Aktarıcıya Tor üzerinden değil doğrudan erişilir, bu nedenle bağlanmak gerçek IP adresinizi gösterir. Tor'u kapatın veya Ayarlar'da .onion adresli bir aktarıcı belirleyin.",
+    "torBlockedShort": "Tor açıkken bağlı değil."
   },
   "backgroundPermission": {
     "body": "Bu telefon artık cüzdanı kendisi çalıştırıyor. Android uyuyan uygulamaları kendi programına alır; bu izin olmazsa cüzdan saatlerce geri kalır ve bir sonraki açışınızda yetişmesini beklersiniz. İzin vermek, cüzdanın güncel kalmak için yaklaşık 15 dakikada bir uyanmasını sağlar. Bunu daha sonra Android ayarlarından değiştirebilirsiniz.",
     "enable": "İzin ver",
     "later": "Şimdi değil",
     "never": "Bir daha sorma",
-    "noScreen": "Bu telefonda pil iyileştirme ekranı yok. Arka plan eşitlemesi yine de Android'in programına göre çalışır."
+    "noScreen": "Bu telefonda pil iyileştirme ekranı yok. Arka plan eşitlemesi yine de Android'in programına göre çalışır.",
+    "title": "Cüzdan arka planda eşitlensin mi?​"
   }
 }

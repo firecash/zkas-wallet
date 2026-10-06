@@ -1880,7 +1880,8 @@
     "rooms": {
       "title": "Vyumba",
       "main": "Kila mtu",
-      "languages": "Lugha"
+      "languages": "Lugha",
+      "all": "Vyumba vyote"
     },
     "actions": {
       "reply": "Jibu",
@@ -1919,7 +1920,7 @@
       "headerNote": "binafsi"
     },
     "you": "wewe",
-    "intro": "Kila mtu hapa anaweza kusoma unachotuma, na ujumbe hauwezi kufutwa. Gusa jina la chumba kuchagua lugha yako. Telezesha ujumbe kujibu.",
+    "intro": "Kila mtu hapa anaweza kusoma unachochapisha, na machapisho hayawezi kufutwa. Tumia safu iliyo juu kubadilisha chumba. Telezesha ujumbe kujibu.",
     "consentTitle": "Washa soga?",
     "consentPublic": "Ujumbe katika chumba cha wote ni wa umma na wa kudumu. Hakuna kufuta.",
     "consentIp": "Seva ya relay inaona anwani yako ya IP na wakati uko mtandaoni. Pochi yako haioni.",
@@ -1933,7 +1934,8 @@
       "offline": "nje ya mtandao",
       "connecting": "inaunganisha…",
       "live": "moja kwa moja",
-      "error": "hakuna relay"
+      "error": "hakuna relay",
+      "blocked": "Tor washa"
     },
     "empty": "Hakuna chochote bado — sema hello.",
     "connecting": "Inaunganisha kwenye relay…",
@@ -1941,7 +1943,7 @@
     "reply": "Jibu",
     "replyingTo": "Unamjibu {{name}}",
     "cancel": "Ghairi",
-    "placeholder": "Tuma ujumbe kwa chumba cha wote",
+    "placeholder": "Ujumbe {{room}}",
     "send": "Tuma",
     "sending": "Inatuma…",
     "errSend": "Ujumbe huo haukutoka. Angalia muunganisho na ujaribu tena.",
@@ -1950,7 +1952,9 @@
     "nameWhy": "Linaonyeshwa karibu na ujumbe wako. Unaweza kubadilisha baadaye, au kuruka na kuchapisha kama wasiojulikana.",
     "namePlaceholder": "Jina lako kwenye soga",
     "namePermanent": "Machapisho ni ya umma na ya kudumu — mtu yeyote anaweza kuyasoma, na hayawezi kufutwa.",
-    "nameSave": "Hifadhi na tuma"
+    "nameSave": "Hifadhi na tuma",
+    "torBlocked": "Mazungumzo yamezimwa kwa sababu Tor imewashwa. Relay inafikiwa moja kwa moja, si kupitia Tor, hivyo kuunganisha kunaweza kuionyesha anwani yako halisi ya IP. Zima Tor, au weka relay yenye anwani ya .onion katika Mipangilio.",
+    "torBlockedShort": "Haijaunganishwa Tor ikiwa."
   },
   "backgroundPermission": {
     "title": "Ruhusu pochi isawazishe chinichini?",

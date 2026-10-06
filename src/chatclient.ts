@@ -29,6 +29,7 @@ export {
   setMyZkasAddress,
 } from "./lib/chatprefs";
 import { GLOBAL_ROOM, relayUrl, mutedKeys } from "./lib/chatprefs";
+import { socketAllowed } from "./lib/privacy";
 
 /** Nostr kinds. Standard ones throughout, so other clients render our users and
  *  we render theirs — the interop is the point, not a side effect. */
@@ -110,7 +111,26 @@ export function hueOf(pubkey: string): number {
 
 type Handler = (ev: ChatEvent) => void;
 type StateHandler = (s: ConnectionState) => void;
-export type ConnectionState = "offline" | "connecting" | "live" | "error";
+export type ConnectionState =
+  | "offline"
+  | "connecting"
+  | "live"
+  | "error"
+  /** Tor is on and the relay is not an onion, so connecting would hand it the
+   *  user's real IP. Not an error and not retried — the user has to change
+   *  something (the relay, or Tor) before it can mean anything else. */
+  | "blocked";
+
+/** May we open a socket to the configured relay right now?
+ *
+ *  The consent screen says the relay learns your IP, and that is a cost the user
+ *  accepted. It is NOT a cost they accepted while also having Tor switched on: a
+ *  WebView WebSocket cannot traverse the engine's SOCKS proxy, so the socket
+ *  would go out in the clear from the real address while the wallet claimed to
+ *  be on Tor. Refuse, and say so in the UI. */
+export function relayReachable(): boolean {
+  return socketAllowed(relayUrl());
+}
 
 /**
  * One relay connection speaking the Nostr client protocol.
@@ -139,15 +159,38 @@ export class ChatClient {
     return this.ws?.readyState === WebSocket.OPEN;
   }
 
+  /** Switch rooms on the SAME socket. The two room subscriptions are re-sent
+   *  under their existing ids, which replaces them; no reconnect, so a switch
+   *  costs one frame instead of a WebSocket handshake.
+   *
+   *  `asked` is deliberately NOT cleared: who we have already fetched a profile
+   *  for does not change with the room, and clearing it re-requested every
+   *  author from scratch. */
   setRoom(room: string): void {
     if (room === this.room) return;
     this.room = room;
-    this.asked.clear();
     if (this.live) this.subscribeRoom();
+  }
+
+  get currentRoom(): string {
+    return this.room;
+  }
+
+  /** One subscription covering the rooms shown in the switcher, so each chip can
+   *  carry an unread count without a socket — or a REQ — per room. */
+  subscribePeek(rooms: string[], since: number): void {
+    if (!this.live || !rooms.length) return;
+    this.send(["REQ", "peek", { kinds: [KIND_NOTE], "#t": rooms, since, limit: 200 }]);
   }
 
   connect(): void {
     if (this.closed) return;
+    if (!relayReachable()) {
+      // Deliberately no retry: nothing about waiting changes the answer, and a
+      // backoff loop here would be a timer that never fires usefully.
+      this.onState("blocked");
+      return;
+    }
     this.onState("connecting");
     let ws: WebSocket;
     try {
@@ -192,12 +235,26 @@ export class ChatClient {
     this.send(["REQ", "reactions", { kinds: [KIND_REACTION], "#t": [this.room], since, limit: 500 }]);
   }
 
-  /** Fetch display names and published addresses for authors we have seen. */
+  /** Fetch display names and published addresses for authors we have seen.
+   *
+   *  ONE subscription id, reused. It used to mint `profiles:<prefix>` per batch,
+   *  and a relay keeps at most MAX_SUBSCRIPTIONS (20) per connection — so after
+   *  roughly sixteen batches, which a busy global room reaches in minutes, the
+   *  connection was at its cap and every later REQ was dropped. Including the
+   *  one that changes room: switching silently stopped working on a long-lived
+   *  session. Reusing the id REPLACES the subscription instead of adding one,
+   *  which is what NIP-01 says it does.
+   *
+   *  Asking for the union of everyone seen so far (not just the new batch) keeps
+   *  that single replacement from losing the authors of earlier batches. */
   requestProfiles(pubkeys: string[]): void {
     const want = pubkeys.filter((p) => !this.asked.has(p));
     if (!want.length || !this.live) return;
     want.forEach((p) => this.asked.add(p));
-    this.send(["REQ", `profiles:${want[0].slice(0, 8)}`, { kinds: [KIND_PROFILE], authors: want.slice(0, 200) }]);
+    // Newest-first so the cap trims the oldest authors, whose profiles have
+    // already arrived, rather than the ones just seen.
+    const authors = [...this.asked].reverse().slice(0, 500);
+    this.send(["REQ", "profiles", { kinds: [KIND_PROFILE], authors }]);
   }
 
   /** Private messages addressed to us.
@@ -329,6 +386,11 @@ export function parseProfile(content: string): { name?: string; zkas?: string } 
  *  the radio open and tell the relay when the wallet is running, for a number. */
 export function countSince(room: string, since: number, mine: string): Promise<number> {
   return new Promise((resolve) => {
+    // The unread badge is not worth a clearnet socket from a Tor user.
+    if (!relayReachable()) {
+      resolve(0);
+      return;
+    }
     let ws: WebSocket;
     try {
       ws = new WebSocket(relayUrl());

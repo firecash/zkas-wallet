@@ -1891,7 +1891,8 @@
       "offline": "offline",
       "connecting": "conectando…",
       "live": "ao vivo",
-      "error": "sem relay"
+      "error": "sem relay",
+      "blocked": "Tor ativo"
     },
     "empty": "Nada aqui ainda — diga olá.",
     "connecting": "Conectando ao relay…",
@@ -1899,7 +1900,7 @@
     "reply": "Responder",
     "replyingTo": "Respondendo a {{name}}",
     "cancel": "Cancelar",
-    "placeholder": "Mensagem para a sala global",
+    "placeholder": "Mensagem {{room}}",
     "send": "Enviar",
     "sending": "Enviando…",
     "errSend": "Essa mensagem não foi enviada. Verifique a conexão e tente novamente.",
@@ -1919,7 +1920,8 @@
     "rooms": {
       "title": "Salas",
       "main": "Todos",
-      "languages": "Idiomas"
+      "languages": "Idiomas",
+      "all": "Todos os canais"
     },
     "actions": {
       "reply": "Responder",
@@ -1958,6 +1960,8 @@
       "headerNote": "privado"
     },
     "you": "você",
-    "intro": "Todos aqui podem ler o que você posta, e as postagens não podem ser excluídas. Toque no nome da sala para escolher o idioma. Deslize uma mensagem para responder."
+    "intro": "Todos aqui podem ler o que você posta, e as postagens não podem ser excluídas. Use a linha acima para trocar de canal. Deslize uma mensagem para responder.",
+    "torBlocked": "O chat está desligado porque o Tor está ativo. O relay é acessado diretamente, não pelo Tor, então conectar mostraria seu IP real. Desligue o Tor ou configure um relay com endereço .onion em Configurações.",
+    "torBlockedShort": "Desconectado com Tor ativo."
   }
 }

@@ -1891,7 +1891,8 @@
       "offline": "offline",
       "connecting": "verbinde…",
       "live": "live",
-      "error": "kein Relay"
+      "error": "kein Relay",
+      "blocked": "Tor an"
     },
     "empty": "Noch nichts da – sag Hallo.",
     "connecting": "Verbinde zum Relay…",
@@ -1899,7 +1900,7 @@
     "reply": "Antworten",
     "replyingTo": "Antworte an {{name}}",
     "cancel": "Abbrechen",
-    "placeholder": "Nachricht an den globalen Raum",
+    "placeholder": "Nachricht {{room}}",
     "send": "Senden",
     "sending": "Sende…",
     "errSend": "Diese Nachricht ging nicht raus. Prüf die Verbindung und versuchs nochmal.",
@@ -1919,7 +1920,8 @@
     "rooms": {
       "title": "Räume",
       "main": "Alle",
-      "languages": "Sprachen"
+      "languages": "Sprachen",
+      "all": "Alle Räume"
     },
     "actions": {
       "reply": "Antworten",
@@ -1958,6 +1960,8 @@
       "headerNote": "privat"
     },
     "you": "du",
-    "intro": "Alle hier können lesen, was du postest, und Beiträge können nicht gelöscht werden. Tippe auf den Raum-Namen, um deine Sprache zu wählen. Wische über eine Nachricht, um zu antworten."
+    "intro": "Alle hier können lesen, was du postest, und Beiträge können nicht gelöscht werden. Wechsle den Raum mit der Zeile oben. Wische auf eine Nachricht, um zu antworten.",
+    "torBlocked": "Chat ist aus, weil Tor an ist. Der Relay wird direkt erreicht, nicht über Tor, daher würde die Verbindung deine echte IP-Adresse zeigen. Schalte Tor aus oder setze in den Einstellungen einen Relay mit einer .onion-Adresse.",
+    "torBlockedShort": "Nicht verbunden bei Tor an."
   }
 }

@@ -3347,3 +3347,58 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
   border-radius: 12px;
   line-height: 1.45;
 }
+
+/* The chat room switcher: rooms and the open conversation visible at once.
+   A horizontal strip rather than a dropdown, because the thing being fixed is
+   that nothing on screen revealed there was more than one room. */
+.chat-rooms {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Logical, so the strip starts at the correct edge in RTL locales. */
+  padding-inline: 12px;
+  padding-block: 7px;
+  border-block-end: 1px solid var(--line);
+  scrollbar-width: none;
+  /* A chip half-cut at the edge is the affordance that says "scroll me". */
+  scroll-snap-type: inline proximity;
+  flex: 0 0 auto;
+}
+.chat-rooms::-webkit-scrollbar { display: none; }
+.chat-chip {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* 34px tall with the padding below: a comfortable tap target without
+     stealing a message row's worth of height from a phone screen. */
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chat-chip.on {
+  background: color-mix(in srgb, var(--ember) 16%, transparent);
+  border-color: color-mix(in srgb, var(--ember) 55%, transparent);
+  color: var(--fg);
+  font-weight: 600;
+}
+.chat-chip.more { color: var(--muted); border-style: dashed; }
+.chat-chip-n {
+  min-width: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--ember);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}

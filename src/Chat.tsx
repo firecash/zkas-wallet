@@ -49,11 +49,28 @@ import {
   setMutedKeys,
   setMyChatPubkey,
   setNickname,
+  GLOBAL_ROOM,
+  ROOMS,
+  roomForLocale,
+  recentRooms,
+  rememberRoom,
 } from "./lib/chatprefs";
 
 const FIRSTNAME_KEY = "zkas_chat_firstnames_v1";
 /** Consecutive messages from one author inside this window share a header. */
 const GROUP_WINDOW_SECS = 5 * 60;
+
+/** Connection state → its catalogue key. Written out rather than built with
+ *  `"chat.state." + state`, so the i18n audit can see that each key is used and
+ *  that none is missing — a concatenated key made it report one phantom missing
+ *  key and four phantom unused ones, on every run. */
+const STATE_LABEL: Record<ConnectionState, string> = {
+  offline: "chat.state.offline",
+  connecting: "chat.state.connecting",
+  live: "chat.state.live",
+  error: "chat.state.error",
+  blocked: "chat.state.blocked",
+};
 
 function loadFirstNames(): Record<string, string> {
   try {
@@ -135,7 +152,7 @@ export function ChatConsent({ onEnable, onClose }: { onEnable: () => void; onClo
 }
 
 export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (addr: string) => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   const [room, setRoom] = useState(currentRoom());
   const [state, setState] = useState<ConnectionState>("offline");
@@ -159,7 +176,26 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
   // one conversation. Keeping them here means one socket and one layout.
   const [view, setView] = useState<{ k: "room" } | { k: "dms" } | { k: "dm"; peer: string }>({ k: "room" });
   const [dms, setDms] = useState<Map<string, Array<{ id: string; sender: string; content: string; created_at: number }>>>(new Map());
-  const [sinceOpen] = useState(() => lastSeen(currentRoom()));
+  /** The read cursor for the room on screen, used to place the "New messages"
+   *  rule. Per ROOM, not per screen: it was captured once when chat opened, so
+   *  after switching rooms the rule was drawn from the previous room's cursor
+   *  and marked week-old messages as new. */
+  const [sinceOpen, setSinceOpen] = useState(() => lastSeen(currentRoom()));
+  /** Unread, per room, for the rooms shown in the switcher. Filled by the single
+   *  `peek` subscription; the open room is excluded because its own messages are
+   *  already on screen. */
+  const [peek, setPeek] = useState<Record<string, number>>({});
+  /** Bumped when a room is opened, so the chip strip recomputes from the stored
+   *  recent list exactly then and at no other time. */
+  const [visited, setVisited] = useState(0);
+  /** Ids already counted into `peek`. A relay replays matching history on every
+   *  REQ, so without this the same message could be counted more than once. */
+  const counted = useRef<Set<string>>(new Set());
+  // `ingest` is created once, so it cannot close over `room`.
+  const roomRef = useRef(room);
+  roomRef.current = room;
+  const meRef = useRef(me);
+  meRef.current = me;
 
   const canPost = useMemo(() => !!getDeviceSeed(), []);
   // Swipe-right-to-reply. The action sheet holds everything, but replying is the
@@ -276,16 +312,96 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
       return;
     }
     if (ev.kind === KIND_NOTE) {
+      // A note from another room arrived on the `peek` subscription: it belongs
+      // to a chip's counter, not to the open conversation.
+      const where = ev.tags.find((tg) => tg[0] === "t")?.[1];
+      if (where && where !== roomRef.current) {
+        if (ev.pubkey !== meRef.current && ev.created_at > lastSeen(where) && !counted.current.has(ev.id)) {
+          counted.current.add(ev.id);
+          setPeek((prev) => ({ ...prev, [where]: (prev[where] ?? 0) + 1 }));
+        }
+        return;
+      }
       setNotes((prev) => (prev.has(ev.id) ? prev : new Map(prev).set(ev.id, ev)));
     }
   }, []);
 
+  // ONE socket for as long as the screen is open. This used to depend on `room`,
+  // so every switch tore the WebSocket down and opened a new one — a handshake
+  // and a fresh backfill before the first message appeared. `setRoom` replaces
+  // the two room subscriptions on the live socket instead.
   useEffect(() => {
-    const c = new ChatClient(room, ingest, setState);
+    const c = new ChatClient(roomRef.current, ingest, setState);
     client.current = c;
     c.connect();
     return () => c.close();
-  }, [ingest, room]);
+  }, [ingest]);
+
+  useEffect(() => {
+    client.current?.setRoom(room);
+    setSinceOpen(lastSeen(room));
+    // Whatever was counted for the room we just opened is now on screen.
+    setPeek((prev) => (prev[room] ? { ...prev, [room]: 0 } : prev));
+  }, [room]);
+
+  /** The rooms the switcher shows without being opened.
+   *
+   *  Switching rooms was a tap on the title to open a sheet, then a tap on a
+   *  row — and nothing on screen said there was more than one room at all. This
+   *  is the global room, the room for the app's language, whichever room is
+   *  open, and any room with something new in it: the handful anyone actually
+   *  moves between, visible and one tap away. Everything else is still in the
+   *  sheet behind the last chip. */
+  const chipRooms = useMemo(() => {
+    const ids = [GLOBAL_ROOM, roomForLocale(i18n.language), ...recentRooms(), room];
+    return [...new Set(ids.filter((r): r is string => !!r))].slice(0, 6);
+    // `visited` changes only when a room is opened, which is what keeps this set
+    // stable: see the note on `recentRooms`.
+  }, [i18n.language, room, visited]);
+
+  const chipsKey = chipRooms.join(",");
+
+  // One subscription for every chip but the open one (whose messages are already
+  // being delivered). Keyed on the room NAMES, not the array identity, so a
+  // re-render cannot resubscribe and replay the backlog.
+  useEffect(() => {
+    if (state !== "live") return;
+    const others = chipsKey.split(",").filter((r) => r && r !== room);
+    if (!others.length) return;
+    const week = Math.floor(Date.now() / 1000) - 7 * 24 * 3600;
+    const since = Math.min(...others.map((r) => lastSeen(r) || week));
+    client.current?.subscribePeek(others, since);
+  }, [chipsKey, room, state]);
+
+  const roomLabel = useCallback(
+    (id: string) => {
+      const r = ROOMS.find((x) => x.id === id);
+      return r ? `${r.flag ? `${r.flag} ` : ""}${r.label}` : `#${id}`;
+    },
+    [],
+  );
+
+  /** Switch rooms. One function for the chips and the sheet, so the two cannot
+   *  differ in what they clear. */
+  const pickRoom = useCallback((r: string) => {
+    setAtBottom(true);
+    setView({ k: "room" });
+    setSheet(null);
+    if (r === roomRef.current) return;
+    setNotes(new Map());
+    setRoom(r);
+    setCurrentRoom(r);
+    rememberRoom(r);
+    setVisited((n) => n + 1);
+  }, []);
+
+  /** Private messages that arrived since this screen opened, for the DMs chip. */
+  const dmUnread = useMemo(() => {
+    if (!me) return 0;
+    let n = 0;
+    for (const thread of dms.values()) n += thread.filter((m) => m.sender !== me && m.created_at > sinceOpen).length;
+    return n;
+  }, [dms, me, sinceOpen]);
 
   useEffect(() => {
     if (me && client.current?.live) {
@@ -473,14 +589,48 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
           onClick={() => view.k === "room" && setSheet({ kind: "rooms" })}
         >
           <span className="chat-room">
-            {view.k === "room" ? `#${room} ▾` : view.k === "dms" ? t("chat.dm.title") : (person(view.peer).name || t("chat.anon"))}
+            {/* The room's own name, as the switcher shows it — not the raw tag
+                `#zkas-fr`, which is an implementation detail of how rooms are
+                addressed on the relay and told a French speaker nothing. */}
+            {view.k === "room" ? roomLabel(room) : view.k === "dms" ? t("chat.dm.title") : (person(view.peer).name || t("chat.anon"))}
           </span>
           <span className="chat-state">
             <i className={dot} aria-hidden="true" />
-            {view.k === "dm" ? t("chat.dm.headerNote") : t("chat.state." + state)}
+            {view.k === "dm" ? t("chat.dm.headerNote") : t(STATE_LABEL[state])}
           </span>
         </button>
       </header>
+
+      {/* The switcher, always on screen. Rooms AND the open conversation at once,
+          so moving between them is one tap on something already visible rather
+          than a tap to open a sheet and a tap to pick a row — and so a newcomer
+          can see that more than one room exists at all. The last chip opens the
+          full list; the first is private messages, which belong in the same row
+          because they are another place to be, not a different kind of thing. */}
+      <nav className="chat-rooms" aria-label={t("chat.rooms.title")}>
+        <button
+          className={view.k === "room" ? "chat-chip" : "chat-chip on"}
+          aria-current={view.k !== "room"}
+          onClick={() => { setAtBottom(true); setView({ k: "dms" }); }}
+        >
+          {t("chat.dm.title")}
+          {dmUnread > 0 && <span className="chat-chip-n">{dmUnread}</span>}
+        </button>
+        {chipRooms.map((r) => (
+          <button
+            key={r}
+            className={view.k === "room" && r === room ? "chat-chip on" : "chat-chip"}
+            aria-current={view.k === "room" && r === room}
+            onClick={() => pickRoom(r)}
+          >
+            {roomLabel(r)}
+            {r !== room && peek[r] > 0 && <span className="chat-chip-n">{peek[r]}</span>}
+          </button>
+        ))}
+        <button className="chat-chip more" onClick={() => setSheet({ kind: "rooms" })}>
+          {t("chat.rooms.all")}
+        </button>
+      </nav>
 
       {error === "engine" && <div className="msg warn small">{t("chat.errEngine")}</div>}
 
@@ -553,7 +703,9 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
             first message is one more thing to dismiss. */}
         <p className="muted small chat-intro">{t("chat.intro")}</p>
         {messages.length === 0 && (
-          <p className="muted small chat-empty">{state === "live" ? t("chat.empty") : t("chat.connecting")}</p>
+          <p className="muted small chat-empty">
+            {state === "live" ? t("chat.empty") : state === "blocked" ? t("chat.torBlocked") : t("chat.connecting")}
+          </p>
         )}
         {messages.map((m) => {
           const day = new Date(m.created_at * 1000).toDateString();
@@ -634,7 +786,17 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
 
       {error === "send" && <div className="msg warn small">{t("chat.errSend")}</div>}
 
-      {canPost ? (
+      {/* Tor is on and the relay is not an onion. A WebView socket cannot use
+          the engine's SOCKS proxy, so connecting would publish the real IP of
+          someone who switched Tor on — the one thing the consent screen frames
+          as a deliberate choice. Say what happened and what would fix it. */}
+      {state === "blocked" && <div className="msg warn small">{t("chat.torBlocked")}</div>}
+
+      {state === "blocked" ? (
+        <div className="chat-compose readonly">
+          <span className="muted small">{t("chat.torBlockedShort")}</span>
+        </div>
+      ) : canPost ? (
         <div className="chat-compose">
           <textarea
             ref={composer}
@@ -653,9 +815,11 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
                 void submit();
               }
             }}
-            placeholder={view.k === "dm" ? t("chat.dm.placeholder") : t("chat.placeholder")}
+            /* Names the room actually open. It was pinned to "the global room",
+               so every language room invited you to post to a different one. */
+            placeholder={view.k === "dm" ? t("chat.dm.placeholder") : t("chat.placeholder", { room: roomLabel(room) })}
             maxLength={2000}
-            aria-label={view.k === "dm" ? t("chat.dm.placeholder") : t("chat.placeholder")}
+            aria-label={view.k === "dm" ? t("chat.dm.placeholder") : t("chat.placeholder", { room: roomLabel(room) })}
           />
           <button className="btn" onClick={() => void submit()} disabled={sending || !draft.trim()}>
             {sending ? t("chat.sending") : t("chat.send")}
@@ -708,10 +872,10 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
       {sheet?.kind === "rooms" && (
         <RoomsSheet
           current={room}
-          unread={{}}
+          unread={peek}
           onClose={() => setSheet(null)}
           onDms={() => { setSheet(null); setView({ k: "dms" }); }}
-          onPick={(r) => { setRoom(r); setCurrentRoom(r); setNotes(new Map()); setSheet(null); setView({ k: "room" }); }}
+          onPick={pickRoom}
         />
       )}
 
@@ -722,7 +886,7 @@ export function ChatScreen({ onClose, onTip }: { onClose: () => void; onTip?: (a
             <p className="muted small" style={{ marginTop: 0 }}>{t("chat.nameWhy")}</p>
             <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder={t("chat.namePlaceholder")} maxLength={32} aria-label={t("chat.nameTitle")} />
             <label style={{ marginTop: 10 }}>{t("chat.tipAddrLabel")}</label>
-            <input value={addrDraft} onChange={(e) => setAddrDraft(e.target.value)} placeholder="zkas:…" aria-label={t("chat.tipAddrLabel")} />
+            <input value={addrDraft} onChange={(e) => setAddrDraft(e.target.value)} placeholder="zkas:…" aria-label={t("chat.tipAddrLabel")} />{/* i18n-ignore: `zkas:` is the address prefix itself, not prose */}
             <p className="muted small">{t("chat.tipAddrWhy")}</p>
             <div className="msg warn small">{t("chat.namePermanent")}</div>
             <button className="btn" onClick={() => void saveName()}>{t("chat.nameSave")}</button>

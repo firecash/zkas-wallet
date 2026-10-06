@@ -1891,7 +1891,8 @@
       "offline": "luar talian",
       "connecting": "menyambung…",
       "live": "langsung",
-      "error": "tiada geganti"
+      "error": "tiada geganti",
+      "blocked": "Tor hidup"
     },
     "empty": "Tiada apa-apa lagi — ucap hai.",
     "connecting": "Menyambung ke geganti…",
@@ -1899,7 +1900,7 @@
     "reply": "Balas",
     "replyingTo": "Membalas {{name}}",
     "cancel": "Batal",
-    "placeholder": "Mesej bilik global",
+    "placeholder": "Mesej {{room}}",
     "send": "Hantar",
     "sending": "Menghantar…",
     "errSend": "Mesej itu tidak terhantar. Periksa sambungan dan cuba lagi.",
@@ -1919,7 +1920,8 @@
     "rooms": {
       "title": "Bilik",
       "main": "Semua",
-      "languages": "Bahasa"
+      "languages": "Bahasa",
+      "all": "Semua bilik"
     },
     "actions": {
       "reply": "Balas",
@@ -1958,6 +1960,8 @@
       "headerNote": "peribadi"
     },
     "you": "anda",
-    "intro": "Semua orang di sini boleh membaca apa yang anda hantar, dan hantaran tidak boleh dipadam. Ketik nama bilik untuk memilih bahasa anda. Leret mesej untuk membalas."
+    "intro": "Semua orang di sini boleh baca apa yang anda pos, dan pos tidak boleh dipadam. Gunakan baris di atas untuk tukar bilik. Leret mesej untuk balas.",
+    "torBlocked": "Sembang dimatikan kerana Tor hidup. Geganti dicapai terus, bukan melalui Tor, jadi sambungan akan mendedahkan alamat IP sebenar anda. Matikan Tor, atau tetapkan geganti dengan alamat .onion dalam Tetapan.",
+    "torBlockedShort": "Tidak bersambung semasa Tor hidup."
   }
 }

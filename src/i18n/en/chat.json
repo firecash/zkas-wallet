@@ -20,7 +20,8 @@
       "offline": "offline",
       "connecting": "connecting…",
       "live": "live",
-      "error": "no relay"
+      "error": "no relay",
+      "blocked": "Tor on"
     },
     "empty": "Nothing here yet — say hello.",
     "connecting": "Connecting to the relay…",
@@ -28,7 +29,7 @@
     "reply": "Reply",
     "replyingTo": "Replying to {{name}}",
     "cancel": "Cancel",
-    "placeholder": "Message the global room",
+    "placeholder": "Message {{room}}",
     "send": "Send",
     "sending": "Sending…",
     "errSend": "That message did not go out. Check the connection and try again.",
@@ -48,7 +49,8 @@
     "rooms": {
       "title": "Rooms",
       "main": "Everyone",
-      "languages": "Languages"
+      "languages": "Languages",
+      "all": "All rooms"
     },
     "actions": {
       "reply": "Reply",
@@ -87,6 +89,8 @@
       "headerNote": "private"
     },
     "you": "you",
-    "intro": "Everyone here can read what you post, and posts cannot be deleted. Tap the room name to pick your language. Swipe a message to reply."
+    "intro": "Everyone here can read what you post, and posts cannot be deleted. Use the row above to change room. Swipe a message to reply.",
+    "torBlocked": "Chat is off because Tor is on. The relay is reached directly, not through Tor, so connecting would show it your real IP address. Either switch Tor off, or set a relay with an .onion address in Settings.",
+    "torBlockedShort": "Not connected while Tor is on."
   }
 }

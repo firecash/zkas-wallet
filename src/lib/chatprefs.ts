@@ -17,6 +17,7 @@ const MUTE_KEY = "zkas_chat_muted_v1";
 const ADDR_KEY = "zkas_chat_zkasaddr_v1";
 const ROOM_KEY = "zkas_chat_room_v1";
 const PUBKEY_KEY = "zkas_chat_pubkey_v1";
+const RECENT_KEY = "zkas_chat_recent_v1";
 
 /** The room everyone lands in. A room is a hashtag, so this is also a public
  *  Nostr feed — other clients can see it without us doing anything. */
@@ -147,6 +148,35 @@ export function setMyZkasAddress(addr: string): void {
   write(ADDR_KEY, addr.trim());
 }
 
+/** The rooms shown in the switcher strip, most recently opened first.
+ *
+ *  Persisted so the strip is the same on every open. It deliberately does NOT
+ *  track "rooms with something new in them": a set that changed as messages
+ *  arrived would re-order the strip under the user's thumb, and when the set
+ *  drove the relay subscription it also fed back into itself — every arriving
+ *  message changed the set, which resubscribed, which replayed the backlog,
+ *  which counted it again. */
+const RECENT_MAX = 4;
+
+export function recentRooms(): string[] {
+  const raw = read(RECENT_KEY);
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.filter((x) => typeof x === "string" && x !== GLOBAL_ROOM).slice(0, RECENT_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Note that a room was opened. The global room is always shown, so it is not
+ *  stored and never costs one of the remembered slots. */
+export function rememberRoom(id: string): void {
+  if (id === GLOBAL_ROOM) return;
+  const next = [id, ...recentRooms().filter((r) => r !== id)].slice(0, RECENT_MAX);
+  write(RECENT_KEY, JSON.stringify(next));
+}
+
 /** Our own chat pubkey, cached after the engine first derives it.
  *
  *  Cached purely so the wallet screen can count unread messages without loading
@@ -163,7 +193,7 @@ export function setMyChatPubkey(k: string): void {
  *  a mute list and read cursors behind after someone opts out is not "off". */
 export function forgetChat(): void {
   try {
-    [CONSENT_KEY, NICK_KEY, MUTE_KEY, ADDR_KEY, ROOM_KEY, PUBKEY_KEY].forEach((k) => localStorage.removeItem(k));
+    [CONSENT_KEY, NICK_KEY, MUTE_KEY, ADDR_KEY, ROOM_KEY, PUBKEY_KEY, RECENT_KEY].forEach((k) => localStorage.removeItem(k));
     Object.keys(localStorage)
       .filter((k) => k.startsWith(SEEN_KEY))
       .forEach((k) => localStorage.removeItem(k));

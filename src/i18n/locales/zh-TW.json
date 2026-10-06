@@ -1880,7 +1880,8 @@
     "rooms": {
       "title": "聊天室",
       "main": "所有人",
-      "languages": "語言"
+      "languages": "語言",
+      "all": "所有聊天室"
     },
     "actions": {
       "reply": "回覆",
@@ -1919,7 +1920,7 @@
       "headerNote": "私密"
     },
     "you": "你",
-    "intro": "此處所有人都能閱讀你的發文，且發文無法刪除。點按聊天室名稱可選擇語言。滑動訊息可回覆。",
+    "intro": "這裡所有人都能看到你的發文，且發文無法刪除。使用上方列切換聊天室。滑動訊息即可回覆。",
     "consentTitle": "開啟聊天？",
     "consentPublic": "全球聊天室的訊息為公開且永久保存，無法刪除。",
     "consentIp": "中繼伺服器會看到您的 IP 位址與上線時間，您的錢包則不會。",
@@ -1933,7 +1934,8 @@
       "offline": "離線",
       "connecting": "連線中…",
       "live": "即時",
-      "error": "無中繼"
+      "error": "無中繼",
+      "blocked": "Tor 開啟"
     },
     "empty": "這裡還沒有內容 — 打聲招呼吧。",
     "connecting": "正在連線至中繼…",
@@ -1941,7 +1943,7 @@
     "reply": "回覆",
     "replyingTo": "回覆 {{name}}",
     "cancel": "取消",
-    "placeholder": "傳送訊息至全球聊天室",
+    "placeholder": "訊息 {{room}}",
     "send": "傳送",
     "sending": "傳送中…",
     "errSend": "該訊息未送出。請檢查連線後再試一次。",
@@ -1950,7 +1952,9 @@
     "nameWhy": "會顯示在您的訊息旁。您之後可以變更，也可以跳過並以匿名身分發文。",
     "namePlaceholder": "您在聊天中的名稱",
     "namePermanent": "發文為公開且永久保存 — 任何人都能閱讀，且無法刪除。",
-    "nameSave": "儲存並傳送"
+    "nameSave": "儲存並傳送",
+    "torBlocked": "聊天功能因 Tor 開啟而關閉。中繼站是直接連線，而非透過 Tor，因此連線會暴露你的真實 IP。請關閉 Tor，或在設定中設定 .onion 位址的中繼站。",
+    "torBlockedShort": "Tor 開啟時無法連線。"
   },
   "backgroundPermission": {
     "title": "讓錢包在背景同步？",

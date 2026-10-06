@@ -1880,7 +1880,8 @@
     "rooms": {
       "title": "Stanze",
       "main": "Tutti",
-      "languages": "Lingue"
+      "languages": "Lingue",
+      "all": "Tutte le stanze"
     },
     "actions": {
       "reply": "Rispondi",
@@ -1919,7 +1920,7 @@
       "headerNote": "privato"
     },
     "you": "tu",
-    "intro": "Tutti qui possono leggere i tuoi post e non possono essere cancellati. Tocca il nome della stanza per scegliere la lingua. Scorri un messaggio per rispondere.",
+    "intro": "Tutti qui possono leggere i tuoi messaggi e non possono essere cancellati. Usa la riga sopra per cambiare stanza. Scorri un messaggio per rispondere.",
     "consentTitle": "Attivare la chat?",
     "consentPublic": "I messaggi nella stanza globale sono pubblici e permanenti. Non si possono cancellare.",
     "consentIp": "Il server relay vede il tuo IP e quando sei online. Il tuo portafoglio no.",
@@ -1933,7 +1934,8 @@
       "offline": "offline",
       "connecting": "connessione…",
       "live": "live",
-      "error": "nessun relay"
+      "error": "nessun relay",
+      "blocked": "Tor acceso"
     },
     "empty": "Ancora nulla — saluta.",
     "connecting": "Connessione al relay…",
@@ -1941,7 +1943,7 @@
     "reply": "Rispondi",
     "replyingTo": "Rispondi a {{name}}",
     "cancel": "Annulla",
-    "placeholder": "Messaggio per la stanza globale",
+    "placeholder": "Messaggio stanza {{room}}",
     "send": "Invia",
     "sending": "Invio…",
     "errSend": "Il messaggio non è partito. Controlla la connessione e riprova.",
@@ -1950,7 +1952,9 @@
     "nameWhy": "Verrà mostrato accanto ai tuoi messaggi. Puoi cambiarlo dopo, o saltarlo e postare come anon.",
     "namePlaceholder": "Il tuo nome in chat",
     "namePermanent": "I post sono pubblici e permanenti — chiunque può leggerli e non possono essere cancellati.",
-    "nameSave": "Salva e invia"
+    "nameSave": "Salva e invia",
+    "torBlocked": "La chat è disattivata perché Tor è acceso. Il relay viene raggiunto direttamente, non tramite Tor, quindi connettersi mostrerebbe il tuo vero indirizzo IP. Disattiva Tor o imposta un relay con indirizzo .onion in Impostazioni.",
+    "torBlockedShort": "Non connesso con Tor acceso."
   },
   "backgroundPermission": {
     "title": "Sincronizzare il portafoglio in background?",

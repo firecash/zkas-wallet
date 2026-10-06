@@ -1880,7 +1880,8 @@
     "rooms": {
       "title": "Pokoje",
       "main": "Wszyscy",
-      "languages": "Języki"
+      "languages": "Języki",
+      "all": "Wszystkie pokoje"
     },
     "actions": {
       "reply": "Odpowiedz",
@@ -1919,7 +1920,7 @@
       "headerNote": "prywatnie"
     },
     "you": "ty",
-    "intro": "Każdy tu widzi, co piszesz, a postów nie da się usunąć. Dotknij nazwy pokoju, by wybrać język. Przesuń wiadomość, by odpowiedzieć.",
+    "intro": "Każdy tu widzi, co piszesz, a postów nie da się usunąć. Górnym wierszem zmienisz pokój. Przesuń wiadomość, by odpowiedzieć.",
     "consentTitle": "Włączyć czat?",
     "consentPublic": "Wiadomości w pokoju globalnym są publiczne i trwałe. Nie ma opcji usunięcia.",
     "consentIp": "Serwer przekaźnika widzi Twój adres IP i czas aktywności. Twój portfel – nie.",
@@ -1933,7 +1934,8 @@
       "offline": "offline",
       "connecting": "łączenie…",
       "live": "na żywo",
-      "error": "brak przekaźnika"
+      "error": "brak przekaźnika",
+      "blocked": "Tor wł."
     },
     "empty": "Na razie pusto – przywitaj się.",
     "connecting": "Łączenie z przekaźnikiem…",
@@ -1941,7 +1943,7 @@
     "reply": "Odpowiedz",
     "replyingTo": "Odpowiadasz {{name}}",
     "cancel": "Anuluj",
-    "placeholder": "Napisz do pokoju globalnego",
+    "placeholder": "Wiadomość {{room}}",
     "send": "Wyślij",
     "sending": "Wysyłanie…",
     "errSend": "Wiadomość nie została wysłana. Sprawdź połączenie i spróbuj ponownie.",
@@ -1950,7 +1952,9 @@
     "nameWhy": "Wyświetlana przy Twoich wiadomościach. Możesz ją zmienić później lub pominąć i pisać jako anonim.",
     "namePlaceholder": "Twoja nazwa na czacie",
     "namePermanent": "Wpisy są publiczne i trwałe – każdy może je czytać, nie można ich usunąć.",
-    "nameSave": "Zapisz i wyślij"
+    "nameSave": "Zapisz i wyślij",
+    "torBlocked": "Czat jest wyłączony, bo Tor jest włączony. Przekaźnik jest osiągany bezpośrednio, nie przez Tora, więc połączenie ujawniłoby mu Twój prawdziwy adres IP. Wyłącz Tora lub ustaw przekaźnik z adresem .onion w Ustawieniach.",
+    "torBlockedShort": "Brak połączenia przy Torze."
   },
   "backgroundPermission": {
     "title": "Zsynchronizować portfel w tle?",

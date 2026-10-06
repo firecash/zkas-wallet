@@ -1880,7 +1880,8 @@
     "rooms": {
       "title": "Salas",
       "main": "Todos",
-      "languages": "Idiomas"
+      "languages": "Idiomas",
+      "all": "Todos"
     },
     "actions": {
       "reply": "Responder",
@@ -1919,7 +1920,7 @@
       "headerNote": "privado"
     },
     "you": "tú",
-    "intro": "Todos aquí pueden leer lo que publicas y las publicaciones no se pueden eliminar. Toca el nombre de la sala para elegir tu idioma. Desliza un mensaje para responder.",
+    "intro": "Todo lo que publiques aquí lo verán todos y no se puede borrar. Usa la fila de arriba para cambiar de sala. Desliza un mensaje para responder.",
     "consentTitle": "¿Activar el chat?​",
     "consentPublic": "Los mensajes en la sala global son públicos y permanentes. No se pueden eliminar.​",
     "consentIp": "El servidor relay ve tu IP y cuándo estás en línea. Tu billetera no.​",
@@ -1933,7 +1934,8 @@
       "offline": "desconectado​",
       "connecting": "conectando…​",
       "live": "en vivo​",
-      "error": "sin relay​"
+      "error": "sin relay​",
+      "blocked": "Tor activo"
     },
     "empty": "Aún no hay nada — saluda.​",
     "connecting": "Conectando al relay…​",
@@ -1941,7 +1943,7 @@
     "reply": "Responder​",
     "replyingTo": "Respondiendo a {{name}}​",
     "cancel": "Cancelar​",
-    "placeholder": "Mensaje a la sala global​",
+    "placeholder": "Mensaje {{room}}",
     "send": "Enviar​",
     "sending": "Enviando…​",
     "errSend": "Ese mensaje no salió. Revisa la conexión e inténtalo de nuevo.​",
@@ -1950,7 +1952,9 @@
     "nameWhy": "Se mostrará junto a tus mensajes. Puedes cambiarlo después, o saltarlo y publicar como anónimo.​",
     "namePlaceholder": "Tu nombre en el chat​",
     "namePermanent": "Las publicaciones son públicas y permanentes — cualquiera puede leerlas y no se pueden eliminar.​",
-    "nameSave": "Guardar y enviar​"
+    "nameSave": "Guardar y enviar​",
+    "torBlocked": "El chat está desactivado porque Tor está activo. El relay se alcanza directamente, no a través de Tor, por lo que conectarse mostraría tu IP real. Desactiva Tor o configura un relay con dirección .onion en Configuración.",
+    "torBlockedShort": "Sin conexión con Tor activo."
   },
   "backgroundPermission": {
     "title": "¿Sincronizar la billetera en segundo plano?​",

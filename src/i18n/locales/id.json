@@ -1880,7 +1880,8 @@
     "rooms": {
       "title": "Ruangan",
       "main": "Semua",
-      "languages": "Bahasa"
+      "languages": "Bahasa",
+      "all": "Semua ruang"
     },
     "actions": {
       "reply": "Balas",
@@ -1919,7 +1920,7 @@
       "headerNote": "pribadi"
     },
     "you": "Anda",
-    "intro": "Semua orang di sini bisa membaca kiriman Anda, dan kiriman tidak bisa dihapus. Ketuk nama ruangan untuk memilih bahasa. Geser pesan untuk membalas.",
+    "intro": "Semua orang di sini bisa membaca kiriman Anda, dan kiriman tidak bisa dihapus. Gunakan baris di atas untuk ganti ruang. Geser pesan untuk membalas.",
     "consentTitle": "Aktifkan obrolan?",
     "consentPublic": "Pesan di ruang global bersifat publik dan permanen. Tidak ada fitur hapus.",
     "consentIp": "Server relay melihat alamat IP Anda dan kapan Anda daring. Dompet Anda tidak.",
@@ -1933,7 +1934,8 @@
       "offline": "luring",
       "connecting": "menghubungkan…",
       "live": "daring",
-      "error": "tanpa relay"
+      "error": "tanpa relay",
+      "blocked": "Tor nyala"
     },
     "empty": "Belum ada apa-apa — sapa saja.",
     "connecting": "Menghubungkan ke relay…",
@@ -1941,7 +1943,7 @@
     "reply": "Balas",
     "replyingTo": "Membalas {{name}}",
     "cancel": "Batal",
-    "placeholder": "Kirim pesan ke ruang global",
+    "placeholder": "Pesan {{room}}",
     "send": "Kirim",
     "sending": "Mengirim…",
     "errSend": "Pesan tidak terkirim. Periksa koneksi dan coba lagi.",
@@ -1950,7 +1952,9 @@
     "nameWhy": "Ditampilkan di samping pesan Anda. Bisa diubah nanti, atau dilewati untuk tetap anonim.",
     "namePlaceholder": "Nama Anda di obrolan",
     "namePermanent": "Postingan bersifat publik dan permanen — siapa pun bisa membacanya dan tidak bisa dihapus.",
-    "nameSave": "Simpan & kirim"
+    "nameSave": "Simpan & kirim",
+    "torBlocked": "Obrolan mati karena Tor menyala. Relai dijangkau langsung, bukan lewat Tor, jadi menghubungkan akan memperlihatkan alamat IP asli Anda ke relai. Matikan Tor, atau atur relai dengan alamat .onion di Pengaturan.",
+    "torBlockedShort": "Tidak terhubung saat Tor nyala."
   },
   "backgroundPermission": {
     "title": "Sinkronkan dompet di latar belakang?",

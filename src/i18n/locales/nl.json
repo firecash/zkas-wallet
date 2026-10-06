@@ -1891,7 +1891,8 @@
       "offline": "offline",
       "connecting": "verbinden…",
       "live": "live",
-      "error": "geen relay"
+      "error": "geen relay",
+      "blocked": "Tor aan"
     },
     "empty": "Nog niets — zeg hallo.",
     "connecting": "Verbinden met de relay…",
@@ -1899,7 +1900,7 @@
     "reply": "Antwoord",
     "replyingTo": "Antwoord aan {{name}}",
     "cancel": "Annuleren",
-    "placeholder": "Bericht de globale ruimte",
+    "placeholder": "Bericht {{room}}",
     "send": "Verzenden",
     "sending": "Verzenden…",
     "errSend": "Dat bericht is niet verzonden. Controleer de verbinding en probeer het opnieuw.",
@@ -1919,7 +1920,8 @@
     "rooms": {
       "title": "Ruimtes",
       "main": "Iedereen",
-      "languages": "Talen"
+      "languages": "Talen",
+      "all": "Alle kamers"
     },
     "actions": {
       "reply": "Antwoorden",
@@ -1958,6 +1960,8 @@
       "headerNote": "privé"
     },
     "you": "jij",
-    "intro": "Iedereen hier kan lezen wat je plaatst, en berichten kunnen niet worden verwijderd. Tik op de ruimtenaam om je taal te kiezen. Veeg over een bericht om te antwoorden."
+    "intro": "Iedereen hier kan lezen wat je plaatst, en berichten kunnen niet worden verwijderd. Gebruik de rij hierboven om van kamer te wisselen. Veeg een bericht om te antwoorden.",
+    "torBlocked": "Chat staat uit omdat Tor aan staat. De relay wordt direct bereikt, niet via Tor, dus verbinden zou je echte IP-adres tonen. Zet Tor uit of stel een relay met een .onion-adres in bij Instellingen.",
+    "torBlockedShort": "Niet verbonden terwijl Tor aan staat."
   }
 }
