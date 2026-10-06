@@ -251,35 +251,65 @@ export async function findOrphanedSeed(expectedAddress: string): Promise<string>
 export const SEED_REQUIRED = "SEED_REQUIRED";
 
 /// Does `secret` (legacy hex, or a phrase at any account) derive `address`?
-/// Undecidable (signer not loaded, malformed secret) counts as "no": a secret that
-/// cannot be shown to own the wallet must not be presented as its key.
+///
+/// THREE answers, not two. `null` means undecidable right now — the signer could
+/// not be loaded, so nothing can be derived and nothing is known. Before this it
+/// returned `false` for that case, and the two readings of `false` want opposite
+/// handling: "do not present this as the wallet's key" (right, and unchanged) but
+/// also "this is some other wallet's key, move it aside" (wrong, and destructive).
+/// A wasm chunk that 404s after a deploy, a phone that is out of memory, or an
+/// offline first load would detach the user's own seed from the active token and
+/// tell them the device held no key — recoverable only by a later orphan scan,
+/// and leaving a plaintext copy behind each time it happened.
 const ownsCache = new Map<string, boolean>();
-export async function secretOwnsAddress(secret: string, address: string): Promise<boolean> {
+export async function secretOwnsAddress(secret: string, address: string): Promise<boolean | null> {
   // A phrase check derives up to ACCOUNT_SCAN_LIMIT accounts; the resolver runs on
   // every send and status refresh, so remember the answer per (secret, address).
   const k = `${address}\n${secret.trim()}`;
   const hit = ownsCache.get(k);
   if (hit !== undefined) return hit;
-  let owns = false;
+  let owns: boolean;
   try {
     owns = (await keyForWallet(secret, address)) !== null;
   } catch {
-    return false; // undecidable now (signer not ready): do not cache
+    return null; // undecidable now (signer not ready): do not cache, do not act
   }
   ownsCache.set(k, owns);
   return owns;
 }
 
+/// "Is this definitely this wallet's key?" — undecidable counts as no.
+/// For the question "may I hand this out as the key", which is the safe default.
+export async function secretDefinitelyOwns(secret: string, address: string): Promise<boolean> {
+  return (await secretOwnsAddress(secret, address)) === true;
+}
+
 /// The stored secret under the active token did not derive the wallet on screen.
-/// Keep it — it may be another wallet's key, and `device_seed_` keeps it visible to
-/// the orphan scan — but move it out of the way so it is never shown as THIS
-/// wallet's key again.
-function shelveMismatchedSeed(token: string, secret: string): void {
+/// Keep it — it may be another wallet's key, and the orphan scan can still find
+/// it — but move it out of the way so it is never shown as THIS wallet's key.
+///
+/// Sealed when the device is locked. It used to be written in the clear
+/// unconditionally, and the ONLY thing that ever swept those copies up was
+/// `enableLock()`, which runs once when the lock is first turned on — so every
+/// stray produced afterwards was a spending key sitting in plaintext
+/// localStorage on a device whose owner had switched the lock on precisely to
+/// stop that. A stray written while locked (no session secret to seal with) is
+/// not written at all and the seed stays where it is: leaving it misfiled is
+/// recoverable, writing it in the clear is not.
+///
+/// Returns whether the seed was moved.
+async function shelveMismatchedSeed(token: string, secret: string): Promise<boolean> {
+  const stray = `stray_${token}_${Date.now()}`;
   try {
-    localStorage.setItem(`device_seed_stray_${token}_${Date.now()}`, secret);
+    if (isLockEnabled()) {
+      if (!(await sealNewSeed(stray, secret))) return false;
+    } else {
+      localStorage.setItem(`device_seed_${stray}`, secret);
+    }
     localStorage.removeItem(`device_seed_${token}`);
+    return true;
   } catch {
-    /* best effort */
+    return false; // quota or a sealing failure: leave the seed in place
   }
 }
 
@@ -288,9 +318,14 @@ export async function resolveDeviceSeed(expectedAddress?: string): Promise<strin
   // A stored secret is only this wallet's key if it derives this wallet's address.
   // Returning it unchecked is how a desktop revealed — and wrote into a backup file —
   // a phrase for a wallet that phrase does not own.
-  if (stored && (!expectedAddress || (await secretOwnsAddress(stored, expectedAddress)))) return stored;
-  if (stored && expectedAddress) {
-    shelveMismatchedSeed(localStorage.getItem("wallet_token") || "default", stored);
+  const owns = stored && expectedAddress ? await secretOwnsAddress(stored, expectedAddress) : true;
+  if (stored && owns === true) return stored;
+  // Shelving is a destructive move, so it needs a DEFINITE mismatch. `null` means
+  // we could not derive anything and therefore know nothing: leave the seed
+  // exactly where it is and fail this attempt. The next one, with a working
+  // signer, returns it normally.
+  if (stored && expectedAddress && owns === false) {
+    await shelveMismatchedSeed(localStorage.getItem("wallet_token") || "default", stored);
   }
   if (expectedAddress) {
     const orphan = await findOrphanedSeed(expectedAddress);

@@ -20,7 +20,10 @@ describe("walletd transport policy", () => {
     (globalThis as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {};
     expect(normalizeDaemonInput("192.168.1.20")).toBe("http://192.168.1.20:8501");
     expect(normalizeDaemonInput("::1")).toBe("http://[::1]:8501");
-    expect(normalizeDaemonInput("[2001:db8::20]:9000")).toBe("http://[2001:db8::20]:9000");
+    // A bracketed IPv6 keeps its explicit port. Uses fd00::/8 (unique-local):
+    // 2001:db8::/32 is the PUBLIC documentation prefix, so it is not a LAN
+    // address and no longer gets cleartext — which is the point of the policy.
+    expect(normalizeDaemonInput("[fd00::20]:9000")).toBe("http://[fd00::20]:9000");
     expect(walletdTransportError("http://192.168.1.20:8501")).toBeNull();
     expect(daemonEndpointCandidates("192.168.1.20")).toEqual([
       "http://192.168.1.20:8501",
@@ -33,6 +36,33 @@ describe("walletd transport policy", () => {
     (globalThis as { Capacitor?: unknown }).Capacitor = { isNativePlatform: () => true };
     expect(normalizeDaemonInput("192.168.1.20:9000")).toBe("http://192.168.1.20:9000");
     expect(walletdTransportError("http://192.168.1.20:9000")).toBeNull();
+  });
+
+  it("never downgrades a PUBLIC host to cleartext, on any platform", () => {
+    // The leak this closes: an installed app defaulted every bare host to http,
+    // and probed plain http for public hosts (IPs first), sending the wallet
+    // token and the full viewing key across the internet in the clear.
+    (globalThis as { Capacitor?: unknown }).Capacitor = { isNativePlatform: () => true };
+    expect(normalizeDaemonInput("wallet.example.com")).toBe("https://wallet.example.com");
+    expect(normalizeDaemonInput("203.0.113.9")).toBe("https://203.0.113.9");
+    expect(daemonEndpointCandidates("203.0.113.9")).toEqual(["https://203.0.113.9"]);
+    expect(daemonEndpointCandidates("203.0.113.9:8501")).toEqual(["https://203.0.113.9:8501"]);
+    expect(daemonEndpointCandidates("wallet.example.com")).toEqual(["https://wallet.example.com"]);
+    expect(daemonEndpointCandidates("[2001:db8::20]:9000")).toEqual(["https://[2001:db8::20]:9000"]);
+    // Explicitly typed http IS honoured: running a public daemon without TLS
+    // stays possible, it just has to be asked for rather than guessed.
+    expect(normalizeDaemonInput("http://203.0.113.9:8501")).toBe("http://203.0.113.9:8501");
+    expect(daemonEndpointCandidates("http://203.0.113.9:8501")).toEqual(["http://203.0.113.9:8501"]);
+  });
+
+  it("still allows cleartext anywhere it cannot leave the user's network", () => {
+    (globalThis as { Capacitor?: unknown }).Capacitor = { isNativePlatform: () => true };
+    for (const h of ["127.0.0.1", "localhost", "10.0.0.5", "172.16.3.4", "192.168.1.20", "169.254.1.1"]) {
+      expect(daemonEndpointCandidates(h)[0]).toBe(`http://${h}:8501`);
+    }
+    expect(daemonEndpointCandidates("[fd00::20]")[0]).toBe("http://[fd00::20]:8501");
+    // 172.32.x is OUTSIDE RFC1918 (16-31 only) and must not get cleartext.
+    expect(daemonEndpointCandidates("172.32.3.4")).toEqual(["https://172.32.3.4"]);
   });
 
   it("accepts .onion services over http on every platform (Tor encrypts them)", () => {

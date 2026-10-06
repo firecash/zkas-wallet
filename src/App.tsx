@@ -33,7 +33,7 @@ import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./rec
 import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
-import { isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor } from "./lib/deviceseed";
+import { SEED_REQUIRED, resolveDeviceSeed, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
@@ -1613,43 +1613,15 @@ export function setDeviceSeed(seed: string) {
 // token, and re-registering such a wallet with 0 scans it from genesis.
 // findOrphanedSeed lives there too (one account-aware implementation, no drift).
 
-/// Thrown when this device has no key for the wallet and the daemon has none to
-/// give (a watch-only wallet opened on a new device) — the caller then asks the
-/// user to restore it from their seed.
-export const SEED_REQUIRED = "SEED_REQUIRED";
-
-/// The seed to sign with. From this device's storage first; then a stale-token
-/// orphan scan (the key may be present under another token — that is the
-/// difference between "lost" and "misfiled"). There is no third source: the
-/// wallet service is viewing-key-only, so a device that holds neither must be
-/// restored from the user's recovery phrase or backup.
-export async function resolveDeviceSeed(expectedAddress?: string): Promise<string> {
-  const stored = getDeviceSeed();
-  // Only a secret that derives the wallet on screen is that wallet's key. An
-  // unchecked return here is what let a desktop reveal (and back up) a phrase for
-  // a wallet the phrase does not own; the mismatched secret is shelved, not lost.
-  if (stored && (!expectedAddress || (await secretOwnsAddress(stored, expectedAddress)))) return stored;
-  if (stored && expectedAddress) {
-    try {
-      localStorage.setItem(`device_seed_stray_${activeToken() ?? "default"}_${Date.now()}`, stored);
-      localStorage.removeItem(deviceSeedKey());
-    } catch {
-      /* best effort */
-    }
-  }
-  if (expectedAddress) {
-    const orphan = await findOrphanedSeed(expectedAddress);
-    if (orphan) {
-      setDeviceSeed(orphan); // reattach under the active token
-      return orphan;
-    }
-  }
-  // No custodial fallback. The wallet service is viewing-key-only and holds no
-  // seed to hand back, so asking it for one could only ever help a wallet from
-  // the old custodial model — at the cost of a path that pulls a spending key
-  // over the network. The device asks the user to restore instead.
-  throw new Error(SEED_REQUIRED);
-}
+/// SEED_REQUIRED and resolveDeviceSeed — ONE implementation, in ./lib/deviceseed,
+/// re-exported here for the many call sites in this file.
+///
+/// This file used to carry its own copy, beside the comment above claiming its
+/// siblings had exactly one each. The copies then drifted: the shelve-on-mismatch
+/// guard was tightened in `lib/deviceseed` and the copy here kept the old,
+/// destructive behaviour — which is the version every screen in the app actually
+/// ran, since this module shadowed the import.
+export { SEED_REQUIRED, resolveDeviceSeed };
 
 function HostedNotice() {
   // Installed builds already are the safer recommendation. Repeating that fact on

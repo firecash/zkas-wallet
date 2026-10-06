@@ -11,6 +11,7 @@
 // FRESH_MS is reused instead of refetched, nothing is fetched while the tab is
 // hidden, and listeners are only told about a price that actually changed.
 import { useEffect, useState } from "react";
+import { clearnetAllowed } from "./lib/privacy";
 
 const PRICE_URL = "https://mining-pool.zkas.info/api/otc/price";
 const CACHE_KEY = "zkas_price_v1";
@@ -49,6 +50,11 @@ export function refreshPrice(): Promise<ZkasPrice | null> {
 }
 
 async function fetchPrice(): Promise<ZkasPrice | null> {
+  // The OTC desk is a clearnet host with no onion, and a fiat figure is the
+  // definition of a nicety. With Tor on, serve the last cached price (or none)
+  // rather than tell mining-pool.zkas.info the user's real IP every 60 seconds —
+  // which, polled on a timer, also leaks exactly when the wallet is open.
+  if (!clearnetAllowed()) return mem;
   try {
     const r = await fetch(PRICE_URL, { cache: "no-store" });
     if (!r.ok) return mem;

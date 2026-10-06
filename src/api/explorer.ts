@@ -5,29 +5,60 @@
 // through a tiny native relay. Keeping the contract here (instead of copying the
 // explorer website's React Query internals) gives every platform identical data.
 
-import { onionSiblingBase } from "../api";
+import { clearnetAllowed, onionBase } from "../lib/privacy";
 
 const DEFAULT_EXPLORER_BASE = "https://wallet.zkas.info/chain";
+
+/// The public explorer, or `null` when this device must not reach clearnet.
+///
+/// Tor on with no onion serving /chain means a WebView fetch has no private
+/// route to the public API, so the explorer goes without data rather than
+/// announcing the user's real IP to it.
+function publicExplorer(): string | null {
+  return clearnetAllowed() ? DEFAULT_EXPLORER_BASE : null;
+}
+
+class ExplorerUnavailable extends Error {
+  constructor() {
+    super("explorer-unavailable-on-tor");
+  }
+}
 
 function isDesktop(): boolean {
   return "__TAURI_INTERNALS__" in globalThis;
 }
 
-function getExplorerBase(): string {
+function getExplorerBase(): string | null {
   // On Tor, the chain API is served on the same onion at /chain — keep the in-app
   // explorer inside Tor rather than reaching out to clearnet wallet.zkas.info.
-  const onion = onionSiblingBase();
+  const onion = onionBase();
   if (onion) return onion + "/chain";
+  // A base the user configured themselves is theirs: a local explorer is on this
+  // machine and an onion is already private, so neither is gated. Anything else
+  // they typed is a public host and goes through the same gate as the default.
   const configured = localStorage.getItem("explorer_base");
-  if (configured) return configured;
+  if (configured) return isLocalBase(configured) || isOnionUrl(configured) ? configured : publicExplorerOr(configured);
   // The hosted web wallet already exposes the explorer through /chain. Using
   // that same-origin route keeps the strict wallet CSP intact and avoids a
   // second CORS/network dependency. Native mobile has no web origin proxy and
   // Tauri has its allow-listed Rust relay, so both retain the public API URL.
   if (!isDesktop() && typeof window !== "undefined" && window.location.hostname === "wallet.zkas.info") {
-    return `${window.location.origin}/chain`;
+    return clearnetAllowed() ? `${window.location.origin}/chain` : null;
   }
-  return DEFAULT_EXPLORER_BASE;
+  return publicExplorer();
+}
+
+/// A clearnet URL, gated: the URL itself when clearnet is allowed, else `null`.
+function publicExplorerOr(url: string): string | null {
+  return clearnetAllowed() ? url : null;
+}
+
+function isOnionUrl(url: string): boolean {
+  try {
+    return new URL(url).hostname.toLowerCase().endsWith(".onion");
+  } catch {
+    return false;
+  }
 }
 
 export function setExplorerBase(url: string): void {
@@ -37,7 +68,8 @@ export function setExplorerBase(url: string): void {
 }
 
 export function explorerBase(): string {
-  return getExplorerBase();
+  // Callers display this; "" reads as "nowhere", which is the truth under Tor.
+  return getExplorerBase() ?? "";
 }
 
 /**
@@ -63,7 +95,11 @@ let localMisses = 0;
 const LOCAL_MISSES_BEFORE_GIVING_UP = 12;
 
 async function explorerGet<T>(path: string, timeoutMs = 10_000): Promise<T> {
-  if (isDesktop() && getExplorerBase() === DEFAULT_EXPLORER_BASE) {
+  const configured = getExplorerBase();
+  // Nothing to reach privately: fail loudly rather than fall through to a
+  // clearnet default further down.
+  if (configured === null) throw new ExplorerUnavailable();
+  if (isDesktop() && configured === DEFAULT_EXPLORER_BASE) {
     const { invoke } = await import("@tauri-apps/api/core");
     return invoke<T>("public_explorer_get", { path });
   }
@@ -79,7 +115,6 @@ async function explorerGet<T>(path: string, timeoutMs = 10_000): Promise<T> {
   // Correctness cannot depend on one toggle's happy path completing. If the local base is
   // unreachable and the public API answers, the override is stale by demonstration —
   // drop it and carry on there.
-  const configured = getExplorerBase();
   if (isLocalBase(configured)) {
     try {
       const live = await explorerFetch<T>(configured, path, timeoutMs);
@@ -90,7 +125,12 @@ async function explorerGet<T>(path: string, timeoutMs = 10_000): Promise<T> {
       // one failure: a local explorer restarting, or briefly busy, is not a local
       // explorer that is gone, and silently un-configuring it would be its own bug.
       // Only a base that keeps failing has demonstrated it is stale.
-      const viaPublic = await explorerFetch<T>(DEFAULT_EXPLORER_BASE, path, timeoutMs);
+      // The fallback is a clearnet host, so it is gated too. Without this, one
+      // hiccup from a local explorer reached out to wallet.zkas.info from the
+      // user's real IP — the local base made the leak intermittent, not absent.
+      const viaPublicBase = publicExplorer();
+      if (!viaPublicBase) throw new ExplorerUnavailable();
+      const viaPublic = await explorerFetch<T>(viaPublicBase, path, timeoutMs);
       if (++localMisses >= LOCAL_MISSES_BEFORE_GIVING_UP) {
         setExplorerBase("");
         localMisses = 0;

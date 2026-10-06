@@ -1,4 +1,4 @@
-import { onionSiblingBase } from "./api";
+import { publicEndpoint } from "./lib/privacy";
 import i18n from "./i18n";
 
 export type ServiceCategory = "store" | "use" | "earn" | "verify" | "build";
@@ -46,14 +46,18 @@ type ServicesDocument = {
 export const SERVICES_DIRECTORY_URL =
   import.meta.env.VITE_SERVICES_DIRECTORY_URL || "https://services.zkas.info/services.v1.json";
 
-/// The directory URL to fetch right now. On Tor it is served on the same onion so
-/// the services list never reaches clearnet either; otherwise the default host.
-function servicesDirectoryUrl(): string {
+/// The directory URL to fetch right now, or `null` when it must not be fetched.
+///
+/// On Tor it is served on the same onion, so the services list never reaches
+/// clearnet. With Tor on and no onion there is no private route to the default
+/// host, and the bundled + cached copies are good enough to render the screen —
+/// so the refresh is skipped rather than made from the user's real IP.
+function servicesDirectoryUrl(): string | null {
   try {
-    const onion = onionSiblingBase();
-    if (onion) return onion + "/services.v1.json";
-  } catch { /* fall through to default */ }
-  return SERVICES_DIRECTORY_URL;
+    return publicEndpoint("/services.v1.json", SERVICES_DIRECTORY_URL);
+  } catch {
+    return SERVICES_DIRECTORY_URL;
+  }
 }
 
 const CACHE_KEY = "zkas_services_directory_v1";
@@ -229,10 +233,14 @@ export async function refreshServicesDirectory(
   fetcher: typeof fetch = fetch,
   storage: Storage | null = browserStorage(),
 ): Promise<DirectoryService[]> {
+  const url = servicesDirectoryUrl();
+  // Tor on, no onion: keep whatever this device already validated, and the
+  // bundled list behind that. A directory refresh is not worth an IP.
+  if (!url) throw new Error("services directory is unreachable without clearnet");
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetcher(servicesDirectoryUrl(), {
+    const response = await fetcher(url, {
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-cache",

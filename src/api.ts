@@ -13,6 +13,7 @@ import { WALLET_SERVICE_PORT } from "./ports";
 // desktop.ts imports nothing from here, so this cannot cycle.
 import { desktopRemoteBase } from "./desktop";
 import i18n from "./i18n";
+import { publicEndpoint } from "./lib/privacy";
 
 function defaultBase(): string {
   // Native mobile (Capacitor) loads the bundle from the device, so there is no
@@ -101,6 +102,36 @@ export function isOnionAddress(raw: string): boolean {
  *   http(s)://…                → passed through (only trailing slash trimmed)
  * Returns "" for empty input (meaning: fall back to the hosted default).
  */
+/** The host part of a bare `host`, `host:port` or `[v6]:port` input. */
+function bareHost(s: string): string {
+  const t = s.trim().toLowerCase();
+  if (t.startsWith("[")) return t.slice(1, t.indexOf("]") === -1 ? undefined : t.indexOf("]"));
+  // More than one colon and no brackets: a bare IPv6 literal, not host:port.
+  if ((t.match(/:/g) || []).length > 1) return t;
+  return t.split(":")[0];
+}
+
+/** Loopback, link-local or RFC1918 — somewhere plain HTTP cannot leave the
+ *  user's own machine or network. */
+export function isPrivateHost(host: string): boolean {
+  const h = host.replace(/^\[|\]$/g, "").toLowerCase();
+  return (
+    h === "localhost" ||
+    h === "::1" ||
+    h === "0:0:0:0:0:0:0:1" ||
+    /^127\./.test(h) ||
+    /^10\./.test(h) ||
+    /^192\.168\./.test(h) ||
+    /^169\.254\./.test(h) ||
+    /^f[cd][0-9a-f]{2}:/.test(h) || // fc00::/7 unique-local
+    /^fe80:/.test(h) ||
+    (() => {
+      const m = h.match(/^172\.(\d+)\./);
+      return !!m && Number(m[1]) >= 16 && Number(m[1]) <= 31;
+    })()
+  );
+}
+
 export function normalizeDaemonInput(raw: string): string {
   let s = raw.trim().replace(/\/+$/, "");
   if (!s) return "";
@@ -109,7 +140,14 @@ export function normalizeDaemonInput(raw: string): string {
   // Onion service: plain http is correct (Tor encrypts the transport). Keep an
   // explicit port; leave a missing one to the candidate list.
   if (isOnionAddress(s)) return `http://${s}`;
-  const localApp = allowsInsecureWalletd();
+  // Cleartext is for a daemon that cannot be reached from outside the user's own
+  // machine or LAN. An installed app used to default EVERY bare host to http,
+  // public domains included — so typing a hostname pointed the wallet at plain
+  // HTTP across the internet, carrying the wallet token and the full viewing key
+  // in the clear. A public host now gets HTTPS, exactly as the browser build
+  // does; a user who really runs a public daemon without TLS types the `http://`
+  // themselves, which stays authoritative.
+  const localApp = allowsInsecureWalletd() && isPrivateHost(bareHost(s));
   // Bare host or host:port. IPv6 must be bracketed in a URL. In particular,
   // `::1` is an ADDRESS, not the host `:` with port 1 — the old final-`:digits`
   // test produced the invalid URL `http://::1`. An explicit IPv6 port remains
@@ -149,31 +187,27 @@ export function daemonEndpointCandidates(raw: string): string[] {
   } catch {
     return [];
   }
-  const privateLan =
-    host === "localhost" ||
-    host === "::1" ||
-    /^127\./.test(host) ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    (() => {
-      const match = host.match(/^172\.(\d+)\./);
-      return !!match && Number(match[1]) >= 16 && Number(match[1]) <= 31;
-    })();
   const http = primary.replace(/^https:/i, "http:");
   const https = primary.replace(/^http:/i, "https:");
-  if (privateLan) return [http, https];
-  // Public host — try BOTH transports, don't force one:
-  //   - a bare IP is usually a raw self-hosted walletd on :8501 with NO TLS, so
-  //     `http` must be tried, not only `https` (the old bug: a public IP scanned
-  //     https-only and always failed against an http daemon);
+  // On a LAN or loopback, plain HTTP never leaves the user's own network, and a
+  // self-hosted daemon there usually has no certificate. Try it first.
+  if (isPrivateHost(host)) return [http, https];
+  // A PUBLIC host gets HTTPS only. This used to probe plain HTTP as well — for a
+  // bare IP it was even tried FIRST — on the reasoning that a raw self-hosted
+  // walletd has no TLS. The cost of that convenience is the wallet token and the
+  // full viewing key crossing the open internet in cleartext, readable and
+  // modifiable by every hop, which no amount of "it usually works" pays for.
+  // Running a public daemon without TLS is still possible: type `http://` and
+  // the scheme is respected (handled above, before this point).
   //   - a bare DOMAIN is usually a reverse proxy on 443, so try bare HTTPS first,
-  //     then the raw :8501 forms;
-  //   - an explicit port is authoritative: try both transports on exactly it.
+  //     then the raw :8501 form;
+  //   - an explicit port is authoritative: use exactly it.
   const gavePort = entered.startsWith("[") ? /\]:\d+$/.test(entered) : /:\d+$/.test(entered);
   const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(":");
-  if (gavePort) return [https, http];
-  if (isIp) return [http, https];
-  return [https.replace(/:\d+$/, ""), https, http];
+  if (gavePort || isIp) return [https];
+  // Deduped: with no port filled in, the bare and explicit forms are the same
+  // string, and returning it twice probes the same URL twice.
+  return [...new Set([https.replace(/:\d+$/, ""), https])];
 }
 
 /** A wallet service that answered, but refused this caller's credentials. Kept
@@ -834,19 +868,22 @@ export interface ChainTx {
 /// desktop app entirely. Both native shells must reach the public host directly.
 /// When on Tor, the onion origin that also serves /chain and /services.v1.json —
 /// i.e. the walletd base with its `/daemon` suffix removed. `null` off Tor.
-export function onionSiblingBase(): string | null {
-  const base = getBase();
-  if (!isOnionAddress(base)) return null;
-  return base.replace(/\/+$/, "").replace(/\/daemon$/, "");
-}
+///
+/// Kept as a re-export so the handful of callers that genuinely want "the onion
+/// we are talking to, if any" still have it. Deciding whether a request may be
+/// made is NOT that question, and every call site that used this predicate for
+/// that purpose was wrong in phone mode — see `lib/privacy.ts`.
+export { onionBase as onionSiblingBase } from "./lib/privacy";
 
-function chainBase(): string {
-  // Over Tor the whole wallet stays on the onion: the chain API is at <onion>/chain,
-  // so history/confirmation lookups never touch clearnet.
-  const onion = onionSiblingBase();
-  if (onion) return onion + "/chain";
+/// Where the confirmation lookup goes, or `null` when it must not be sent.
+///
+/// `null` happens when Tor is on and there is no onion serving /chain: a WebView
+/// fetch cannot use the engine's SOCKS proxy, so the only alternatives are
+/// "reveal the real IP" or "do without the number". We do without it.
+function chainBase(): string | null {
   const native = isNative() || "__TAURI_INTERNALS__" in globalThis;
-  return native ? "https://wallet.zkas.info/chain" : window.location.origin + "/chain";
+  const fallback = native ? "https://wallet.zkas.info/chain" : window.location.origin + "/chain";
+  return publicEndpoint("/chain", fallback);
 }
 
 /** Confirmations for a broadcast txid, or null if the chain doesn't know it yet.
@@ -857,7 +894,9 @@ export async function chainTx(txid: string): Promise<ChainTx | null> {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 4000);
   try {
-    const r = await fetch(`${chainBase()}/transactions/${txid}`, { signal: ctl.signal });
+    const base = chainBase();
+    if (!base) return null; // Tor on, no onion: a confirmation count is not worth an IP.
+    const r = await fetch(`${base}/transactions/${txid}`, { signal: ctl.signal });
     if (!r.ok) return null; // not mined yet (the API 502s on an unknown tx)
     return (await r.json()) as ChainTx;
   } catch {
