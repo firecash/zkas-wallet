@@ -26,6 +26,22 @@ on:
     tags: ["v*"]
 
 jobs:
+  # Nothing was ever tested in CI, on any platform. `npm test` (eslint +
+  # i18n-audit + vitest) ran only on a developer's machine, and the desktop
+  # matrix's `beforeBuildCommand` is `npm run build`, which does not include it.
+  # 400+ suites — the privacy gate, desktop routing, the wallet-state wipe — have
+  # been shipping unverified. The build matrix now waits on this.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
   # Pick the matrix before spawning runners, so a request for one platform does not queue
   # five. A job-level `if` cannot see the `matrix` context, so the selection has to happen
   # here and be handed over as JSON.
@@ -60,7 +76,7 @@ jobs:
           fi
 
   build:
-    needs: setup
+    needs: [test, setup]
     permissions:
       contents: write
     strategy:
