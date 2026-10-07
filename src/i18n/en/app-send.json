@@ -66,7 +66,8 @@
     "feeSummary": "+ {{min}}–{{max}} fee (scales with how many coins get combined) = up to {{total}} total",
     "catchingUp": "Still catching up with the chain — you can pay once it finishes, so the wallet knows about all your coins.",
     "warmBanner": "<b>⚡ Your first payment will take a few minutes.</b><br/>Locating your coins — this happens once. You can start the payment now.",
-    "reviewSend": "Review send"
+    "reviewSend": "Review send",
+    "waitingForSync": "Still reading the chain — you can send the moment it catches up."
   },
   "sign": {
     "title": "Sign message",

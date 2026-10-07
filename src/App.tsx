@@ -3554,6 +3554,14 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
         >
           {t("seedBackup.confirmOpen")}
         </button>
+        {/* Disabled with nothing said: the blanks are the reason, but on a phone
+            a 0.5-opacity button and a cursor rule nobody can see is the whole
+            feedback. Someone tapping it repeatedly concludes the app is broken. */}
+        {answers.some((a) => !a.trim()) && (
+          <div className="muted small" style={{ marginTop: 8, textAlign: "center" }}>
+            {t("seedBackup.fillAllBlanks")}
+          </div>
+        )}
         <button className="btn ghost small" style={{ marginTop: 10 }} onClick={() => { setStep("read"); setQuizErr(""); }}>
           {t("seedBackup.showAgain")}
         </button>
@@ -6404,6 +6412,16 @@ function Send({
       <button className="btn" disabled={!canProceed} onClick={() => { setError(""); setConfirming(true); }}>
         {t("send.reviewSend")}
       </button>
+      {/* A bad address, a bad amount and an overspend each already say so above.
+          The one way this button goes dead in silence is the wallet not being
+          spend-ready yet: the form is filled in correctly, nothing is marked, and
+          tapping does nothing. On touch there is not even a cursor change to
+          suggest why. */}
+      {!canProceed && addrOk && amtValid && !overspend && (
+        <div className="muted small" style={{ marginTop: 8, textAlign: "center" }}>
+          {t("send.waitingForSync")}
+        </div>
+      )}
     </div>
   );
 }

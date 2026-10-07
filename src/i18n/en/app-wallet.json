@@ -121,7 +121,8 @@
     "copyPhrase": "Copy phrase",
     "writeOnPaper": "Write them on paper, in order.",
     "written": "I've written it down",
-    "alsoFile": "Also save an encrypted backup file"
+    "alsoFile": "Also save an encrypted backup file",
+    "fillAllBlanks": "Fill in every missing word to continue."
   },
   "recoverWallet": {
     "errNotSecret": "That doesn't look like a recovery phrase (12 words) or a recovery seed (64 hex characters).",
