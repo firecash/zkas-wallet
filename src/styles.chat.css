@@ -1,0 +1,717 @@
+/* ZKas chat — the room, in the shape a messenger has.
+   ===================================================================
+
+   This file is loaded by Chat.tsx and deliberately comes AFTER styles.css, so
+   everything here overrides the earlier `.chat-*` rules rather than replacing
+   them. The tokens are the wallet's own (styles.css `:root`): --surface,
+   --surface-2, --border, --ink, --muted, --ember, --radius. Nothing new is
+   invented except the two bubble fills, which are mixed from the accent so a
+   user who picks a different accent gets a matching chat.
+
+   The model being matched is Telegram's, because that is the one a billion
+   people already have in their hands:
+
+     · bubbles, left for them and right for you, grouped into turns
+     · the avatar on the LAST bubble of a turn, the name on the FIRST
+     · the time inside the bubble, bottom right, with a tick when it is yours
+     · reactions attached under the text, inside the bubble
+     · tap or hold a message → the message lifts out, a reaction bar floats
+       above it and a compact command card sits below it, both anchored to the
+       message — never a full-width sheet for one line of text
+     · swipe right to reply, with the bubble following the finger
+     · a floating date pill, a round jump-to-latest button, a pill composer
+*/
+
+:root {
+  --bub-in: var(--surface-2);
+  --bub-out: color-mix(in srgb, var(--ember) 20%, var(--surface-2));
+  --bub-radius: 16px;
+  --bub-tight: 6px;
+  /* The widest a column of text may get before it stops being readable. */
+  --chat-col: 760px;
+  /* The corner the in-bubble time occupies, reserved by `.chat-time-gap`. A
+     12-hour locale renders "12:24 PM", which is the widest case. */
+  --time-w: 56px;
+  --time-w-mine: 72px;
+}
+.chat-screen { background: var(--bg); }
+
+/* ---------------------------------------------------------------- header */
+.chat-head {
+  gap: 4px;
+  padding: 8px 10px;
+  padding-top: calc(8px + env(safe-area-inset-top, 0));
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 70%, var(--bg));
+}
+.chat-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 7px 8px 7px 4px;
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  color: var(--ember);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.chat-back svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* The word only when there is room for it; the chevron always. */
+.chat-back-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 92px; }
+@media (max-width: 400px) { .chat-back-label { display: none; } }
+.chat-back:active { background: rgb(var(--ember-rgb) / 0.1); }
+
+.chat-title { gap: 1px; padding: 2px 4px; }
+.chat-room { font-size: 16px; font-weight: 650; }
+.chat-state { font-size: 12px; }
+
+.chat-icon-btn {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 36px; height: 36px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  cursor: pointer;
+}
+.chat-icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chat-icon-btn:hover { color: var(--ink); background: rgb(255 255 255 / 0.06); }
+.chat-me .chat-avatar { width: 30px; height: 30px; font-size: 10px; }
+
+/* ------------------------------------------------- the room strip as tabs
+   Telegram's chat folders: text tabs with an underline, not a row of pills.
+   Pills at this size read as six competing buttons; tabs read as one control
+   with a current value, which is what the strip is. */
+.chat-rooms {
+  gap: 2px;
+  padding-inline: 8px;
+  padding-block: 0;
+  border-block-end: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 70%, var(--bg));
+}
+.chat-chip {
+  position: relative;
+  gap: 5px;
+  max-width: 44vw;
+  padding: 10px 10px 9px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.chat-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.chat-chip.on {
+  background: none;
+  color: var(--ember);
+  font-weight: 700;
+}
+.chat-chip.on::after {
+  content: "";
+  position: absolute;
+  inset-inline: 6px;
+  bottom: 0;
+  height: 2.5px;
+  border-radius: 2px 2px 0 0;
+  background: var(--ember);
+}
+.chat-chip-n {
+  flex: 0 0 auto;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--ember);
+  color: var(--ember-ink);
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------------- the list */
+.chat-list {
+  padding: 6px 10px 10px;
+  gap: 0;
+  /* A phone-width column of text on a 1280px window is the layout; the padding
+     does the centring so the scrollbar stays at the window edge, as Telegram's
+     does. */
+  padding-inline: max(10px, calc((100% - var(--chat-col)) / 2));
+  scroll-behavior: auto;
+  /* The list owns the horizontal axis: nothing inside it may widen the screen. */
+  overflow-x: hidden;
+}
+/* The row wrapper around a message and its day/unread rules. It must be exactly
+   as wide as the list — the old rows used negative margins and stuck 4px past
+   both edges of every single message in the room. */
+.chat-slot { width: 100%; min-width: 0; }
+/* NOT `content-visibility: auto`. It looks like exactly the right tool for a
+   long list and it was MEASURED here at 15fps against 60fps without it: rows
+   this small enter and leave the rendered set constantly, and each crossing
+   re-measures the row and resizes the scroll content under a scroll that is
+   already in flight. The list is kept cheap in React instead — a window of
+   history (`PAGE` in Chat.tsx) and memoised rows. */
+
+.chat-banner { margin: 8px auto; max-width: var(--chat-col); width: calc(100% - 24px); flex: 0 0 auto; }
+
+/* A statement about the chat rather than a message in it: Telegram's little
+   centred capsule. It replaces a bordered three-sentence instruction box. */
+.chat-service {
+  align-self: center;
+  max-width: min(86%, 440px);
+  margin: 8px auto 10px;
+  padding: 5px 12px;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.05);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* An empty room, or no private conversations yet. */
+.chat-blank {
+  margin: auto;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 320px;
+  text-align: center;
+}
+.chat-blank svg {
+  width: 40px; height: 40px;
+  fill: none; stroke: var(--border); stroke-width: 1.6; stroke-linejoin: round;
+}
+.chat-blank b { font-size: 15px; font-weight: 600; }
+.chat-blank span { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+
+.chat-earlier {
+  align-self: center;
+  margin: 8px auto 10px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.chat-earlier:hover { color: var(--ink); border-color: var(--ember); }
+
+/* The date capsule floats over the conversation and sticks while that day is on
+   screen, which is how you always know where you are in a long scrollback. */
+.chat-day {
+  position: sticky;
+  top: 2px;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  margin: 10px 0 6px;
+  pointer-events: none;
+}
+.chat-day::before, .chat-day::after { content: none; }
+.chat-day span {
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+}
+.chat-unread-rule {
+  margin: 10px 0 6px;
+  padding: 4px 0;
+  background: rgb(var(--ember-rgb) / 0.08);
+  color: var(--ember);
+  font-size: 11.5px;
+  font-weight: 650;
+  justify-content: center;
+  gap: 0;
+}
+.chat-unread-rule::before, .chat-unread-rule::after { content: none; }
+
+/* ---------------------------------------------------------------- a message */
+.chat-msg {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  /* All of the old geometry goes: the negative margins, the row padding, the
+     accent rule down the side of your own messages. A bubble says whose it is. */
+  margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  cursor: default;
+}
+.chat-msg.first { margin-top: 9px; }
+.chat-msg:active { background: none; }
+.chat-msg.mine { justify-content: flex-end; margin-inline-start: 0; padding-inline-start: 0; border-inline-start: 0; }
+.chat-msg .chat-avatar { width: 28px; height: 28px; font-size: 10px; margin-bottom: 1px; }
+.chat-avatar.spacer { width: 28px; height: 0; min-height: 0; background: none !important; }
+
+.chat-bubble {
+  position: relative;
+  min-width: 0;
+  max-width: min(78%, 560px);
+  padding: 6px 10px 6px;
+  border-radius: var(--bub-radius);
+  background: var(--bub-in);
+  color: var(--ink);
+  /* Touch-dragging a bubble is swipe-to-reply, not a text selection. */
+  touch-action: pan-y;
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.chat-msg.mine .chat-bubble { background: var(--bub-out); }
+/* Inside a turn the near corners tuck in, so a run of messages reads as one
+   block of speech with one tail at the end of it. */
+.chat-msg:not(.first):not(.mine) .chat-bubble { border-start-start-radius: var(--bub-tight); }
+.chat-msg:not(.last):not(.mine) .chat-bubble { border-end-start-radius: var(--bub-tight); }
+.chat-msg.mine:not(.first) .chat-bubble { border-start-end-radius: var(--bub-tight); }
+.chat-msg.mine:not(.last) .chat-bubble { border-end-end-radius: var(--bub-tight); }
+/* No tail. Telegram's is a drawn curve that flicks out of the corner; the CSS
+   approximation of it is a hard triangle sitting beside the bubble, and on a
+   dark ground it reads as a rendering artifact rather than a tail. The turn is
+   already legible from the tucked corners and the avatar on the last bubble, so
+   the tail is the one piece of the shape not worth copying. */
+
+.chat-author {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  margin-bottom: 1px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+/* A 40-character display name used to wrap the header onto three lines and
+   push the time onto its own row. One line, ellipsed, always. */
+.chat-author-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  unicode-bidi: isolate;
+}
+.chat-author .chat-fp { flex: 0 0 auto; color: inherit; opacity: 0.6; font-weight: 600; }
+
+.chat-text {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.4;
+  /* `anywhere`, not `break-word`: a pasted zkas: address or a 70-character URL
+     is a single token wider than any bubble, and `break-word` only breaks when
+     the token is alone on its line — which it is not, once the time spacer is
+     in the same paragraph. */
+  overflow-wrap: anywhere;
+  word-break: normal;
+  white-space: pre-wrap;
+  /* The direction is set on the BUBBLE, from the text (see `dirOf`), so the
+     clock's corner and the end of the text are the same corner. */
+  unicode-bidi: isolate;
+}
+.chat-msg.mine .chat-text { color: var(--ink); }
+.chat-bubble.jumbo { background: none !important; padding: 0 2px; }
+.chat-bubble.jumbo .chat-text { font-size: 40px; line-height: 1.15; }
+.chat-bubble.jumbo .chat-time { position: static; display: block; text-align: end; margin-top: 2px; }
+.chat-bubble.jumbo .chat-time-gap { display: none; }
+
+/* The time lives in the bubble's bottom corner. The spacer is an inline box at
+   the end of the text that reserves exactly that corner, so a last line can
+   never run underneath it and the bubble never grows a blank row for it. */
+.chat-time-gap { display: inline-block; width: var(--time-w); height: 1px; }
+.chat-time-gap.mine { width: var(--time-w-mine); }
+.chat-time {
+  position: absolute;
+  inset-inline-end: 10px;
+  bottom: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.chat-msg.mine .chat-time { color: color-mix(in srgb, var(--ember) 65%, var(--muted)); }
+.chat-tick { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.chat-msg.failed .chat-text { opacity: 0.55; }
+.chat-failed { display: block; margin-top: 2px; color: var(--bad); font-size: 11px; }
+
+/* The quoted message a reply is attached to. Tap it to go there. */
+.chat-quote {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 1px 0 3px;
+  padding: 3px 8px;
+  border: 0;
+  border-inline-start: 3px solid currentColor;
+  border-radius: 5px;
+  background: rgb(255 255 255 / 0.07);
+  color: var(--ember);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  overflow: hidden;
+}
+.chat-quote-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  unicode-bidi: isolate;
+}
+.chat-quote-text {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  unicode-bidi: isolate;
+}
+.chat-quote:hover { background: rgb(255 255 255 / 0.11); }
+/* Where a reply lands when its quote is followed. */
+@keyframes chatFlash {
+  0%, 60% { background: rgb(var(--ember-rgb) / 0.18); }
+  100% { background: transparent; }
+}
+.chat-msg.flash { animation: chatFlash 1.1s ease-out; border-radius: 12px; }
+
+/* Reactions, attached under the text inside the bubble. One tap on a pill adds
+   yours — the commonest way to react, and it never opens anything. */
+.chat-reacts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.chat-bubble.has-reacts .chat-reacts { padding-inline-end: var(--time-w); }
+.chat-msg.mine .chat-bubble.has-reacts .chat-reacts { padding-inline-end: var(--time-w-mine); }
+.chat-bubble.has-reacts .chat-time-gap { display: none; }
+.chat-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.09);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.3;
+  cursor: pointer;
+}
+.chat-react.mine { background: rgb(var(--ember-rgb) / 0.26); cursor: default; }
+.chat-react:hover:not(.mine) { background: rgb(255 255 255 / 0.16); }
+.chat-react-e { font-size: 13px; }
+.chat-react-n { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* Telegram desktop puts a quick reaction at the edge of the bubble on hover.
+   Nothing on a touch screen: there is no hover there, and a permanent button on
+   every row is the clutter the message menu exists to avoid. */
+.chat-quick {
+  flex: 0 0 auto;
+  width: 28px; height: 28px;
+  margin-bottom: 1px;
+  padding: 0;
+  display: none;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-2);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .chat-quick { display: grid; }
+  .chat-msg:hover .chat-quick { opacity: 1; }
+  .chat-quick:hover { background: rgb(var(--ember-rgb) / 0.25); }
+  .chat-msg.mine .chat-quick { order: -1; }
+}
+
+/* Swipe-to-reply: the bubble is dragged by the pointer handler in Chat.tsx and
+   rings once it has travelled far enough for the release to mean "reply". */
+.chat-msg { position: relative; }
+.chat-msg.swiping .chat-bubble { box-shadow: 0 0 0 1.5px rgb(var(--ember-rgb) / 0.6); }
+
+/* ------------------------------------------------- jump to the newest message */
+.chat-jump {
+  position: absolute;
+  inset-inline-end: 14px;
+  inset-inline-start: auto;
+  bottom: 84px;
+  transform: none;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 44px; height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.45);
+}
+.chat-jump svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chat-jump .chat-chip-n { position: absolute; top: -5px; inset-inline-end: -3px; }
+
+/* ---------------------------------------------------------------- composer */
+.chat-replying {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px max(12px, calc((100% - var(--chat-col)) / 2));
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.chat-replying .chat-ico { flex: 0 0 auto; width: 20px; height: 20px; fill: none; stroke: var(--ember); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chat-replying-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-inline-start: 8px;
+  border-inline-start: 2px solid var(--ember);
+}
+.chat-replying-name { color: var(--ember); font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-replying-text { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; unicode-bidi: plaintext; }
+
+.chat-compose {
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px max(10px, calc((100% - var(--chat-col)) / 2)) calc(8px + env(safe-area-inset-bottom, 0));
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 70%, var(--bg));
+}
+.chat-compose textarea {
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 15px;
+  unicode-bidi: plaintext;
+}
+.chat-compose textarea:focus { border-color: color-mix(in srgb, var(--ember) 60%, var(--border)); outline: none; }
+.chat-send {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px; height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ember);
+  color: var(--ember-ink);
+  cursor: pointer;
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+.chat-send svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.chat-send:disabled { background: var(--surface-2); color: var(--muted); cursor: default; }
+.chat-send:not(:disabled):active { transform: scale(0.92); }
+.chat-compose.readonly { padding-block: 12px; }
+
+/* ------------------------------------------------------ the message menu
+   The whole point of this screen's rebuild. The conversation dims, the message
+   lifts out of the list and sits where it already was, a reaction bar floats
+   above it and the commands sit below it. */
+.chat-menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 190;
+  background: rgb(0 0 0 / 0.55);
+  animation: chatFade 140ms ease-out;
+}
+@keyframes chatFade { from { opacity: 0; } to { opacity: 1; } }
+.chat-menu-stack {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100% - 20px);
+}
+.chat-menu-stack.theirs { align-items: flex-start; }
+.chat-menu-stack.mine { align-items: flex-end; }
+.chat-menu-lift { max-width: min(86%, 520px); animation: chatLift 180ms cubic-bezier(0.2, 0.9, 0.3, 1); }
+@keyframes chatLift { from { transform: scale(0.96); opacity: 0.4; } to { transform: scale(1); opacity: 1; } }
+/* The lifted copy keeps the bubble's own shape and a tail, whatever its place
+   in the turn was. */
+.chat-menu-lift .chat-bubble {
+  max-width: 100%;
+  border-radius: var(--bub-radius);
+  background: var(--bub-in);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
+}
+.chat-menu-stack.mine .chat-menu-lift .chat-bubble { background: var(--bub-out); }
+.chat-menu-lift .chat-bubble::after { content: none; }
+.chat-menu-lift .chat-react { pointer-events: none; }
+
+.chat-reactions {
+  display: flex;
+  gap: 2px;
+  justify-content: flex-start;
+  margin: 0;
+  padding: 5px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-2) 96%, transparent);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chat-reactions::-webkit-scrollbar { display: none; }
+.chat-reaction-pick {
+  flex: 0 0 auto;
+  width: 40px; height: 40px;
+  min-width: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  animation: chatPop 220ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes chatPop { from { transform: scale(0.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.chat-reaction-pick:hover { background: rgb(255 255 255 / 0.08); }
+.chat-reaction-pick:active { transform: scale(0.88); }
+
+.chat-menu-card {
+  min-width: 212px;
+  max-width: min(100%, 290px);
+  padding: 5px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-2) 97%, transparent);
+  box-shadow: 0 12px 34px rgb(0 0 0 / 0.55);
+  overflow-y: auto;
+  animation: chatPop 160ms cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+.chat-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+}
+.chat-menu-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.chat-menu-row:hover { background: rgb(255 255 255 / 0.07); }
+.chat-menu-row:active { background: rgb(var(--ember-rgb) / 0.14); }
+.chat-menu-row.danger { color: var(--bad); }
+.chat-menu-row.danger .chat-ico { stroke: var(--bad); }
+.chat-menu-row.arming { background: color-mix(in srgb, var(--bad) 20%, transparent); font-weight: 700; }
+.chat-ico { flex: 0 0 auto; width: 19px; height: 19px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------------------------------------------------------------- sheets */
+.chat-sheet { padding-top: 10px; }
+.chat-sheet-grab {
+  width: 36px; height: 4px;
+  margin: 0 auto 10px;
+  border-radius: 2px;
+  background: var(--border);
+}
+@media (min-width: 640px) { .chat-sheet-grab { display: none; } }
+.chat-sheet-row {
+  gap: 11px;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font-weight: 500;
+}
+.chat-sheet-row + .chat-sheet-row { margin-top: 1px; }
+.chat-sheet-row:hover { background: rgb(255 255 255 / 0.06); }
+.chat-sheet-row.current { background: rgb(var(--ember-rgb) / 0.12); color: var(--ember); }
+.chat-sheet-row.current .chat-ico { stroke: var(--ember); }
+.chat-sheet-row.danger .chat-ico { stroke: var(--bad); }
+.chat-sheet-row.arming { background: color-mix(in srgb, var(--bad) 20%, transparent); font-weight: 700; }
+.chat-sheet-row > span:first-of-type, .chat-room-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-sheet-detail { margin-inline-start: auto; flex: 0 0 auto; }
+.chat-sheet-row .chat-ico + span { flex: 1 1 auto; }
+
+.chat-profile-head { align-items: center; gap: 14px; }
+.chat-profile-id { min-width: 0; }
+.chat-profile-name { min-width: 0; }
+.chat-profile-name b { display: block; font-size: 17px; overflow-wrap: anywhere; }
+.chat-profile-about { font-size: 14px; color: var(--muted); }
+.chat-sheet-addr { overflow-wrap: anywhere; word-break: break-all; font-size: 11.5px; line-height: 1.5; }
+
+/* ------------------------------------------------- private conversation list */
+.chat-dmlist { padding-inline: max(6px, calc((100% - var(--chat-col)) / 2)); }
+.chat-dm-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 8px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.chat-dm-row:hover { background: rgb(255 255 255 / 0.05); }
+.chat-dm-row .chat-avatar { width: 46px; height: 46px; font-size: 14px; }
+.chat-dm-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.chat-dm-top { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.chat-dm-top b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; unicode-bidi: isolate; }
+.chat-dm-top .chat-fp { flex: 0 0 auto; }
+.chat-dm-top time { margin-inline-start: auto; flex: 0 0 auto; color: var(--muted); font-size: 11.5px; }
+.chat-dm-last {
+  color: var(--muted);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  unicode-bidi: plaintext;
+}
+
+/* ---------------------------------------------------------------- desktop */
+@media (min-width: 640px) {
+  .chat-bubble { max-width: min(68%, 520px); }
+  .chat-menu-card { min-width: 224px; }
+  .chat-reaction-pick { width: 36px; height: 36px; font-size: 21px; }
+  .chat-jump { bottom: 92px; }
+}
+
+/* A user who has asked for less motion gets the layout, not the choreography. */
+@media (prefers-reduced-motion: reduce) {
+  .chat-bubble, .chat-menu-lift, .chat-menu-card, .chat-reaction-pick, .chat-send, .chat-menu-scrim {
+    animation: none !important;
+    transition: none !important;
+  }
+}

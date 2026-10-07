@@ -21,8 +21,12 @@ const PUBKEY_KEY = "zkas_chat_pubkey_v1";
 const RECENT_KEY = "zkas_chat_recent_v1";
 const DM_SEEN_KEY = "zkas_chat_dmseen_v1";
 
-/** The room everyone lands in. A room is a hashtag, so this is also a public
- *  Nostr feed — other clients can see it without us doing anything. */
+/** The room everyone lands in.
+ *
+ *  A room is a hashtag on ordinary Nostr notes, so any Nostr client pointed at
+ *  the ZKas relay could read it. It is NOT visible from the wider Nostr network:
+ *  nothing republishes these notes anywhere else, and Nostr relays do not gossip
+ *  with each other. One relay, reachable at one address — see `ChatClient`. */
 export const GLOBAL_ROOM = "zkas-global";
 
 /** Rooms: one global room, plus one per language the app ships.

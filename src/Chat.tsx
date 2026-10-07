@@ -3,17 +3,30 @@
 // Two screens and one rule: nothing connects to a relay until the user has read
 // what it costs them and said yes.
 //
-// Everything the chat can do is reached by tapping the thing it applies to — a
-// message, a person, the room name — so the message row itself stays free of
-// controls. See ChatSheets.tsx.
+// The room reads the way a messenger reads: bubbles, grouped turns, the time
+// inside the bubble, reactions attached under it, and one anchored menu that
+// opens on the message you touched. See ChatSheets.tsx for the menu, and
+// styles.chat.css for the layout.
 
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { getDeviceSeed } from "./lib/deviceseed";
 import { useBackClose } from "./lib/backclose";
 import { useToast } from "./toast";
-import { MessageSheet, MutedSheet, ProfileSheet, RoomsSheet } from "./ChatSheets";
+import { MessageMenu, MutedSheet, ProfileSheet, RoomsSheet, QUICK_REACTION, type Anchor } from "./ChatSheets";
+import "./styles.chat.css";
 import {
   ChatClient,
   type ChatEvent,
@@ -63,8 +76,22 @@ import {
 } from "./lib/chatprefs";
 
 const FIRSTNAME_KEY = "zkas_chat_firstnames_v1";
-/** Consecutive messages from one author inside this window share a header. */
+/** Consecutive messages from one author inside this window share a turn. */
 const GROUP_WINDOW_SECS = 5 * 60;
+/** How many messages are rendered at once, and how many more each time the list
+ *  is pulled to the top. A relay replays up to 200 notes per room and a phone
+ *  does not need 200 bubbles in the document to show the last screenful — the
+ *  full backfill put 4,100 nodes in the list and scrolling it dropped to 18fps.
+ *  Telegram pages its history in exactly this way. */
+const PAGE = 40;
+/** Pixels from the top of the list at which the next page is pulled in. */
+const EARLIER_AT = 260;
+/** Movement past this is a scroll or a swipe, not a tap. */
+const SLOP_PX = 12;
+/** A press held this long is the menu gesture, before the finger comes up. */
+const HOLD_MS = 420;
+/** How far the bubble must travel to count as swipe-to-reply. */
+const SWIPE_PX = 52;
 
 /** Connection state → its catalogue key. Written out rather than built with
  *  `"chat.state." + state`, so the i18n audit can see that each key is used and
@@ -84,6 +111,60 @@ function loadFirstNames(): Record<string, string> {
   } catch {
     return {};
   }
+}
+
+/** A message that is nothing but emoji is rendered big, as every messenger does
+ *  — a lone 👍 set in body text reads as a typo rather than a reply. */
+const PICTO = /\p{Extended_Pictographic}/u;
+const PICTO_ONLY = /^(?:\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}\u{FE0F}\u{200D}\u{20E3}\s])+$/u;
+function jumbo(text: string): boolean {
+  const s = text.trim();
+  if (!s || s.length > 12) return false;
+  return PICTO.test(s) && PICTO_ONLY.test(s);
+}
+
+/** The label on a date separator. The grouping KEY stays `toDateString()`; this
+ *  is only what the capsule says — and it has to be localised, because
+ *  `toDateString()` is English whatever the app's language is. */
+function dayLabel(unix: number, today: string, yesterday: string): string {
+  const d = new Date(unix * 1000);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return today;
+  const y = new Date(now);
+  y.setDate(y.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return yesterday;
+  return d.toLocaleDateString(
+    undefined,
+    d.getFullYear() === now.getFullYear() ? { day: "numeric", month: "long" } : { day: "numeric", month: "long", year: "numeric" },
+  );
+}
+
+/** Which way a message reads.
+ *
+ *  Decided in JS and written onto the bubble, not left to `dir="auto"` on the
+ *  text alone. The time sits in the bubble's trailing bottom corner and the
+ *  space for it is reserved at the END of the text — with the bubble LTR and the
+ *  text RTL those are opposite corners, and an Arabic message ran its last line
+ *  straight through the clock. One direction for the whole bubble keeps every
+ *  logical edge inside it on the same side. */
+const RTL_RANGE = /[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u0750-\u077F\u0780-\u07BF\u08A0-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
+const LTR_RANGE = /[A-Za-z\u00C0-\u02FF\u0370-\u058F\u0900-\u1FFF\u2C00-\u2DFF\u2E80-\uA4CF\uAC00-\uD7AF]/;
+function dirOf(text: string): "rtl" | "ltr" {
+  for (const ch of text) {
+    if (RTL_RANGE.test(ch)) return "rtl";
+    if (LTR_RANGE.test(ch)) return "ltr";
+  }
+  return "ltr";
+}
+
+function hhmm(unix: number): string {
+  return new Date(unix * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+/** A per-author name colour, the way group chats everywhere tint names. The hue
+ *  is already derived from the key for the avatar, so the two always agree. */
+function nameColor(hue: number): string {
+  return `hsl(${hue} 70% 70%)`;
 }
 
 function Avatar({ person, big }: { person: Person; big?: boolean }) {
@@ -108,7 +189,7 @@ function Avatar({ person, big }: { person: Person; big?: boolean }) {
 function Body({ text }: { text: string }) {
   const parts = text.split(/(https?:\/\/[^\s]+)/g);
   return (
-    <p className="chat-text">
+    <>
       {parts.map((p, i) =>
         /^https?:\/\//.test(p) ? (
           <a key={i} href={p} target="_blank" rel="noopener noreferrer nofollow ugc" className="chat-link">
@@ -118,7 +199,7 @@ function Body({ text }: { text: string }) {
           <span key={i}>{p}</span>
         ),
       )}
-    </p>
+    </>
   );
 }
 
@@ -157,6 +238,161 @@ export function ChatConsent({ onEnable, onClose }: { onEnable: () => void; onClo
   );
 }
 
+/** One turn in the list: the parts that live inside the bubble.
+ *
+ *  Factored out because the message menu lifts the message out of the list and
+ *  must show exactly what was touched — the same markup, not a quotation of it.
+ *
+ *  It carries NO handlers. Every gesture on a message — tap, hold, swipe,
+ *  right-click, a tap on a reaction pill or on a reply quote — is handled once,
+ *  on the list, and resolved back to a message through `data-mid`. Four hundred
+ *  rows used to be four hundred freshly allocated handler objects on every
+ *  render, and the allocation alone made every row a guaranteed re-render. */
+function Bubble({
+  m,
+  firstOfTurn,
+  parentName,
+  parentText,
+  reacts,
+  mine,
+  me,
+  anon,
+  failedLabel,
+}: {
+  m: ChatMessage;
+  firstOfTurn: boolean;
+  parentName?: string;
+  parentText?: string;
+  /** emoji → who reacted with it. Replaced wholesale when it changes, so its
+   *  identity is a usable "did this message's reactions move?" test. */
+  reacts?: Map<string, Set<string>>;
+  mine: boolean;
+  me: string;
+  anon: string;
+  failedLabel: string;
+}) {
+  const pills = reacts && reacts.size ? [...reacts.entries()] : null;
+  return (
+    <div className={"chat-bubble" + (jumbo(m.content) ? " jumbo" : "") + (pills ? " has-reacts" : "")} dir={dirOf(m.content)}>
+      {firstOfTurn && !mine && (
+        <div className="chat-author" style={{ color: nameColor(m.person.hue) }}>
+          <span className="chat-author-name" dir={dirOf(m.person.name || anon)}>{m.person.name || anon}</span>
+          {/* Always visible, never styled away: a nickname is not an identity. */}
+          <span className="chat-fp" dir="ltr">·{m.person.fingerprint}</span>
+        </div>
+      )}
+      {parentText !== undefined && (
+        <button className="chat-quote" type="button" data-quote={m.replyTo} dir={dirOf(parentText)}>
+          <span className="chat-quote-name" dir={dirOf(parentName || "")}>{parentName}</span>
+          <span className="chat-quote-text">{parentText}</span>
+        </button>
+      )}
+      <p className="chat-text">
+        <Body text={m.content} />
+        {/* Reserves the corner the time sits in, so a last line can never run
+            underneath it. The time itself is positioned, not in the flow. */}
+        <span className={mine ? "chat-time-gap mine" : "chat-time-gap"} aria-hidden="true" />
+      </p>
+      <span className="chat-time">
+        <span dir="ltr">{hhmm(m.created_at)}</span>
+        {mine && !m.failed && (
+          <svg className="chat-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M3 13l4 4L14 7M12 16l2 2 7-11" />
+          </svg>
+        )}
+      </span>
+      {m.failed && <span className="chat-failed">{failedLabel}</span>}
+      {pills && (
+        <div className="chat-reacts">
+          {pills.map(([emoji, who]) => (
+            <button
+              key={emoji}
+              type="button"
+              data-react={emoji}
+              className={me && who.has(me) ? "chat-react mine" : "chat-react"}
+            >
+              <span className="chat-react-e">{emoji === "+" ? "👍" : emoji}</span>
+              <span className="chat-react-n">{who.size}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** One row of the room: its day rule, its unread rule, and the message.
+ *
+ *  Memoised on purpose. Paging in older history, or a reaction arriving, used to
+ *  re-render every message on screen; now only the rows whose own props moved do
+ *  any work. That is only sound because `messages` reuses message objects whose
+ *  inputs have not changed and the reaction maps are replaced rather than
+ *  mutated — see `messages` and `ingest`. */
+const MessageRow = memo(function MessageRow({
+  m,
+  day,
+  firstOfTurn,
+  lastOfTurn,
+  firstUnread,
+  parentName,
+  parentText,
+  reacts,
+  me,
+  anon,
+  failedLabel,
+  newLabel,
+  reactLabel,
+}: {
+  m: ChatMessage;
+  day?: string;
+  firstOfTurn: boolean;
+  lastOfTurn: boolean;
+  firstUnread: boolean;
+  parentName?: string;
+  parentText?: string;
+  reacts?: Map<string, Set<string>>;
+  me: string;
+  anon: string;
+  failedLabel: string;
+  newLabel: string;
+  reactLabel: string;
+}) {
+  return (
+    <div className={day ? "chat-slot has-day" : "chat-slot"}>
+      {day && <div className="chat-day"><span>{day}</span></div>}
+      {firstUnread && <div className="chat-unread-rule"><span>{newLabel}</span></div>}
+      <div
+        data-mid={m.id}
+        className={
+          "chat-msg" +
+          (m.mine ? " mine" : "") +
+          (firstOfTurn ? " first" : "") +
+          (lastOfTurn ? " last" : "") +
+          (m.failed ? " failed" : "")
+        }
+      >
+        {!m.mine && (lastOfTurn ? <Avatar person={m.person} /> : <span className="chat-avatar spacer" aria-hidden="true" />)}
+        <Bubble
+          m={m}
+          mine={m.mine}
+          me={me}
+          firstOfTurn={firstOfTurn}
+          parentName={parentName}
+          parentText={parentText}
+          reacts={reacts}
+          anon={anon}
+          failedLabel={failedLabel}
+        />
+        {/* Desktop's quick reaction: Telegram puts it at the edge of the bubble
+            on hover, so the commonest action never opens a menu. */}
+        <button className="chat-quick" data-quick="1" aria-label={reactLabel} title={reactLabel}>
+          👍
+        </button>
+      </div>
+    </div>
+  );
+});
+
 export function ChatScreen({
   onClose,
   onTip,
@@ -171,9 +407,29 @@ export function ChatScreen({
   const toast = useToast();
   const [room, setRoom] = useState(currentRoom());
   const [state, setState] = useState<ConnectionState>("offline");
-  const [notes, setNotes] = useState<Map<string, ChatEvent>>(new Map());
-  const [profiles, setProfiles] = useState<Map<string, { name?: string; zkas?: string; about?: string }>>(new Map());
-  const [reactions, setReactions] = useState<Map<string, Map<string, Set<string>>>>(new Map());
+
+  /** Everything the relay has delivered, held in a ref and revised by a counter.
+   *
+   *  This used to be three `useState` Maps, each CLONED on every arriving event.
+   *  A 400-note backfill therefore built 400 Maps and ran 400 renders of the
+   *  whole list — quadratic, and the single biggest cause of the screen feeling
+   *  slow. Events now mutate the store and schedule ONE render per frame. */
+  const store = useRef({
+    notes: new Map<string, ChatEvent>(),
+    profiles: new Map<string, { name?: string; zkas?: string; about?: string }>(),
+    reactions: new Map<string, Map<string, Set<string>>>(),
+  });
+  const [rev, setRev] = useState(0);
+  const frame = useRef<number | null>(null);
+  const bump = useCallback(() => {
+    if (frame.current !== null) return;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = null;
+      setRev((n) => n + 1);
+    });
+  }, []);
+  useEffect(() => () => { if (frame.current !== null) cancelAnimationFrame(frame.current); }, []);
+
   const [muted, setMuted] = useState<string[]>(() => mutedKeys());
   const [firstNames, setFirstNames] = useState<Record<string, string>>(loadFirstNames);
   const [draft, setDraft] = useState("");
@@ -186,8 +442,12 @@ export function ChatScreen({
   const [addrDraft, setAddrDraft] = useState(myZkasAddress());
   const [aboutDraft, setAboutDraft] = useState(myBio());
   const [me, setMe] = useState("");
-  const [sheet, setSheet] = useState<null | { kind: "msg" | "profile" | "rooms" | "muted"; id?: string; pubkey?: string }>(null);
+  const [sheet, setSheet] = useState<null | { kind: "profile" | "rooms" | "muted"; pubkey?: string }>(null);
+  /** The anchored message menu: which message, and where it was on screen. */
+  const [menu, setMenu] = useState<null | { id: string; anchor: Anchor }>(null);
   const [atBottom, setAtBottom] = useState(true);
+  /** How much history is in the document. Grows as the list is pulled upward. */
+  const [limit, setLimit] = useState(PAGE);
   // One screen, three views: the room, the list of private conversations, and
   // one conversation. Keeping them here means one socket and one layout.
   const [view, setView] = useState<{ k: "room" } | { k: "dms" } | { k: "dm"; peer: string }>({ k: "room" });
@@ -219,15 +479,26 @@ export function ChatScreen({
   meRef.current = me;
 
   const canPost = useMemo(() => !!getDeviceSeed(), []);
-  // Swipe-right-to-reply. The action sheet holds everything, but replying is the
-  // one action common enough that making it cost two taps was a regression from
-  // the visible button it replaced — so it also gets a gesture.
-  const swipe = useRef<{ id: string; x: number; y: number; at: number; held: boolean } | null>(null);
+  const swipe = useRef<{ id: string; x: number; y: number; el: HTMLElement; handled: boolean; hold: number } | null>(null);
 
   const client = useRef<ChatClient | null>(null);
   const bottom = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const composer = useRef<HTMLTextAreaElement | null>(null);
+  const composeBox = useRef<HTMLDivElement | null>(null);
+
+  /** Put the newest message against the bottom of the list.
+   *
+   *  One function, called from everywhere that can change the usable height —
+   *  new messages, the composer growing a line, the on-screen keyboard opening.
+   *  Before this, only new messages re-pinned, so typing a three-line message
+   *  pushed the message you were replying to underneath the composer. */
+  const pin = useCallback(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
+  const atBottomRef = useRef(true);
+  atBottomRef.current = atBottom;
 
   // The on-screen keyboard does not shrink the layout viewport, so a fixed
   // full-height panel keeps its composer underneath it. visualViewport reports
@@ -235,7 +506,12 @@ export function ChatScreen({
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const apply = () => document.documentElement.style.setProperty("--chat-vh", `${vv.height}px`);
+    const apply = () => {
+      document.documentElement.style.setProperty("--chat-vh", `${vv.height}px`);
+      // The viewport just changed height under a fixed panel: whatever was at
+      // the bottom is now behind the keyboard unless we follow it down.
+      if (atBottomRef.current) requestAnimationFrame(pin);
+    };
     apply();
     vv.addEventListener("resize", apply);
     vv.addEventListener("scroll", apply);
@@ -244,7 +520,19 @@ export function ChatScreen({
       vv.removeEventListener("scroll", apply);
       document.documentElement.style.removeProperty("--chat-vh");
     };
-  }, []);
+  }, [pin]);
+
+  // The composer grows with the message. Every pixel it gains is a pixel the
+  // list loses, so the list has to follow.
+  useEffect(() => {
+    const el = composeBox.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      if (atBottomRef.current) pin();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [pin, view.k, state, canPost]);
 
   useEffect(() => {
     if (!canPost) return;
@@ -260,11 +548,13 @@ export function ChatScreen({
 
   // One ingest path for every kind. Notes, profiles, reactions and the mute list
   // are all just events; keeping them on one path is what stops the four from
-  // drifting apart.
+  // drifting apart. Nothing here clones a collection — see `store`.
   const ingest = useCallback((ev: ChatEvent) => {
+    const s = store.current;
     if (ev.kind === KIND_PROFILE) {
       const p = parseProfile(ev.content);
-      setProfiles((prev) => new Map(prev).set(ev.pubkey, p));
+      s.profiles.set(ev.pubkey, p);
+      bump();
       if (p.name) {
         setFirstNames((prev) => {
           if (prev[ev.pubkey]) return prev;
@@ -282,15 +572,16 @@ export function ChatScreen({
     if (ev.kind === KIND_REACTION) {
       const target = ev.tags.find((tg) => tg[0] === "e")?.[1];
       if (!target) return;
-      setReactions((prev) => {
-        const next = new Map(prev);
-        const forTarget = new Map(next.get(target) ?? []);
-        const who = new Set(forTarget.get(ev.content) ?? []);
-        who.add(ev.pubkey);
-        forTarget.set(ev.content, who);
-        next.set(target, forTarget);
-        return next;
-      });
+      const forTarget = s.reactions.get(target);
+      if (forTarget?.get(ev.content)?.has(ev.pubkey)) return;
+      // Copy on write, but only for the ONE message reacted to. The map handed
+      // to a row is then stable for as long as that row's reactions are, which
+      // is what lets the row skip re-rendering (see `MessageRow`) — a store that
+      // mutated in place would have been invisible to it.
+      const next = new Map(forTarget ?? []);
+      next.set(ev.content, new Set([...(forTarget?.get(ev.content) ?? []), ev.pubkey]));
+      s.reactions.set(target, next);
+      bump();
       return;
     }
     if (ev.kind === KIND_MUTE_LIST) {
@@ -299,6 +590,7 @@ export function ChatScreen({
       const remote = ev.tags.filter((tg) => tg[0] === "p").map((tg) => tg[1]);
       setMuted((prev) => {
         const merged = [...new Set([...prev, ...remote])];
+        if (merged.length === prev.length) return prev;
         setMutedKeys(merged);
         return merged;
       });
@@ -348,9 +640,12 @@ export function ChatScreen({
         }
         return;
       }
-      setNotes((prev) => (prev.has(ev.id) ? prev : new Map(prev).set(ev.id, ev)));
+      if (!s.notes.has(ev.id)) {
+        s.notes.set(ev.id, ev);
+        bump();
+      }
     }
-  }, []);
+  }, [bump]);
 
   // ONE socket for as long as the screen is open. This used to depend on `room`,
   // so every switch tore the WebSocket down and opened a new one — a handshake
@@ -384,6 +679,7 @@ export function ChatScreen({
   useEffect(() => {
     client.current?.setRoom(room);
     setSinceOpen(lastSeen(room));
+    setLimit(PAGE);
     // Whatever was counted for the room we just opened is now on screen.
     setPeek((prev) => (prev[room] ? { ...prev, [room]: 0 } : prev));
   }, [room]);
@@ -431,84 +727,15 @@ export function ChatScreen({
     setAtBottom(true);
     setView({ k: "room" });
     setSheet(null);
+    setMenu(null);
     if (r === roomRef.current) return;
-    setNotes(new Map());
+    store.current.notes = new Map();
+    bump();
     setRoom(r);
     setCurrentRoom(r);
     rememberRoom(r);
     setVisited((n) => n + 1);
-  }, []);
-
-  /** How a message is operated.
-   *
-   *  A single tap used to open the action sheet, and the sheet opened under the
-   *  finger — so tapping a message twice landed the second tap on a row, and
-   *  "Mute this person" is one of them. People muted strangers without ever
-   *  seeing the menu. A single tap now does nothing at all, and the two
-   *  gestures every messenger already trains people in do the work:
-   *
-   *    hold        → the action sheet (right-click on a desktop)
-   *    double tap  → 👍, the one reaction common enough to deserve a gesture
-   *    swipe right → reply
-   *
-   *  Hold is cancelled by movement, so scrolling the list never opens anything.
-   */
-  /** Movement past this is a scroll or a swipe, not a tap. */
-  const SLOP_PX = 12;
-
-  /** How a message is operated.
-   *
-   *  A tap opens the action sheet, immediately — waiting on a long press to
-   *  read someone's message is a delay with nothing to show for it.
-   *
-   *  What a tap must NOT do is run something. The sheet opens under the finger,
-   *  so a second tap used to land on a row, and "Mute this person" is one of
-   *  them: people muted strangers without ever seeing the menu. That is fixed
-   *  where it belongs — the sheet ignores taps for its first 350ms, and mute and
-   *  report take two deliberate taps with the second one spelled out — not by
-   *  making every reader hold their thumb down.
-   *
-   *  The pointer handlers exist only for swipe-to-reply; a swipe suppresses the
-   *  click that would otherwise follow it.
-   */
-  const gestures = useCallback(
-    (m: ChatMessage) => ({
-      onPointerDown: (e: ReactPointerEvent) => {
-        swipe.current = { id: m.id, x: e.clientX, y: e.clientY, at: Date.now(), held: false };
-      },
-      onPointerCancel: () => {
-        swipe.current = null;
-      },
-      onPointerUp: (e: ReactPointerEvent) => {
-        const st = swipe.current;
-        if (!st || st.id !== m.id) return;
-        const dx = e.clientX - st.x;
-        const dy = e.clientY - st.y;
-        // Rightward and far enough to be deliberate rather than a sloppy tap.
-        if (dx > 60 && Math.abs(dy) < 60) {
-          st.held = true; // reuse: "this gesture was handled, swallow the click"
-          setReplyTo(m);
-          return;
-        }
-        // A scroll that began on this message is not a tap on it either.
-        if (Math.abs(dx) > SLOP_PX || Math.abs(dy) > SLOP_PX) st.held = true;
-      },
-      onClick: () => {
-        const handled = swipe.current?.held;
-        swipe.current = null;
-        if (handled) return;
-        setSheet({ kind: "msg", id: m.id, pubkey: m.pubkey });
-      },
-      // Right-click reaches the same menu, so a desktop context menu does not
-      // sit on top of the app's own.
-      onContextMenu: (e: ReactMouseEvent) => {
-        e.preventDefault();
-        swipe.current = null;
-        setSheet({ kind: "msg", id: m.id, pubkey: m.pubkey });
-      },
-    }),
-    [],
-  );
+  }, [bump]);
 
   /** Open your own profile for editing, loaded with what was last saved rather
    *  than a stale draft from earlier in this session. */
@@ -517,16 +744,18 @@ export function ChatScreen({
     setAddrDraft(myZkasAddress());
     setAboutDraft(myBio());
     setSheet(null);
+    setMenu(null);
     setAskName(true);
   }, []);
 
-  /** Open a private conversation. Used by the message sheet, the profile sheet
+  /** Open a private conversation. Used by the message menu, the profile sheet
    *  and the conversation list, so all three land in the same state — the list
    *  reset `atBottom`, the profile did not, and a thread opened from a profile
    *  could therefore open scrolled away from its newest message. */
   const openDm = useCallback((peer: string) => {
     setAtBottom(true);
     setSheet(null);
+    setMenu(null);
     setView({ k: "dm", peer });
   }, []);
 
@@ -579,9 +808,27 @@ export function ChatScreen({
     });
   }
 
+  /** The handful of strings a row needs, resolved once. Passing `t` itself into
+   *  four hundred memoised rows defeats the memo the moment react-i18next hands
+   *  back a new function. */
+  const anon = t("chat.anon");
+  const failedLabel = t("chat.failedTap");
+  const newLabel = t("chat.newMessages");
+  const reactLabel = t("chat.actions.react");
+  const todayLabel = t("chat.today");
+  const yesterdayLabel = t("chat.yesterday");
+  /** The app's own string may still carry a leading arrow (the label used to BE
+   *  "← Wallet"); the header draws a chevron now, so one is stripped whatever
+   *  the locale wrote. */
+  const backLabel = t("chat.back").replace(/^[\s←⟵<‹«]+/, "");
+
+  /** A Set, not an array scan. `muted.includes()` ran once per message on every
+   *  render, which on a full backfill is a few hundred linear scans a frame. */
+  const mutedSet = useMemo(() => new Set(muted), [muted]);
+
   const person = useCallback(
     (pubkey: string): Person => {
-      const p = profiles.get(pubkey);
+      const p = store.current.profiles.get(pubkey);
       return {
         pubkey,
         name: p?.name,
@@ -590,57 +837,158 @@ export function ChatScreen({
         firstName: firstNames[pubkey],
         fingerprint: fingerprintOf(pubkey),
         hue: hueOf(pubkey),
-        muted: muted.includes(pubkey),
+        muted: mutedSet.has(pubkey),
       };
+      // `rev` is a dependency because profiles live in the store, not in state.
     },
-    [profiles, firstNames, muted],
+    [firstNames, mutedSet, rev],
   );
 
+  /** Decorated messages, REUSED when nothing about them has changed.
+   *
+   *  Every arriving event revises `rev`, and this ran again on each one — fine,
+   *  except that it rebuilt a new object for all four hundred messages every
+   *  time, which made each of them a new prop and so a guaranteed re-render of
+   *  the whole list. A message whose author, text, delivery state and mute
+   *  status are unchanged now comes back as the SAME object, which is what lets
+   *  `MessageRow` skip it. */
+  const decorated = useRef(new Map<string, ChatMessage>());
   const messages: ChatMessage[] = useMemo(() => {
-    const mutedSet = new Set(muted);
-    return [...notes.values()]
-      .filter((ev) => !mutedSet.has(ev.pubkey))
-      .map((ev) => ({
+    const cache = decorated.current;
+    const out: ChatMessage[] = [];
+    const live = new Set<string>();
+    for (const ev of store.current.notes.values()) {
+      if (mutedSet.has(ev.pubkey)) continue;
+      live.add(ev.id);
+      const who = person(ev.pubkey);
+      const mine = !!me && ev.pubkey === me;
+      const bad = failed.has(ev.id);
+      const had = cache.get(ev.id);
+      if (
+        had &&
+        had.mine === mine &&
+        had.failed === bad &&
+        had.person.name === who.name &&
+        had.person.zkas === who.zkas &&
+        had.person.about === who.about &&
+        had.person.firstName === who.firstName
+      ) {
+        out.push(had);
+        continue;
+      }
+      const next: ChatMessage = {
         ...ev,
-        person: person(ev.pubkey),
+        person: who,
         replyTo: ev.tags.find((tg) => tg[0] === "e")?.[1],
-        mine: !!me && ev.pubkey === me,
-        failed: failed.has(ev.id),
-      }))
-      // `created_at` is author-supplied, so ties break on id to keep the order
-      // stable rather than jittering between renders.
-      .sort((a, b) => a.created_at - b.created_at || a.id.localeCompare(b.id));
-  }, [notes, muted, me, person, failed]);
+        mine,
+        failed: bad,
+      };
+      cache.set(ev.id, next);
+      out.push(next);
+    }
+    // Switching rooms empties the note store; the cache must not outlive it.
+    if (cache.size > live.size * 2 + 64) for (const k of cache.keys()) if (!live.has(k)) cache.delete(k);
+    // `created_at` is author-supplied, so ties break on id to keep the order
+    // stable rather than jittering between renders.
+    return out.sort((a, b) => a.created_at - b.created_at || a.id.localeCompare(b.id));
+  }, [mutedSet, me, person, failed, rev]);
 
   useEffect(() => {
     // Muted authors are filtered out of `messages`, so asking only about those
     // left meant a muted person's name was never fetched — and the muted list
     // could then only ever show "anon".
     const want = [...new Set([...messages.map((m) => m.pubkey), ...muted])];
-    const unknown = want.filter((p) => !profiles.has(p));
+    const unknown = want.filter((p) => !store.current.profiles.has(p));
     if (unknown.length) client.current?.requestProfiles(unknown);
-  }, [messages, profiles, muted]);
+  }, [messages, muted, rev]);
 
-  useEffect(() => {
+  /** The window of history that is actually in the document. */
+  const hasEarlier = messages.length > limit;
+  const visible = useMemo(() => (hasEarlier ? messages.slice(-limit) : messages), [messages, limit, hasEarlier]);
+
+  /** Rows, with the turn structure resolved once instead of inside the map.
+   *
+   *  A turn needs to know where it ENDS as well as where it starts — the avatar
+   *  belongs to the last bubble of a run and the corner is only rounded there —
+   *  and that cannot be decided from a `prev` variable carried down the list. */
+  const rows = useMemo(() => {
+    let lastDay = "";
+    return visible.map((m, i) => {
+      const day = new Date(m.created_at * 1000).toDateString();
+      const newDay = day !== lastDay;
+      if (newDay) lastDay = day;
+      const before = i > 0 ? visible[i - 1] : undefined;
+      const after = i + 1 < visible.length ? visible[i + 1] : undefined;
+      const sameTurn = (a: ChatMessage | undefined, b: ChatMessage) =>
+        !!a && a.pubkey === b.pubkey && Math.abs(b.created_at - a.created_at) < GROUP_WINDOW_SECS;
+      const parent = m.replyTo ? store.current.notes.get(m.replyTo) : undefined;
+      return {
+        m,
+        day: newDay ? dayLabel(m.created_at, todayLabel, yesterdayLabel) : undefined,
+        firstOfTurn: newDay || !sameTurn(before, m),
+        lastOfTurn: !after || !sameTurn(m, after) || new Date(after.created_at * 1000).toDateString() !== day,
+        firstUnread: !m.mine && m.created_at > sinceOpen && (!before || before.created_at <= sinceOpen),
+        parentName: parent ? person(parent.pubkey).name || anon : undefined,
+        parentText: parent ? parent.content : undefined,
+        reacts: store.current.reactions.get(m.id),
+      };
+    });
+  }, [visible, sinceOpen, person, anon, todayLabel, yesterdayLabel, rev]);
+
+  /** Pull in the previous page, keeping the reading position still. */
+  const growFrom = useRef<number | null>(null);
+  const loadEarlier = useCallback(() => {
+    const el = listRef.current;
+    growFrom.current = el ? el.scrollHeight - el.scrollTop : null;
+    setLimit((n) => n + PAGE);
+  }, []);
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el || growFrom.current === null) return;
+    el.scrollTop = el.scrollHeight - growFrom.current;
+    growFrom.current = null;
+  }, [limit]);
+
+  useLayoutEffect(() => {
     // Set scrollTop so the movement stays INSIDE the list. `scrollIntoView`
     // walks up every scrollable ancestor, which on a phone drags the page and
     // fights the keyboard.
-    if (atBottom && listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
-    const newest = messages[messages.length - 1];
-    if (newest && atBottom) markSeen(room, newest.created_at);
-  }, [messages, atBottom, room, view, dms]);
+    if (atBottom && growFrom.current === null) pin();
+  }, [rows, atBottom, room, view, dms, replyTo, pin]);
 
   useEffect(() => {
-    const last = messages[messages.length - 1];
-    if (last) newestInRoom.current = Math.max(newestInRoom.current, last.created_at);
-  }, [messages]);
+    const newest = messages[messages.length - 1];
+    if (newest && atBottom) markSeen(room, newest.created_at);
+    if (newest) newestInRoom.current = Math.max(newestInRoom.current, newest.created_at);
+  }, [messages, atBottom, room]);
 
-  const unreadCount = messages.filter((m) => m.created_at > sinceOpen && !m.mine).length;
+  const unreadCount = useMemo(
+    () => messages.reduce((n, m) => (m.created_at > sinceOpen && !m.mine ? n + 1 : n), 0),
+    [messages, sinceOpen],
+  );
 
   async function publishSigned(kind: number, tags: string[][], content: string): Promise<void> {
     const signed = await signAs(getDeviceSeed(), 0, kind, tags, content);
     client.current?.publish(signed);
   }
+
+  /** React, and show it at once.
+   *
+   *  The reaction used to appear only when the relay echoed it back, so the one
+   *  thing the owner asked to be immediate was the one thing that waited on a
+   *  round trip. It is ingested locally first; the echo dedupes by pubkey. */
+  const react = useCallback(
+    async (m: ChatMessage, emoji: string) => {
+      try {
+        const signed = await signAs(getDeviceSeed(), 0, KIND_REACTION, reactionTags(m, roomRef.current), emoji);
+        ingest(JSON.parse(signed) as ChatEvent);
+        client.current?.publish(signed);
+      } catch {
+        /* a reaction that cannot be signed is not worth an error banner */
+      }
+    },
+    [ingest],
+  );
 
   async function send(retryBody?: string) {
     const body = (retryBody ?? draft).trim();
@@ -669,6 +1017,7 @@ export function ChatScreen({
       setFailed((prev) => { const n = new Set(prev); n.delete(localId); return n; });
       setDraft("");
       setReplyTo(null);
+      setAtBottom(true);
     } catch (e) {
       if (localId) setFailed((prev) => new Set(prev).add(localId));
       setError(String(e).includes("chat-engine-missing") ? "engine" : "send");
@@ -707,6 +1056,7 @@ export function ChatScreen({
       if (composer.current) composer.current.style.height = "auto";
     }
     composer.current?.focus();
+    pin();
   }
 
   async function saveName() {
@@ -726,11 +1076,12 @@ export function ChatScreen({
   }
 
   async function toggleMute(pubkey: string) {
-    const wasMuted = muted.includes(pubkey);
+    const wasMuted = mutedSet.has(pubkey);
     const next = wasMuted ? muted.filter((k) => k !== pubkey) : [...muted, pubkey];
     setMuted(next);
     setMutedKeys(next);
     setSheet(null);
+    setMenu(null);
     toast.show("good", wasMuted ? t("chat.toast.unmuted") : t("chat.toast.muted"));
     try {
       await publishSigned(KIND_MUTE_LIST, muteTags(next), "");
@@ -739,12 +1090,205 @@ export function ChatScreen({
     }
   }
 
-  const openMessage = sheet?.kind === "msg" ? messages.find((m) => m.id === sheet.id) : undefined;
+  /** Open the anchored menu on the bubble that was touched. */
+  const openMenu = useCallback((m: ChatMessage, el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    setMenu({ id: m.id, anchor: { top: r.top, bottom: r.bottom, left: r.left, right: r.right, mine: m.mine } });
+  }, []);
+
+  /** Jump to the message a reply quotes, and flash it.
+   *
+   *  A quote that cannot be followed is decoration. If the parent is older than
+   *  the window currently in the document, the window grows until it is in. */
+  const goToMessage = useCallback(
+    (id: string) => {
+      const show = () => {
+        const el = listRef.current?.querySelector(`[data-mid="${CSS.escape(id)}"]`) as HTMLElement | null;
+        if (!el) return false;
+        const list = listRef.current!;
+        list.scrollTop = el.offsetTop - list.clientHeight / 2 + el.clientHeight / 2;
+        setAtBottom(false);
+        el.classList.remove("flash");
+        // Reflow, so re-flashing the same row restarts the animation.
+        void el.offsetWidth;
+        el.classList.add("flash");
+        return true;
+      };
+      if (show()) return;
+      const idx = messages.findIndex((m) => m.id === id);
+      if (idx < 0) return;
+      growFrom.current = null;
+      setLimit(Math.max(limit, messages.length - idx + PAGE));
+      requestAnimationFrame(() => requestAnimationFrame(show));
+    },
+    [messages, limit],
+  );
+
+  /** How a message is operated — Telegram's grammar, as closely as the web
+   *  allows:
+   *
+   *    tap / click   → the anchored menu (reactions above, commands below)
+   *    press & hold  → the same menu, on the hold rather than the release
+   *    right-click   → the same menu, so a desktop context menu does not sit on
+   *                    top of the app's own
+   *    swipe right   → reply, with the bubble following the finger
+   *    tap a pill    → add your reaction to one already there, opening nothing
+   *
+   *  What a tap must NOT do is run something. The menu opens under the finger,
+   *  so a second tap used to land on a row, and "Mute this person" is one of
+   *  them. That is fixed where it belongs — the menu ignores taps for its first
+   *  350ms, and mute and report take two deliberate taps with the second one
+   *  spelled out — not by making every reader hold their thumb down.
+   *
+   *  ONE set of handlers, on the list, not one per row. The gesture is resolved
+   *  back to a message through the `data-mid` on the row, which is also what the
+   *  reply-quote jump looks a message up by. */
+  const byId = useMemo(() => new Map(visible.map((m) => [m.id, m])), [visible]);
+  const hit = useCallback(
+    (e: { target: EventTarget | null }) => {
+      const el = (e.target as HTMLElement | null)?.closest?.("[data-mid]") as HTMLElement | null;
+      const id = el?.getAttribute("data-mid");
+      const m = id ? byId.get(id) : undefined;
+      return m ? { m, el: el!.querySelector(".chat-bubble") as HTMLElement | null } : null;
+    },
+    [byId],
+  );
+
+  const release = useCallback(() => {
+    const st = swipe.current;
+    if (!st) return;
+    clearTimeout(st.hold);
+    st.el.style.transition = "";
+    st.el.style.transform = "";
+    st.el.closest(".chat-msg")?.classList.remove("swiping");
+  }, []);
+
+  const listGestures = {
+    onPointerDown: (e: ReactPointerEvent) => {
+      const h = hit(e);
+      if (!h?.el) return;
+      const el = h.el;
+      const m = h.m;
+      const hold = window.setTimeout(() => {
+        if (swipe.current?.id === m.id) {
+          swipe.current.handled = true;
+          el.style.transform = "";
+          openMenu(m, el);
+        }
+      }, HOLD_MS);
+      swipe.current = { id: m.id, x: e.clientX, y: e.clientY, el, handled: false, hold };
+    },
+    onPointerMove: (e: ReactPointerEvent) => {
+      const st = swipe.current;
+      if (!st || st.handled) return;
+      const dx = e.clientX - st.x;
+      const dy = e.clientY - st.y;
+      if (Math.abs(dx) > SLOP_PX || Math.abs(dy) > SLOP_PX) clearTimeout(st.hold);
+      // Touch only. With a mouse, dragging across a message is how a person
+      // SELECTS its text to copy, and hijacking that to drag the bubble made
+      // desktop selection impossible. Desktop replies from the menu.
+      if (e.pointerType === "mouse") return;
+      // Rightward and roughly level: track the finger, with resistance.
+      if (dx > SLOP_PX && Math.abs(dy) < 44) {
+        st.el.style.transition = "none";
+        st.el.style.transform = `translateX(${Math.min(dx * 0.55, 64)}px)`;
+        st.el.closest(".chat-msg")?.classList.toggle("swiping", dx > SWIPE_PX);
+      }
+    },
+    onPointerCancel: () => {
+      release();
+      swipe.current = null;
+    },
+    onPointerUp: (e: ReactPointerEvent) => {
+      const st = swipe.current;
+      if (!st) return;
+      release();
+      if (st.handled) return;
+      const dx = e.clientX - st.x;
+      const dy = e.clientY - st.y;
+      if (e.pointerType !== "mouse" && dx > SWIPE_PX && Math.abs(dy) < 60) {
+        st.handled = true; // "this gesture was handled, swallow the click"
+        const m = byId.get(st.id);
+        if (m) setReplyTo(m);
+        composer.current?.focus();
+        return;
+      }
+      // A scroll that began on this message is not a tap on it either.
+      if (Math.abs(dx) > SLOP_PX || Math.abs(dy) > SLOP_PX) st.handled = true;
+    },
+    onClick: (e: ReactMouseEvent) => {
+      const handled = swipe.current?.handled;
+      swipe.current = null;
+      if (handled) return;
+      const target = e.target as HTMLElement;
+      const h = hit(e);
+      if (!h) return;
+      // A reaction pill, the quick-react button and the reply quote are their
+      // own controls, not a tap on the message.
+      const pill = target.closest("[data-react]");
+      if (pill) {
+        const emoji = pill.getAttribute("data-react");
+        const already = pill.classList.contains("mine");
+        if (emoji && !already) void react(h.m, emoji);
+        return;
+      }
+      if (target.closest("[data-quick]")) {
+        void react(h.m, QUICK_REACTION);
+        return;
+      }
+      const quote = target.closest("[data-quote]");
+      if (quote) {
+        const to = quote.getAttribute("data-quote");
+        if (to) goToMessage(to);
+        return;
+      }
+      if (target.closest(".chat-link")) return;
+      if (h.el) openMenu(h.m, h.el);
+    },
+    onContextMenu: (e: ReactMouseEvent) => {
+      const h = hit(e);
+      if (!h?.el) return;
+      e.preventDefault();
+      if (swipe.current) clearTimeout(swipe.current.hold);
+      swipe.current = null;
+      openMenu(h.m, h.el);
+    },
+  };
+
+  const openMessage = menu ? messages.find((m) => m.id === menu.id) : undefined;
   const openPerson = sheet?.kind === "profile" && sheet.pubkey ? person(sheet.pubkey) : undefined;
 
   const dot = state === "live" ? "chat-dot live" : state === "connecting" ? "chat-dot warm" : "chat-dot off";
-  let lastDay = "";
-  let prev: ChatMessage | null = null;
+
+  /** The rendered conversation, built only when the conversation changes.
+   *
+   *  Scrolling re-renders this screen (the at-bottom flag lives here), and that
+   *  used to mean re-creating one element per message — four hundred of them,
+   *  every frame, which was most of the cost of a scroll. Handing React the same
+   *  element objects lets it skip the whole subtree. */
+  const listBody = useMemo(
+    () => rows.map((r) => <MessageRow key={r.m.id} {...r} me={me} anon={anon} failedLabel={failedLabel} newLabel={newLabel} reactLabel={reactLabel} />),
+    [rows, me, anon, failedLabel, newLabel, reactLabel],
+  );
+
+  /** The copy of a message the menu lifts out of the list. Same component the
+   *  list uses, so what you act on is what you touched. */
+  const liftedBubble = (m: ChatMessage): ReactNode => {
+    const parent = m.replyTo ? store.current.notes.get(m.replyTo) : undefined;
+    return (
+      <Bubble
+        m={m}
+        mine={m.mine}
+        me={me}
+        firstOfTurn
+        parentName={parent ? person(parent.pubkey).name || anon : undefined}
+        parentText={parent ? parent.content : undefined}
+        reacts={store.current.reactions.get(m.id)}
+        anon={anon}
+        failedLabel={failedLabel}
+      />
+    );
+  };
 
   return createPortal(
     <div className="chat-screen" role="dialog" aria-modal="true" aria-label={t("chat.roomAria")}>
@@ -752,14 +1296,16 @@ export function ChatScreen({
         {/* Back steps WITHIN chat first — thread → list → room → wallet — so a
             private conversation is not one tap from vanishing. */}
         <button
-          className="btn ghost chat-back"
+          className="chat-back"
+          aria-label={backLabel}
           onClick={() => {
             if (view.k === "dm") setView({ k: "dms" });
             else if (view.k === "dms") setView({ k: "room" });
             else onClose();
           }}
         >
-          {t("chat.back")}
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" /></svg>
+          <span className="chat-back-label">{backLabel}</span>
         </button>
         <button
           className="chat-title"
@@ -776,6 +1322,11 @@ export function ChatScreen({
             {view.k === "dm" ? t("chat.dm.headerNote") : t(STATE_LABEL[state])}
           </span>
         </button>
+        {/* On the header line, opposite Wallet — not at the end of the room
+            strip, where it sat past the right edge and had to be scrolled to. */}
+        <button className="chat-icon-btn" onClick={() => setSheet({ kind: "rooms" })} aria-label={t("chat.rooms.all")} title={t("chat.rooms.all")}>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        </button>
         {/* Your own profile, where every messenger puts it: your avatar, in the
             header. It was only reachable through a row inside the "All rooms"
             sheet — a sheet about ROOMS — so nobody found it. */}
@@ -784,28 +1335,19 @@ export function ChatScreen({
             {me ? me.slice(0, 2) : "·"}
           </span>
         </button>
-        {/* On the header line, opposite Wallet — not at the end of the room
-            strip, where it sat past the right edge and had to be scrolled to.
-            The strip is for the rooms you move between; the full list is a
-            different kind of thing and belongs with the other navigation. */}
-        <button className="chat-chip more" onClick={() => setSheet({ kind: "rooms" })}>
-          {t("chat.rooms.all")}
-        </button>
       </header>
 
       {/* The switcher, always on screen. Rooms AND the open conversation at once,
           so moving between them is one tap on something already visible rather
           than a tap to open a sheet and a tap to pick a row — and so a newcomer
-          can see that more than one room exists at all. The last chip opens the
-          full list; the first is private messages, which belong in the same row
-          because they are another place to be, not a different kind of thing. */}
+          can see that more than one room exists at all. */}
       <nav className="chat-rooms" aria-label={t("chat.rooms.title")}>
         <button
           className={view.k === "room" ? "chat-chip" : "chat-chip on"}
           aria-current={view.k !== "room"}
           onClick={() => { setAtBottom(true); setView({ k: "dms" }); }}
         >
-          {t("chat.dm.title")}
+          <span className="chat-chip-label">{t("chat.dm.title")}</span>
           {dmUnread > 0 && <span className="chat-chip-n">{dmUnread}</span>}
         </button>
         {chipRooms.map((r) => (
@@ -815,34 +1357,40 @@ export function ChatScreen({
             aria-current={view.k === "room" && r === room}
             onClick={() => pickRoom(r)}
           >
-            {roomLabel(r)}
+            <span className="chat-chip-label">{roomLabel(r)}</span>
             {r !== room && peek[r] > 0 && <span className="chat-chip-n">{peek[r]}</span>}
           </button>
         ))}
       </nav>
 
-      {error === "engine" && <div className="msg warn small">{t("chat.errEngine")}</div>}
+      {error === "engine" && <div className="msg warn small chat-banner">{t("chat.errEngine")}</div>}
 
       {view.k === "dms" && (
-        <div className="chat-list" ref={listRef}>
-          {dms.size === 0 && <p className="muted small chat-empty">{t("chat.dm.none")}</p>}
+        <div className="chat-list chat-dmlist" ref={listRef}>
+          {dms.size === 0 && (
+            <div className="chat-blank">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16v11H9l-5 4Z" /></svg>
+              <b>{t("chat.dm.none")}</b>
+              <span>{t("chat.dm.note")}</span>
+            </div>
+          )}
           {[...dms.entries()]
             .sort((a, b) => (b[1][b[1].length - 1]?.created_at ?? 0) - (a[1][a[1].length - 1]?.created_at ?? 0))
             .map(([peer, thread]) => {
               const who = person(peer);
               const last = thread[thread.length - 1];
               return (
-                <article key={peer} className="chat-msg" onClick={() => openDm(peer)}>
+                <button key={peer} className="chat-dm-row" onClick={() => openDm(peer)}>
                   <Avatar person={who} />
-                  <div className="chat-body">
-                    <div className="chat-meta">
-                      <b>{who.name || t("chat.anon")}</b>
+                  <span className="chat-dm-body">
+                    <span className="chat-dm-top">
+                      <b dir="auto">{who.name || t("chat.anon")}</b>
                       <span className="chat-fp">·{who.fingerprint}</span>
                       {last && <time>{new Date(last.created_at * 1000).toLocaleDateString()}</time>}
-                    </div>
-                    <p className="chat-text">{last?.content.slice(0, 80) ?? ""}</p>
-                  </div>
-                </article>
+                    </span>
+                    <span className="chat-dm-last" dir="auto">{last?.content ?? ""}</span>
+                  </span>
+                </button>
               );
             })}
         </div>
@@ -855,23 +1403,25 @@ export function ChatScreen({
           onScroll={() => {
             const el = listRef.current;
             if (!el) return;
-            setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+            const low = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+            if (low !== atBottomRef.current) setAtBottom(low);
           }}
         >
-          <p className="muted small chat-empty" style={{ margin: "0 0 8px" }}>{t("chat.dm.note")}</p>
-          {(dms.get(view.peer) ?? []).map((m) => {
-            const who = person(m.sender);
+          <p className="chat-service">{t("chat.dm.note")}</p>
+          {(dms.get(view.peer) ?? []).map((dm) => {
+            const who = person(dm.sender);
+            const isMine = dm.sender === me;
             return (
-              <article key={m.id} className={m.sender === me ? "chat-msg mine" : "chat-msg"}>
-                <Avatar person={who} />
-                <div className="chat-body">
-                  <div className="chat-meta">
-                    <b>{m.sender === me ? t("chat.you") : who.name || t("chat.anon")}</b>
-                    <time>{new Date(m.created_at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
-                  </div>
-                  <Body text={m.content} />
+              <div key={dm.id} className={"chat-msg last first" + (isMine ? " mine" : "")}>
+                {!isMine && <Avatar person={who} />}
+                <div className={"chat-bubble" + (jumbo(dm.content) ? " jumbo" : "")} dir={dirOf(dm.content)}>
+                  <p className="chat-text">
+                    <Body text={dm.content} />
+                    <span className={isMine ? "chat-time-gap mine" : "chat-time-gap"} aria-hidden="true" />
+                  </p>
+                  <span className="chat-time"><span dir="ltr">{hhmm(dm.created_at)}</span></span>
                 </div>
-              </article>
+              </div>
             );
           })}
           <div ref={bottom} />
@@ -881,104 +1431,78 @@ export function ChatScreen({
       {view.k === "room" && <div
         className="chat-list"
         ref={listRef}
+        {...listGestures}
         onScroll={() => {
           const el = listRef.current;
           if (!el) return;
-          setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+          // Only when it actually changes: setting the same value still woke
+          // React up once per scroll event, which is sixty renders a second.
+          const low = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+          if (low !== atBottomRef.current) setAtBottom(low);
+          if (el.scrollTop < EARLIER_AT && hasEarlier && growFrom.current === null) loadEarlier();
         }}
       >
-        {/* Said once, at the top of the room: what this place is, and the two
-            things a newcomer needs to know. Not a modal — a modal before the
-            first message is one more thing to dismiss. */}
-        <p className="muted small chat-intro">{t("chat.intro")}</p>
-        {messages.length === 0 && (
-          <p className="muted small chat-empty">
-            {state === "live" ? t("chat.empty") : state === "blocked" ? t("chat.torBlocked") : t("chat.connecting")}
-          </p>
+        {/* Said once, at the top of the room: what this place is. A service
+            line, the way a messenger states a fact about a chat — not a boxed
+            paragraph of instructions for a UI that now explains itself. */}
+        {!hasEarlier && <p className="chat-service">{t("chat.intro")}</p>}
+        {hasEarlier && (
+          <button className="chat-earlier" onClick={loadEarlier}>{t("chat.earlier")}</button>
         )}
-        {messages.map((m) => {
-          const day = new Date(m.created_at * 1000).toDateString();
-          const newDay = day !== lastDay;
-          if (newDay) lastDay = day;
-          // Consecutive messages from one author share a header — the single
-          // biggest density win on a phone.
-          const grouped = !newDay && prev?.pubkey === m.pubkey && m.created_at - prev.created_at < GROUP_WINDOW_SECS;
-          const firstUnread = !m.mine && m.created_at > sinceOpen && (!prev || prev.created_at <= sinceOpen);
-          const parent = m.replyTo ? notes.get(m.replyTo) : undefined;
-          prev = m;
-          const reacts = reactions.get(m.id);
-          return (
-            <div key={m.id}>
-              {newDay && <div className="chat-day"><span>{day}</span></div>}
-              {firstUnread && <div className="chat-unread-rule"><span>{t("chat.newMessages")}</span></div>}
-              <article
-                className={"chat-msg" + (m.mine ? " mine" : "") + (grouped ? " grouped" : "") + (m.failed ? " failed" : "")}
-                {...gestures(m)}
-              >
-                {grouped ? <span className="chat-avatar spacer" aria-hidden="true" /> : <Avatar person={m.person} />}
-                <div className="chat-body">
-                  {!grouped && (
-                    <div className="chat-meta">
-                      <b>{m.person.name || t("chat.anon")}</b>
-                      <span className="chat-fp">·{m.person.fingerprint}</span>
-                      <time>{new Date(m.created_at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
-                    </div>
-                  )}
-                  {parent && (
-                    <div className="chat-quote">
-                      <b>{person(parent.pubkey).name || t("chat.anon")}</b> {parent.content.slice(0, 90)}
-                    </div>
-                  )}
-                  <Body text={m.content} />
-                  {m.failed && <span className="chat-failed">{t("chat.failedTap")}</span>}
-                  {reacts && reacts.size > 0 && (
-                    <div className="chat-reacts">
-                      {[...reacts.entries()].map(([emoji, who]) => (
-                        <span key={emoji} className="chat-react">
-                          {emoji === "+" ? "👍" : emoji} {who.size}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </article>
-            </div>
-          );
-        })}
+        {messages.length === 0 && (
+          <div className="chat-blank">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16v11H9l-5 4Z" /></svg>
+            <b>{state === "live" ? t("chat.empty") : state === "blocked" ? t("chat.torBlocked") : t("chat.connecting")}</b>
+          </div>
+        )}
+        {listBody}
         <div ref={bottom} />
       </div>}
 
-      {view.k === "room" && !atBottom && unreadCount > 0 && (
-        <button className="chat-jump" onClick={() => { setAtBottom(true); if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight; }}>
-          ↓ {unreadCount} {t("chat.new")}
+      {view.k === "room" && !atBottom && (
+        <button
+          className="chat-jump"
+          aria-label={t("chat.jumpLatest")}
+          title={t("chat.jumpLatest")}
+          onClick={() => { setAtBottom(true); pin(); }}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 10l6 6 6-6" /></svg>
+          {unreadCount > 0 && <span className="chat-chip-n">{unreadCount}</span>}
         </button>
       )}
 
-      {replyTo && (
+      {replyTo && view.k === "room" && (
         <div className="chat-replying">
-          <span>{t("chat.replyingTo", { name: replyTo.person.name || t("chat.anon") })}</span>
-          <button className="btn ghost small" onClick={() => setReplyTo(null)}>{t("chat.cancel")}</button>
+          <svg className="chat-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 7 4 12l5 5M4 12h8a6 6 0 0 1 6 6v1" /></svg>
+          <span className="chat-replying-body">
+            <span className="chat-replying-name">{t("chat.replyingTo", { name: replyTo.person.name || t("chat.anon") })}</span>
+            <span className="chat-replying-text" dir="auto">{replyTo.content}</span>
+          </span>
+          <button className="chat-icon-btn" onClick={() => setReplyTo(null)} aria-label={t("chat.cancel")} title={t("chat.cancel")}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
         </div>
       )}
 
-      {error === "send" && <div className="msg warn small">{t("chat.errSend")}</div>}
+      {error === "send" && <div className="msg warn small chat-banner">{t("chat.errSend")}</div>}
 
       {/* Tor is on and the relay is not an onion. A WebView socket cannot use
           the engine's SOCKS proxy, so connecting would publish the real IP of
           someone who switched Tor on — the one thing the consent screen frames
           as a deliberate choice. Say what happened and what would fix it. */}
-      {state === "blocked" && <div className="msg warn small">{t("chat.torBlocked")}</div>}
+      {state === "blocked" && <div className="msg warn small chat-banner">{t("chat.torBlocked")}</div>}
 
-      {state === "blocked" ? (
-        <div className="chat-compose readonly">
+      {view.k === "dms" ? null : state === "blocked" ? (
+        <div className="chat-compose readonly" ref={composeBox}>
           <span className="muted small">{t("chat.torBlockedShort")}</span>
         </div>
       ) : canPost ? (
-        <div className="chat-compose">
+        <div className="chat-compose" ref={composeBox}>
           <textarea
             ref={composer}
             value={draft}
             rows={1}
+            onFocus={() => { if (atBottomRef.current) requestAnimationFrame(pin); }}
             onChange={(e) => {
               setDraft(e.target.value);
               // Grow to fit, up to the CSS max-height.
@@ -998,31 +1522,39 @@ export function ChatScreen({
             maxLength={2000}
             aria-label={view.k === "dm" ? t("chat.dm.placeholder") : t("chat.placeholder", { room: roomLabel(room) })}
           />
-          <button className="btn" onClick={() => void submit()} disabled={sending || !draft.trim()}>
-            {sending ? t("chat.sending") : t("chat.send")}
+          <button
+            className="chat-send"
+            onClick={() => void submit()}
+            disabled={sending || !draft.trim()}
+            aria-label={sending ? t("chat.sending") : t("chat.send")}
+            title={sending ? t("chat.sending") : t("chat.send")}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h14M11 5l7 7-7 7" /></svg>
           </button>
         </div>
       ) : (
-        <div className="chat-compose readonly">
+        <div className="chat-compose readonly" ref={composeBox}>
           <span className="muted small">{t("chat.readOnly")}</span>
         </div>
       )}
 
-      {openMessage && (
-        <MessageSheet
+      {openMessage && menu && (
+        <MessageMenu
           message={openMessage}
-          onClose={() => setSheet(null)}
-          onReply={() => { setReplyTo(openMessage); setSheet(null); }}
+          anchor={menu.anchor}
+          preview={liftedBubble(openMessage)}
+          onClose={() => setMenu(null)}
+          onReply={() => { setReplyTo(openMessage); setMenu(null); composer.current?.focus(); }}
           onReact={(emoji) => {
-            setSheet(null);
-            void publishSigned(KIND_REACTION, reactionTags(openMessage, room), emoji).catch(() => undefined);
+            setMenu(null);
+            void react(openMessage, emoji);
           }}
           onDm={() => openDm(openMessage.pubkey)}
-          onTip={() => { setSheet(null); onClose(); if (openMessage.person.zkas) onTip?.(openMessage.person.zkas); }}
-          onProfile={() => setSheet({ kind: "profile", pubkey: openMessage.pubkey })}
+          onTip={() => { setMenu(null); onClose(); if (openMessage.person.zkas) onTip?.(openMessage.person.zkas); }}
+          onProfile={() => { setMenu(null); setSheet({ kind: "profile", pubkey: openMessage.pubkey }); }}
           onMute={() => void toggleMute(openMessage.pubkey)}
-          onCopy={() => { void navigator.clipboard?.writeText(openMessage.content); setSheet(null); toast.show("good", t("chat.toast.copied")); }}
-          onRetry={() => { setSheet(null); void send(openMessage.content); }}
+          onCopy={() => { void navigator.clipboard?.writeText(openMessage.content); setMenu(null); toast.show("good", t("chat.toast.copied")); }}
+          onRetry={() => { setMenu(null); void send(openMessage.content); }}
           onReport={() => {
             void publishSigned(KIND_REPORT, reportTags(openMessage, "spam"), "").catch(() => undefined);
             void toggleMute(openMessage.pubkey);

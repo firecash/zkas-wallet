@@ -14,7 +14,7 @@
     "consentEnable": "Turn on chat",
     "consentLater": "Not now",
     "consentOff": "You can turn this off again in Settings.",
-    "back": "← Wallet",
+    "back": "Wallet",
     "roomAria": "Community chat",
     "state": {
       "offline": "offline",
@@ -41,6 +41,10 @@
     "nameSkip": "Post as anon",
     "readOnly": "This device has no key, so it can read the room but not post.",
     "new": "new",
+    "earlier": "Earlier messages",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "jumpLatest": "Go to the latest message",
     "newMessages": "New messages",
     "failedTap": "Not sent — tap to retry",
     "tipAddrLabel": "Your ZKAS address (optional)",
@@ -63,7 +67,7 @@
       "muteConfirm": "Tap again to mute {{name}}",
       "reportConfirm": "Tap again to report and mute",
       "sendZkas": "Send ZKAS",
-      "noAddress": "No address published yet."
+      "react": "React"
     },
     "profile": {
       "copyKey": "Copy public key",
@@ -83,11 +87,10 @@
       "none": "No private messages yet.",
       "start": "Message privately",
       "placeholder": "Private message",
-      "note": "Only the two of you can read this. Relays see a one-time key, not who is talking to whom.",
+      "note": "Only the two of you can read this. The relay sees a one-time key, not who is talking to whom.",
       "headerNote": "private"
     },
-    "you": "you",
-    "intro": "Everyone here can read what you post, and posts cannot be deleted. Use the row above to change room. Tap a message to react or reply, or swipe it to reply.",
+    "intro": "Everyone here can read what you post, and posts cannot be deleted. Tap a message to react or reply, or swipe it to reply.",
     "torBlocked": "Chat is off because Tor is on. The relay is reached directly, not through Tor, so connecting would show it your real IP address. Either switch Tor off, or set a relay with an .onion address in Settings.",
     "torBlockedShort": "Not connected while Tor is on.",
     "muted": {

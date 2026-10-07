@@ -31,8 +31,12 @@ export {
 import { GLOBAL_ROOM, relayUrl, mutedKeys } from "./lib/chatprefs";
 import { socketAllowed } from "./lib/privacy";
 
-/** Nostr kinds. Standard ones throughout, so other clients render our users and
- *  we render theirs — the interop is the point, not a side effect. */
+/** Nostr kinds. Standard ones throughout, so nothing here is a private dialect:
+ *  a general Nostr client pointed at our relay would render these events, and
+ *  this client would render that relay's. That is interop being POSSIBLE, which
+ *  is not the same as interop happening — see `ChatClient` on what is actually
+ *  deployed. The standard kinds are kept because they cost nothing and are what
+ *  a future federation would need, not because anything federates today. */
 export const KIND_PROFILE = 0;
 export const KIND_NOTE = 1;
 export const KIND_REACTION = 7; // NIP-25
@@ -137,9 +141,26 @@ export function relayReachable(): boolean {
 /**
  * One relay connection speaking the Nostr client protocol.
  *
- * Connecting to ONE relay is enough to see the whole network, because relays
- * gossip with each other — so this deliberately does not fan out to many relays
- * the way a typical Nostr client has to.
+ * ONE relay is all there is, and it is worth being exact about that because the
+ * opposite is easy to assume:
+ *
+ *   · `chat-relays.ts` ships a single URL, `wss://zkas.info/chat-relay`, and it
+ *     is the only relay any ZKas wallet talks to unless its owner sets another
+ *     one by hand in Settings.
+ *   · Nostr has no relay-to-relay propagation. A note published here does not
+ *     reach other relays, and notes published elsewhere do not arrive here.
+ *     Our own relay binary has an optional `--peer` mesh — a local extension,
+ *     with tests — but the deployed relay runs with no peers configured, and a
+ *     third-party relay would not speak it anyway.
+ *   · So ZKas chat is a single-relay island today: if that relay is down, the
+ *     room is down, and whoever runs it sees every connection.
+ *
+ * Not fanning out is the RIGHT implementation of that deployment — there is
+ * nowhere else to fan out to, and opening sockets to unrelated public relays
+ * would hand the user's IP to more operators for nothing. What makes it
+ * acceptable is the exit: the relay URL is user-settable, the event format is
+ * standard Nostr, and the intended bootstrap is an on-chain registry rather
+ * than a list baked into the app. None of that is live yet.
  */
 export class ChatClient {
   private ws: WebSocket | null = null;

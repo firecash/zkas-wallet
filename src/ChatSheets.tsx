@@ -1,11 +1,21 @@
-// The three sheets the chat reaches for. One primitive, three contents.
+// The chat's menus and sheets.
 //
-// Everything the chat can do is reached by tapping the thing it applies to: a
-// message, a person, the room name. That is what keeps the message row free of
-// controls — a visible Reply button on every line is N buttons of permanent
-// clutter buying one action, where a tap target buys all of them.
+// Two primitives now, not one:
+//
+//   `Sheet`       — a bottom sheet (rooms, muted people, a profile). Things that
+//                   are about the whole screen, not about one line in it.
+//   `MessageMenu` — Telegram's message menu: the message lifts out of the list,
+//                   a reaction bar floats ABOVE it and a compact command card
+//                   sits BELOW it, both anchored to where the message actually
+//                   is. A full-width sheet for one line of text was the thing
+//                   that made this screen feel unlike every messenger people
+//                   already use.
+//
+// Everything the chat can do is still reached by touching the thing it applies
+// to — a message, a person, the room name — so the message row itself stays
+// free of controls.
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useBackClose } from "./lib/backclose";
@@ -16,22 +26,69 @@ import type { ChatMessage, Person } from "./chatclient";
  *  good choices. NIP-25 allows any content; these are the common ones. */
 export const REACTIONS = ["+", "🔥", "😂", "👀", "🙏", "💜"] as const;
 
-/** How long a freshly opened sheet ignores taps.
+/** The reaction a double tap sends, the way Telegram's quick reaction works. */
+export const QUICK_REACTION = "+";
+
+/** How long a freshly opened sheet or menu ignores taps.
  *
- *  The sheet opens under the finger that opened it. Without this, a second tap
- *  — or the release of a long press — landed on whatever row happened to be
- *  beneath it, and the rows include "Mute this person": people muted someone by
- *  tapping a message twice and never saw the menu that did it. */
+ *  It opens under the finger that opened it. Without this, a second tap — or the
+ *  release of a long press — landed on whatever row happened to be beneath it,
+ *  and the rows include "Mute this person": people muted someone by tapping a
+ *  message twice and never saw the menu that did it. */
 const ARM_MS = 350;
 
-/** Bottom sheet. Tapping the backdrop or pressing Android back dismisses it. */
-export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  useBackClose(true, onClose);
+function useArmed(): boolean {
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     const id = setTimeout(() => setArmed(true), ARM_MS);
     return () => clearTimeout(id);
   }, []);
+  return armed;
+}
+
+/* ------------------------------------------------------------------ icons
+   Drawn inline. A menu row with only a word in it reads as a list; Telegram's
+   reads as a menu because every command carries its own mark. No icon package
+   is added for nine glyphs. */
+const PATHS: Record<string, string> = {
+  reply: "M9 7 4 12l5 5M4 12h8a6 6 0 0 1 6 6v1",
+  copy: "M9 9h9v11H9zM6 15H4V4h11v2",
+  profile: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0",
+  send: "M4 12h13M12 5l7 7-7 7",
+  dm: "M4 6h16v11H9l-5 4Z",
+  mute: "M6 9a6 6 0 0 1 9-5M18 10v3l2 4H9M4 3l17 18",
+  unmute: "M7 17V10a5 5 0 0 1 10 0v7M4 17h16M10 20h4",
+  report: "M5 21V4h13l-3 4 3 4H5",
+  retry: "M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5",
+  close: "M6 6l12 12M18 6 6 18",
+  check: "M4 12.5 9 17l11-11",
+};
+
+function Icon({ name }: { name: keyof typeof PATHS | string }) {
+  return (
+    <svg className="chat-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d={PATHS[name] ?? ""} />
+    </svg>
+  );
+}
+
+/** Bottom sheet. Tapping the backdrop or pressing Android back dismisses it. */
+export function Sheet({
+  title,
+  onClose,
+  children,
+  heading = true,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  /** A sheet whose content already names itself — a profile — skips the
+   *  heading rather than printing the person's name twice. The dialog keeps it
+   *  as its accessible name either way. */
+  heading?: boolean;
+}) {
+  useBackClose(true, onClose);
+  const armed = useArmed();
   return createPortal(
     // The guard is on the WRAPPER, so it covers the backdrop as well as the
     // rows. A sheet opened by a long press received the click from that press's
@@ -47,7 +104,8 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
       onClick={onClose}
     >
       <div className="card modalcard chat-sheet" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
-        <h2>{title}</h2>
+        <div className="chat-sheet-grab" aria-hidden="true" />
+        {heading && <h2>{title}</h2>}
         {children}
       </div>
     </div>,
@@ -58,9 +116,21 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
 /** A row whose action cannot be undone by the same gesture that caused it.
  *
  *  Mute and Report change what this person sees and what the network is told,
- *  and both sat one tap deep in a sheet that opens under the thumb. The first
- *  tap now only ASKS; the label says exactly what the second one will do. */
-function ConfirmRow({ label, confirm, onConfirm }: { label: string; confirm: string; onConfirm: () => void }) {
+ *  and both sit one tap deep in a menu that opens under the thumb. The first tap
+ *  only ASKS; the label says exactly what the second one will do. */
+function ConfirmRow({
+  label,
+  confirm,
+  onConfirm,
+  icon,
+  menu,
+}: {
+  label: string;
+  confirm: string;
+  onConfirm: () => void;
+  icon: string;
+  menu?: boolean;
+}) {
   const [asking, setAsking] = useState(false);
   useEffect(() => {
     if (!asking) return;
@@ -68,11 +138,10 @@ function ConfirmRow({ label, confirm, onConfirm }: { label: string; confirm: str
     const id = setTimeout(() => setAsking(false), 4000);
     return () => clearTimeout(id);
   }, [asking]);
+  const base = menu ? "chat-menu-row" : "chat-sheet-row";
   return (
-    <button
-      className={asking ? "chat-sheet-row danger arming" : "chat-sheet-row danger"}
-      onClick={() => (asking ? onConfirm() : setAsking(true))}
-    >
+    <button className={`${base} danger${asking ? " arming" : ""}`} onClick={() => (asking ? onConfirm() : setAsking(true))}>
+      <Icon name={icon} />
       <span>{asking ? confirm : label}</span>
     </button>
   );
@@ -83,48 +152,64 @@ function Row({
   onClick,
   danger,
   detail,
-  disabled,
+  icon,
 }: {
   label: string;
   onClick: () => void;
   danger?: boolean;
   detail?: string;
-  disabled?: boolean;
+  icon?: string;
 }) {
   return (
-    <button
-      className={(danger ? "chat-sheet-row danger" : "chat-sheet-row") + (disabled ? " off" : "")}
-      onClick={onClick}
-      disabled={disabled}
-    >
+    <button className={danger ? "chat-sheet-row danger" : "chat-sheet-row"} onClick={onClick}>
+      {icon && <Icon name={icon} />}
       <span>{label}</span>
       {detail && <span className="chat-sheet-detail">{detail}</span>}
     </button>
   );
 }
 
-/** "Send ZKAS" wherever a person is on screen.
- *
- *  Paying someone was previously offered only when they had published an
- *  address, so to everyone else the feature simply did not exist — there was
- *  nothing on screen to say a payment was possible at all, or why it was not.
- *  The row is now always present and says which of the two it is. */
-function SendZkasRow({ zkas, mine, onSend }: { zkas?: string; mine: boolean; onSend: () => void }) {
-  const { t } = useTranslation();
-  if (mine) return null;
-  if (!zkas) {
-    return (
-      <>
-        <Row label={t("chat.actions.sendZkas")} onClick={() => {}} disabled />
-        <p className="muted small chat-sheet-note">{t("chat.actions.noAddress")}</p>
-      </>
-    );
-  }
-  return <Row label={t("chat.actions.sendZkas")} onClick={onSend} detail={t("chat.actions.tipDetail")} />;
+function MenuRow({ label, onClick, icon, danger }: { label: string; onClick: () => void; icon: string; danger?: boolean }) {
+  return (
+    <button className={danger ? "chat-menu-row danger" : "chat-menu-row"} onClick={onClick}>
+      <Icon name={icon} />
+      <span>{label}</span>
+    </button>
+  );
 }
 
-export function MessageSheet({
+/** "Send ZKAS", but only when there is somewhere to send it.
+ *
+ *  It used to be rendered disabled with a line of explanation under it whenever
+ *  the person had published no address — a dead control plus a sentence about
+ *  why it is dead, on the majority of people in the room. If there is nowhere to
+ *  send, the command is simply not offered. */
+function sendZkasRow(zkas: string | undefined, mine: boolean): boolean {
+  return !mine && !!zkas;
+}
+
+/* ------------------------------------------------- the message menu (Telegram)
+
+   Long-press or tap a message and Telegram does three things at once: it dims
+   the conversation, it lifts THAT message out of the list, and it puts a row of
+   reactions directly above it with the commands directly below. You never lose
+   sight of which message you are acting on, and a reaction is one tap away in a
+   bar, not a row inside a sheet.
+
+   The stack is positioned so the lifted copy sits exactly where the real message
+   was, then clamped into the viewport. */
+export interface Anchor {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+  mine: boolean;
+}
+
+export function MessageMenu({
   message,
+  anchor,
+  preview,
   onClose,
   onReply,
   onReact,
@@ -137,6 +222,9 @@ export function MessageSheet({
   onRetry,
 }: {
   message: ChatMessage;
+  anchor: Anchor;
+  /** The message, rendered exactly as the list renders it. */
+  preview: ReactNode;
   onClose: () => void;
   onReply: () => void;
   onReact: (emoji: string) => void;
@@ -150,46 +238,108 @@ export function MessageSheet({
 }) {
   const { t } = useTranslation();
   const p = message.person;
-  return (
-    <Sheet title={p.name || t("chat.anon")} onClose={onClose}>
-      <p className="muted small chat-sheet-quote">{message.content.slice(0, 160)}</p>
-      {/* Reactions first, as a row of emoji rather than a row that opens
-          another sheet. Holding a message is how a reaction is chosen in every
-          messenger people already use, and it cost two sheets here. Double-tap
-          still sends 👍 without opening anything. */}
-      <div className="chat-reactions">
-        {REACTIONS.map((r) => (
-          <button key={r} className="chat-reaction-pick" onClick={() => onReact(r)} aria-label={r}>
-            {r === "+" ? "👍" : r}
-          </button>
-        ))}
-      </div>
-      {message.failed && <Row label={t("chat.actions.retry")} onClick={onRetry} />}
-      <Row label={t("chat.actions.reply")} onClick={onReply} />
-      <SendZkasRow zkas={p.zkas} mine={message.mine} onSend={onTip} />
-      {/* Writing to this person privately is reached from the message itself,
-          not only from "View profile" — reaching it through the profile was two
-          taps and a screen that exists to show a key. Deliberately the SAME key
-          and detail as the profile's row, so the two cannot read differently:
-          one action, one name, wherever it is offered. */}
-      {!message.mine && <Row label={t("chat.dm.start")} onClick={onDm} detail={t("chat.dm.openDetail")} />}
-      <Row label={t("chat.actions.copy")} onClick={onCopy} />
-      <Row label={t("chat.actions.profile")} onClick={onProfile} />
-      {!message.mine && (
-        <>
-          {p.muted ? (
-            <Row label={t("chat.actions.unmute")} onClick={onMute} />
-          ) : (
-            <ConfirmRow
-              label={t("chat.actions.mute")}
-              confirm={t("chat.actions.muteConfirm", { name: p.name || t("chat.anon") })}
-              onConfirm={onMute}
-            />
+  useBackClose(true, onClose);
+  const armed = useArmed();
+  const stack = useRef<HTMLDivElement | null>(null);
+  const lift = useRef<HTMLDivElement | null>(null);
+  const [at, setAt] = useState<{ top: number; left?: number; right?: number } | null>(null);
+
+  // Place the stack so the lifted copy lands exactly on the original, then clamp
+  // it into the viewport. In a layout effect, so it is never painted in the
+  // wrong place first.
+  useLayoutEffect(() => {
+    const el = stack.current;
+    const li = lift.current;
+    if (!el || !li) return;
+    const vh = window.visualViewport?.height ?? window.innerHeight;
+    const vw = window.innerWidth;
+    const h = el.offsetHeight;
+    const top = Math.max(10, Math.min(anchor.top - li.offsetTop, vh - h - 10));
+    // Horizontally it hangs off the side the message is on, so the menu reads as
+    // belonging to that message rather than to the screen.
+    const EDGE = 8;
+    const MIN = 236;
+    setAt(
+      anchor.mine
+        ? { top, right: Math.max(EDGE, Math.min(vw - anchor.right, vw - MIN)) }
+        : { top, left: Math.max(EDGE, Math.min(anchor.left, vw - MIN)) },
+    );
+  }, [anchor.top, anchor.left, anchor.right, anchor.mine]);
+
+  const side = anchor.mine ? "mine" : "theirs";
+  return createPortal(
+    <div
+      className="chat-menu-scrim"
+      role="dialog"
+      aria-modal="true"
+      aria-label={p.name || t("chat.anon")}
+      onClickCapture={(e) => {
+        if (armed) return;
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={onClose}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      <div
+        ref={stack}
+        className={`chat-menu-stack ${side}`}
+        style={at ? { ...at, maxWidth: `calc(100% - ${(at.left ?? at.right ?? 0) + 8}px)` } : { top: -9999, visibility: "hidden" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="chat-reactions" role="group" aria-label={t("chat.actions.react")}>
+          {REACTIONS.map((r, i) => (
+            <button
+              key={r}
+              className="chat-reaction-pick"
+              style={{ animationDelay: `${i * 22}ms` }}
+              onClick={() => onReact(r)}
+              aria-label={r === "+" ? "👍" : r}
+            >
+              {r === "+" ? "👍" : r}
+            </button>
+          ))}
+        </div>
+
+        {/* The message itself, lifted. Not a quotation of it — the same markup,
+            so what you are acting on is unmistakably what you touched. */}
+        <div ref={lift} className="chat-menu-lift" aria-hidden="true">
+          {preview}
+        </div>
+
+        <div className="chat-menu-card">
+          {message.failed && <MenuRow icon="retry" label={t("chat.actions.retry")} onClick={onRetry} />}
+          <MenuRow icon="reply" label={t("chat.actions.reply")} onClick={onReply} />
+          {sendZkasRow(p.zkas, message.mine) && <MenuRow icon="send" label={t("chat.actions.sendZkas")} onClick={onTip} />}
+          {/* Writing privately is reached from the message itself, not only from
+              "View profile". Deliberately the SAME key as the profile's row, so
+              the two cannot read differently. */}
+          {!message.mine && <MenuRow icon="dm" label={t("chat.dm.start")} onClick={onDm} />}
+          <MenuRow icon="copy" label={t("chat.actions.copy")} onClick={onCopy} />
+          <MenuRow icon="profile" label={t("chat.actions.profile")} onClick={onProfile} />
+          {!message.mine && (
+            <>
+              {p.muted ? (
+                <MenuRow icon="unmute" label={t("chat.actions.unmute")} onClick={onMute} />
+              ) : (
+                <ConfirmRow
+                  menu
+                  icon="mute"
+                  label={t("chat.actions.mute")}
+                  confirm={t("chat.actions.muteConfirm", { name: p.name || t("chat.anon") })}
+                  onConfirm={onMute}
+                />
+              )}
+              <ConfirmRow menu icon="report" label={t("chat.actions.report")} confirm={t("chat.actions.reportConfirm")} onConfirm={onReport} />
+            </>
           )}
-          <ConfirmRow label={t("chat.actions.report")} confirm={t("chat.actions.reportConfirm")} onConfirm={onReport} />
-        </>
-      )}
-    </Sheet>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -210,38 +360,39 @@ export function ProfileSheet({
 }) {
   const { t } = useTranslation();
   return (
-    <Sheet title={person.name || t("chat.anon")} onClose={onClose}>
+    <Sheet title={person.name || t("chat.anon")} onClose={onClose} heading={false}>
       <div className="chat-profile-head">
         <span className="chat-avatar big" style={{ background: `hsl(${person.hue} 58% 42%)` }}>
           {person.pubkey.slice(0, 2)}
         </span>
-        <div>
+        <div className="chat-profile-id">
           <div className="chat-profile-name">
             <b>{person.name || t("chat.anon")}</b>
-            <span className="chat-fp">·{person.fingerprint}</span>
           </div>
-          {/* A rename is surfaced, never silently accepted — it is the cheapest
-              impersonation there is, and the only defence is remembering. */}
-          {person.firstName && person.name && person.firstName !== person.name && (
-            <div className="msg warn small">{t("chat.profile.wasKnownAs", { name: person.firstName })}</div>
-          )}
+          <span className="chat-fp">·{person.fingerprint}</span>
         </div>
       </div>
+      {/* A rename is surfaced, never silently accepted — it is the cheapest
+          impersonation there is, and the only defence is remembering. */}
+      {person.firstName && person.name && person.firstName !== person.name && (
+        <div className="msg warn small">{t("chat.profile.wasKnownAs", { name: person.firstName })}</div>
+      )}
       {person.about && <p className="chat-profile-about">{person.about}</p>}
-      <SendZkasRow zkas={person.zkas} mine={false} onSend={onTip} />
       {/* Where the money would actually go. A chat name is not an identity, so
           seeing the destination before tapping is the only check there is. */}
       {person.zkas && (
-        <p className="muted small chat-sheet-note mono chat-sheet-addr">
-          {person.zkas.slice(0, 18)}…{person.zkas.slice(-8)}
-        </p>
+        <>
+          <Row icon="send" label={t("chat.actions.sendZkas")} onClick={onTip} detail={t("chat.actions.tipDetail")} />
+          <p className="muted small chat-sheet-note mono chat-sheet-addr">{person.zkas}</p>
+        </>
       )}
-      <Row label={t("chat.dm.start")} onClick={onDm} detail={t("chat.dm.openDetail")} />
-      <Row label={t("chat.profile.copyKey")} onClick={onCopyKey} />
+      <Row icon="dm" label={t("chat.dm.start")} onClick={onDm} detail={t("chat.dm.openDetail")} />
+      <Row icon="copy" label={t("chat.profile.copyKey")} onClick={onCopyKey} />
       {person.muted ? (
-        <Row label={t("chat.actions.unmute")} onClick={onMute} />
+        <Row icon="unmute" label={t("chat.actions.unmute")} onClick={onMute} />
       ) : (
         <ConfirmRow
+          icon="mute"
           label={t("chat.actions.mute")}
           confirm={t("chat.actions.muteConfirm", { name: person.name || t("chat.anon") })}
           onConfirm={onMute}
@@ -279,20 +430,12 @@ export function RoomsSheet({
   ];
   return (
     <Sheet title={t("chat.rooms.title")} onClose={onClose}>
-      <button className="chat-sheet-row" onClick={onDms}>
-        <span>{t("chat.dm.open")}</span>
-        <span className="chat-sheet-detail">{t("chat.dm.openDetail")}</span>
-      </button>
+      <Row icon="dm" label={t("chat.dm.open")} onClick={onDms} detail={t("chat.dm.openDetail")} />
       {/* Editing your own name, bio and tip address was reachable ONLY in the
           prompt before your first message — after that there was no way back to
           it at all. */}
-      <button className="chat-sheet-row" onClick={onProfile}>
-        <span>{t("chat.profileTitle")}</span>
-      </button>
-      <button className="chat-sheet-row" onClick={onMuted}>
-        <span>{t("chat.muted.title")}</span>
-        <span className="chat-sheet-detail">{mutedCount || ""}</span>
-      </button>
+      <Row icon="profile" label={t("chat.profileTitle")} onClick={onProfile} />
+      <Row icon="mute" label={t("chat.muted.title")} onClick={onMuted} detail={mutedCount ? String(mutedCount) : undefined} />
       {groups.map((g) => (
         <div key={g.key}>
           <div className="chat-sheet-group">{t(g.key)}</div>
@@ -302,11 +445,12 @@ export function RoomsSheet({
               className={r.id === current ? "chat-sheet-row current" : "chat-sheet-row"}
               onClick={() => onPick(r.id)}
             >
-              <span>
+              <span className="chat-room-label">
                 {r.flag ? `${r.flag} ` : ""}
                 {r.label}
               </span>
               {unread[r.id] ? <span className="chat-sheet-detail">{unread[r.id]} {t("chat.new")}</span> : null}
+              {r.id === current ? <Icon name="check" /> : null}
             </button>
           ))}
         </div>
@@ -356,4 +500,3 @@ export function MutedSheet({
     </Sheet>
   );
 }
-
