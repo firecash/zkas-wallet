@@ -31,8 +31,16 @@ function stampServiceWorker() {
 // single largest remaining item in the cold-load budget.
 //
 // `media="print"` makes the browser fetch the file at normal priority WITHOUT
-// blocking the first paint, then `onload` promotes it to all media the moment it
-// lands. This is deliberately not a dynamic import() from main.tsx: that would
+// blocking the first paint; `promoteAppCss()` in main.tsx flips it to all media.
+//
+// The usual form of this trick carries an inline `onload` handler so the promotion
+// happens without JS. We cannot use it: wallet.zkas.info serves
+// `script-src 'self' 'wasm-unsafe-eval' 'sha256-...'` with no `unsafe-inline`, so
+// the browser refuses the attribute and logs a CSP violation on every single load.
+// (The one inline script in index.html is allowed by that exact hash — which is
+// also why its contents must not be edited without re-issuing the header.)
+// The file is downloaded in parallel either way, so what the JS promotion costs
+// is only the flip, not the fetch. This is deliberately not a dynamic import() from main.tsx: that would
 // also unblock paint, but it would queue the CSS BEHIND the ~157 KB gz JS
 // bundle, trading ~300ms of first paint for about a second of time-to-usable.
 // Here the CSS still downloads in parallel with the JS.
@@ -49,7 +57,7 @@ function deferAppCss() {
       return html.replace(
         /<link rel="stylesheet"([^>]*?)href="([^"]+)"([^>]*)>/g,
         (_m, pre: string, href: string, post: string) =>
-          `<link rel="stylesheet" data-app-css${pre}href="${href}"${post} media="print" onload="this.media='all';this.onload=null">` +
+          `<link rel="stylesheet" data-app-css${pre}href="${href}"${post} media="print">` +
           `<noscript><link rel="stylesheet"${pre}href="${href}"${post}></noscript>`,
       );
     },
