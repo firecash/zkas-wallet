@@ -674,6 +674,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   const [txs, setTxs] = useState<LocalTx[]>(() => loadTxs());
   /// Set once the on-device signer has been asked to initialise; see the poll below.
   const signerWarmed = useRef(false);
+  /// Address whose receive QR has already been encoded and cached.
+  const warmedQrFor = useRef<string | null>(null);
   // Which wallet token `/api/wallet/warm` has been asked for this session (see refresh).
   const warmArmedFor = useRef<string | null>(null);
   // Consecutive polls answering "no wallet"; see the guard in `refresh`.
@@ -1019,6 +1021,25 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       if (s.has_wallet && !signerWarmed.current) {
         signerWarmed.current = true;
         void ensureSigner().catch(() => {});
+      }
+      // Same reasoning for the receive QR. It was encoded on the TAP, and the
+      // address never changes, so the first Receive of a wallet's life paid for
+      // a 440px encode before it could paint: measured at ~363ms of a ~500ms
+      // open on a 6x-throttled phone, the single largest cost on that path.
+      // Doing it here moves the work to a moment nobody is waiting on, and the
+      // sheet's own cache read then hits on the very first open.
+      if (s.address && warmedQrFor.current !== s.address) {
+        warmedQrFor.current = s.address;
+        const addr = s.address;
+        void (async () => {
+          try {
+            if (localStorage.getItem("qr_" + addr)) return;
+            const url = await QRCode.toDataURL(addr, { margin: 1, width: 440 });
+            localStorage.setItem("qr_" + addr, url);
+          } catch {
+            /* best-effort: Receive still encodes on demand */
+          }
+        })();
       }
       if (s.has_wallet && !notifAsked.current) {
         notifAsked.current = true;
@@ -5385,14 +5406,24 @@ function Receive({ status }: { status: Status }) {
 
       {mode === "address" ? (
         <>
-          <div className="qr-vault">
+          <div className={qr ? "qr-vault" : "qr-vault empty"}>
             <span className="qr-aura" aria-hidden="true" />
             <div className="qr-frame">
               <span className="qr-corner tl" aria-hidden="true" />
               <span className="qr-corner tr" aria-hidden="true" />
               <span className="qr-corner bl" aria-hidden="true" />
               <span className="qr-corner br" aria-hidden="true" />
-              {qr && <img src={qr} alt={t("receive.qrAlt")} onClick={copy} style={{ cursor: "pointer" }} />}
+              {qr ? (
+                <img src={qr} alt={t("receive.qrAlt")} onClick={copy} style={{ cursor: "pointer" }} />
+              ) : (
+                /* `.qr-await` has been in the stylesheet all along and was never
+                   rendered, so a cache miss showed a blank white square with no
+                   explanation — which is what "Receive is slow" looks like. */
+                <span className="qr-await">
+                  <span className="shield-chip-mark" aria-hidden="true" />
+                  {t("receive.qrBuilding")}
+                </span>
+              )}
             </div>
             <span className="shield-chip" aria-hidden="true"><span className="shield-chip-mark" />{t("receive.shielded")}</span>
           </div>
