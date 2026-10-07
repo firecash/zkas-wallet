@@ -1331,7 +1331,15 @@ async function __wbg_init(module_or_path) {
     }
 
     if (typeof module_or_path === 'undefined') {
-        module_or_path = new URL('firecash_signer_bg.wasm', import.meta.url);
+        // PATCHED (not generated): the app inlines the module as base64 and passes
+        // it in from ./index.ts, so no sibling .wasm is ever fetched. The generated
+        // wasm-bindgen's generated fallback resolved the sibling .wasm by URL,
+        // which made the bundler emit a 594 KB copy into dist/assets that nothing
+        // ever requested — dead weight in the APK, the Tauri resources and the
+        // service-worker cache.
+        // The committed .wasm stays in src/ as the integrity reference for
+        // scripts/check-signer-inline.mjs; it is just no longer referenced here.
+        throw new Error('signer: init() requires explicit wasm bytes; use ensureSigner() from ./index.ts');
     }
     const imports = __wbg_get_imports();
 

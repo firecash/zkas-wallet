@@ -505,7 +505,8 @@
     "amountZkas": "{{amount}} ZKAS",
     "blockEmission": "Block emission",
     "nextReduction": "Next reduction",
-    "tailNote": "The schedule ends in a permanent tail emission; it has no fixed terminal supply."
+    "tailNote": "The schedule ends in a permanent tail emission; it has no fixed terminal supply.",
+    "liveHiddenOnTor": "The live network view is hidden while Tor is on: it loads from explorer.zkas.info, which would see your real address. The figures below come through your wallet service."
   },
   "blockView": {
     "title": "Block",

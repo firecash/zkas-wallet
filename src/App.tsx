@@ -5,7 +5,6 @@ import { ProvePayment } from "./PaymentProof";
 import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo, memo, Fragment } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
-import jsQR from "jsqr";
 import { api, chainTx, findReachableDaemon, getBase, getToken, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, isOnionAddress, DEFAULT_WALLETD_PORT, isNative, localEngine, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { parsePairingUri } from "./pairing";
 import { attachTapHaptics, successFeedback } from "./haptics";
@@ -102,7 +101,12 @@ import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, Eye, EyeOff, Server, Settings, ShieldAlert, Trash2, WalletCards } from "lucide-react";
 import { useHideBalances, toggleBalancesHidden, MASK } from "./hidebal";
 import { useBackClose } from "./lib/backclose";
-import { ChatConsent, ChatScreen } from "./Chat";
+// Chat is opt-in and most wallets never turn it on, yet its screens were ~32 KB
+// of the main chunk for everyone. The unread counter already imports the
+// transport dynamically; the screens now follow. Suspense has no fallback on
+// purpose — both render inside an overlay that is itself appearing.
+const ChatConsent = lazy(() => import("./Chat").then((m) => ({ default: m.ChatConsent })));
+const ChatScreen = lazy(() => import("./Chat").then((m) => ({ default: m.ChatScreen })));
 import { chatEnabled, followedRooms, lastSeen, myChatPubkey, seenDmWraps } from "./lib/chatprefs";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
@@ -1453,22 +1457,26 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 </div>
               )}
             </div>
-            {showChatConsent && (
-              <ChatConsent
-                onEnable={() => { setShowChatConsent(false); setShowChat(true); }}
-                onClose={() => setShowChatConsent(false)}
-              />
-            )}
-            {showChat && (
-              <ChatScreen
-                onClose={() => { setShowChat(false); setChatUnreadTick((n) => n + 1); }}
-                // Tipping hands off to the normal send flow, prefilled. Chat
-                // never touches the spend path itself.
-                onTip={(addr) => onSendAnother(addr)}
-                // So "publish an address so people can pay me" is one tap
-                // instead of a trip to Receive and a paste.
-                myAddress={status?.address ?? undefined}
-              />
+            {(showChatConsent || showChat) && (
+              <Suspense fallback={null}>
+                {showChatConsent && (
+                  <ChatConsent
+                    onEnable={() => { setShowChatConsent(false); setShowChat(true); }}
+                    onClose={() => setShowChatConsent(false)}
+                  />
+                )}
+                {showChat && (
+                  <ChatScreen
+                    onClose={() => { setShowChat(false); setChatUnreadTick((n) => n + 1); }}
+                    // Tipping hands off to the normal send flow, prefilled. Chat
+                    // never touches the spend path itself.
+                    onTip={(addr) => onSendAnother(addr)}
+                    // So "publish an address so people can pay me" is one tap
+                    // instead of a trip to Receive and a paste.
+                    myAddress={status?.address ?? undefined}
+                  />
+                )}
+              </Suspense>
             )}
             {showConsolidate && (
               <ConsolidateDialog
@@ -3801,6 +3809,8 @@ function Onboard({
   const [createdDate, setCreatedDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  /** Switching away from a stuck engine, so the escape button can show progress. */
+  const [leaving, setLeaving] = useState(false);
   // Desktop: backups the app itself wrote, offered as a shortcut beside the file
   // picker. The picker is the main path — the WebView reads a chosen file like any
   // browser and the decrypt is client-side, so desktop no longer has to type a
@@ -4180,6 +4190,47 @@ function Onboard({
       <button className="btn" disabled={busy || !status?.daa_score} onClick={create}>
         {busy ? <span className="spin" /> : status?.daa_score ? t("onboard.createNew") : t("onboard.connecting")}
       </button>
+      {/* Why the button is dead, and a way out of it.
+          A local engine that is still syncing answers status with daa_score 0,
+          so this button stayed disabled reading "Connecting…" with no
+          explanation — and `ConnectionButton`, the only in-app way to change
+          where the wallet connects, renders solely once a wallet EXISTS. A new
+          user whose engine was slow had a dead screen and no escape. */}
+      {!busy && !status?.daa_score && (
+        <div className="stack" style={{ marginTop: 10 }}>
+          <p className="muted small" style={{ margin: 0 }}>{t("onboard.connectingWhy")}</p>
+          <button
+            className="btn ghost small"
+            disabled={leaving}
+            onClick={async () => {
+              setLeaving(true);
+              try {
+                // Both existing switches, kept as they are elsewhere: the desktop
+                // shell is pinned to a remote base, everything else just clears
+                // its base and falls back to the hosted default.
+                if (embeddedChosen()) {
+                  setEmbeddedChosen(false);
+                  await stopEmbedded().catch(() => undefined);
+                }
+                if (isDesktop()) {
+                  const url = await findReachableDaemon(HOSTED_WALLETD_URL, "", 20_000);
+                  setDesktopRemoteBase(url);
+                  setBase(url);
+                } else {
+                  setBase("");
+                }
+                setWalletdBearer("");
+                location.reload();
+              } catch (e) {
+                setError(String((e as Error)?.message ?? e));
+                setLeaving(false);
+              }
+            }}
+          >
+            {leaving ? t("onboard.connecting") : t("onboard.usePublicInstead")}
+          </button>
+        </div>
+      )}
       {/* The three ways to bring an EXISTING wallet, grouped under one heading and
           demoted to secondary — so the primary decision (create) stands alone, and
           "restore" is one button, not two identical ones split by platform. */}
@@ -5507,6 +5558,11 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
     let stream: MediaStream | null = null;
     let raf = 0;
     let done = false;
+    // jsQR is 130 KB — 38% of the wallet's main chunk — and the ONLY thing that
+    // uses it is this scanner, which mounts behind a deliberate tap. Loading it
+    // with the camera instead of with the app takes that weight off the landing
+    // screen for everyone who never scans anything.
+    let decode: typeof import("jsqr").default | null = null;
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
@@ -5524,7 +5580,7 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
         canvas.height = v.videoHeight;
         ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
         const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(data, width, height, { inversionAttempts: "dontInvert" });
+        const code = decode?.(data, width, height, { inversionAttempts: "dontInvert" });
         if (code?.data) {
           stop();
           onResult(code.data);
@@ -5537,7 +5593,14 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
     (async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("no-camera-api");
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        // Fetched alongside the permission prompt, so it is ready by the time
+        // there are frames to read.
+        const [decoder, cam] = await Promise.all([
+          import("jsqr"),
+          navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false }),
+        ]);
+        decode = decoder.default;
+        stream = cam;
         if (done) { stream.getTracks().forEach((t) => t.stop()); return; }
         const v = videoRef.current;
         if (!v) return;
@@ -6243,6 +6306,19 @@ function Send({
           </div>
       )}
       {error && <div className="msg err">{error}</div>}
+
+      {/* The unlock field has to be HERE as well as on the review step.
+          A device that holds no seed fails inside doSend, which sets needSeed
+          AND clears `confirming` — dropping the user back to this form with
+          "enter your recovery phrase once" and nowhere on screen to enter it.
+          The only way forward was to guess that pressing Review again would
+          reveal the field. */}
+      {needSeed && (
+        <>
+          <label>{t("send.unlockLabel")}</label>
+          <textarea value={unlock} onChange={(e) => setUnlock(e.target.value)} placeholder={t("send.unlockPlaceholder")} />
+        </>
+      )}
 
       <button className="btn" disabled={!canProceed} onClick={() => { setError(""); setConfirming(true); }}>
         {t("send.reviewSend")}

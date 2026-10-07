@@ -5,6 +5,11 @@
 // where the SPA already looks (localStorage walletd_base / wallet_token) — the
 // rest of the UI then needs zero desktop-specific code.
 
+// `lib/privacy` is the one import here on purpose: it imports nothing itself,
+// so the "desktop.ts imports nothing from api.ts, therefore cannot cycle"
+// property that api.ts relies on still holds.
+import { clearnetAllowed } from "./lib/privacy";
+
 export interface DesktopConfig {
   base: string;
   token: string;
@@ -259,9 +264,13 @@ let updateCheck: Promise<DesktopUpdate | null> | null = null;
  */
 export function checkForDesktopUpdate(currentVersion: string): Promise<DesktopUpdate | null> {
   if (!isDesktop()) return Promise.resolve(null);
-  // A user who pointed the app at the Tor onion chose to show no IP to anyone; a
-  // clearnet GET to GitHub from the WebView would undo that on every launch.
-  if (desktopRemoteBase().toLowerCase().includes(".onion")) return Promise.resolve(null);
+  // A user who chose to show no IP to anyone would have that undone by a
+  // clearnet GET to GitHub from the WebView on every launch.
+  //
+  // Through the shared gate rather than its own `.onion` string test: that test
+  // is the exact URL-shape pattern `lib/privacy.ts` exists to replace, and it
+  // answers "no" for any privacy mode that is not expressed as an onion base.
+  if (!clearnetAllowed()) return Promise.resolve(null);
   if (!updateCheck) {
     updateCheck = (async () => {
       try {

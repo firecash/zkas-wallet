@@ -209,7 +209,9 @@
     "alreadyHave": "Already have a wallet?",
     "restoreFromFile": "Restore from a backup file",
     "importPhrase": "Import a recovery phrase",
-    "watchWallet": "Watch a wallet (view-only)"
+    "watchWallet": "Watch a wallet (view-only)",
+    "connectingWhy": "Your wallet service is still catching up with the chain. A new wallet waits for the current block, so it does not scan years of history it cannot have.",
+    "usePublicInstead": "Use the public wallet service instead"
   },
   "confirmWatch": {
     "title": "Watch this wallet?",

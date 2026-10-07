@@ -16,6 +16,15 @@ const inlined = Buffer.from(b64, "base64");
 const file = readFileSync(new URL("firecash_signer_bg.wasm", dir));
 const glue = readFileSync(new URL("firecash_signer.js", dir), "utf8");
 
+// The glue must never reference the sibling .wasm by URL. wasm-bindgen generates
+// that fallback, and a bundler resolves it into a 594 KB asset nobody fetches —
+// the app always instantiates from the inlined base64. Regenerating the glue
+// reintroduces it, so this is checked, not remembered.
+if (/new URL\(\s*['"]firecash_signer_bg\.wasm['"]/.test(glue)) {
+  fail("src/signer/firecash_signer.js references firecash_signer_bg.wasm via new URL(): that makes the bundler emit a 594 KB asset the app never fetches.\n" +
+       "Re-apply the patch: replace that fallback with a throw, as src/chat-engine/zkas_chat_identity.js does.");
+}
+
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 if (sha(inlined) !== sha(file)) {
   fail(`inlined WASM (${sha(inlined).slice(0, 12)}) != committed firecash_signer_bg.wasm (${sha(file).slice(0, 12)}).\n` +

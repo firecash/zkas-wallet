@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { clearnetAllowed } from "../lib/privacy";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import {
@@ -226,17 +227,29 @@ function DashboardView() {
         <span className={`status-pill ${data ? "good" : "warm"}`} title={refreshing ? t("dashboardView.updating") : data ? t("dashboardView.live") : t("dashboardView.offline")}>{refreshing ? t("dashboardView.updating") : data ? t("dashboardView.live") : t("dashboardView.offline")}</span>
       </div>
 
-      <section className="explorer-live-hero" aria-label={t("dashboardView.heroAria")}>
-        <iframe
-          className="explorer-live-frame"
-          src="https://explorer.zkas.info/live?embed=1"
-          title={t("dashboardView.heroTitle")}
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          sandbox="allow-scripts allow-same-origin"
-        />
-        <a className="explorer-live-full" href="https://explorer.zkas.info/live" target="_blank" rel="noreferrer">{t("dashboardView.fullView")}</a>
-      </section>
+      {/* An <iframe> is a request from the user's IP, made with no user action
+          at all — so it has to pass the same gate every fetch does. It did not:
+          `lib/privacy.ts` only ever covered fetch, and opening Explore with Tor
+          on sent the real IP to explorer.zkas.info while the UI said Tor was on.
+          The external links below stay: following one is a deliberate act that
+          opens the user's own browser. This loads itself. */}
+      {clearnetAllowed() ? (
+        <section className="explorer-live-hero" aria-label={t("dashboardView.heroAria")}>
+          <iframe
+            className="explorer-live-frame"
+            src="https://explorer.zkas.info/live?embed=1"
+            title={t("dashboardView.heroTitle")}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin"
+          />
+          <a className="explorer-live-full" href="https://explorer.zkas.info/live" target="_blank" rel="noreferrer">{t("dashboardView.fullView")}</a>
+        </section>
+      ) : (
+        <section className="control-card" aria-label={t("dashboardView.heroAria")}>
+          <p className="muted small" style={{ margin: 0 }}>{t("dashboardView.liveHiddenOnTor")}</p>
+        </section>
+      )}
       {error && <div className="control-error">{error}</div>}
       {!data ? (
         <div className="control-card empty-state"><span className="spin" /> {t("dashboardView.connecting")}</div>
