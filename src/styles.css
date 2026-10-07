@@ -3522,3 +3522,9 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
 /* The boot mark, sized for the first-open card. */
 .connect-mark { margin-bottom: 10px; }
 .connect-mark img { width: 72px; height: 72px; }
+
+/* Don't rely on the UA hiding a closed <details>'s children: a global input rule
+   in this stylesheet wins over it, and the "advanced" fields stayed on screen
+   while the disclosure read as closed. Verified by rendering the import screen. */
+.setup-advanced:not([open]) > *:not(summary),
+.advanced-details:not([open]) > *:not(summary) { display: none; }

@@ -4136,24 +4136,50 @@ function Onboard({
     );
   }
 
+  // Why the Import button is dead, in the user's own terms.
+  //
+  // The signer already refuses a bad phrase properly — an unknown word, a typo
+  // that lands on a DIFFERENT valid BIP39 word, even a word-order swap are all
+  // caught on the checksum. What it cannot do is explain a button that has not
+  // been pressed yet. Someone restoring a lost phone who types 11 of their 12
+  // words got a greyed-out button, no counter, no hint, and the entirely
+  // reasonable conclusion that their words do not work.
+  const phraseHint = (): string | null => {
+    const v = importHex.trim();
+    if (!v) return null;
+    if (/^[0-9a-fA-F]{64}$/.test(v)) return null; // a legacy raw seed, not a phrase
+    const words = v.split(/\s+/).filter(Boolean);
+    if (words.length < 12) return t("onboard.wordsSoFar", { n: words.length });
+    if (![12, 15, 18, 21, 24].includes(words.length)) return t("onboard.wordsOddLength", { n: words.length });
+    return null;
+  };
+
   if (mode === "import") {
     return (
       <div className="card">
         <h2>{t("onboard.importTitle")}</h2>
         <label>{t("onboard.seedLabel")}</label>
         <textarea value={importHex} onChange={(e) => setImportHex(e.target.value)} placeholder={t("onboard.importPlaceholder")} />
+        {phraseHint() && <div className="muted small" style={{ marginTop: -4, marginBottom: 6 }}>{phraseHint()}</div>}
         <label>{t("onboard.createdWhen")}</label>
         <input type="date" value={createdDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setCreatedDate(e.target.value)} />
-        <label>{t("onboard.advancedHeight")}</label>
-        <input
-          value={birthday}
-          onChange={(e) => setBirthday(e.target.value.replace(/[^0-9]/g, ""))}
-          placeholder={t("onboard.heightPlaceholder")}
-          inputMode="numeric"
-        />
         <div className="msg small" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--muted)" }}>
           {t("onboard.scanHint")}
           </div>
+        {/* "Exact block height (overrides the date)" sat on screen next to the
+            date for everybody. Someone restoring a phone they no longer have
+            cannot answer either question, and two unanswerable fields above a
+            greyed-out button read as "you are missing something". It is a real
+            option for people who know their height, so it stays — folded. */}
+        <details className="setup-advanced">
+          <summary>{t("onboard.advancedHeight")}</summary>
+          <input
+            value={birthday}
+            onChange={(e) => setBirthday(e.target.value.replace(/[^0-9]/g, ""))}
+            placeholder={t("onboard.heightPlaceholder")}
+            inputMode="numeric"
+          />
+        </details>
         {error && <div className="msg err">{error}</div>}
         <div className="row">
           <button className="btn ghost" onClick={() => setMode("choose")}>

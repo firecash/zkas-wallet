@@ -212,7 +212,9 @@
     "importPhrase": "Import a recovery phrase",
     "watchWallet": "Watch a wallet (view-only)",
     "connectingWhy": "Your wallet service is still catching up with the chain. A new wallet waits for the current block, so it does not scan years of history it cannot have.",
-    "usePublicInstead": "Use the public wallet service instead"
+    "usePublicInstead": "Use the public wallet service instead",
+    "wordsSoFar": "{{n}} of 12 words so far.",
+    "wordsOddLength": "{{n}} words. A recovery phrase is 12, 18 or 24 words long."
   },
   "confirmWatch": {
     "title": "Watch this wallet?",
