@@ -234,9 +234,30 @@ class Boundary extends Component<{ children: ReactNode }, { err: Error | null }>
 // createRoot().render() schedules the mount, it does not perform it. The frame
 // cap is a backstop so a render that never commits cannot leave a wallet stuck
 // behind an opaque overlay — better a bare app than no app.
+// The app stylesheet ships as media="print" + onload so it does not block the
+// first paint (see deferAppCss in vite.config.ts). Promote it from here too: if a
+// Content-Security-Policy ever blocks the inline handler, this is what applies
+// the stylesheet. By the time this module runs the file is normally already
+// fetched, so the flip costs nothing.
+function promoteAppCss(): HTMLLinkElement[] {
+  const links = [...document.querySelectorAll<HTMLLinkElement>('link[data-app-css]')];
+  for (const l of links) if (l.media !== "all") l.media = "all";
+  return links;
+}
+
+// True once every app stylesheet has actually been applied. `sheet` stays null
+// until the browser has parsed the file, which is exactly the condition that
+// would otherwise let the splash fade onto unstyled content.
+function appCssReady(links: HTMLLinkElement[]): boolean {
+  return links.every((l) => l.sheet !== null);
+}
+
 function revealApp() {
   const splash = document.getElementById("boot-splash");
   if (!splash) return;
+  // In dev there is no such link at all (Vite injects CSS through JS), so this
+  // is an empty list and the check below passes immediately.
+  const cssLinks = promoteAppCss();
   const remove = () => splash.remove();
   const fade = () => {
     splash.classList.add("boot-done");
@@ -248,7 +269,8 @@ function revealApp() {
   let frames = 0;
   const waitForMount = () => {
     const root = document.getElementById("root");
-    if ((root && root.childElementCount > 0) || frames++ > 180) {
+    const mounted = (root && root.childElementCount > 0) && appCssReady(cssLinks);
+    if (mounted || frames++ > 180) {
       // One more frame so the app's first paint lands before the fade starts.
       requestAnimationFrame(fade);
       return;
