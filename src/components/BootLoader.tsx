@@ -1,43 +1,26 @@
-// The animated loading window shown while a route chunk (or the wallet itself)
-// is still arriving. It deliberately mirrors the inline boot splash in
-// `index.html` — the same drawing shield, teal aurora, wordmark and promise — so
-// the hand-off from the browser's first paint → this React screen → the app is
-// one continuous animation rather than three different loading states.
+// The loading window shown while a route chunk (or the wallet itself) is still
+// arriving. It is a pixel-for-pixel continuation of the inline boot splash in
+// `index.html` — the same ZKas mark, halo, spacing and progress line — so the
+// browser's first paint, this React screen and the app read as one continuous
+// opening rather than three different loading states. Styles: src/styles.boot.css.
+//
+// The mark is the real app icon (public/zkas-mark.png), requested relatively so
+// the same markup resolves under https, Capacitor and the Tauri shell. By the
+// time this component can render, that file is already in the HTTP cache: the
+// splash showed the identical image inline moments earlier.
 import { useTranslation } from "react-i18next";
 
 export function BootLoader({ label }: { label?: string }) {
   const { t } = useTranslation();
   const text = label ?? t("bootLoader.opening");
   return (
-    <div className="bootload" role="status" aria-live="polite" aria-label={text}>
-      <div className="bootload-aurora" aria-hidden="true" />
-      <div className="bootload-stage">
-        <div className="connect-shield bootload-shield" aria-hidden="true">
-          <svg viewBox="0 0 48 56" width="64" height="74">
-            <path
-              className="connect-shield-path"
-              d="M24 2 L44 10 V26 C44 40 35 50 24 54 C13 50 4 40 4 26 V10 Z"
-              fill="none"
-              stroke="var(--ember)"
-              strokeWidth="2.5"
-              strokeLinejoin="round"
-            />
-            <path
-              className="connect-shield-check"
-              d="M16 27 L22 34 L33 20"
-              fill="none"
-              stroke="var(--ember)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+    <div className="bl" role="status" aria-live="polite" aria-label={text}>
+      <div className="bl-stack">
+        <div className="bl-logo">
+          <img src="./zkas-mark.png" width={88} height={88} alt="" aria-hidden="true" />
         </div>
-        <div className="bootload-mark">
-          <span>Z</span>Kas{/* i18n-ignore: logo wordmark */}
-        </div>
-        <div className="bootload-tag">{text}</div>
-        <div className="bootload-bar" aria-hidden="true">
+        <div className="bl-tag">{text}</div>
+        <div className="bl-bar" aria-hidden="true">
           <span />
         </div>
       </div>

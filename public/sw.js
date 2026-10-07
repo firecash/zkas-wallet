@@ -10,7 +10,11 @@
 // its poisoned assets forever (the "__wbindgen_is_object requires a callable"
 // reports on "latest version"). Never hardcode a fixed version here again.
 const CACHE = "zkas-wallet-shell-__SW_BUILD_VERSION__";
-const SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/icon-512-maskable.png", "/apple-touch-icon.png"];
+// zkas-mark.png is the boot/loading mark. The inline splash in index.html
+// carries its own copy as a data URI (nothing to fetch on first paint); this
+// entry is for the React BootLoader, so a reopened wallet with no network still
+// shows the brand instead of a broken image.
+const SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/icon-512-maskable.png", "/apple-touch-icon.png", "/zkas-mark.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));

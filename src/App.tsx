@@ -1399,26 +1399,12 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           drawing itself, over the wallet's two promises. */}
       {reachable === null && !status && (
         <div className="card connecting">
-          <div className="connect-shield" aria-hidden="true">
-            <svg viewBox="0 0 48 56" width="52" height="60">
-              <path
-                className="connect-shield-path"
-                d="M24 2 L44 10 V26 C44 40 35 50 24 54 C13 50 4 40 4 26 V10 Z"
-                fill="none"
-                stroke="var(--ember)"
-                strokeWidth="2.5"
-                strokeLinejoin="round"
-              />
-              <path
-                className="connect-shield-check"
-                d="M16 27 L22 34 L33 20"
-                fill="none"
-                stroke="var(--ember)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+          {/* The same mark the boot splash and the route loader show. This card
+              used to draw the old shield motif — a fourth distinct loading
+              identity after the inline splash, the React loader and the app, in
+              a sequence that is otherwise continuous. */}
+          <div className="bl-logo connect-mark" aria-hidden="true">
+            <img src="./zkas-mark.png" width={72} height={72} alt="" />
           </div>
           <div className="connect-title">{t("app.connectTitle")}</div>
           <div className="connect-sub">

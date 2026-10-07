@@ -16,71 +16,101 @@
     <meta name="apple-mobile-web-app-title" content="ZKas" />
   </head>
   <body>
-    <!-- Inline boot splash: painted by the browser the instant the HTML loads,
-         before any JS is parsed, so opening the app is never a blank screen. A
-         shield drawing its own outline and ticking a checkmark, over the wordmark
-         and the wallet's promise — the same identity the React app opens into, so
-         the hand-off is seamless. React replaces the whole #root content on mount. -->
+    <!-- Inline boot splash. Everything it needs — the styles AND the ZKas coin
+         mark, inlined as a data URI — arrives in this one HTML response, so the
+         browser paints the finished brand on its very first frame: no stylesheet
+         to wait for, no second request for the logo, no JavaScript parsed yet.
+         A mark that is complete the instant it appears is the whole point; the
+         earlier splash drew a shield outline over two seconds, so for most of
+         the wait the screen showed a teal fragment rather than a logo.
+         It is a sibling of #root, not its content: React mounts into an empty
+         #root underneath and main.tsx then cross-fades this layer away, so the
+         app is already painted before the splash goes (no flash, no jump, and
+         no second copy of the splash rendered by React). The boot guards below
+         and in main.tsx still find it by .boot and write their message into it. -->
     <style>
       html, body { background: #08080c; margin: 0; }
       .boot {
-        position: relative; overflow: hidden;
-        min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
-        align-items: center; justify-content: center; gap: 18px;
-        font-family: system-ui, -apple-system, sans-serif;
+        position: fixed; inset: 0; z-index: 2147483000;
+        display: flex; align-items: center; justify-content: center;
+        /* Plain gradients, not blurred circles: a 60px blur filter is real work
+           for the compositor on exactly the weak phones this screen exists for,
+           and it would be paid before the first paint. This looks the same. */
+        background:
+          radial-gradient(62% 46% at 16% 10%, rgba(23, 214, 190, 0.11), transparent 70%),
+          radial-gradient(58% 42% at 86% 90%, rgba(62, 230, 209, 0.08), transparent 70%),
+          #08080c;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        opacity: 1;
+        transition: opacity 240ms ease;
       }
-      /* A soft teal aurora, matching the app's background glow. */
-      .boot::before, .boot::after {
-        content: ""; position: absolute; border-radius: 50%;
-        filter: blur(60px); pointer-events: none;
-        animation: bootglow 6s ease-in-out infinite alternate;
+      /* Added by main.tsx once React has painted; the element is removed after. */
+      .boot-done { opacity: 0; pointer-events: none; }
+      .boot-stack {
+        display: flex; flex-direction: column; align-items: center; gap: 22px;
+        transform: translateY(-4%);
       }
-      .boot::before { width: 340px; height: 340px; top: 12%; left: 8%;
-        background: rgba(23,214,190,0.16); }
-      .boot::after { width: 300px; height: 300px; bottom: 10%; right: 6%;
-        background: rgba(62,230,209,0.10); animation-delay: -3s; }
-      @keyframes bootglow {
-        from { transform: translateY(-8px) scale(1); opacity: 0.8; }
-        to   { transform: translateY(10px) scale(1.1); opacity: 1; }
+      .boot-logo { position: relative; width: 88px; height: 88px; }
+      /* A slow halo under the mark. Opacity + transform only, so it runs on the
+         compositor and never repaints the logo. */
+      .boot-logo::before {
+        content: ""; position: absolute; inset: -30%; border-radius: 50%;
+        background: radial-gradient(circle, rgba(23, 214, 190, 0.3), rgba(23, 214, 190, 0) 68%);
+        animation: boot-halo 2.8s ease-in-out infinite;
       }
-      .boot-shield { position: relative; z-index: 1; filter: drop-shadow(0 0 16px rgba(23,214,190,0.25)); }
-      .boot-shield path { stroke: #17d6be; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-      .boot-outline { stroke-width: 2.5; stroke-dasharray: 150; stroke-dashoffset: 150;
-        animation: bootdraw 2s ease infinite; }
-      .boot-check { stroke-width: 2.5; stroke-dasharray: 34; stroke-dashoffset: 34;
-        animation: bootcheck 2s ease infinite; }
-      @keyframes bootdraw {
-        0% { stroke-dashoffset: 150; } 45% { stroke-dashoffset: 0; }
-        85% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0.5; }
+      .boot-logo img { position: relative; display: block; width: 88px; height: 88px; }
+      @keyframes boot-halo {
+        0%, 100% { opacity: 0.5; transform: scale(0.92); }
+        50% { opacity: 1; transform: scale(1.06); }
       }
-      @keyframes bootcheck {
-        0%, 40% { stroke-dashoffset: 34; } 70%, 100% { stroke-dashoffset: 0; }
+      .boot-tag {
+        font-size: 11px; font-weight: 600; letter-spacing: 0.22em;
+        text-transform: uppercase; color: #6c6e7e;
       }
-      .boot-mark { position: relative; z-index: 1;
-        font-size: 30px; font-weight: 700; color: #f6f6f8; letter-spacing: -0.02em; }
-      .boot-mark span { color: #17d6be; }
-      .boot-tag { position: relative; z-index: 1;
-        font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
-        color: #7a7a8c; }
+      .boot-bar {
+        width: 132px; height: 2px; border-radius: 2px;
+        background: rgba(255, 255, 255, 0.07); overflow: hidden;
+      }
+      .boot-bar span {
+        display: block; width: 40%; height: 100%; border-radius: 2px;
+        background: linear-gradient(90deg, rgba(23, 214, 190, 0), #17d6be, rgba(23, 214, 190, 0));
+        animation: boot-slide 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+      }
+      @keyframes boot-slide {
+        from { transform: translateX(-110%); }
+        to { transform: translateX(360%); }
+      }
+      /* A little more presence on a laptop window; the mark is a 176px source,
+         so this stays sharp on a 2x display. */
+      @media (min-width: 720px) {
+        .boot-logo, .boot-logo img { width: 96px; height: 96px; }
+      }
       @media (prefers-reduced-motion: reduce) {
-        .boot::before, .boot::after, .boot-outline, .boot-check { animation: none; }
-        .boot-outline, .boot-check { stroke-dashoffset: 0; }
+        .boot { transition: none; }
+        .boot-logo::before { animation: none; opacity: 0.8; }
+        .boot-bar span { animation: none; width: 100%; opacity: 0.3; }
       }
     </style>
-    <div id="root">
-      <div class="boot">
-        <svg class="boot-shield" viewBox="0 0 48 56" width="60" height="70" aria-hidden="true">
-          <path class="boot-outline" d="M24 3 L44 11 V27 C44 41 35 51 24 55 C13 51 4 41 4 27 V11 Z" />
-          <path class="boot-check" d="M16 28 L22 35 L33 21" />
-        </svg>
-        <div class="boot-mark"><span>Z</span>Kas</div>
+    <div id="boot-splash" class="boot" role="status" aria-label="Loading ZKas Wallet">
+      <div class="boot-stack">
+        <div class="boot-logo">
+          <img
+            width="88"
+            height="88"
+            alt="ZKas"
+            decoding="sync"
+            src="data:image/png;base64,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"
+          />
+        </div>
         <div class="boot-tag">Private · Fast</div>
+        <div class="boot-bar"><span></span></div>
       </div>
     </div>
+    <div id="root"></div>
     <!-- Old-engine guard, deliberately ES5. The app bundle is a modern module
          (es2020 syntax, WebAssembly, BigInt): on an outdated Android System
          WebView or ancient browser it fails to PARSE, the splash never gets
-         replaced, and the user sees an animated shield forever — a "white
+         replaced, and the user sees a loading screen forever — a "white
          screen" bug report. This classic script parses everywhere, probes the
          exact features the wallet needs, and says what to do instead. -->
     <script>

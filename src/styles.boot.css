@@ -1,0 +1,124 @@
+/* The React side of the boot experience.
+ *
+ * `index.html` paints a splash before any JavaScript exists; this file styles
+ * the screen React shows for the SAME reason a moment later (a lazy route chunk
+ * still arriving, the wallet still opening). They are deliberately the same
+ * picture — same mark, same halo, same gap, same progress line, same dark —
+ * so the hand-off from the browser's first frame to React is invisible rather
+ * than three different loading screens in a row.
+ *
+ * Kept out of styles.css on purpose: this is the only stylesheet the boot path
+ * owns, and it must stay small and easy to compare against the inline copy.
+ */
+
+.bl {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(62% 46% at 16% 10%, rgba(23, 214, 190, 0.11), transparent 70%),
+    radial-gradient(58% 42% at 86% 90%, rgba(62, 230, 209, 0.08), transparent 70%),
+    var(--bg, #08080c);
+  /* No fade-in. This screen exists because something is already slow; easing it
+     in only delays the moment the user sees the brand. */
+}
+
+.bl-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  transform: translateY(-4%);
+}
+
+.bl-logo {
+  position: relative;
+  width: 88px;
+  height: 88px;
+}
+
+.bl-logo::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(23, 214, 190, 0.3), rgba(23, 214, 190, 0) 68%);
+  animation: bl-halo 2.8s ease-in-out infinite;
+}
+
+.bl-logo img {
+  position: relative;
+  display: block;
+  width: 88px;
+  height: 88px;
+}
+
+@keyframes bl-halo {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+.bl-tag {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #6c6e7e;
+}
+
+.bl-bar {
+  width: 132px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.bl-bar span {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(23, 214, 190, 0), #17d6be, rgba(23, 214, 190, 0));
+  animation: bl-slide 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes bl-slide {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(360%);
+  }
+}
+
+/* Matches the inline splash: a little more presence on a laptop window. */
+@media (min-width: 720px) {
+  .bl-logo,
+  .bl-logo img {
+    width: 96px;
+    height: 96px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bl-logo::before {
+    animation: none;
+    opacity: 0.8;
+  }
+  .bl-bar span {
+    animation: none;
+    width: 100%;
+    opacity: 0.3;
+  }
+}

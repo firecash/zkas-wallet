@@ -559,8 +559,9 @@ a { color: var(--ember-text); }
 .conf-pill.done { color: var(--good); background: rgba(53, 196, 106, 0.12); border: 1px solid rgba(53, 196, 106, 0.4); }
 .conf-pill.wait { color: var(--ember-text); background: var(--ember-soft); border: 1px solid rgb(var(--ember-rgb) / 0.4); }
 
-/* First-open connecting state: a shield that draws its outline, then ticks a
-   checkmark, over the two promises. Reads as "securing", not "waiting". */
+/* First-open connecting state. Shows the SAME mark as the boot splash and the
+   route loader — the shield that used to draw itself here was a fourth loading
+   identity in an otherwise continuous opening. */
 .connecting {
   text-align: center;
   padding: 40px 24px;
@@ -569,28 +570,10 @@ a { color: var(--ember-text); }
   align-items: center;
   gap: 6px;
 }
-.connect-shield {
-  filter: drop-shadow(0 0 12px var(--ember-soft));
-  margin-bottom: 8px;
-}
-.connect-shield-path {
-  stroke-dasharray: 150;
-  stroke-dashoffset: 150;
-  animation: draw-shield 1.5s ease forwards infinite;
-}
-.connect-shield-check {
-  stroke-dasharray: 34;
-  stroke-dashoffset: 34;
-  animation: draw-check 1.5s ease forwards infinite;
-}
-@keyframes draw-shield {
-  0%   { stroke-dashoffset: 150; }
   45%  { stroke-dashoffset: 0; }
   85%  { stroke-dashoffset: 0; opacity: 1; }
   100% { stroke-dashoffset: 0; opacity: 0.55; }
 }
-@keyframes draw-check {
-  0%, 40%  { stroke-dashoffset: 34; }
   70%      { stroke-dashoffset: 0; }
   100%     { stroke-dashoffset: 0; }
 }
@@ -606,9 +589,6 @@ a { color: var(--ember-text); }
   border: 1px solid rgb(var(--ember-rgb) / 0.22);
   border-radius: 999px;
   padding: 5px 11px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .connect-shield-path, .connect-shield-check { animation: none; stroke-dashoffset: 0; }
 }
 
 /* Full-window boot loader (main.tsx Suspense fallback). Mirrors the inline splash
@@ -3538,3 +3518,7 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
 .setup-advanced > summary::-webkit-details-marker { display: none; }
 .setup-advanced > summary::before { content: "⌄ "; display: inline-block; }
 .setup-advanced[open] > summary::before { transform: rotate(180deg); }
+
+/* The boot mark, sized for the first-open card. */
+.connect-mark { margin-bottom: 10px; }
+.connect-mark img { width: 72px; height: 72px; }

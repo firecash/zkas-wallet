@@ -29,6 +29,7 @@ import { captureScanReceipt } from "./scanreceipt";
 import { bgSyncReconfigure } from "./bgsync";
 import { internalRouteFromLink, queuePaymentLink } from "./paymentlinks";
 import "./styles.css";
+import "./styles.boot.css";
 
 // Every tool page used to ship in the first JavaScript download, including QR,
 // explorer, service-directory and mining code a user may never open. Load a
@@ -221,6 +222,42 @@ class Boundary extends Component<{ children: ReactNode }, { err: Error | null }>
   }
 }
 
+// Hand the screen over from the inline splash in index.html to React.
+//
+// The splash is a sibling of #root, not its content, so React mounts UNDERNEATH
+// it: the app gets to lay out and paint while the splash still covers it, and
+// only then does the splash cross-fade away. That is what removes the old flash
+// — previously React replaced #root's children, so the splash was cut mid-frame
+// and the app's first, still-settling paint was the first thing anyone saw.
+//
+// Waiting is driven by #root actually having children rather than by a timer:
+// createRoot().render() schedules the mount, it does not perform it. The frame
+// cap is a backstop so a render that never commits cannot leave a wallet stuck
+// behind an opaque overlay — better a bare app than no app.
+function revealApp() {
+  const splash = document.getElementById("boot-splash");
+  if (!splash) return;
+  const remove = () => splash.remove();
+  const fade = () => {
+    splash.classList.add("boot-done");
+    splash.addEventListener("transitionend", remove, { once: true });
+    // prefers-reduced-motion disables the transition, so transitionend never
+    // fires; and a backgrounded tab may not fire it either.
+    setTimeout(remove, 600);
+  };
+  let frames = 0;
+  const waitForMount = () => {
+    const root = document.getElementById("root");
+    if ((root && root.childElementCount > 0) || frames++ > 180) {
+      // One more frame so the app's first paint lands before the fade starts.
+      requestAnimationFrame(fade);
+      return;
+    }
+    requestAnimationFrame(waitForMount);
+  };
+  requestAnimationFrame(waitForMount);
+}
+
 async function boot() {
   let locked = false;
   if (isDesktop()) {
@@ -372,6 +409,7 @@ async function boot() {
       </ToastHost>
     </StrictMode>,
   );
+  revealApp();
 
   // Desktop: the WebView has no new-window handler, so an `<a target="_blank">`
   // opened nothing at all (Mining.tsx documented the symptom). Route those
@@ -454,8 +492,10 @@ async function boot() {
 // first localStorage access throw; say so in plain text, the way that guard does.
 boot().catch((err: unknown) => {
   console.error("wallet boot failed:", err);
-  const el = document.querySelector(".boot");
-  if (!el) return; // React already mounted; its own Boundary owns the screen now
+  const el = document.querySelector(".boot:not(.boot-done)");
+  // Gone, or already handing over to a mounted app: React's own Boundary owns
+  // the screen now, and painting an error over a working wallet would be worse.
+  if (!el) return;
   const box = document.createElement("div");
   box.style.cssText = "max-width:420px;padding:24px;text-align:center;color:#f6f6f8;";
   const mark = document.createElement("div");
