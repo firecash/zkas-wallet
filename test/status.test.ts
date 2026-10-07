@@ -85,6 +85,28 @@ describe("what the wallet tells the user it is doing", () => {
     expect(v.balanceIsFinal).toBe(false);
   });
 
+  // A red-team pass found a funded, fully synced wallet announcing
+  // "Ready to pay · You can send now" while the daemon's own link to a node was
+  // down. The payment would have been built, proved — tens of seconds on a phone
+  // — and then had nowhere to be broadcast. `node_connected` was published by the
+  // daemon and read by nothing outside the node-runner page.
+  it("does not claim a payment can be made while the daemon has no node", () => {
+    const v = walletStatus({ ...base, nodeConnected: false });
+    expect(v.phase).toBe("offline");
+    expect(v.label).not.toMatch(/ready/i);
+    expect(v.detail).toMatch(/safe/i);
+  });
+
+  // The counterpart, and the more dangerous direction. `spend_ready` is defined as
+  // exactly the condition `/prepare` enforces, so a UI that refuses while the
+  // daemon would accept is the same divergence mirrored — and a send gate hung off
+  // a liveness flag has silently blocked withdrawals on this project before.
+  // Saying "can't reach the network" must not become "you may not spend".
+  it("still allows the spend the daemon would accept when the node link drops", () => {
+    expect(walletStatus({ ...base, nodeConnected: false }).canSpend).toBe(true);
+    expect(walletStatus({ ...base, nodeConnected: undefined }).canSpend).toBe(true);
+  });
+
   // Every one of these words appeared on screen at some point. None of them mean
   // anything to somebody who just wants to know whether their money is there.
   it("uses no internal jargon in anything the user reads", () => {

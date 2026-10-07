@@ -3030,6 +3030,7 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
     chainLen: shownChainLen,
     warming: !!status.warming,
     loading: !!status.loading,
+    nodeConnected: status.node_connected,
     blocksBehind: status.blocks_behind,
     haveConfirmedBalance: !!snap,
     etaSeconds: eta,

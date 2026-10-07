@@ -34,6 +34,11 @@ export interface StatusInput {
   /// The daemon's own answer to "would a spend be accepted right now". Absent on
   /// daemons that predate the field, in which case `synced` is used.
   spendReady?: boolean;
+  /// The daemon's own link to a node. Absent on daemons that predate the field.
+  /// Distinct from `online`, which is about reaching the DAEMON: the daemon can
+  /// answer perfectly while its node connection is down, and in that state a
+  /// payment can still be built and proved but has nowhere to be broadcast.
+  nodeConnected?: boolean;
   /// A confirmed balance from a previous completed sync, if we have ever had one.
   haveConfirmedBalance: boolean;
   /// Seconds remaining from a measured scan rate, or null if not yet known.
@@ -201,6 +206,32 @@ export function walletStatus(s: StatusInput): WalletStatusView {
       pctFine: null,
       progress: null,
       eta: null,
+      tone: "busy",
+      balanceIsFinal: false,
+      canSpend: walletCanSpend(s),
+    };
+  }
+
+  // The daemon is answering, but ITS link to a node is down. Nothing used to read
+  // this, so a wallet in that state still announced "Ready to pay · You can send
+  // now" — and a payment built from it would have been proved and then had
+  // nowhere to go.
+  //
+  // `canSpend` is deliberately left as the daemon reports it. `spendReady` is
+  // defined as exactly what `/prepare` enforces and the daemon's own note says
+  // this card must not diverge from it; refusing here would make the UI stricter
+  // than the daemon, which is the same fault mirrored. A send gate hung off a
+  // liveness flag has silently blocked withdrawals on this project before. So
+  // this changes what we SAY, not what we allow.
+  if (s.nodeConnected === false) {
+    return {
+      phase: "offline",
+      label: i18n.t("status.offlineLabel"),
+      detail: i18n.t("status.offlineDetail"),
+      pct,
+      pctFine,
+      progress,
+      eta,
       tone: "busy",
       balanceIsFinal: false,
       canSpend: walletCanSpend(s),
