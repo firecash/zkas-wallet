@@ -223,5 +223,10 @@
     "accept": "Watch this wallet",
     "adding": "Adding…",
     "decline": "No, discard the link"
+  },
+  "daemonError": {
+    "network": "Lost contact with the network for a moment. Your coins are safe — the wallet keeps retrying on its own.",
+    "generic": "The wallet service hit a problem while reading the chain. Your coins are safe on the chain.",
+    "details": "Technical details"
   }
 }

@@ -2934,6 +2934,22 @@ function isTransientNote(msg: string): boolean {
   return /[….]{1,3}$/.test(m) && m === m.toLowerCase() && m.length < 40;
 }
 
+/// A daemon fault, said in words the person reading it can act on.
+///
+/// `status.error` was rendered verbatim: a red box reading
+/// `rpc error: connection reset by peer` directly under a green "Ready" pill.
+/// It is contradictory, it is untranslatable, and it names no action. The raw
+/// text still matters when something is actually broken, so it is kept — one
+/// disclosure away, where it helps whoever is diagnosing rather than alarming
+/// whoever is not.
+function friendlyDaemonError(msg: string): string {
+  const m = msg.toLowerCase();
+  if (/connection reset|connection refused|broken pipe|transport|rpc error|timed out|timeout|unavailable|eof/.test(m)) {
+    return i18n.t("daemonError.network");
+  }
+  return i18n.t("daemonError.generic");
+}
+
 function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // NB: every hook here runs BEFORE the `restoring` early return below. That
   // return comes and goes with the daemon's scan state, so a hook placed after
@@ -3275,7 +3291,15 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           one version away from doing that to somebody again: a lower-case message
           ending in an ellipsis is a progress note, not a failure, and the status line
           above already says what the wallet is doing. */}
-      {status.error && !isTransientNote(status.error) && <div className="msg err">{status.error}</div>}
+      {status.error && !isTransientNote(status.error) && (
+        <div className="msg err">
+          {friendlyDaemonError(status.error)}
+          <details className="setup-advanced" style={{ marginTop: 6 }}>
+            <summary>{t("daemonError.details")}</summary>
+            <code style={{ fontSize: 11, overflowWrap: "anywhere" }}>{status.error}</code>
+          </details>
+        </div>
+      )}
     </div>
   );
 }
