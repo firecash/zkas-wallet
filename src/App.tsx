@@ -503,6 +503,24 @@ function snapshotDirty(s: Status): boolean {
 /// a real removal takes effect while the user is still looking at the screen.
 const MISSING_TOLERANCE = 10;
 
+/// ...except against an engine running on THIS device, where ~10s is far too short.
+///
+/// A local engine answers `has_wallet:false` while it is still opening the wallet
+/// file — the comment below on `has_wallet` says so itself: "after a daemon
+/// restart every wallet is unloaded at once for minutes". On a phone that window
+/// routinely outlasts ten polls, so reopening the app armed the auto-repair
+/// against a wallet that was never lost, only still loading.
+///
+/// `/watch` defends itself well — same key plus an existing checkpoint RESUMES —
+/// so this is usually survivable. It is not survivable when there is no
+/// checkpoint yet: the engine writes one every 60s, so an app closed during its
+/// first minute of syncing has none, and the repair re-registers it into a scan
+/// from birthday. That is the "I closed it and it started from zero" report.
+///
+/// Time-based, not poll-based: the poll throttles itself when the tab is hidden,
+/// which is exactly when a phone is doing this.
+const LOCAL_ENGINE_MISSING_GRACE_MS = 150_000;
+
 /// Scroll the active tab pane to sit just under the sticky tab bar, so whatever
 /// the user is here to do (type an address, read tx details) is immediately in
 /// view — never the header/balance they'd have to scroll past.
@@ -660,6 +678,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   const warmArmedFor = useRef<string | null>(null);
   // Consecutive polls answering "no wallet"; see the guard in `refresh`.
   const missingPolls = useRef(0);
+  /// When the daemon first said "no wallet" in this run, for the time-based grace.
+  const missingSince = useRef<number | null>(null);
   // Auto-repair state: when the daemon has genuinely forgotten this token's
   // wallet (server-side GC, a wiped wallet dir, a fresh hosted instance) but
   // this device holds the seed, we re-register the viewing key ourselves
@@ -802,10 +822,24 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         // still opening. A daemon that says it HAS the wallet has not forgotten it.
         if (s.has_wallet) {
           missingPolls.current = 0;
+          missingSince.current = null;
           repairAttempts.current = 0;
           noKeyHere.current = false;
-        } else missingPolls.current += 1;
-        const transient = missingPolls.current <= MISSING_TOLERANCE;
+        } else {
+          missingPolls.current += 1;
+          if (missingSince.current == null) missingSince.current = now;
+        }
+        // An engine on this device gets a much longer, TIME-based grace: it is
+        // opening the wallet, not missing it. See LOCAL_ENGINE_MISSING_GRACE_MS.
+        // "An engine WE started on this device", not "the base looks local": a
+        // self-hosted walletd on localhost is a separate server whose restart is
+        // a hosted restart, and `localEngine()` is additionally true under jsdom,
+        // where the origin is localhost. The grace is for the embedded engine
+        // whose startup we are waiting on.
+        const ownEngine = embeddedChosen() || (isDesktop() && localEngine());
+        const stillOpeningLocally =
+          ownEngine && missingSince.current != null && now - missingSince.current < LOCAL_ENGINE_MISSING_GRACE_MS;
+        const transient = missingPolls.current <= MISSING_TOLERANCE || stillOpeningLocally;
         const denied = !!prev?.has_wallet && !s.has_wallet;
         // Out of grace with a wallet on record: if this device holds the seed,
         // the daemon has LOST the registration — re-register the viewing key
