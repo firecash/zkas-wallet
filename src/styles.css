@@ -172,7 +172,11 @@ a { color: var(--ember-text); }
   50%  { transform: translate3d(3%, 2%, 0)  scale(1.08);  opacity: 1; }
   100% { transform: translate3d(5%, -1%, 0) scale(1.04);  opacity: 0.85; }
 }
-.balance > *:not(.balance-glow) { position: relative; z-index: 1; }
+/* The eye is excluded here on purpose. This selector is (0,2,0) and
+   `.balance-eye` is (0,1,0), so `position: relative` used to win outright — the
+   eye never left the flow and sat at the card's top-LEFT, overhanging its
+   padding, beside a centred label. */
+.balance > *:not(.balance-glow):not(.balance-eye) { position: relative; z-index: 1; }
 .balance-label {
   display: inline-flex;
   align-items: center;
@@ -534,8 +538,15 @@ a { color: var(--ember-text); }
   .action-sheet-wrap, .action-sheet { animation: none; }
 }
 
+/* Links styled as buttons keep the UA underline unless it is cleared here. */
+.btn { text-decoration: none; }
 .copybtn { transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease; }
-.copybtn.copied { color: var(--good); border-color: var(--good); }
+/* On the FILLED button the label has to stay ink-on-teal: --good (#35c46a) on
+   --ember (#17d6be) measures 1.24:1, so the confirmation of the most-tapped
+   action in the app could not be read at all. The green belongs to the outline
+   variants, where it sits on the surface colour. */
+.copybtn.copied { border-color: var(--good); }
+.btn.ghost.copybtn.copied, .linkbtn.copybtn.copied { color: var(--good); }
 
 /* Confirmation status pill in the transaction-detail modal. */
 .conf-pill {
@@ -3480,3 +3491,34 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
 /* Your own avatar in the chat header: the way to your profile. */
 .chat-me { flex: 0 0 auto; background: none; border: 0; padding: 0; cursor: pointer; line-height: 0; }
 .chat-me .chat-avatar { width: 28px; height: 28px; font-size: 10px; }
+
+/* ---------------------------------------------------------------- desktop fit
+   The app is phone-first, and several containers simply stretched. These cap
+   them at a width a pointer-driven layout can actually read. */
+@media (min-width: 900px) {
+  /* Settings rows ran the full 1032px: title hard left, value hard right, and
+     half a metre of nothing between them. */
+  .settings-route { max-width: 640px; margin-inline: auto; }
+
+  /* Every page centred its own column at a different width (820 / 920 / 1080),
+     so moving down the rail slid the whole layout sideways by ~110px. One
+     column; a page that wants to be narrower does it on its inner content. */
+  .control-page, .mining-page, .explorer-page, .services-page { max-width: 1080px; }
+
+  /* The connection chip is ~110px of content; `flex: 1 1 0` grew it to 795px. */
+  .wallet-topline .connection-button { flex: 0 1 auto; max-width: 360px; }
+}
+
+/* The sheet's close button is floated, and `.sendhead` is a flex container —
+   flex layout ignores floats entirely, so the heading ran right up against it
+   with a measured 0px gap ("…spendable✕"). */
+.sendhead { padding-inline-end: 44px; }
+
+/* Touch targets. The coarse-pointer block already raises .linkbtn and .chip;
+   these three were left at 27-34px, and `.service-action` is a service card's
+   only action. */
+@media (pointer: coarse) {
+  .balance-eye { width: 44px; height: 44px; }
+  .btn.small { min-height: 44px; }
+  .service-action { min-height: 44px; display: inline-flex; align-items: center; }
+}
