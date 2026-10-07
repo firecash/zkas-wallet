@@ -564,8 +564,12 @@ export function ChatScreen({
     const id = await engine.chatIdentity(getDeviceSeed(), 0);
     const theirs = await engine.wrapDm(id.privkey_hex, peer, body);
     const mine = await engine.wrapDm(id.privkey_hex, id.pubkey_hex, body);
-    client.current?.publish(theirs);
-    client.current?.publish(mine);
+    // Theirs first: it is the copy that matters. If the socket drops between the
+    // two, the caller still hears about it rather than the failure being
+    // swallowed by the optional-chain and the message looking sent.
+    if (!client.current?.live) throw new Error("offline");
+    client.current.publish(theirs);
+    client.current.publish(mine);
     setDms((prev) => {
       const next = new Map(prev);
       const thread = [...(next.get(peer) ?? [])];
@@ -681,9 +685,23 @@ export function ChatScreen({
     const body = draft.trim();
     if (!body || sending) return;
     if (view.k === "dm") {
-      setDraft("");
-      if (composer.current) composer.current.style.height = "auto";
-      await sendDm(view.peer, body).catch(() => setError("send"));
+      // The draft is cleared only once the message is actually out.
+      //
+      // It used to be wiped first. `publish()` throws when the socket is down,
+      // so a DM typed while the relay was away vanished completely: not on
+      // screen, not queued, not retryable, and the typed text gone with it. The
+      // public-room path has always done this correctly — it clears after a
+      // successful publish and leaves a failed row the user can tap to retry.
+      setSending(true);
+      try {
+        await sendDm(view.peer, body);
+        setDraft("");
+        if (composer.current) composer.current.style.height = "auto";
+      } catch {
+        setError("send");
+      } finally {
+        setSending(false);
+      }
     } else {
       await send();
       if (composer.current) composer.current.style.height = "auto";

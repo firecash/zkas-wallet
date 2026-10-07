@@ -27,7 +27,33 @@ const PER_WALLET_PREFIXES = [
   // MASTER PHRASE as that wallet's backup even when its key is unrelated — the
   // user then backs up the wrong secret.
   "wallet_account_",
+  // The VIEW KEY of a watch-only wallet. `lib/watchonly.ts` calls it "the
+  // wallet's entire financial history in one string", and the disclosure is
+  // permanent — so leaving it behind on removal is the worst omission here.
+  "watch_fvk_",
+  "local_receipts_", // what this device has announced as arriving
+  "last_final_balance_", // arrival baseline; revives a removed wallet's figure
+  "maintenance_last_run_", // unattended-consolidation clock
 ];
+
+/**
+ * Per-wallet keys whose token is not a simple suffix of a fixed prefix, so they
+ * need a scan rather than one `removeItem`.
+ *
+ * `device_seed_stray_<token>_<ts>` is the important one: `shelveMismatchedSeed`
+ * writes a SPENDING KEY there, in the clear when no lock is on, and the exact-key
+ * removal of `device_seed_<token>` never matched it. A removed — or explicitly
+ * erased — wallet could leave its spending key on the device.
+ */
+function sweepScattered(token: string): void {
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const k = localStorage.key(i);
+    if (!k) continue;
+    if (k.startsWith(`device_seed_stray_${token}_`)) localStorage.removeItem(k);
+    // timing_<op>_<token>: the token is the suffix, not the prefix.
+    else if (k.startsWith("timing_") && k.endsWith(`_${token}`)) localStorage.removeItem(k);
+  }
+}
 
 /**
  * Keys that are global and must be left ALONE here.
@@ -81,6 +107,7 @@ export function wipeWalletState(token: string | null): void {
   // on this device still holds the same address.
   const address = addressOf(t);
   for (const p of PER_WALLET_PREFIXES) localStorage.removeItem(p + t);
+  sweepScattered(t);
   if (address && !registeredElsewhere(t, address)) localStorage.removeItem(`birthday_addr_${address}`);
   void NEVER_TOUCH; // documentation of intent; see the comment above
 

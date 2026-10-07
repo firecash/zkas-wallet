@@ -25,6 +25,7 @@ import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, prepa
 import { walletStatus, walletCanSpend } from "./status";
 import { useZkasPrice, fmtFiat } from "./price";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
+import { feeReserveSompi } from "./fees";
 import { useMaintenance, mergeInFlight } from "./useMaintenance";
 import { isMaintenanceEnabled, setMaintenanceEnabled } from "./maintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
@@ -349,7 +350,14 @@ function sameStatus(a: Status, b: Status): boolean {
 /// state are what the History rows show.
 function sameTxs(a: LocalTx[], b: LocalTx[]): boolean {
   if (a.length !== b.length) return false;
-  return a.every((x, i) => x.txid === b[i].txid && x.confs === b[i].confs && x.pending === b[i].pending);
+  // `confTries` belongs here too. It is what `confBadge` reads to decide a send
+  // was never seen on chain, and leaving it out froze the badge: the counter kept
+  // rising in storage while the React copy stayed put, so a send the chain never
+  // acknowledged displayed "Sending…" for the rest of the session. It only moves
+  // on a genuinely unanswered lookup, so including it costs nothing at rest.
+  return a.every(
+    (x, i) => x.txid === b[i].txid && x.confs === b[i].confs && x.pending === b[i].pending && x.confTries === b[i].confTries,
+  );
 }
 
 /// Animate a balance from its previous value to the new one.
@@ -1005,11 +1013,20 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // condition `balanceIsFinal` uses; the first final reading only sets the baseline.
       if (s.synced && !s.warming && s.has_wallet) {
         const now = parseFloat(s.balance_fc || "0");
-        // `txs` is this device's own outgoing history. A balance rise that our own
-        // settling payment can explain — change coming back, or the optimistic spend
-        // subtraction being released — is not an arrival, and must not be announced as
-        // one. See `arrivals.ts`.
-        const gained = arrivalAmount(lastFinalBalance.current, now, true, txs);
+        // This device's own outgoing history. A balance rise that our own settling
+        // payment can explain — change coming back, or the optimistic spend
+        // subtraction being released — is not an arrival, and must not be
+        // announced as one. See `arrivals.ts`.
+        //
+        // Read from storage, NOT from the `txs` state. `refresh` is a useCallback
+        // whose deps reduce to [], so it is built once and every value it closes
+        // over is frozen at mount. Closing over `txs` meant a send made in this
+        // session was invisible here, and its change note — arriving ~10 minutes
+        // later — was announced as "Received 100 ZKAS". That is verbatim the live
+        // report `arrivals.ts` was written to fix: the fix was correct and its
+        // wiring defeated it. `recordSend` writes this key synchronously, so a
+        // fresh read is always current.
+        const gained = arrivalAmount(lastFinalBalance.current, now, true, loadTxs());
         const whileAway = firstFinalRead.current;
         firstFinalRead.current = false;
         if (gained !== null) {
@@ -5786,7 +5803,19 @@ function Send({
   // gets raised server-side, so we still reserve the worst case then).
   const feeCustom = parseAmount(customFee);
   const feeCustomSet = !Number.isNaN(feeCustom) && feeCustom > 0;
-  const feeReserve = feeCustomSet ? Math.max(feeCustom, FEE_MAX_FC) : FEE_MAX_FC;
+  // What to hold back so the daemon can actually pay the relay minimum.
+  //
+  // This was the flat FEE_MAX_FC (0.045), which is the fee for SIX spent notes.
+  // The cap is 38, and the curve is steep: 7 notes already cost 0.0501 and 38
+  // cost 0.2458. So "Max" on any wallet holding more than six notes produced an
+  // amount the daemon refuses outright with "insufficient matured funds", and
+  // tapping Max again refilled the same unpayable figure. `fees.ts` exists to
+  // price this properly — ask it, for the note count this wallet actually has.
+  const feeReserve = useMemo(() => {
+    const notes = Math.max(1, Math.min(status?.note_count ?? MAX_NOTES_PER_TX, MAX_NOTES_PER_TX));
+    const priced = feeReserveSompi(notes) / 1e8;
+    return feeCustomSet ? Math.max(feeCustom, priced) : priced;
+  }, [status?.note_count, feeCustomSet, feeCustom]);
   const overspend = amtValid && amt + feeReserve > spendable + 1e-9;
   // The maturing balance would cover it — the shortfall is just not-yet-matured funds.
   const blockedByMaturing = overspend && amtValid && amt + feeReserve <= spendable + maturing + 1e-9;

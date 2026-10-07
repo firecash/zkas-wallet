@@ -32,7 +32,14 @@ export function sameStatus(a: Status, b: Status): boolean {
 
 export function sameTxs(a: LocalTx[], b: LocalTx[]): boolean {
   if (a.length !== b.length) return false;
-  return a.every((x, i) => x.txid === b[i].txid && x.confs === b[i].confs && x.pending === b[i].pending);
+  // `confTries` belongs here too. It is what `confBadge` reads to decide a send
+  // was never seen on chain, and leaving it out froze the badge: the counter kept
+  // rising in storage while the React copy stayed put, so a send the chain never
+  // acknowledged displayed "Sending…" for the rest of the session. It only moves
+  // on a genuinely unanswered lookup, so including it costs nothing at rest.
+  return a.every(
+    (x, i) => x.txid === b[i].txid && x.confs === b[i].confs && x.pending === b[i].pending && x.confTries === b[i].confTries,
+  );
 }
 
 export function spendableFc(status: Status | null): number {
