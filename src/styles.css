@@ -3522,3 +3522,19 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
   .btn.small { min-height: 44px; }
   .service-action { min-height: 44px; display: inline-flex; align-items: center; }
 }
+
+/* The "service unreachable" card leads with the money, not with the server. */
+.setup-lastbalance {
+  display: flex; flex-direction: column; gap: 2px;
+  margin-bottom: 12px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2);
+}
+.setup-lastbalance strong { font-size: 22px; font-variant-numeric: tabular-nums; }
+.setup-advanced { margin-top: 14px; }
+.setup-advanced > summary {
+  cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 600;
+  padding: 6px 0; list-style: none;
+}
+.setup-advanced > summary::-webkit-details-marker { display: none; }
+.setup-advanced > summary::before { content: "⌄ "; display: inline-block; }
+.setup-advanced[open] > summary::before { transform: rotate(180deg); }

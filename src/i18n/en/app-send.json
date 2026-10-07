@@ -357,13 +357,17 @@
   "setup": {
     "title": "Can't reach the wallet service",
     "nativeDown": "The wallet service isn't responding. Check your connection and try again shortly — your funds are safe on-chain.",
-    "hostedDown": "The hosted wallet service isn't responding. Nothing for you to run — try again shortly.",
+    "hostedDown": "The wallet service is not responding right now. Nothing for you to run or fix — it usually comes back on its own.",
     "privacyNote": "Your spending key is on this device either way — it is never sent to the service. What running your own <code>zkas-walletd</code> changes is <b>privacy</b>: the hosted service can see which wallet is asking about which blocks, and your own daemon sees only what you already know.",
     "nativeTransports": "The installed app accepts HTTPS and plain HTTP LAN addresses.",
     "webTransports": "The web wallet requires an HTTPS wallet-service URL.",
     "daemonUrl": "Daemon URL",
     "checking": "Checking…",
-    "save": "Save"
+    "save": "Save",
+    "safeOnChain": "Your coins are safe on the chain. This is only how the app reads them.",
+    "lastBalance": "Last confirmed balance",
+    "retry": "Try again",
+    "advanced": "Connect to a different wallet service"
   },
   "privateSends": {
     "intro": "Your payments normally carry a copy of their details encrypted to <b>your own</b> key, so your history survives a restore and you can prove a payment later. Private sends leave that copy out.",

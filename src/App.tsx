@@ -8542,26 +8542,41 @@ function Setup({ error: requestError }: { error?: string | null }) {
     return <DesktopEngineDown requestError={requestError} />;
   }
 
+  // What this screen used to do: replace the whole wallet — balance, Receive,
+  // Send, history — with a server form headed "Can't reach the wallet service",
+  // ten seconds after a blip, with a `Daemon URL` text box as the only control
+  // and no retry. To the person holding the phone that is indistinguishable
+  // from "my money is gone", and the only thing offered is a URL they could not
+  // possibly know. The sibling string for native users already says "your funds
+  // are safe on-chain"; the hosted one, which is what most people hit, dropped
+  // exactly that sentence.
+  //
+  // So: the last confirmed balance stays on screen, the first words are that the
+  // coins are safe, retrying is one obvious tap, and the daemon field moves
+  // behind a disclosure for the people who actually run their own.
+  const lastSeen = loadStatusCache();
   return (
     <div className="card setup">
       <h2>{t("setup.title")}</h2>
-      <div className="msg warn">
-        {isNative()
-          ? t("setup.nativeDown")
-          : t("setup.hostedDown")}
-      </div>
-      <p className="muted small">
-        <Trans
-          i18nKey="setup.privacyNote"
-          components={{
-            code: <code />,
-            b: <b />,
-          }}
-        />
-      </p>
-      <p className="muted small">{isNative() ? t("setup.nativeTransports") : t("setup.webTransports")}</p>
+      {lastSeen?.balance_fc && (
+        <div className="setup-lastbalance">
+          <span className="muted small">{t("setup.lastBalance")}</span>
+          <strong>{trimFc(lastSeen.balance_fc)} ZKAS</strong>{/* i18n-ignore: ticker */}
+        </div>
+      )}
+      <div className="msg warn">{t("setup.safeOnChain")}</div>
+      <p className="muted small">{isNative() ? t("setup.nativeDown") : t("setup.hostedDown")}</p>
       {error && <div className="msg err">{error}</div>}
-      <label>{t("setup.daemonUrl")}</label>
+      <button className="btn" disabled={busy} onClick={() => location.reload()}>
+        {busy ? t("setup.checking") : t("setup.retry")}
+      </button>
+      <details className="setup-advanced">
+        <summary>{t("setup.advanced")}</summary>
+        <p className="muted small">
+          <Trans i18nKey="setup.privacyNote" components={{ code: <code />, b: <b /> }} />
+        </p>
+        <p className="muted small">{isNative() ? t("setup.nativeTransports") : t("setup.webTransports")}</p>
+        <label>{t("setup.daemonUrl")}</label>
       <div className="row">
         <input value={base} onChange={(e) => setB(e.target.value)} className="mono" placeholder={isNative() ? "http://192.168.1.20:8501" : "https://wallet.example.com"} />
         <button
@@ -8583,7 +8598,8 @@ function Setup({ error: requestError }: { error?: string | null }) {
         >
           {busy ? t("setup.checking") : t("setup.save")}
         </button>
-      </div>
+        </div>
+      </details>
     </div>
   );
 }
