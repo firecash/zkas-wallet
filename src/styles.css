@@ -3583,3 +3583,53 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
   .lock-brand .bl-logo::after { animation: none !important; }
 }
 body.reduced-effects .lock-brand .bl-logo::after { animation: none !important; }
+
+/* The balance reserves its width so crossing a digit boundary mid-count (9.9 -> 10.1)
+   cannot nudge the layout. Valid because `.amt` is already tabular-nums, so 1ch is
+   exactly one digit advance. */
+.balance .amt { min-width: 9ch; }
+
+/* ------------------------------------------------------------------ press
+   On a phone there is no hover, so a row that only responds to :hover responds
+   to nothing at all. History — the most-touched surface in the app after the two
+   action buttons — had a hover transform and no :active, so tapping a payment
+   gave no acknowledgement whatsoever.
+
+   Press fast, release slow: down is a quick ease-in, up is a longer settle, which
+   is what makes a tap feel mechanical rather than laggy. Two calibrations only —
+   discrete controls dip further than full-width rows, because the same scale on a
+   350px row reads as the whole screen flinching.
+
+   transform only: no layout, no paint. */
+.txrow, .chip, .contact-row, .setrow-head, .walletbar, .connection-button {
+  transition: transform 180ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.txrow:active:not(:disabled),
+.contact-row:active:not(:disabled),
+.setrow-head:active:not(:disabled),
+.walletbar:active:not(:disabled),
+.connection-button:active:not(:disabled) {
+  transform: scale(0.985);
+  transition-duration: 90ms;
+  transition-timing-function: cubic-bezier(0.32, 0, 0.67, 0);
+}
+.chip:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: 90ms;
+  transition-timing-function: cubic-bezier(0.32, 0, 0.67, 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .txrow, .chip, .contact-row, .setrow-head, .walletbar, .connection-button,
+  .txrow:active, .chip:active, .contact-row:active, .setrow-head:active,
+  .walletbar:active, .connection-button:active { transition: none; transform: none; }
+}
+body.reduced-effects .txrow:active,
+body.reduced-effects .chip:active,
+body.reduced-effects .contact-row:active,
+body.reduced-effects .setrow-head:active,
+body.reduced-effects .walletbar:active,
+body.reduced-effects .connection-button:active { transform: none; }
+
+/* A row that slides sideways under the pointer walks the eye down a column of
+   amounts, and being hover-only the phone never saw it anyway. Colour instead. */
+.txrow:hover { transform: none; box-shadow: none; }

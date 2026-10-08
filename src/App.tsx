@@ -540,7 +540,10 @@ function scrollToPane(force = false) {
   if (typeof window === "undefined") return;
   if (!force && window.innerWidth > MOBILE_SCROLL_MAX_WIDTH) return;
   requestAnimationFrame(() => {
-    document.querySelector(".pane")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.querySelector(".pane")?.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "start",
+    });
   });
 }
 
@@ -1599,7 +1602,12 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 aria-label={TAB_LABEL[t]()}
                 title={TAB_LABEL[t]()}
                 className={`${tab === t ? "active" : ""}${t === "settings" ? " gear" : ""}`}
-                onClick={() => setTab(t)}
+                // Tapping a tab must take you to the pane. `scrollToPane` was written
+                // for exactly this, with a mobile-only guard and a rationale, and was
+                // wired to three other places but never to the tabs themselves — so on
+                // a phone the pane sits at y=596 on an 844px viewport and tapping
+                // "History" left scrollY at 0. The app looked like it had ignored you.
+                onClick={() => { setTab(t); scrollToPane(); }}
                 onKeyDown={(e) => {
                   // Arrow keys move between tabs, as a tablist is expected to.
                   if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
@@ -3110,6 +3118,17 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   // only on some renders, and the moment "restoring" flips off React throws
   // #310 (more hooks than the previous render) and takes the whole UI down.
   const animBal = useCountUp(shownBal);
+  /// Decimal places for the count-up, taken from where it is GOING.
+  ///
+  /// The tween rendered `trimFc(animBal.toFixed(8))`, and trimming only removes
+  /// TRAILING zeros — so mid-flight the string was full precision. Counting
+  /// 12.7 -> 14.51 rendered 4, 11, 8, 11 then 5 characters: the largest number on
+  /// screen, centred at up to 48px, swelling about 180px wide and snapping back,
+  /// twice, every time money arrives. `tabular-nums` equalises digit WIDTHS, not
+  /// digit COUNTS, so it could not help. Fixing the precision turns the count-up
+  /// from something that looks like a rendering fault into the thing it was
+  /// written to be.
+  const balanceDp = (trimFc(shownBal.toFixed(8)).split(".")[1] ?? "").length;
   const price = useZkasPrice();
   const hide = useHideBalances();
   /// An amount printed in the hero's notice lines, masked when balances are hidden.
@@ -3199,10 +3218,18 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
         {t("balanceHero.label")}
       </div>
       <div className="amt">
-        {hide ? <span className="amt-hidden">{MASK}</span> : trimFc(animBal.toFixed(8))}
+        {hide ? <span className="amt-hidden">{MASK}</span> : animBal.toFixed(balanceDp)}
         <span className="unit"> ZKAS</span>
       </div>
-      {!hide && fmtFiat(shownBal, price) && <div className="balance-fiat">≈ {fmtFiat(shownBal, price)}</div>}
+      {/* Always rendered, so hiding the balance cannot move the page.
+          Every other line in this card is deliberately height-reserved — there is a
+          comment above each explaining why — and this one was missed: toggling the
+          eye removed it outright and shifted everything below up by ~42px, moving
+          Receive from y=725 to y=683. A privacy control that makes the page jump
+          draws the eye straight to the thing it just hid. */}
+      <div className="balance-fiat" aria-hidden={hide || !fmtFiat(shownBal, price) ? true : undefined}>
+        {!hide && fmtFiat(shownBal, price) ? `≈ ${fmtFiat(shownBal, price)}` : "\u00a0"}
+      </div>
       {/* Fixed height, deliberately. This line's content changes as the wallet
           works — "Ready" one second, "Setting up 44% · about 5 minutes left" the
           next — and with height driven by content the whole card grew and shrank
