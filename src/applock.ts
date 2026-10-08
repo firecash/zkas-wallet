@@ -94,7 +94,11 @@ function plaintextSeeds(): Record<string, string> {
 
 /** Is this device locked behind a passphrase? */
 export function isLockEnabled(): boolean {
-  return record() !== null || Object.keys(legacyRecords()).length > 0;
+  const rec = record();
+  // An empty record is not a lock: it has nothing to verify a secret against, so
+  // demanding one can only ever accept a wrong answer (see `dropIfEmpty`).
+  const real = rec !== null && (Object.keys(rec.wallets).length > 0 || !!rec.mnemonic);
+  return real || Object.keys(legacyRecords()).length > 0;
 }
 
 function legacyRecords(): Record<string, Sealed & { kind?: "pin" | "passphrase" }> {
@@ -323,11 +327,33 @@ export async function disableLock(secret: string): Promise<boolean> {
 
 /** Forget the sealed master phrase (used when the last phrase-derived wallet is
  * removed, so "Remove wallet" really does erase that wallet's key). */
+/// Drop the lock record entirely once it protects nothing.
+///
+/// An emptied record is worse than no record. `unlock()` has a `nothingToVerify`
+/// branch — with no sealed wallets and no sealed phrase there is nothing to test a
+/// secret against, so it returns true for ANY input and then holds that input as
+/// `sessionSecret`. Removing your last wallet left exactly that state: the app
+/// still demanded a PIN, accepted the first thing typed, and sealed the NEXT
+/// wallet's seed and master phrase under a 6-digit string the user had entered
+/// once, blind, with no confirm field and no indication a secret was being set.
+/// Their real PIN was then refused forever. That is a complete key-loss path, so
+/// the empty record goes.
+function dropIfEmpty(rec: LockRecord): void {
+  if (Object.keys(rec.wallets).length === 0 && !rec.mnemonic) {
+    localStorage.removeItem(LOCK_KEY);
+    unlocked = null;
+    sessionSecret = null;
+    sessionMnemonic = null;
+    return;
+  }
+  write(rec);
+}
+
 export function forgetMnemonicLock(): void {
   const rec = record();
   if (rec?.mnemonic) {
     delete rec.mnemonic;
-    write(rec);
+    dropIfEmpty(rec);
   }
   sessionMnemonic = null;
 }
@@ -337,8 +363,8 @@ export function forgetWalletLock(token: string): void {
   const rec = record();
   if (!rec) return;
   delete rec.wallets[token];
-  write(rec);
   if (unlocked) delete unlocked[token];
+  dropIfEmpty(rec);
 }
 
 /**

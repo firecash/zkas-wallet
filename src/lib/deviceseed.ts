@@ -340,3 +340,43 @@ export async function resolveDeviceSeed(expectedAddress?: string): Promise<strin
   // over the network. The device asks the user to restore instead.
   throw new Error(SEED_REQUIRED);
 }
+
+/** Key recording that a freshly created wallet has NOT had its phrase written down. */
+function backupKey(token: string): string {
+  return `backup_pending_${token}`;
+}
+
+/// A new wallet's recovery phrase has not been written down yet.
+///
+/// The backup card used to live in React state alone, so one tap on "Explore" —
+/// the nav bar sits 40px below it and is fully live — or a plain reload destroyed
+/// it permanently. The phrase had never been revealed, the quiz had never run, and
+/// NOTHING recorded that it was skipped: `main.tsx` asserts "which is why the
+/// backup nag exists", and grepping the repo for one finds nothing. A wallet could
+/// therefore be funded for months with no backup and no reminder, and this storage
+/// is the same storage a browser may evict after 7 days.
+export function markBackupPending(token: string, address: string): void {
+  try {
+    localStorage.setItem(backupKey(token), address);
+  } catch {
+    /* storage full / private mode: the in-memory card still shows this session */
+  }
+}
+
+/** The address of the wallet still awaiting a written-down phrase, if any. */
+export function backupPending(token: string): string | null {
+  try {
+    return localStorage.getItem(backupKey(token));
+  } catch {
+    return null;
+  }
+}
+
+/** Cleared only by finishing the backup — reaching the end of the quiz. */
+export function clearBackupPending(token: string): void {
+  try {
+    localStorage.removeItem(backupKey(token));
+  } catch {
+    /* ignore */
+  }
+}

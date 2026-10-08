@@ -33,7 +33,7 @@ import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./rec
 import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText } from "./lib/utils";
-import { SEED_REQUIRED, resolveDeviceSeed, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor } from "./lib/deviceseed";
+import { SEED_REQUIRED, resolveDeviceSeed, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
@@ -667,7 +667,19 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   }, [tab]);
   // A freshly created seed, held at the top level so the 4-second status poll
   // (which flips has_wallet true) can never unmount the backup screen mid-copy.
-  const [freshSeed, setFreshSeed] = useState<{ seed: string; address: string } | null>(null);
+  /// The backup card, which must survive leaving the screen.
+  ///
+  /// This was state alone, so tapping "Explore" — the nav bar is live and sits
+  /// 40px under the card — or reloading destroyed it for good, with the phrase
+  /// never revealed and nothing recording that it had been skipped. Seeded from
+  /// durable storage so the card comes back until the quiz is actually finished.
+  const [freshSeed, setFreshSeed] = useState<{ seed: string; address: string } | null>(() => {
+    const token = localStorage.getItem("wallet_token") || "default";
+    const address = backupPending(token);
+    if (!address) return null;
+    const seed = getDeviceSeed();
+    return seed ? { seed, address } : null;
+  });
   // The daemon lost this wallet's registration AND this device holds no key to
   // auto-repair with: show a recovery screen, never a bare "create a new wallet"
   // over someone's existing wallet.
@@ -1461,13 +1473,23 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       {reachable === false && <Setup error={reachError} />}
       {/* Seed backup takes priority and stays until dismissed — independent of has_wallet. */}
       {reachable && freshSeed && (
-        <SeedBackup seed={freshSeed.seed} address={freshSeed.address} onDone={() => setFreshSeed(null)} />
+        <SeedBackup
+          seed={freshSeed.seed}
+          address={freshSeed.address}
+          onDone={() => {
+            clearBackupPending(localStorage.getItem("wallet_token") || "default");
+            setFreshSeed(null);
+          }}
+        />
       )}
       {reachable && !freshSeed && walletLost && (
         <RecoverWallet onRecovered={refresh} onStartOver={() => setWalletLost(false)} />
       )}
       {reachable && !freshSeed && !walletLost && status && !status.has_wallet && (
-        <Onboard status={status} onCreated={(seed, address) => setFreshSeed({ seed, address })} onImported={refresh} />
+        <Onboard status={status} onCreated={(seed, address) => {
+                  markBackupPending(localStorage.getItem("wallet_token") || "default", address);
+                  setFreshSeed({ seed, address });
+                }} onImported={refresh} />
       )}
       {/* Settings is its own screen, the way a phone expects: the nav opens it,
           Back leaves it, and the wallet underneath keeps whichever tab the user

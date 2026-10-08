@@ -27,6 +27,7 @@ const PER_WALLET_PREFIXES = [
   // MASTER PHRASE as that wallet's backup even when its key is unrelated — the
   // user then backs up the wrong secret.
   "wallet_account_",
+  "backup_pending_", // "this wallet's phrase was never written down" — meaningless once it is gone
   // The VIEW KEY of a watch-only wallet. `lib/watchonly.ts` calls it "the
   // wallet's entire financial history in one string", and the disclosure is
   // permanent — so leaving it behind on removal is the worst omission here.
