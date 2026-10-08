@@ -1180,6 +1180,12 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         // and the modal is already showing its progress; flipping to the
         // engine-down screen meanwhile would only add a reload once it answers.
         const busy = (embeddedChosen() && engineBusy()) || desktopSwitching;
+        // Starting the on-device engine is not instant — it opens the wallet store
+        // and binds a loopback port — and the poll keeps failing the whole time.
+        // Counting those against the 5-failure flip put "can't reach the wallet
+        // service" on screen WHILE the engine was coming up, which is what a phone
+        // shows on a normal cold start. Reported from a real device on rc4.
+        const starting = embeddedChosen() && engineHealing.current;
         if (embeddedChosen() && !busy && failedPolls.current === 3 && !engineHealing.current) {
           // Not mid-send: the engine may have died — try once to revive it.
           // ensureEmbedded is a no-op if running, and restarts it (new port) if not.
@@ -1189,7 +1195,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             .catch(() => {})
             .finally(() => { engineHealing.current = false; });
         }
-        const flipAt = busy ? 120 : 5;
+        const flipAt = busy ? 120 : starting ? 60 : 5;
         if (failedPolls.current >= flipAt) {
           setReachError((error as Error)?.message || String(error));
           setReachable(false);
@@ -1332,6 +1338,30 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // while the webview woke. On foreground: clear stale background failures,
   // re-ensure the engine (revives it and adopts a possibly-new loopback port), and
   // poll at once so the recovery is instant instead of tap-triggered.
+  // COLD START, phone mode. The engine runs inside this app, so a freshly launched
+  // process has none running — and nothing asked for one. The poll simply failed
+  // until the self-heal noticed at the third failure, started it, and the screen
+  // flipped to "can't reach the wallet service" two polls later while it was still
+  // coming up. That is what a phone showed on an ordinary launch.
+  //
+  // Ask for it immediately instead. `ensureEmbedded` is a no-op when one is already
+  // running and adopts its port, so this costs nothing on a warm start and is the
+  // difference between a wallet opening and an error screen on a cold one.
+  useEffect(() => {
+    if (!embeddedChosen()) return;
+    engineHealing.current = true;
+    void ensureEmbedded()
+      .then((url) => { if (url) setBase(url); })
+      .catch(() => {})
+      .finally(() => {
+        engineHealing.current = false;
+        failedPolls.current = 0;
+        void refresh();
+      });
+    // Once, on mount: later revivals are the resume handler's and the poll's job.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const onResume = () => {
       failedPolls.current = 0;
