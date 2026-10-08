@@ -114,7 +114,8 @@
     "title": "보내기",
     "spendable": "{{amount}} 사용 가능",
     "recipientLabel": "수신자 보호 주소",
-    "addrPlaceholder": "zkas:…"
+    "addrPlaceholder": "zkas:…",
+    "waitingForSync": "아직 체인을 읽는 중입니다 — 따라잡는 즉시 보낼 수 있습니다."
   },
   "sign": {
     "title": "메시지 서명",
@@ -363,7 +364,12 @@
     "webTransports": "웹 지갑은 HTTPS 지갑 서비스 URL이 필요합니다.",
     "daemonUrl": "데몬 URL",
     "checking": "확인 중…",
-    "save": "저장"
+    "save": "저장",
+    "safeOnChain": "코인은 체인에 안전하게 있습니다. 이것은 앱이 읽는 방식의 문제일 뿐입니다.",
+    "lastBalance": "마지막으로 확인된 잔액",
+    "retry": "다시 시도",
+    "advanced": "다른 지갑 서비스에 연결",
+    "restartEngine": "기기 내 엔진 다시 시작"
   },
   "sendScene": {
     "warmEta": "약 {{n}}분 남음",
@@ -438,7 +444,7 @@
     "fingerprint": "지문",
     "on": "켜기",
     "off": "끄기",
-    "privateSends": "프라이빗 전송"
+    "privateSends": "익명 전송"
   },
   "appearanceCard": {
     "title": "강조 색상",
@@ -618,7 +624,8 @@
     "sealed": "금액, 발신자, 수신자 — 모두 보호됩니다.",
     "viewKeyTitle": "지갑 보기 키",
     "viewKeySummary": "이 지갑을 읽기 전용으로 보기",
-    "seedMoved": "복구 시드를 찾으시나요? <b>설정 → 복구 시드</b>로 이동했습니다. 앱 잠금 뒤에 있습니다."
+    "seedMoved": "복구 시드를 찾으시나요? <b>설정 → 복구 시드</b>로 이동했습니다. 앱 잠금 뒤에 있습니다.",
+    "qrBuilding": "코드를 준비하는 중…"
   },
   "revealSeedCard": {
     "wrongPin": "잘못된 PIN입니다.",
@@ -821,7 +828,8 @@
     "copyPhrase": "구문 복사",
     "writeOnPaper": "종이에 순서대로 적으세요.",
     "written": "기록 완료",
-    "alsoFile": "암호화된 백업 파일도 저장"
+    "alsoFile": "암호화된 백업 파일도 저장",
+    "fillAllBlanks": "계속하려면 빠진 단어를 모두 채우세요."
   },
   "recoverWallet": {
     "errNotSecret": "복구 구문(12단어) 또는 복구 시드(64자 16진수)가 아닙니다.",
@@ -909,7 +917,11 @@
     "alreadyHave": "이미 지갑이 있으신가요?",
     "restoreFromFile": "백업 파일에서 복원",
     "importPhrase": "복구 구문 가져오기",
-    "watchWallet": "지갑 보기 (읽기 전용)"
+    "watchWallet": "지갑 보기 (읽기 전용)",
+    "wordsSoFar": "지금까지 12개 중 {{n}}개입니다.",
+    "wordsOddLength": "{{n}}개입니다. 복구 문구는 12, 18 또는 24개 단어입니다.",
+    "connectingWhy": "지갑을 만들기 전에 앱이 지갑 서비스에 연결합니다.",
+    "usePublicInstead": "대신 공개 서비스 사용"
   },
   "languagePicker": {
     "label": "언어",
@@ -1617,7 +1629,8 @@
     "amountZkas": "{{amount}} ZKAS",
     "blockEmission": "블록 발행량",
     "nextReduction": "다음 반감기",
-    "tailNote": "일정은 영구적인 테일 발행으로 종료되며, 고정된 최종 공급량은 없습니다."
+    "tailNote": "일정은 영구적인 테일 발행으로 종료되며, 고정된 최종 공급량은 없습니다.",
+    "liveHiddenOnTor": "Tor에서는 실시간 보기가 숨겨집니다. 불러오면 실제 IP가 드러나기 때문입니다."
   },
   "blockView": {
     "title": "블록",
@@ -1728,7 +1741,10 @@
     "forgotLink": "{{secret}}을(를) 잊으셨나요?",
     "wipeWarning": "이 작업은 모든 지갑 데이터를 <b>이 기기에서</b> 삭제합니다. 코인은 온체인에 남지만, 각 지갑은 시드나 백업 파일로만 복구됩니다.",
     "eraseDevice": "기기 초기화 및 재시작",
-    "cancel": "취소"
+    "cancel": "취소",
+    "sealed": "이 기기에 봉인됨",
+    "decrypting": "지갑을 복호화하는 중",
+    "decrypted": "복호화 완료"
   },
   "mainNav": {
     "mine": "채굴",
@@ -1839,10 +1855,10 @@
     "opening": "여는 중…"
   },
   "privateSends": {
-    "intro": "일반 결제는 복원 후 거래 내역을 살리거나 나중에 결제를 증명할 수 있도록, 세부 정보를 암호화해 <b>내</b> 키로 보관합니다. 프라이빗 전송은 이 사본을 남기지 않습니다.",
-    "cost": "영구적인 제약이 따릅니다. 프라이빗 전송은 지갑 복원 후 복구할 수 없고, 다른 기기에서 거래 내역에 표시되지 않으며, 누구에게도 증명할 수 없습니다. 받는 사람은 정상적으로 수신합니다.",
-    "turnOn": "프라이빗 전송 켜기",
-    "turnOff": "프라이빗 전송 끄기"
+    "intro": "결제는 보통 세부 내용의 사본을 <b>당신의</b> 키로 암호화해 함께 담습니다. 복구 후에도 내역이 남고 나중에 결제를 증명할 수 있도록 하기 위해서입니다. 익명 전송은 그 사본을 남기지 않습니다.",
+    "cost": "이 대가는 영구적이며, 부담하는 쪽은 당신입니다. 누구도 복호화할 수 있는 사본이 없습니다 — <b>당신의 지출 키로도 불가능합니다</b>. 보낸 뒤에는 익명 결제를 이 지갑 복구 시 되살릴 수 없고, 다른 기기의 내역에도 나타나지 않으며, 누구에게도 증명할 수 없습니다. 받는 사람은 정상적으로 받습니다.",
+    "turnOn": "익명 전송 켜기",
+    "turnOff": "익명 전송 끄기"
   },
   "paymentProof": {
     "title": "이 결제 증명하기",
@@ -1895,7 +1911,8 @@
       "muteConfirm": "다시 탭하여 {{name}} 음소거",
       "reportConfirm": "다시 탭하여 신고 및 음소거",
       "sendZkas": "ZKAS 보내기",
-      "noAddress": "아직 주소가 없습니다."
+      "noAddress": "아직 주소가 없습니다.",
+      "react": "반응"
     },
     "profile": {
       "copyKey": "공개 키 복사",
@@ -1966,7 +1983,11 @@
     "profileWhy": "이름, 소개, ZKAS를 받을 주소입니다. 모두 공개되며 언제든 변경할 수 있습니다.",
     "nameLabel": "이름",
     "useMyAddress": "내 지갑 주소 사용",
-    "clearAddress": "주소 삭제"
+    "clearAddress": "주소 삭제",
+    "earlier": "이전 메시지",
+    "today": "오늘",
+    "yesterday": "어제",
+    "jumpLatest": "최신으로 이동"
   },
   "backgroundPermission": {
     "title": "지갑 동기화를 백그라운드에서 허용할까요?​",
@@ -1983,5 +2004,10 @@
     "accept": "지갑 보기",
     "adding": "추가 중…",
     "decline": "아니요, 링크 삭제"
+  },
+  "daemonError": {
+    "network": "네트워크 연결이 잠시 끊겼습니다. 코인은 안전하며 지갑이 알아서 다시 시도합니다.",
+    "generic": "지갑 서비스가 체인을 읽는 중 문제가 발생했습니다. 코인은 체인에 안전합니다.",
+    "details": "기술 세부 정보"
   }
 }

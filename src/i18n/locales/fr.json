@@ -114,7 +114,8 @@
     "title": "Envoyer",
     "spendable": "{{amount}} disponibles",
     "recipientLabel": "Adresse protégée du destinataire",
-    "addrPlaceholder": "zkas:…"
+    "addrPlaceholder": "zkas:…",
+    "waitingForSync": "Lecture de la chaîne en cours — vous pourrez envoyer dès qu’elle sera à jour."
   },
   "sign": {
     "title": "Signer un message",
@@ -439,7 +440,7 @@
     "signatures": "Signatures",
     "sectionAbout": "À propos",
     "aboutZkas": "À propos de ZKas",
-    "privateSends": "Envois privés"
+    "privateSends": "Envois anonymes"
   },
   "saveContactDialog": {
     "namePlaceholder": "ex. Alice",
@@ -502,7 +503,12 @@
     "webTransports": "Le portefeuille web exige une URL HTTPS de service de portefeuille.",
     "daemonUrl": "URL du démon",
     "checking": "Vérification…",
-    "save": "Enregistrer"
+    "save": "Enregistrer",
+    "safeOnChain": "Vos pièces sont en sécurité sur la chaîne. Ceci concerne seulement la façon dont l’app les lit.",
+    "lastBalance": "Dernier solde confirmé",
+    "retry": "Réessayer",
+    "advanced": "Se connecter à un autre service de portefeuille",
+    "restartEngine": "Redémarrer le moteur sur l’appareil"
   },
   "sendScene": {
     "warmEta": "environ {{n}} min restantes",
@@ -618,7 +624,8 @@
     "sealed": "Montants, expéditeur, destinataire — scellés.",
     "viewKeyTitle": "Clé de consultation",
     "viewKeySummary": "Voir ce portefeuille en lecture seule",
-    "seedMoved": "Phrase de récupération ? Elle est dans <b>Paramètres → Phrase de récupération</b>, derrière le verrouillage de l'application."
+    "seedMoved": "Phrase de récupération ? Elle est dans <b>Paramètres → Phrase de récupération</b>, derrière le verrouillage de l'application.",
+    "qrBuilding": "Préparation de votre code…"
   },
   "revealSeedCard": {
     "wrongPin": "Code PIN erroné.",
@@ -883,7 +890,11 @@
     "alreadyHave": "Vous avez déjà un portefeuille ?",
     "restoreFromFile": "Restaurer depuis un fichier",
     "importPhrase": "Importer une phrase de récupération",
-    "watchWallet": "Surveiller (lecture seule)"
+    "watchWallet": "Surveiller (lecture seule)",
+    "wordsSoFar": "{{n}} mots sur 12 pour l’instant.",
+    "wordsOddLength": "{{n}} mots. Une phrase de récupération compte 12, 18 ou 24 mots.",
+    "connectingWhy": "L’app se connecte à un service de portefeuille avant de pouvoir en créer un.",
+    "usePublicInstead": "Utiliser le service public à la place"
   },
   "addAccountWallet": {
     "noPhrase": "Ce portefeuille n'a pas de phrase de récupération, impossible d'en dériver un compte. Utilisez « Ajouter un portefeuille séparé » — il a sa propre phrase de récupération, à sauvegarder.",
@@ -909,7 +920,8 @@
     "copyPhrase": "Copier la phrase",
     "writeOnPaper": "Notez-les sur papier, dans l'ordre.",
     "written": "Je l’ai notée",
-    "alsoFile": "Sauvegarder aussi un fichier chiffré"
+    "alsoFile": "Sauvegarder aussi un fichier chiffré",
+    "fillAllBlanks": "Complétez chaque mot manquant pour continuer."
   },
   "languagePicker": {
     "label": "Langue",
@@ -1617,7 +1629,8 @@
     "amountZkas": "{{amount}} ZKAS",
     "blockEmission": "Émission par bloc",
     "nextReduction": "Prochaine réduction",
-    "tailNote": "Le calendrier se termine par une émission résiduelle permanente ; il n'a pas d'offre terminale fixe."
+    "tailNote": "Le calendrier se termine par une émission résiduelle permanente ; il n'a pas d'offre terminale fixe.",
+    "liveHiddenOnTor": "La vue en direct est masquée sur Tor, car la charger révélerait l’IP réelle."
   },
   "blockView": {
     "title": "Bloc",
@@ -1728,7 +1741,10 @@
     "forgotLink": "{{secret}} oublié ?",
     "wipeWarning": "Cela efface les données de vos portefeuilles <b>de cet appareil</b> — les pièces restent sur la chaîne, mais ne se restaurent qu'avec leur phrase de récupération ou un fichier de sauvegarde.",
     "eraseDevice": "Effacer cet appareil & recommencer",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "sealed": "Scellé sur cet appareil",
+    "decrypting": "Déchiffrement de votre portefeuille",
+    "decrypted": "Déchiffré"
   },
   "firstRunNode": {
     "errEnterAddress": "Entrez l'adresse de votre nœud (hôte:port).",
@@ -1839,10 +1855,10 @@
     "opening": "Ouverture…"
   },
   "privateSends": {
-    "intro": "Vos paiements incluent normalement une copie de leurs détails chiffrée pour <b>votre propre</b> clé, afin que votre historique survive à une restauration et que vous puissiez prouver un paiement plus tard. Les envois privés omettent cette copie.",
-    "cost": "Le coût est permanent : un envoi privé ne peut pas être récupéré après une restauration de ce portefeuille, ne peut pas être affiché dans l’historique sur un autre appareil, et ne peut être prouvé à personne. Le destinataire le reçoit normalement.",
-    "turnOn": "Activer les envois privés",
-    "turnOff": "Désactiver les envois privés"
+    "intro": "Vos paiements portent normalement une copie de leurs détails chiffrée avec <b>votre propre</b> clé, pour que votre historique survive à une restauration et que vous puissiez prouver un paiement plus tard. Un envoi anonyme omet cette copie.",
+    "cost": "Le coût est définitif, et il est pour vous : il n’existe aucune copie que quiconque puisse déchiffrer — <b>pas même vous, avec votre propre clé de dépense</b>. Une fois envoyé, un paiement anonyme ne peut pas être récupéré lors de la restauration de ce portefeuille, n’apparaît pas dans l’historique d’un autre appareil et ne peut être prouvé à personne. Le destinataire le reçoit normalement.",
+    "turnOn": "Activer les envois anonymes",
+    "turnOff": "Désactiver les envois anonymes"
   },
   "paymentProof": {
     "title": "Prouver ce paiement",
@@ -1934,7 +1950,8 @@
       "muteConfirm": "Rappuyez pour masquer {{name}}",
       "reportConfirm": "Rappuyez pour signaler et masquer",
       "sendZkas": "Envoyer ZKAS",
-      "noAddress": "Aucune adresse publiée."
+      "noAddress": "Aucune adresse publiée.",
+      "react": "Réagir"
     },
     "profile": {
       "copyKey": "Copier la clé publique",
@@ -1974,7 +1991,11 @@
     "profileWhy": "Votre nom, une ligne de présentation et une adresse pour recevoir des ZKAS. Le tout est public et modifiable à tout moment.",
     "nameLabel": "Nom",
     "useMyAddress": "Utiliser mon adresse",
-    "clearAddress": "Retirer l'adresse"
+    "clearAddress": "Retirer l'adresse",
+    "earlier": "Messages précédents",
+    "today": "Aujourd’hui",
+    "yesterday": "Hier",
+    "jumpLatest": "Aller aux plus récents"
   },
   "confirmWatch": {
     "title": "Surveiller ce portefeuille ?",
@@ -1983,5 +2004,10 @@
     "accept": "Surveiller ce portefeuille",
     "adding": "Ajout…",
     "decline": "Non, ignorer le lien"
+  },
+  "daemonError": {
+    "network": "Connexion au réseau perdue un instant. Vos pièces sont en sécurité — le portefeuille réessaie tout seul.",
+    "generic": "Le service de portefeuille a rencontré un problème en lisant la chaîne. Vos pièces sont en sécurité sur la chaîne.",
+    "details": "Détails techniques"
   }
 }

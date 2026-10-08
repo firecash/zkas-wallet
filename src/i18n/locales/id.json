@@ -114,7 +114,8 @@
     "feeSummary": "+ {{min}}–{{max}} biaya (tergantung jumlah koin yang digabung) = hingga {{total}} total",
     "catchingUp": "Masih menyusul rantai — bayar setelah selesai, agar dompet tahu semua koin Anda.",
     "warmBanner": "<b>⚡ Pembayaran pertama butuh beberapa menit.</b><br/>Mencari koin Anda — ini terjadi sekali. Anda bisa mulai bayar sekarang.",
-    "reviewSend": "Tinjau kiriman"
+    "reviewSend": "Tinjau kiriman",
+    "waitingForSync": "Masih membaca rantai — Anda bisa mengirim begitu selesai."
   },
   "sign": {
     "title": "Tanda tangani pesan",
@@ -363,7 +364,12 @@
     "webTransports": "Dompet web memerlukan URL layanan dompet HTTPS.",
     "daemonUrl": "URL Daemon",
     "checking": "Memeriksa…",
-    "save": "Simpan"
+    "save": "Simpan",
+    "safeOnChain": "Koin Anda aman di rantai. Ini hanya soal cara aplikasi membacanya.",
+    "lastBalance": "Saldo terkonfirmasi terakhir",
+    "retry": "Coba lagi",
+    "advanced": "Hubungkan ke layanan dompet lain",
+    "restartEngine": "Mulai ulang mesin di perangkat"
   },
   "sendScene": {
     "warmEta": "sekitar {{n}} mnt lagi",
@@ -438,7 +444,7 @@
     "fingerprint": "Sidik jari",
     "on": "Aktif",
     "off": "Nonaktif",
-    "privateSends": "Kiriman pribadi"
+    "privateSends": "Pengiriman anonim"
   },
   "appearanceCard": {
     "title": "Warna aksen",
@@ -618,7 +624,8 @@
     "sealed": "Jumlah, pengirim, penerima — tersegel.",
     "viewKeyTitle": "Kunci lihat dompet",
     "viewKeySummary": "Lihat dompet ini hanya-baca",
-    "seedMoved": "Cari frasa pemulihan? Pindah ke <b>Pengaturan → Frasa pemulihan</b>, di balik kunci aplikasi."
+    "seedMoved": "Cari frasa pemulihan? Pindah ke <b>Pengaturan → Frasa pemulihan</b>, di balik kunci aplikasi.",
+    "qrBuilding": "Menyiapkan kode Anda…"
   },
   "revealSeedCard": {
     "wrongPin": "PIN salah.",
@@ -821,7 +828,8 @@
     "copyPhrase": "Salin frasa",
     "writeOnPaper": "Tulis di kertas, berurutan.",
     "written": "Saya sudah menuliskannya",
-    "alsoFile": "Simpan juga file cadangan terenkripsi"
+    "alsoFile": "Simpan juga file cadangan terenkripsi",
+    "fillAllBlanks": "Isi setiap kata yang hilang untuk melanjutkan."
   },
   "recoverWallet": {
     "errNotSecret": "Itu bukan frasa pemulihan (12 kata) atau seed pemulihan (64 karakter hex).",
@@ -902,7 +910,11 @@
     "orOpenFile": "…atau buka file cadangan (.json)",
     "backupFile": "File cadangan (.json)",
     "errReadFile": "Tidak bisa membaca file itu.",
-    "selected": "Dipilih: {{name}}"
+    "selected": "Dipilih: {{name}}",
+    "wordsSoFar": "{{n}} dari 12 kata sejauh ini.",
+    "wordsOddLength": "{{n}} kata. Frasa pemulihan terdiri dari 12, 18, atau 24 kata.",
+    "connectingWhy": "Aplikasi terhubung ke layanan dompet sebelum dapat membuat dompet.",
+    "usePublicInstead": "Gunakan layanan publik saja"
   },
   "languagePicker": {
     "label": "Bahasa",
@@ -1608,7 +1620,8 @@
     "live": "Langsung",
     "offline": "Offline",
     "heroAria": "Kolam terlindungi, langsung",
-    "heroTitle": "Kolam terlindungi — langsung"
+    "heroTitle": "Kolam terlindungi — langsung",
+    "liveHiddenOnTor": "Tampilan langsung disembunyikan di Tor, karena memuatnya akan membocorkan IP asli."
   },
   "blockView": {
     "title": "Blok",
@@ -1728,7 +1741,10 @@
     "forgotLink": "Lupa {{secret}}?",
     "wipeWarning": "Ini menghapus semua data dompet <b>dari perangkat ini</b> — koin tetap di rantai, tetapi setiap dompet hanya bisa kembali dari seed atau file cadangannya.",
     "eraseDevice": "Hapus perangkat ini & mulai ulang",
-    "cancel": "Batal"
+    "cancel": "Batal",
+    "sealed": "Tersegel di perangkat ini",
+    "decrypting": "Mendekripsi dompet Anda",
+    "decrypted": "Terdekripsi"
   },
   "firstRunNode": {
     "errEnterAddress": "Masukkan alamat node Anda (host:port).",
@@ -1839,10 +1855,10 @@
     "opening": "Membuka…"
   },
   "privateSends": {
-    "intro": "Pembayaran Anda biasanya membawa salinan detailnya yang dienkripsi ke <b>kunci Anda sendiri</b>, agar riwayat tetap ada setelah pemulihan dan Anda bisa membuktikan pembayaran nanti. Kiriman pribadi menghilangkan salinan itu.",
-    "cost": "Konsekuensinya permanen: kiriman pribadi tidak dapat dipulihkan setelah Anda memulihkan dompet ini, tidak dapat ditampilkan di riwayat pada perangkat lain, dan tidak dapat dibuktikan kepada siapa pun. Penerima tetap menerimanya seperti biasa.",
-    "turnOn": "Aktifkan kiriman pribadi",
-    "turnOff": "Nonaktifkan kiriman pribadi"
+    "intro": "Pembayaran Anda biasanya membawa salinan detailnya yang dienkripsi dengan kunci <b>Anda sendiri</b>, agar riwayat Anda bertahan setelah pemulihan dan Anda bisa membuktikan pembayaran nanti. Pengiriman anonim meninggalkan salinan itu.",
+    "cost": "Biayanya permanen, dan Anda yang menanggungnya: tidak ada salinan yang bisa didekripsi siapa pun — <b>bahkan Anda sendiri, dengan kunci belanja Anda</b>. Setelah terkirim, pembayaran anonim tidak bisa dipulihkan saat Anda memulihkan dompet ini, tidak muncul di riwayat perangkat lain, dan tidak bisa dibuktikan kepada siapa pun. Penerima tetap menerimanya seperti biasa.",
+    "turnOn": "Aktifkan pengiriman anonim",
+    "turnOff": "Matikan pengiriman anonim"
   },
   "paymentProof": {
     "title": "Buktikan pembayaran ini",
@@ -1895,7 +1911,8 @@
       "muteConfirm": "Ketuk lagi untuk membisukan {{name}}",
       "reportConfirm": "Ketuk lagi untuk lapor & bisukan",
       "sendZkas": "Kirim ZKAS",
-      "noAddress": "Belum ada alamat."
+      "noAddress": "Belum ada alamat.",
+      "react": "Beri reaksi"
     },
     "profile": {
       "copyKey": "Salin kunci publik",
@@ -1966,7 +1983,11 @@
     "profileWhy": "Nama Anda, baris tentang Anda, dan alamat untuk menerima ZKAS. Semuanya publik dan dapat diubah kapan saja.",
     "nameLabel": "Nama",
     "useMyAddress": "Gunakan alamat dompet",
-    "clearAddress": "Hapus alamat"
+    "clearAddress": "Hapus alamat",
+    "earlier": "Pesan sebelumnya",
+    "today": "Hari ini",
+    "yesterday": "Kemarin",
+    "jumpLatest": "Lompat ke terbaru"
   },
   "backgroundPermission": {
     "title": "Sinkronkan dompet di latar belakang?",
@@ -1983,5 +2004,10 @@
     "accept": "Pantau dompet ini",
     "adding": "Menambahkan…",
     "decline": "Tidak, buang tautan"
+  },
+  "daemonError": {
+    "network": "Koneksi ke jaringan terputus sesaat. Koin Anda aman — dompet terus mencoba sendiri.",
+    "generic": "Layanan dompet mengalami masalah saat membaca rantai. Koin Anda aman di rantai.",
+    "details": "Detail teknis"
   }
 }

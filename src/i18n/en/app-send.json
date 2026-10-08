@@ -368,7 +368,8 @@
     "safeOnChain": "Your coins are safe on the chain. This is only how the app reads them.",
     "lastBalance": "Last confirmed balance",
     "retry": "Try again",
-    "advanced": "Connect to a different wallet service"
+    "advanced": "Connect to a different wallet service",
+    "restartEngine": "Restart the on-device engine"
   },
   "privateSends": {
     "intro": "Your payments normally carry a copy of their details encrypted to <b>your own</b> key, so your history survives a restore and you can prove a payment later. An anonymous send leaves that copy out.",

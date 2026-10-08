@@ -66,7 +66,8 @@
     "feeSummary": "+ {{min}}–{{max}} 手续费（随合并币数变化）= 最高 {{total}}",
     "catchingUp": "仍在与链同步——完成后即可支付，以便钱包识别你的所有币。",
     "warmBanner": "<b>⚡ 首次支付需要几分钟。</b><br/>正在定位你的币——仅此一次。现在即可开始支付。",
-    "reviewSend": "检查发送"
+    "reviewSend": "检查发送",
+    "waitingForSync": "仍在读取链——跟上后即可发送。"
   },
   "sign": {
     "title": "签名消息",
@@ -439,7 +440,7 @@
     "signatures": "签名",
     "sectionAbout": "关于",
     "aboutZkas": "关于 ZKas",
-    "privateSends": "私密发送"
+    "privateSends": "匿名发送"
   },
   "setup": {
     "title": "无法连接钱包服务",
@@ -450,7 +451,12 @@
     "webTransports": "网页钱包需要 HTTPS 钱包服务 URL。",
     "daemonUrl": "守护进程 URL",
     "checking": "检查中…",
-    "save": "保存"
+    "save": "保存",
+    "safeOnChain": "你的币安全地在链上。这只关乎应用如何读取它们。",
+    "lastBalance": "最近确认的余额",
+    "retry": "重试",
+    "advanced": "连接到其他钱包服务",
+    "restartEngine": "重启设备上的引擎"
   },
   "sendScene": {
     "warmEta": "约 {{n}} 分钟剩余",
@@ -559,7 +565,8 @@
     "sealed": "金额、发送方、接收方——全部密封。",
     "viewKeyTitle": "钱包查看密钥",
     "viewKeySummary": "以只读方式查看此钱包",
-    "seedMoved": "在找你的恢复种子？它已移至<b>设置 → 恢复种子</b>，受应用锁保护。"
+    "seedMoved": "在找你的恢复种子？它已移至<b>设置 → 恢复种子</b>，受应用锁保护。",
+    "qrBuilding": "正在准备你的二维码…"
   },
   "revealSeedCard": {
     "wrongPin": "PIN 码错误。",
@@ -787,7 +794,8 @@
     "copyPhrase": "复制助记词",
     "writeOnPaper": "按顺序写在纸上。",
     "written": "我已记下",
-    "alsoFile": "同时保存加密备份文件"
+    "alsoFile": "同时保存加密备份文件",
+    "fillAllBlanks": "填入每个缺失的单词以继续。"
   },
   "recoverWallet": {
     "errNotSecret": "这不像助记词（12个词）或恢复种子（64个十六进制字符）。",
@@ -902,7 +910,11 @@
     "orOpenFile": "…或打开备份文件（.json）",
     "backupFile": "备份文件 (.json)",
     "errReadFile": "无法读取该文件。",
-    "selected": "已选择：{{name}}"
+    "selected": "已选择：{{name}}",
+    "wordsSoFar": "目前 12 个单词中的 {{n}} 个。",
+    "wordsOddLength": "{{n}} 个单词。恢复短语是 12、18 或 24 个单词。",
+    "connectingWhy": "应用在创建钱包之前会先连接到钱包服务。",
+    "usePublicInstead": "改用公共服务"
   },
   "languagePicker": {
     "label": "语言",
@@ -1608,7 +1620,8 @@
     "live": "在线",
     "offline": "离线",
     "heroAria": "隐私池，在线",
-    "heroTitle": "隐私池 — 在线"
+    "heroTitle": "隐私池 — 在线",
+    "liveHiddenOnTor": "使用 Tor 时隐藏实时视图，因为加载它会泄露真实 IP。"
   },
   "blockView": {
     "title": "区块",
@@ -1728,7 +1741,10 @@
     "forgotLink": "忘记{{secret}}？",
     "wipeWarning": "这将<b>从本设备</b>清除所有钱包数据——币仍在链上，但每个钱包只能通过助记词或备份文件恢复。",
     "eraseDevice": "擦除此设备并重新开始",
-    "cancel": "取消"
+    "cancel": "取消",
+    "sealed": "已在此设备上封存",
+    "decrypting": "正在解密你的钱包",
+    "decrypted": "已解密"
   },
   "mainNav": {
     "mine": "挖矿",
@@ -1839,10 +1855,10 @@
     "opening": "打开中…"
   },
   "privateSends": {
-    "intro": "你的支付通常会附带一份用<b>你自己的</b>密钥加密的详情副本，这样你的历史记录在恢复后仍能保留，并且你以后可以证明某笔支付。私密发送会省略该副本。",
-    "cost": "代价是永久性的：私密发送在恢复此钱包后无法找回，无法在另一台设备的历史记录中显示，也无法向任何人证明。收款方仍会正常收到。",
-    "turnOn": "开启私密发送",
-    "turnOff": "关闭私密发送"
+    "intro": "你的付款通常会带上一份用<b>你自己的</b>密钥加密的明细副本，这样历史记录在恢复后仍在，之后也能证明某笔付款。匿名发送不保留这份副本。",
+    "cost": "代价是永久的，并且由你承担：没有任何副本可供任何人解密——<b>连你用自己的花费密钥也不行</b>。一旦发送，匿名支付在你恢复此钱包时无法找回，不会出现在其他设备的历史记录中，也无法向任何人证明。收款方仍照常收到。",
+    "turnOn": "开启匿名发送",
+    "turnOff": "关闭匿名发送"
   },
   "paymentProof": {
     "title": "证明此支付",
@@ -1895,7 +1911,8 @@
       "muteConfirm": "再次点击以静音{{name}}",
       "reportConfirm": "再次点击以举报并静音",
       "sendZkas": "发送ZKAS",
-      "noAddress": "尚未发布地址。"
+      "noAddress": "尚未发布地址。",
+      "react": "回应"
     },
     "profile": {
       "copyKey": "复制公钥",
@@ -1966,7 +1983,11 @@
     "profileWhy": "你的昵称、简介和收款地址，全部公开且可随时修改。",
     "nameLabel": "昵称",
     "useMyAddress": "使用我的钱包地址",
-    "clearAddress": "移除地址"
+    "clearAddress": "移除地址",
+    "earlier": "更早的消息",
+    "today": "今天",
+    "yesterday": "昨天",
+    "jumpLatest": "跳到最新"
   },
   "backgroundPermission": {
     "title": "允许钱包在后台同步？",
@@ -1983,5 +2004,10 @@
     "accept": "观察此钱包",
     "adding": "添加中…",
     "decline": "不，丢弃链接"
+  },
+  "daemonError": {
+    "network": "与网络的连接短暂中断。你的币是安全的——钱包会自行重试。",
+    "generic": "钱包服务在读取链时遇到问题。你的币在链上是安全的。",
+    "details": "技术细节"
   }
 }

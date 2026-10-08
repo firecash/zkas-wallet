@@ -63,7 +63,10 @@
     "forgotLink": "Forgot {{secret}}?",
     "wipeWarning": "This erases every wallet's data <b>from this device</b> — the coins stay on-chain, but each wallet comes back only from its seed or backup file.",
     "eraseDevice": "Erase this device & start over",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "sealed": "Sealed on this device",
+    "decrypting": "Decrypting your wallet",
+    "decrypted": "Decrypted"
   },
   "firstRunNode": {
     "errEnterAddress": "Enter the address of your node (host:port).",

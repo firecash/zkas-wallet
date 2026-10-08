@@ -12,10 +12,57 @@ import { enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured, unl
 import { listWallets } from "./wallets";
 import { wipeWalletState } from "./walletstate";
 
+/** The status line under the mark, which actually decrypts.
+ *
+ *  Unlocking really is a decryption — the seed is sealed and Argon2 has to run,
+ *  which takes a few hundred milliseconds of genuine work. The screen used to
+ *  spend that silently on a disabled button reading "Unlocking…". Churning hex
+ *  that resolves into the words says what is happening and costs one rAF loop.
+ *
+ *  `resolve` flips it from "never settles" (work in flight) to "settle now"
+ *  (done), so the animation is bound to the real work rather than to a timer
+ *  pretending to be it. Reduced motion gets the words with no churn at all. */
+export function DecryptLine({ text, active, resolve }: { text: string; active: boolean; resolve: boolean }) {
+  const [out, setOut] = useState(text);
+  useEffect(() => {
+    const still = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!active || still || document.body.classList.contains("reduced-effects")) {
+      setOut(text);
+      return;
+    }
+    const CHARS = "0123456789abcdef";
+    let settled = 0;
+    let last = 0;
+    let raf = 0;
+    const tick = (now: number) => {
+      if (now - last > 45) {
+        last = now;
+        // While the work is in flight nothing settles; once it is done the
+        // resolved prefix walks across and the real words are left behind.
+        if (resolve) settled += 1;
+        setOut(
+          text
+            .split("")
+            .map((c, i) => (c === " " || i < settled ? c : CHARS[(Math.random() * 16) | 0]))
+            .join(""),
+        );
+      }
+      if (!resolve || settled <= text.length) raf = requestAnimationFrame(tick);
+      else setOut(text);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [text, active, resolve]);
+  return <span className="lock-status-text mono">{active ? out : text}</span>;
+}
+
 export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   const { t } = useTranslation();
   const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState(false);
+  /** Set the moment the secret is accepted, so the line resolves on the real
+   *  event rather than on a guess about how long Argon2 takes. */
+  const [opened, setOpened] = useState(false);
   const [error, setError] = useState("");
   // Forgotten-secret escape hatch: a guarded erase-and-restore flow. Without it
   // the lock screen was a hard dead end — the promised "restore from your seed"
@@ -89,7 +136,19 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
           setShowOffer(true);
         } else {
           setSecret("");
-          onUnlocked();
+          // Let the line finish resolving before the wallet appears. The seal is
+          // already open at this point, so this is the end of real work being
+          // shown, not a delay invented to look busy. Skipped entirely when the
+          // device asks for reduced motion.
+          const still =
+            (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches) ||
+            document.body.classList.contains("reduced-effects");
+          if (still) {
+            onUnlocked();
+          } else {
+            setOpened(true);
+            setTimeout(onUnlocked, 520);
+          }
         }
       } else {
         // Deliberately not "wrong PIN, 3 tries left": there is no lockout to
@@ -144,6 +203,23 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   return (
     <div className="lockwrap">
       <LanguageButton compact />
+      {/* The same mark as the boot splash, the route loader and the first-open
+          card, so opening a locked wallet is the same sequence as opening an
+          unlocked one rather than a bare form on a black screen. */}
+      <div className={`lock-brand${busy || opened ? " working" : ""}${opened ? " opened" : ""}`}>
+        <div className="bl-logo" aria-hidden="true">
+          <img src="./zkas-mark.png" width={76} height={76} alt="" />
+        </div>
+        <div className="lock-status" role="status" aria-live="polite">
+          {opened ? (
+            <DecryptLine text={t("appLockScreen.decrypted")} active resolve />
+          ) : busy ? (
+            <DecryptLine text={t("appLockScreen.decrypting")} active resolve={false} />
+          ) : (
+            <span className="lock-status-text sealed">{t("appLockScreen.sealed")}</span>
+          )}
+        </div>
+      </div>
       <form className="card lockcard" onSubmit={submit}>
         <h2 style={{ marginTop: 0 }}>{t("appLockScreen.title")}</h2>
         <p className="muted small">

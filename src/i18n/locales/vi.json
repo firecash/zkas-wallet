@@ -114,7 +114,8 @@
     "title": "Gửi",
     "spendable": "{{amount}} khả dụng",
     "recipientLabel": "Địa chỉ ẩn danh người nhận",
-    "addrPlaceholder": "zkas:…"
+    "addrPlaceholder": "zkas:…",
+    "waitingForSync": "Vẫn đang đọc chuỗi — bạn có thể gửi ngay khi xong."
   },
   "sign": {
     "title": "Ký tin nhắn",
@@ -363,7 +364,12 @@
     "webTransports": "Ví web yêu cầu URL dịch vụ ví HTTPS.",
     "daemonUrl": "URL Daemon",
     "checking": "Đang kiểm tra…",
-    "save": "Lưu"
+    "save": "Lưu",
+    "safeOnChain": "Tiền của bạn an toàn trên chuỗi. Đây chỉ là cách ứng dụng đọc chúng.",
+    "lastBalance": "Số dư xác nhận gần nhất",
+    "retry": "Thử lại",
+    "advanced": "Kết nối tới dịch vụ ví khác",
+    "restartEngine": "Khởi động lại engine trên thiết bị"
   },
   "sendScene": {
     "warmEta": "còn khoảng {{n}} phút",
@@ -464,7 +470,7 @@
     "signatures": "Chữ ký",
     "sectionAbout": "Giới thiệu",
     "aboutZkas": "Về ZKas",
-    "privateSends": "Gửi riêng tư"
+    "privateSends": "Gửi ẩn danh"
   },
   "appearanceCard": {
     "title": "Màu chủ đạo",
@@ -618,7 +624,8 @@
     "sealed": "Số lượng, người gửi, người nhận — được niêm phong.",
     "viewKeyTitle": "Khóa xem ví",
     "viewKeySummary": "Xem ví này ở chế độ chỉ đọc",
-    "seedMoved": "Tìm cụm từ khôi phục? Nó đã chuyển đến <b>Cài đặt → Cụm từ khôi phục</b>, sau khóa ứng dụng."
+    "seedMoved": "Tìm cụm từ khôi phục? Nó đã chuyển đến <b>Cài đặt → Cụm từ khôi phục</b>, sau khóa ứng dụng.",
+    "qrBuilding": "Đang chuẩn bị mã của bạn…"
   },
   "revealSeedCard": {
     "wrongPin": "Sai mã PIN.",
@@ -812,7 +819,8 @@
     "copyPhrase": "Sao chép cụm từ",
     "writeOnPaper": "Ghi chúng ra giấy, theo thứ tự.",
     "written": "Tôi đã ghi lại",
-    "alsoFile": "Cũng lưu tệp sao lưu mã hóa"
+    "alsoFile": "Cũng lưu tệp sao lưu mã hóa",
+    "fillAllBlanks": "Điền đủ mọi từ còn thiếu để tiếp tục."
   },
   "recoverWallet": {
     "errNotSecret": "Đó không phải cụm từ khôi phục (12 từ) hay hạt giống (64 ký tự hex).",
@@ -900,7 +908,11 @@
     "alreadyHave": "Bạn đã có ví chưa?",
     "restoreFromFile": "Khôi phục từ tệp sao lưu",
     "importPhrase": "Nhập cụm từ khôi phục",
-    "watchWallet": "Xem ví (chỉ xem)"
+    "watchWallet": "Xem ví (chỉ xem)",
+    "wordsSoFar": "Hiện có {{n}} trên 12 từ.",
+    "wordsOddLength": "{{n}} từ. Cụm từ khôi phục gồm 12, 18 hoặc 24 từ.",
+    "connectingWhy": "Ứng dụng kết nối tới dịch vụ ví trước khi có thể tạo ví.",
+    "usePublicInstead": "Dùng dịch vụ công cộng thay thế"
   },
   "languagePicker": {
     "label": "Ngôn ngữ",
@@ -1585,7 +1597,8 @@
     "amountZkas": "{{amount}} ZKAS",
     "blockEmission": "Phát hành khối",
     "nextReduction": "Giảm tiếp theo",
-    "tailNote": "Lịch trình kết thúc bằng phát thải đuôi vĩnh viễn; không có nguồn cung cuối cố định."
+    "tailNote": "Lịch trình kết thúc bằng phát thải đuôi vĩnh viễn; không có nguồn cung cuối cố định.",
+    "liveHiddenOnTor": "Chế độ xem trực tiếp bị ẩn trên Tor, vì tải nó sẽ lộ IP thật."
   },
   "blockView": {
     "title": "Khối",
@@ -1696,7 +1709,10 @@
     "forgotLink": "Quên {{secret}}?",
     "wipeWarning": "Thao tác này xóa dữ liệu mọi ví <b>khỏi thiết bị này</b> — xu vẫn trên chuỗi, nhưng mỗi ví chỉ phục hồi được từ hạt giống hoặc tệp sao lưu.",
     "eraseDevice": "Xóa thiết bị & bắt đầu lại",
-    "cancel": "Hủy"
+    "cancel": "Hủy",
+    "sealed": "Đã niêm phong trên thiết bị này",
+    "decrypting": "Đang giải mã ví của bạn",
+    "decrypted": "Đã giải mã"
   },
   "firstRunNode": {
     "errEnterAddress": "Nhập địa chỉ nút của bạn (host:port).",
@@ -1839,10 +1855,10 @@
     "fewerThanThree": "Hiện có ít hơn ba đồng khả dụng, nên việc gộp sẽ không giảm số lượng đồng trong ví."
   },
   "privateSends": {
-    "intro": "Các khoản thanh toán của bạn thường mang theo một bản sao chi tiết được mã hóa bằng khóa của <b>chính bạn</b>, để lịch sử của bạn tồn tại sau khi khôi phục và bạn có thể chứng minh khoản thanh toán sau này. Gửi riêng tư sẽ bỏ bản sao đó đi.",
-    "cost": "Cái giá là vĩnh viễn: một giao dịch gửi riêng tư không thể khôi phục sau khi bạn khôi phục ví này, không thể hiển thị trong lịch sử trên thiết bị khác và không thể chứng minh với bất kỳ ai. Người nhận vẫn nhận được bình thường.",
-    "turnOn": "Bật gửi riêng tư",
-    "turnOff": "Tắt gửi riêng tư"
+    "intro": "Các khoản thanh toán của bạn thường mang theo một bản sao chi tiết được mã hóa bằng khóa <b>của chính bạn</b>, để lịch sử còn lại sau khi khôi phục và bạn có thể chứng minh khoản thanh toán về sau. Gửi ẩn danh bỏ bản sao đó đi.",
+    "cost": "Cái giá là vĩnh viễn, và bạn là người trả: không có bản sao nào để bất kỳ ai giải mã — <b>kể cả chính bạn, với khóa chi tiêu của mình</b>. Sau khi gửi, một khoản thanh toán ẩn danh không thể khôi phục khi bạn khôi phục ví này, không xuất hiện trong lịch sử trên thiết bị khác, và không thể chứng minh với bất kỳ ai. Người nhận vẫn nhận bình thường.",
+    "turnOn": "Bật gửi ẩn danh",
+    "turnOff": "Tắt gửi ẩn danh"
   },
   "paymentProof": {
     "title": "Chứng minh thanh toán này",
@@ -1895,7 +1911,8 @@
       "muteConfirm": "Chạm lại để tắt tiếng {{name}}",
       "reportConfirm": "Chạm lại để báo cáo và tắt tiếng",
       "sendZkas": "Gửi ZKAS",
-      "noAddress": "Chưa có địa chỉ nào."
+      "noAddress": "Chưa có địa chỉ nào.",
+      "react": "Bày tỏ cảm xúc"
     },
     "profile": {
       "copyKey": "Sao chép khóa công khai",
@@ -1966,7 +1983,11 @@
     "profileWhy": "Tên, dòng giới thiệu và địa chỉ để người khác gửi ZKAS. Tất cả đều công khai và có thể thay đổi bất kỳ lúc nào. (153)",
     "nameLabel": "Tên (8)",
     "useMyAddress": "Dùng địa chỉ ví (34)",
-    "clearAddress": "Xóa địa chỉ (23)"
+    "clearAddress": "Xóa địa chỉ (23)",
+    "earlier": "Tin nhắn trước",
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "jumpLatest": "Đến tin mới nhất"
   },
   "backgroundPermission": {
     "title": "Cho phép ví đồng bộ trong nền?​",
@@ -1983,5 +2004,10 @@
     "accept": "Theo dõi ví này",
     "adding": "Đang thêm…",
     "decline": "Không, bỏ đường dẫn"
+  },
+  "daemonError": {
+    "network": "Mất kết nối mạng trong giây lát. Tiền của bạn an toàn — ví sẽ tự thử lại.",
+    "generic": "Dịch vụ ví gặp sự cố khi đọc chuỗi. Tiền của bạn an toàn trên chuỗi.",
+    "details": "Chi tiết kỹ thuật"
   }
 }

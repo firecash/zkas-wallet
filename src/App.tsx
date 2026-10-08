@@ -8625,6 +8625,34 @@ function Setup({ error: requestError }: { error?: string | null }) {
       <button className="btn" disabled={busy} onClick={() => location.reload()}>
         {busy ? t("setup.checking") : t("setup.retry")}
       </button>
+      {/* Reported: "the wallet gets stuck, I force-stop the app and it works."
+          On a phone the engine runs INSIDE this app, so killing the app is just a
+          clumsy way of restarting the engine — and it is the only way anyone was
+          given. Reloading the page does not do it: the native process survives a
+          WebView reload, which is exactly why a reload "does nothing" and a
+          force-stop "fixes it". This stops and starts the engine in place. */}
+      {embeddedChosen() && (
+        <button
+          className="btn ghost"
+          style={{ marginTop: 8 }}
+          disabled={busy}
+          onClick={() => void (async () => {
+            setBusy(true);
+            setError("");
+            try {
+              await stopEmbedded();
+              const url = await ensureEmbedded();
+              if (url) setBase(url);
+              location.reload();
+            } catch (cause) {
+              setError((cause as Error).message || String(cause));
+              setBusy(false);
+            }
+          })()}
+        >
+          {t("setup.restartEngine")}
+        </button>
+      )}
       <details className="setup-advanced">
         <summary>{t("setup.advanced")}</summary>
         <p className="muted small">

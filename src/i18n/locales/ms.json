@@ -151,7 +151,8 @@
     "feeSummary": "+ yuran {{min}}–{{max}} (mengikut bilangan syiling digabungkan) = sehingga {{total}} jumlah",
     "catchingUp": "Masih menyegerak dengan rantaian — anda boleh bayar selepas selesai, supaya dompet tahu semua syiling anda.",
     "warmBanner": "<b>⚡ Bayaran pertama anda mengambil masa beberapa minit.</b><br/>Mencari syiling anda — ini berlaku sekali. Anda boleh mulakan bayaran sekarang.",
-    "reviewSend": "Semak hantaran"
+    "reviewSend": "Semak hantaran",
+    "waitingForSync": "Masih membaca rantai — anda boleh menghantar sebaik sahaja ia selesai."
   },
   "sign": {
     "title": "Tandatangan mesej",
@@ -380,7 +381,7 @@
     "fingerprint": "Cap jari",
     "on": "Hidup",
     "off": "Mati",
-    "privateSends": "Hantaran peribadi"
+    "privateSends": "Penghantaran tanpa nama"
   },
   "appearanceCard": {
     "title": "Warna aksen",
@@ -488,7 +489,12 @@
     "webTransports": "Dompet web memerlukan URL perkhidmatan dompet HTTPS.",
     "daemonUrl": "URL Daemon",
     "checking": "Memeriksa…",
-    "save": "Simpan"
+    "save": "Simpan",
+    "safeOnChain": "Syiling anda selamat pada rantai. Ini hanya tentang cara apl membacanya.",
+    "lastBalance": "Baki disahkan terakhir",
+    "retry": "Cuba lagi",
+    "advanced": "Sambung ke perkhidmatan dompet lain",
+    "restartEngine": "Mulakan semula enjin pada peranti"
   },
   "sendScene": {
     "warmEta": "lebih kurang {{n}} min lagi",
@@ -559,7 +565,8 @@
     "sealed": "Jumlah, pengirim, penerima — dirahsiakan.",
     "viewKeyTitle": "Kunci lihat dompet",
     "viewKeySummary": "Lihat dompet ini secara baca sahaja",
-    "seedMoved": "Mencari benih pemulihan anda? Ia dipindahkan ke <b>Tetapan → Benih pemulihan</b>, di sebalik kunci aplikasi anda."
+    "seedMoved": "Mencari benih pemulihan anda? Ia dipindahkan ke <b>Tetapan → Benih pemulihan</b>, di sebalik kunci aplikasi anda.",
+    "qrBuilding": "Menyediakan kod anda…"
   },
   "revealSeedCard": {
     "wrongPin": "PIN salah.",
@@ -812,7 +819,8 @@
     "copyPhrase": "Salin frasa",
     "writeOnPaper": "Tulis di atas kertas, mengikut urutan.",
     "written": "Saya sudah mencatatnya",
-    "alsoFile": "Simpan juga fail sandaran disulitkan"
+    "alsoFile": "Simpan juga fail sandaran disulitkan",
+    "fillAllBlanks": "Isi setiap perkataan yang hilang untuk meneruskan."
   },
   "recoverWallet": {
     "errNotSecret": "Itu bukan frasa pemulihan (12 perkataan) atau benih pemulihan (64 aksara hex).",
@@ -902,7 +910,11 @@
     "orOpenFile": "…atau buka fail sandaran (.json)",
     "backupFile": "Fail sandaran (.json)",
     "errReadFile": "Tidak dapat baca fail itu.",
-    "selected": "Dipilih: {{name}}"
+    "selected": "Dipilih: {{name}}",
+    "wordsSoFar": "{{n}} daripada 12 perkataan setakat ini.",
+    "wordsOddLength": "{{n}} perkataan. Frasa pemulihan ialah 12, 18 atau 24 perkataan.",
+    "connectingWhy": "Apl menyambung ke perkhidmatan dompet sebelum ia boleh mencipta dompet.",
+    "usePublicInstead": "Guna perkhidmatan awam sebaliknya"
   },
   "languagePicker": {
     "label": "Bahasa",
@@ -1585,7 +1597,8 @@
     "amountZkas": "{{amount}} ZKAS",
     "blockEmission": "Emisi blok",
     "nextReduction": "Pengurangan seterusnya",
-    "tailNote": "Jadual berakhir dengan pelepasan ekor kekal; tiada bekalan terminal tetap."
+    "tailNote": "Jadual berakhir dengan pelepasan ekor kekal; tiada bekalan terminal tetap.",
+    "liveHiddenOnTor": "Paparan langsung disembunyikan pada Tor, kerana memuatkannya akan mendedahkan IP sebenar."
   },
   "blockView": {
     "title": "Blok",
@@ -1696,7 +1709,10 @@
     "forgotLink": "Lupa {{secret}}?",
     "wipeWarning": "Ini memadam semua data dompet <b>dari peranti ini</b> — syiling kekal dalam rantai, tetapi setiap dompet hanya kembali daripada benih atau fail sandaran.",
     "eraseDevice": "Padam peranti & mula semula",
-    "cancel": "Batal"
+    "cancel": "Batal",
+    "sealed": "Dimeterai pada peranti ini",
+    "decrypting": "Menyahsulit dompet anda",
+    "decrypted": "Dinyahsulit"
   },
   "firstRunNode": {
     "errEnterAddress": "Masukkan alamat nod anda (hos:port).",
@@ -1839,10 +1855,10 @@
     "fewerThanThree": "Kurang daripada tiga syiling boleh dibelanjakan sekarang, jadi penggabungan tidak akan mengurangkan kiraan syiling dompet."
   },
   "privateSends": {
-    "intro": "Bayaran anda biasanya membawa salinan butiran yang disulitkan kepada kunci <b>anda sendiri</b>, supaya sejarah terselamat selepas pemulihan dan anda boleh buktikan bayaran kemudian. Hantaran peribadi tinggalkan salinan itu.",
-    "cost": "Kosnya kekal: hantaran peribadi tidak boleh dipulihkan selepas anda pulihkan dompet ini, tidak boleh dipapar dalam sejarah pada peranti lain, dan tidak boleh dibuktikan kepada sesiapa. Penerima tetap menerimanya seperti biasa.",
-    "turnOn": "Hidupkan hantaran peribadi",
-    "turnOff": "Matikan hantaran peribadi"
+    "intro": "Pembayaran anda biasanya membawa salinan butirannya yang disulitkan dengan kunci <b>anda sendiri</b>, supaya sejarah anda kekal selepas pemulihan dan anda boleh membuktikan pembayaran kemudian. Penghantaran tanpa nama meninggalkan salinan itu.",
+    "cost": "Kosnya kekal, dan ia ditanggung oleh anda: tiada salinan untuk sesiapa menyahsulit — <b>malah anda sendiri, dengan kunci perbelanjaan anda</b>. Setelah dihantar, pembayaran tanpa nama tidak boleh dipulihkan apabila anda memulihkan dompet ini, tidak muncul dalam sejarah pada peranti lain, dan tidak boleh dibuktikan kepada sesiapa. Penerima tetap menerimanya seperti biasa.",
+    "turnOn": "Hidupkan penghantaran tanpa nama",
+    "turnOff": "Matikan penghantaran tanpa nama"
   },
   "paymentProof": {
     "title": "Buktikan bayaran ini",
@@ -1934,7 +1950,8 @@
       "muteConfirm": "Tekan lagi untuk bisukan {{name}}",
       "reportConfirm": "Tekan lagi untuk lapor dan bisukan",
       "sendZkas": "Hantar ZKAS",
-      "noAddress": "Belum ada alamat diterbitkan."
+      "noAddress": "Belum ada alamat diterbitkan.",
+      "react": "Beri reaksi"
     },
     "profile": {
       "copyKey": "Salin kunci awam",
@@ -1974,7 +1991,11 @@
     "profileWhy": "Nama anda, baris tentang anda, dan alamat untuk orang hantar ZKAS. Semuanya awam dan boleh diubah bila-bila masa.",
     "nameLabel": "Nama",
     "useMyAddress": "Guna alamat dompet",
-    "clearAddress": "Buang alamat"
+    "clearAddress": "Buang alamat",
+    "earlier": "Mesej terdahulu",
+    "today": "Hari ini",
+    "yesterday": "Semalam",
+    "jumpLatest": "Lompat ke terkini"
   },
   "confirmWatch": {
     "title": "Pantau dompet ini?",
@@ -1983,5 +2004,10 @@
     "accept": "Pantau dompet ini",
     "adding": "Menambah…",
     "decline": "Tidak, buang pautan"
+  },
+  "daemonError": {
+    "network": "Sambungan ke rangkaian terputus sebentar. Syiling anda selamat — dompet terus mencuba sendiri.",
+    "generic": "Perkhidmatan dompet menghadapi masalah semasa membaca rantai. Syiling anda selamat pada rantai.",
+    "details": "Butiran teknikal"
   }
 }

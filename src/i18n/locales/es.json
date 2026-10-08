@@ -114,7 +114,8 @@
     "title": "Enviar",
     "spendable": "{{amount}} disponible",
     "recipientLabel": "Dirección blindada del destinatario",
-    "addrPlaceholder": "zkas:…"
+    "addrPlaceholder": "zkas:…",
+    "waitingForSync": "Todavía leyendo la cadena: podrás enviar en cuanto termine."
   },
   "sign": {
     "title": "Firmar mensaje",
@@ -380,7 +381,7 @@
     "fingerprint": "Huella digital",
     "on": "Activo",
     "off": "Inactivo",
-    "privateSends": "Envíos privados"
+    "privateSends": "Envíos anónimos"
   },
   "appearanceCard": {
     "title": "Color de acento",
@@ -488,7 +489,12 @@
     "webTransports": "La billetera web requiere una URL HTTPS del servicio de billetera.",
     "daemonUrl": "URL del daemon",
     "checking": "Comprobando…",
-    "save": "Guardar"
+    "save": "Guardar",
+    "safeOnChain": "Tus monedas están seguras en la cadena. Esto solo afecta a cómo las lee la app.",
+    "lastBalance": "Último saldo confirmado",
+    "retry": "Reintentar",
+    "advanced": "Conectar a otro servicio de monedero",
+    "restartEngine": "Reiniciar el motor del dispositivo"
   },
   "sendScene": {
     "warmEta": "aprox. {{n}} min restantes",
@@ -618,7 +624,8 @@
     "sealed": "Montos, remitente, destinatario — sellados.",
     "viewKeyTitle": "Clave de vista",
     "viewKeySummary": "Ver esta billetera en solo lectura",
-    "seedMoved": "¿Buscas tu semilla de recuperación? Se movió a <b>Configuración → Semilla de recuperación</b>, detrás del bloqueo de la app."
+    "seedMoved": "¿Buscas tu semilla de recuperación? Se movió a <b>Configuración → Semilla de recuperación</b>, detrás del bloqueo de la app.",
+    "qrBuilding": "Preparando tu código…"
   },
   "revealSeedCard": {
     "wrongPin": "PIN incorrecto.",
@@ -847,7 +854,11 @@
     "orOpenFile": "…o abre una copia de seguridad (.json)",
     "backupFile": "Archivo de respaldo (.json)",
     "errReadFile": "No se pudo leer ese archivo.",
-    "selected": "Seleccionado: {{name}}"
+    "selected": "Seleccionado: {{name}}",
+    "wordsSoFar": "{{n}} de 12 palabras hasta ahora.",
+    "wordsOddLength": "{{n}} palabras. Una frase de recuperación tiene 12, 18 o 24 palabras.",
+    "connectingWhy": "La app se conecta a un servicio de monedero antes de poder crear uno.",
+    "usePublicInstead": "Usar el servicio público en su lugar"
   },
   "languagePicker": {
     "label": "Idioma",
@@ -916,7 +927,8 @@
     "copyPhrase": "Copiar frase",
     "writeOnPaper": "Escríbelas en papel, en orden.",
     "written": "Ya la anoté",
-    "alsoFile": "Guarda también una copia cifrada"
+    "alsoFile": "Guarda también una copia cifrada",
+    "fillAllBlanks": "Completa cada palabra que falta para continuar."
   },
   "status": {
     "offlineLabel": "Sin conexión a la red",
@@ -1617,7 +1629,8 @@
     "amountZkas": "{{amount}} ZKAS",
     "blockEmission": "Emisión por bloque",
     "nextReduction": "Próxima reducción",
-    "tailNote": "El cronograma termina en una emisión residual permanente; no tiene un suministro terminal fijo."
+    "tailNote": "El cronograma termina en una emisión residual permanente; no tiene un suministro terminal fijo.",
+    "liveHiddenOnTor": "La vista en vivo se oculta con Tor, porque cargarla revelaría la IP real."
   },
   "blockView": {
     "title": "Bloque",
@@ -1728,7 +1741,10 @@
     "forgotLink": "¿Olvidaste tu {{secret}}?",
     "wipeWarning": "Esto borra los datos de cada billetera <b>de este dispositivo</b> — las monedas quedan en la cadena, pero cada billetera solo se recupera con su semilla o copia de seguridad.",
     "eraseDevice": "Borrar dispositivo y empezar de cero",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "sealed": "Sellada en este dispositivo",
+    "decrypting": "Descifrando tu monedero",
+    "decrypted": "Descifrado"
   },
   "mainNav": {
     "mine": "Minar",
@@ -1839,10 +1855,10 @@
     "opening": "Abriendo…"
   },
   "privateSends": {
-    "intro": "Tus pagos normalmente llevan una copia de sus detalles cifrada para <b>tu propia</b> clave, así tu historial sobrevive a una restauración y puedes probar un pago después. Los envíos privados omiten esa copia.",
-    "cost": "El costo es permanente: un envío privado no se puede recuperar tras restaurar esta billetera, no se muestra en el historial en otro dispositivo y no se puede probar a nadie. El destinatario lo recibe normalmente.",
-    "turnOn": "Activar envíos privados",
-    "turnOff": "Desactivar envíos privados"
+    "intro": "Tus pagos llevan normalmente una copia de sus detalles cifrada con <b>tu propia</b> clave, para que tu historial sobreviva a una restauración y puedas demostrar un pago más tarde. Un envío anónimo omite esa copia.",
+    "cost": "El coste es permanente y lo asumes tú: no hay copia que nadie pueda descifrar, <b>ni siquiera tú con tu propia clave de gasto</b>. Una vez enviado, un pago anónimo no se puede recuperar al restaurar este monedero, no aparece en el historial de otro dispositivo y no se puede demostrar a nadie. El destinatario lo recibe con normalidad.",
+    "turnOn": "Activar envíos anónimos",
+    "turnOff": "Desactivar envíos anónimos"
   },
   "paymentProof": {
     "title": "Probar este pago",
@@ -1895,7 +1911,8 @@
       "muteConfirm": "Toca otra vez para silenciar a {{name}}",
       "reportConfirm": "Toca otra vez para reportar y silenciar",
       "sendZkas": "Enviar ZKAS",
-      "noAddress": "Sin dirección publicada."
+      "noAddress": "Sin dirección publicada.",
+      "react": "Reaccionar"
     },
     "profile": {
       "copyKey": "Copiar clave pública",
@@ -1966,7 +1983,11 @@
     "profileWhy": "Tu nombre, una línea sobre ti y una dirección para recibir ZKAS. Todo es público y se puede cambiar en cualquier momento.",
     "nameLabel": "Nombre",
     "useMyAddress": "Usar mi dirección",
-    "clearAddress": "Quitar dirección"
+    "clearAddress": "Quitar dirección",
+    "earlier": "Mensajes anteriores",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "jumpLatest": "Ir a los más recientes"
   },
   "backgroundPermission": {
     "title": "¿Sincronizar la billetera en segundo plano?​",
@@ -1983,5 +2004,10 @@
     "accept": "Ver esta billetera​",
     "adding": "Agregando…​",
     "decline": "No, descartar enlace"
+  },
+  "daemonError": {
+    "network": "Se perdió la conexión con la red por un momento. Tus monedas están seguras: el monedero sigue reintentando solo.",
+    "generic": "El servicio del monedero tuvo un problema al leer la cadena. Tus monedas están seguras en la cadena.",
+    "details": "Detalles técnicos"
   }
 }

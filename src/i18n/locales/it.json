@@ -114,7 +114,8 @@
     "feeSummary": "+ {{min}}–{{max}} commissione (scala con quante monete si combinano) = fino a {{total}} totale",
     "catchingUp": "Ancora in sincronizzazione con la catena — potrai pagare quando finisce, così il portafoglio conosce tutte le tue monete.",
     "warmBanner": "<b>⚡ Il primo pagamento richiederà qualche minuto.</b><br/>Localizzo le tue monete — succede una volta. Puoi avviare il pagamento ora.",
-    "reviewSend": "Rivedi invio"
+    "reviewSend": "Rivedi invio",
+    "waitingForSync": "Sto ancora leggendo la catena: potrai inviare appena sarà aggiornata."
   },
   "sign": {
     "title": "Firma messaggio",
@@ -363,7 +364,12 @@
     "webTransports": "Il wallet web richiede un URL del servizio wallet HTTPS.",
     "daemonUrl": "URL del daemon",
     "checking": "Verifica…",
-    "save": "Salva"
+    "save": "Salva",
+    "safeOnChain": "Le tue monete sono al sicuro sulla catena. Questo riguarda solo come l’app le legge.",
+    "lastBalance": "Ultimo saldo confermato",
+    "retry": "Riprova",
+    "advanced": "Connetti a un altro servizio di portafoglio",
+    "restartEngine": "Riavvia il motore sul dispositivo"
   },
   "sendScene": {
     "warmEta": "circa {{n}} min rimasti",
@@ -438,7 +444,7 @@
     "fingerprint": "Impronta digitale",
     "on": "Attivo",
     "off": "Disattivo",
-    "privateSends": "Invii privati"
+    "privateSends": "Invii anonimi"
   },
   "appearanceCard": {
     "title": "Colore accento",
@@ -618,7 +624,8 @@
     "sealed": "Importi, mittente, destinatario — sigillati.",
     "viewKeyTitle": "Chiave di sola lettura",
     "viewKeySummary": "Portafoglio in sola visualizzazione",
-    "seedMoved": "Cerchi la frase di recupero? È in <b>Impostazioni → Frase di recupero</b>, dietro il blocco app."
+    "seedMoved": "Cerchi la frase di recupero? È in <b>Impostazioni → Frase di recupero</b>, dietro il blocco app.",
+    "qrBuilding": "Preparazione del tuo codice…"
   },
   "revealSeedCard": {
     "wrongPin": "PIN errato.",
@@ -821,7 +828,8 @@
     "copyPhrase": "Copia frase",
     "writeOnPaper": "Scrivile su carta, in ordine.",
     "written": "L'ho scritta",
-    "alsoFile": "Salva anche un file di backup crittografato"
+    "alsoFile": "Salva anche un file di backup crittografato",
+    "fillAllBlanks": "Completa ogni parola mancante per continuare."
   },
   "recoverWallet": {
     "errNotSecret": "Non sembra una frase di recupero (12 parole) o un seed di recupero (64 caratteri esadecimali).",
@@ -909,7 +917,11 @@
     "alreadyHave": "Hai già un portafoglio?",
     "restoreFromFile": "Ripristina da file di backup",
     "importPhrase": "Importa frase di recupero",
-    "watchWallet": "Segui un wallet (sola visualizzazione)"
+    "watchWallet": "Segui un wallet (sola visualizzazione)",
+    "wordsSoFar": "{{n}} parole su 12 finora.",
+    "wordsOddLength": "{{n}} parole. Una frase di recupero è di 12, 18 o 24 parole.",
+    "connectingWhy": "L’app si connette a un servizio di portafoglio prima di poterne creare uno.",
+    "usePublicInstead": "Usa invece il servizio pubblico"
   },
   "languagePicker": {
     "label": "Lingua",
@@ -1617,7 +1629,8 @@
     "amountZkas": "{{amount}} ZKAS",
     "blockEmission": "Emissione per blocco",
     "nextReduction": "Prossima riduzione",
-    "tailNote": "Il programma termina con un'emissione residua permanente; non ha un'offerta terminale fissa."
+    "tailNote": "Il programma termina con un'emissione residua permanente; non ha un'offerta terminale fissa.",
+    "liveHiddenOnTor": "La vista live è nascosta su Tor, perché caricarla rivelerebbe l’IP reale."
   },
   "blockView": {
     "title": "Blocco",
@@ -1699,7 +1712,10 @@
     "forgotLink": "Hai dimenticato {{secret}}?",
     "wipeWarning": "Cancella tutti i dati dei portafogli <b>da questo dispositivo</b> — le monete restano sulla catena, ma ogni portafoglio torna solo dal suo seed o backup.",
     "eraseDevice": "Cancella e ricomincia",
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "sealed": "Sigillato su questo dispositivo",
+    "decrypting": "Decifratura del tuo portafoglio",
+    "decrypted": "Decifrato"
   },
   "transactionView": {
     "title": "Transazione",
@@ -1839,10 +1855,10 @@
     "opening": "Apertura…"
   },
   "privateSends": {
-    "intro": "Di solito i tuoi pagamenti includono una copia dei dettagli cifrata con la <b>tua</b> chiave, così la cronologia sopravvive a un ripristino e puoi provare un pagamento. Gli invii privati la omettono.",
-    "cost": "Il costo è permanente: un invio privato non può essere recuperato dopo un ripristino del portafoglio, non apparirà nella cronologia su altri dispositivi e non potrai provarlo a nessuno. Il destinatario lo riceve normalmente.",
-    "turnOn": "Attiva invii privati",
-    "turnOff": "Disattiva invii privati"
+    "intro": "I tuoi pagamenti portano normalmente una copia dei loro dettagli cifrata con la <b>tua</b> chiave, così la cronologia sopravvive a un ripristino e puoi dimostrare un pagamento in seguito. Un invio anonimo omette quella copia.",
+    "cost": "Il costo è permanente, e lo paghi tu: non esiste alcuna copia che qualcuno possa decifrare — <b>nemmeno tu, con la tua chiave di spesa</b>. Una volta inviato, un pagamento anonimo non può essere recuperato ripristinando questo portafoglio, non compare nella cronologia di un altro dispositivo e non può essere dimostrato a nessuno. Il destinatario lo riceve normalmente.",
+    "turnOn": "Attiva gli invii anonimi",
+    "turnOff": "Disattiva gli invii anonimi"
   },
   "paymentProof": {
     "title": "Prova questo pagamento",
@@ -1895,7 +1911,8 @@
       "muteConfirm": "Tocca ancora per silenziare {{name}}",
       "reportConfirm": "Tocca ancora per segnalare e silenziare",
       "sendZkas": "Invia ZKAS",
-      "noAddress": "Nessun indirizzo pubblicato."
+      "noAddress": "Nessun indirizzo pubblicato.",
+      "react": "Reagisci"
     },
     "profile": {
       "copyKey": "Copia chiave pubblica",
@@ -1966,7 +1983,11 @@
     "profileWhy": "Il tuo nome, una riga su di te e un indirizzo a cui inviare ZKAS. Tutto è pubblico e modificabile in qualsiasi momento.",
     "nameLabel": "Nome",
     "useMyAddress": "Usa indirizzo portafoglio",
-    "clearAddress": "Rimuovi indirizzo"
+    "clearAddress": "Rimuovi indirizzo",
+    "earlier": "Messaggi precedenti",
+    "today": "Oggi",
+    "yesterday": "Ieri",
+    "jumpLatest": "Vai ai più recenti"
   },
   "backgroundPermission": {
     "title": "Sincronizzare il portafoglio in background?",
@@ -1983,5 +2004,10 @@
     "accept": "Osserva portafoglio",
     "adding": "Aggiungo…",
     "decline": "No, scarta link"
+  },
+  "daemonError": {
+    "network": "Connessione alla rete persa per un momento. Le tue monete sono al sicuro: il portafoglio riprova da solo.",
+    "generic": "Il servizio del portafoglio ha avuto un problema leggendo la catena. Le tue monete sono al sicuro sulla catena.",
+    "details": "Dettagli tecnici"
   }
 }

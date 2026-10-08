@@ -114,7 +114,8 @@
     "title": "Senden",
     "spendable": "{{amount}} verfügbar",
     "recipientLabel": "Abgeschirmte Empfängeradresse",
-    "addrPlaceholder": "zkas:…"
+    "addrPlaceholder": "zkas:…",
+    "waitingForSync": "Die Chain wird noch gelesen — du kannst senden, sobald sie aufgeholt hat."
   },
   "sign": {
     "title": "Nachricht signieren",
@@ -363,7 +364,12 @@
     "webTransports": "Das Web-Wallet benötigt eine HTTPS-Wallet-Dienst-URL. ",
     "daemonUrl": "Daemon-URL",
     "checking": "Prüfen…",
-    "save": "Speichern"
+    "save": "Speichern",
+    "safeOnChain": "Deine Coins sind sicher in der Chain. Dies betrifft nur, wie die App sie liest.",
+    "lastBalance": "Zuletzt bestätigtes Guthaben",
+    "retry": "Erneut versuchen",
+    "advanced": "Mit einem anderen Wallet-Dienst verbinden",
+    "restartEngine": "Engine auf dem Gerät neu starten"
   },
   "sendScene": {
     "warmEta": "noch ca. {{n}} Min.",
@@ -464,7 +470,7 @@
     "signatures": "Signaturen",
     "sectionAbout": "Über",
     "aboutZkas": "Über ZKas",
-    "privateSends": "Private Sends"
+    "privateSends": "Anonyme Sendungen"
   },
   "appearanceCard": {
     "title": "Akzentfarbe",
@@ -590,7 +596,8 @@
     "sealed": "Beträge, Sender, Empfänger – versiegelt.",
     "viewKeyTitle": "Betrachtungsschlüssel",
     "viewKeySummary": "Wallet nur beobachtend ansehen",
-    "seedMoved": "Suchst du deine Wiederherstellungsphrase? Sie ist jetzt unter <b>Einstellungen → Wiederherstellungsphrase</b>, hinter deiner App-Sperre."
+    "seedMoved": "Suchst du deine Wiederherstellungsphrase? Sie ist jetzt unter <b>Einstellungen → Wiederherstellungsphrase</b>, hinter deiner App-Sperre.",
+    "qrBuilding": "Dein Code wird vorbereitet…"
   },
   "revealSeedCard": {
     "wrongPin": "Falsche PIN.",
@@ -800,7 +807,8 @@
     "copyPhrase": "Phrase kopieren",
     "writeOnPaper": "Schreib sie der Reihe nach auf Papier.",
     "written": "Ich hab's notiert",
-    "alsoFile": "Auch verschlüsseltes Backup speichern"
+    "alsoFile": "Auch verschlüsseltes Backup speichern",
+    "fillAllBlanks": "Fülle jedes fehlende Wort aus, um fortzufahren."
   },
   "recoverWallet": {
     "errNotSecret": "Das sieht nicht nach einer Wiederherstellungsphrase (12 Wörter) oder einem Seed (64 Hex-Zeichen) aus.",
@@ -1419,7 +1427,8 @@
     "live": "Live",
     "offline": "Offline",
     "heroAria": "Abgeschirmter Pool, live",
-    "heroTitle": "Abgeschirmter Pool – live"
+    "heroTitle": "Abgeschirmter Pool – live",
+    "liveHiddenOnTor": "Die Live-Ansicht ist über Tor ausgeblendet, da ihr Laden die echte IP preisgeben würde."
   },
   "blockView": {
     "title": "Block",
@@ -1539,7 +1548,10 @@
     "forgotLink": "{{secret}} vergessen?",
     "wipeWarning": "Dies löscht alle Wallet-Daten <b>von diesem Gerät</b> – die Coins bleiben in der Chain, aber jedes Wallet kommt nur per Seed oder Backup zurück.",
     "eraseDevice": "Gerät löschen & neu starten",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "sealed": "Auf diesem Gerät versiegelt",
+    "decrypting": "Wallet wird entschlüsselt",
+    "decrypted": "Entschlüsselt"
   },
   "firstRunNode": {
     "errEnterAddress": "Adresse Ihres Nodes eingeben (Host:Port).",
@@ -1786,7 +1798,11 @@
     "orOpenFile": "…oder Backup-Datei öffnen (.json)",
     "backupFile": "Backup-Datei (.json)",
     "errReadFile": "Konnte Datei nicht lesen.",
-    "selected": "Ausgewählt: {{name}}"
+    "selected": "Ausgewählt: {{name}}",
+    "wordsSoFar": "Bisher {{n}} von 12 Wörtern.",
+    "wordsOddLength": "{{n}} Wörter. Eine Wiederherstellungsphrase hat 12, 18 oder 24 Wörter.",
+    "connectingWhy": "Die App verbindet sich mit einem Wallet-Dienst, bevor sie eine Wallet anlegen kann.",
+    "usePublicInstead": "Stattdessen den öffentlichen Dienst nutzen"
   },
   "syncDestination": {
     "tor": "Tor",
@@ -1839,10 +1855,10 @@
     "hours": "~{{h}}h übrig"
   },
   "privateSends": {
-    "intro": "Deine Zahlungen enthalten normalerweise eine Kopie ihrer Details, verschlüsselt mit <b>deinem eigenen</b> Schlüssel, damit dein Verlauf eine Wiederherstellung übersteht und du später eine Zahlung beweisen kannst. Private Sends lassen diese Kopie weg.",
-    "cost": "Die Kosten sind dauerhaft: Ein privater Send kann nach Wiederherstellung dieses Wallets nicht wiederhergestellt werden, kann nicht im Verlauf auf einem anderen Gerät angezeigt und niemandem bewiesen werden. Der Empfänger erhält ihn trotzdem normal.",
-    "turnOn": "Private Sends aktivieren",
-    "turnOff": "Private Sends deaktivieren"
+    "intro": "Deine Zahlungen tragen normalerweise eine Kopie ihrer Details, verschlüsselt mit <b>deinem eigenen</b> Schlüssel, damit dein Verlauf eine Wiederherstellung übersteht und du eine Zahlung später belegen kannst. Eine anonyme Sendung lässt diese Kopie weg.",
+    "cost": "Der Preis ist endgültig, und du zahlst ihn: Es gibt keine Kopie, die irgendjemand entschlüsseln könnte — <b>auch du nicht, mit deinem eigenen Ausgabeschlüssel</b>. Einmal gesendet, lässt sich eine anonyme Zahlung beim Wiederherstellen dieser Wallet nicht zurückholen, erscheint auf keinem anderen Gerät im Verlauf und kann niemandem bewiesen werden. Der Empfänger erhält sie ganz normal.",
+    "turnOn": "Anonyme Sendungen einschalten",
+    "turnOff": "Anonyme Sendungen ausschalten"
   },
   "paymentProof": {
     "title": "Diese Zahlung beweisen",
@@ -1934,7 +1950,8 @@
       "muteConfirm": "Nochmal tippen, um {{name}} stummzuschalten",
       "reportConfirm": "Nochmal tippen, um zu melden & stummzuschalten",
       "sendZkas": "ZKAS senden",
-      "noAddress": "Noch keine Adresse veröffentlicht."
+      "noAddress": "Noch keine Adresse veröffentlicht.",
+      "react": "Reagieren"
     },
     "profile": {
       "copyKey": "Öff. Schlüssel kopieren",
@@ -1974,7 +1991,11 @@
     "profileWhy": "Dein Name, ein Satz über dich und eine Adresse für ZKAS-Zahlungen. Alles ist öffentlich und jederzeit änderbar.",
     "nameLabel": "Name",
     "useMyAddress": "Wallet-Adresse nutzen",
-    "clearAddress": "Adresse entfernen"
+    "clearAddress": "Adresse entfernen",
+    "earlier": "Ältere Nachrichten",
+    "today": "Heute",
+    "yesterday": "Gestern",
+    "jumpLatest": "Zu den neuesten springen"
   },
   "confirmWatch": {
     "title": "Wallet beobachten? ",
@@ -1983,5 +2004,10 @@
     "accept": "Wallet beobachten",
     "adding": "Füge hinzu…",
     "decline": "Nein, Link verwerfen"
+  },
+  "daemonError": {
+    "network": "Kurz die Verbindung zum Netzwerk verloren. Deine Coins sind sicher — die Wallet versucht es von selbst weiter.",
+    "generic": "Beim Lesen der Chain gab es ein Problem im Wallet-Dienst. Deine Coins sind sicher in der Chain.",
+    "details": "Technische Details"
   }
 }

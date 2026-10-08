@@ -114,7 +114,8 @@
     "feeSummary": "+ {{min}}–{{max}} netwerkkosten (schaalt met aantal gecombineerde munten) = tot {{total}} totaal",
     "catchingUp": "Nog aan het synchroniseren met de blockchain — je kunt betalen zodra dit klaar is, zodat de portemonnee al je munten kent.",
     "warmBanner": "<b>⚡ Je eerste betaling duurt enkele minuten.</b><br/>Munten lokaliseren — dit gebeurt eenmalig. Je kunt de betaling nu starten.",
-    "reviewSend": "Verzending bekijken"
+    "reviewSend": "Verzending bekijken",
+    "waitingForSync": "De chain wordt nog gelezen — je kunt versturen zodra dat klaar is."
   },
   "sign": {
     "title": "Bericht ondertekenen",
@@ -363,7 +364,12 @@
     "webTransports": "De webportemonnee heeft een HTTPS-walletdienst-URL nodig.",
     "daemonUrl": "Daemon URL",
     "checking": "Controleren…",
-    "save": "Opslaan"
+    "save": "Opslaan",
+    "safeOnChain": "Je coins staan veilig op de chain. Dit gaat alleen over hoe de app ze uitleest.",
+    "lastBalance": "Laatst bevestigde saldo",
+    "retry": "Opnieuw proberen",
+    "advanced": "Verbinden met een andere wallet-service",
+    "restartEngine": "Engine op dit apparaat herstarten"
   },
   "sendScene": {
     "warmEta": "ongeveer {{n}} min resterend",
@@ -438,7 +444,7 @@
     "fingerprint": "Vingerafdruk",
     "on": "Aan",
     "off": "Uit",
-    "privateSends": "Privé verzendingen"
+    "privateSends": "Anonieme verzendingen"
   },
   "appearanceCard": {
     "title": "Accentkleur",
@@ -618,7 +624,8 @@
     "sealed": "Bedragen, afzender, ontvanger — afgeschermd.",
     "viewKeyTitle": "Wallet-kijksleutel",
     "viewKeySummary": "Bekijk deze portemonnee alleen-lezen",
-    "seedMoved": "Op zoek naar je herstel-seed? Die staat nu in <b>Instellingen → Herstel-seed</b>, achter je appvergrendeling."
+    "seedMoved": "Op zoek naar je herstel-seed? Die staat nu in <b>Instellingen → Herstel-seed</b>, achter je appvergrendeling.",
+    "qrBuilding": "Je code wordt voorbereid…"
   },
   "revealSeedCard": {
     "wrongPin": "Verkeerde pincode.",
@@ -821,7 +828,8 @@
     "copyPhrase": "Kopieer zin",
     "writeOnPaper": "Schrijf ze op papier, in volgorde.",
     "written": "Ik heb het opgeschreven",
-    "alsoFile": "Bewaar ook een versleuteld back-upbestand"
+    "alsoFile": "Bewaar ook een versleuteld back-upbestand",
+    "fillAllBlanks": "Vul elk ontbrekend woord in om door te gaan."
   },
   "recoverWallet": {
     "errNotSecret": "Dat lijkt geen herstelzin (12 woorden) of herstel-seed (64 hex-tekens).",
@@ -909,7 +917,11 @@
     "alreadyHave": "Heb je al een wallet?",
     "restoreFromFile": "Herstellen uit back-upbestand",
     "importPhrase": "Herstelzin importeren",
-    "watchWallet": "Portemonnee bekijken (alleen bekijken)"
+    "watchWallet": "Portemonnee bekijken (alleen bekijken)",
+    "wordsSoFar": "{{n}} van de 12 woorden tot nu toe.",
+    "wordsOddLength": "{{n}} woorden. Een herstelzin bestaat uit 12, 18 of 24 woorden.",
+    "connectingWhy": "De app maakt verbinding met een wallet-service voordat er een wallet kan worden aangemaakt.",
+    "usePublicInstead": "Gebruik in plaats daarvan de publieke service"
   },
   "languagePicker": {
     "label": "Taal",
@@ -1608,7 +1620,8 @@
     "live": "Live",
     "offline": "Offline",
     "heroAria": "Afgeschermde pool, live",
-    "heroTitle": "Afgeschermde pool — live"
+    "heroTitle": "Afgeschermde pool — live",
+    "liveHiddenOnTor": "De live-weergave is verborgen op Tor, omdat laden het echte IP-adres zou prijsgeven."
   },
   "blockView": {
     "title": "Blok",
@@ -1728,7 +1741,10 @@
     "forgotLink": "{{secret}} vergeten?",
     "wipeWarning": "Dit wist alle portemonneegegevens <b>van dit apparaat</b> — de munten blijven on-chain, maar elke portemonnee komt alleen terug via zijn seed of back-upbestand.",
     "eraseDevice": "Wis dit apparaat & begin opnieuw",
-    "cancel": "Annuleren"
+    "cancel": "Annuleren",
+    "sealed": "Verzegeld op dit apparaat",
+    "decrypting": "Je wallet wordt ontsleuteld",
+    "decrypted": "Ontsleuteld"
   },
   "firstRunNode": {
     "errEnterAddress": "Voer het adres van uw node in (host:poort).",
@@ -1839,10 +1855,10 @@
     "thisSite": "deze site"
   },
   "privateSends": {
-    "intro": "Je betalingen bevatten normaal een kopie van hun details, versleuteld naar <b>je eigen</b> sleutel, zodat je geschiedenis een herstel overleeft en je later een betaling kunt bewijzen. Privé verzendingen laten die kopie weg.",
-    "cost": "De kost is permanent: een privé verzending kan niet worden hersteld nadat je deze wallet herstelt, kan niet in de geschiedenis op een ander apparaat worden getoond en kan aan niemand worden bewezen. De ontvanger ontvangt hem nog steeds normaal.",
-    "turnOn": "Privé verzendingen aan",
-    "turnOff": "Privé verzendingen uit"
+    "intro": "Je betalingen dragen normaal een kopie van hun gegevens, versleuteld met <b>je eigen</b> sleutel, zodat je geschiedenis een herstel overleeft en je een betaling later kunt bewijzen. Een anonieme verzending laat die kopie weg.",
+    "cost": "De prijs is blijvend, en jij betaalt hem: er is geen kopie die iemand kan ontsleutelen — <b>ook jij niet, met je eigen uitgeefsleutel</b>. Eenmaal verzonden kan een anonieme betaling niet worden teruggehaald bij het herstellen van deze wallet, verschijnt niet in de geschiedenis op een ander apparaat en is aan niemand te bewijzen. De ontvanger krijgt hem gewoon.",
+    "turnOn": "Anonieme verzendingen aanzetten",
+    "turnOff": "Anonieme verzendingen uitzetten"
   },
   "paymentProof": {
     "title": "Deze betaling bewijzen",
@@ -1934,7 +1950,8 @@
       "muteConfirm": "Tik opnieuw om {{name}} te dempen",
       "reportConfirm": "Tik opnieuw om te rapporteren en dempen",
       "sendZkas": "ZKAS verzenden",
-      "noAddress": "Nog geen adres gepubliceerd."
+      "noAddress": "Nog geen adres gepubliceerd.",
+      "react": "Reageren"
     },
     "profile": {
       "copyKey": "Openbare sleutel kopiëren",
@@ -1974,7 +1991,11 @@
     "profileWhy": "Je naam, een regel over jou en een adres waar mensen ZKAS naartoe kunnen sturen. Alles is openbaar en kan altijd worden gewijzigd.",
     "nameLabel": "Naam",
     "useMyAddress": "Gebruik mijn walletadres",
-    "clearAddress": "Adres verwijderen"
+    "clearAddress": "Adres verwijderen",
+    "earlier": "Eerdere berichten",
+    "today": "Vandaag",
+    "yesterday": "Gisteren",
+    "jumpLatest": "Naar de nieuwste"
   },
   "confirmWatch": {
     "title": "Deze wallet bekijken?",
@@ -1983,5 +2004,10 @@
     "accept": "Deze wallet bekijken",
     "adding": "Toevoegen…",
     "decline": "Nee, link weggooien"
+  },
+  "daemonError": {
+    "network": "Even geen verbinding met het netwerk. Je coins zijn veilig — de wallet probeert het vanzelf opnieuw.",
+    "generic": "De wallet-service liep tegen een probleem aan bij het lezen van de chain. Je coins staan veilig op de chain.",
+    "details": "Technische details"
   }
 }

@@ -114,7 +114,8 @@
     "title": "Enviar",
     "spendable": "{{amount}} disponível",
     "recipientLabel": "Endereço blindado do destinatário",
-    "addrPlaceholder": "zkas:…"
+    "addrPlaceholder": "zkas:…",
+    "waitingForSync": "Ainda lendo a chain — você poderá enviar assim que terminar."
   },
   "sign": {
     "title": "Assinar mensagem",
@@ -439,7 +440,7 @@
     "signatures": "Assinaturas",
     "sectionAbout": "Sobre",
     "aboutZkas": "Sobre o ZKas",
-    "privateSends": "Envios privados"
+    "privateSends": "Envios anônimos"
   },
   "setup": {
     "title": "Sem conexão com o serviço de carteira",
@@ -450,7 +451,12 @@
     "webTransports": "A carteira web requer uma URL de serviço de carteira HTTPS.",
     "daemonUrl": "URL do Daemon",
     "checking": "Verificando…",
-    "save": "Salvar"
+    "save": "Salvar",
+    "safeOnChain": "Suas moedas estão seguras na chain. Isto é apenas sobre como o app as lê.",
+    "lastBalance": "Último saldo confirmado",
+    "retry": "Tentar novamente",
+    "advanced": "Conectar a outro serviço de carteira",
+    "restartEngine": "Reiniciar o motor no dispositivo"
   },
   "sendScene": {
     "warmEta": "cerca de {{n}} min restantes",
@@ -618,7 +624,8 @@
     "sealed": "Valores, remetente, destinatário — selados.",
     "viewKeyTitle": "Chave de visualização",
     "viewKeySummary": "Ver esta carteira (somente leitura)",
-    "seedMoved": "Procurando sua semente de recuperação? Ela foi para <b>Configurações → Semente de recuperação</b>, atrás do bloqueio do app."
+    "seedMoved": "Procurando sua semente de recuperação? Ela foi para <b>Configurações → Semente de recuperação</b>, atrás do bloqueio do app.",
+    "qrBuilding": "Preparando seu código…"
   },
   "revealSeedCard": {
     "wrongPin": "PIN incorreto.",
@@ -812,7 +819,8 @@
     "copyPhrase": "Copiar frase",
     "writeOnPaper": "Escreva no papel, em ordem.",
     "written": "Eu anotei",
-    "alsoFile": "Salve também um backup criptografado"
+    "alsoFile": "Salve também um backup criptografado",
+    "fillAllBlanks": "Preencha cada palavra que falta para continuar."
   },
   "recoverWallet": {
     "errNotSecret": "Isso não parece uma frase de recuperação (12 palavras) ou semente (64 caracteres hex).",
@@ -893,7 +901,11 @@
     "orOpenFile": "…ou abra um arquivo de backup (.json)",
     "backupFile": "Arquivo de backup (.json)",
     "errReadFile": "Não foi possível ler o arquivo.",
-    "selected": "Selecionado: {{name}}"
+    "selected": "Selecionado: {{name}}",
+    "wordsSoFar": "{{n}} de 12 palavras até agora.",
+    "wordsOddLength": "{{n}} palavras. Uma frase de recuperação tem 12, 18 ou 24 palavras.",
+    "connectingWhy": "O app se conecta a um serviço de carteira antes de poder criar uma.",
+    "usePublicInstead": "Usar o serviço público"
   },
   "languagePicker": {
     "label": "Idioma",
@@ -1567,7 +1579,8 @@
     "amountZkas": "{{amount}} ZKAS",
     "blockEmission": "Emissão por bloco",
     "nextReduction": "Próxima redução",
-    "tailNote": "O cronograma termina com emissão residual permanente; não há oferta final fixa."
+    "tailNote": "O cronograma termina com emissão residual permanente; não há oferta final fixa.",
+    "liveHiddenOnTor": "A visão ao vivo fica oculta no Tor, porque carregá-la revelaria o IP real."
   },
   "blockView": {
     "title": "Bloco",
@@ -1678,7 +1691,10 @@
     "forgotLink": "Esqueceu {{secret}}?",
     "wipeWarning": "Isso apaga os dados de toda carteira <b>deste dispositivo</b> — as moedas ficam na cadeia, mas cada carteira só volta com sua semente ou backup.",
     "eraseDevice": "Apagar este dispositivo e recomeçar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "sealed": "Selada neste dispositivo",
+    "decrypting": "Descriptografando sua carteira",
+    "decrypted": "Descriptografada"
   },
   "firstRunNode": {
     "errEnterAddress": "Digite o endereço do seu nó (host:porta).",
@@ -1839,10 +1855,10 @@
     "interrupted": "Eventos ao vivo foram interrompidos. A consulta continuará tentando: {{error}}"
   },
   "privateSends": {
-    "intro": "Seus pagamentos normalmente levam uma cópia dos detalhes criptografada para <b>sua própria</b> chave, para que seu histórico sobreviva a uma restauração e você possa provar um pagamento depois. Envios privados deixam essa cópia de fora.",
-    "cost": "O custo é permanente: um envio privado não pode ser recuperado após restaurar esta carteira, não pode ser exibido no histórico em outro dispositivo e não pode ser provado a ninguém. O destinatário ainda o recebe normalmente.",
-    "turnOn": "Ativar envios privados",
-    "turnOff": "Desativar envios privados"
+    "intro": "Seus pagamentos normalmente carregam uma cópia dos seus detalhes criptografada com a <b>sua própria</b> chave, para que seu histórico sobreviva a uma restauração e você possa comprovar um pagamento depois. Um envio anônimo deixa essa cópia de fora.",
+    "cost": "O custo é permanente, e é você quem paga: não existe cópia que alguém possa descriptografar — <b>nem você, com a sua própria chave de gasto</b>. Depois de enviado, um pagamento anônimo não pode ser recuperado ao restaurar esta carteira, não aparece no histórico em outro dispositivo e não pode ser provado a ninguém. O destinatário recebe normalmente.",
+    "turnOn": "Ativar envios anônimos",
+    "turnOff": "Desativar envios anônimos"
   },
   "paymentProof": {
     "title": "Provar este pagamento",
@@ -1934,7 +1950,8 @@
       "muteConfirm": "Toque de novo para silenciar {{name}}",
       "reportConfirm": "Toque de novo para denunciar e silenciar",
       "sendZkas": "Enviar ZKAS",
-      "noAddress": "Nenhum endereço publicado."
+      "noAddress": "Nenhum endereço publicado.",
+      "react": "Reagir"
     },
     "profile": {
       "copyKey": "Copiar chave pública",
@@ -1974,7 +1991,11 @@
     "profileWhy": "Seu nome, uma linha sobre você e um endereço para receber ZKAS. Tudo é público e pode ser alterado a qualquer momento.",
     "nameLabel": "Nome",
     "useMyAddress": "Usar meu endereço",
-    "clearAddress": "Remover endereço"
+    "clearAddress": "Remover endereço",
+    "earlier": "Mensagens anteriores",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "jumpLatest": "Ir para as mais recentes"
   },
   "confirmWatch": {
     "title": "Observar esta carteira?",
@@ -1983,5 +2004,10 @@
     "accept": "Observar carteira",
     "adding": "Adicionando…",
     "decline": "Não, descartar link"
+  },
+  "daemonError": {
+    "network": "A conexão com a rede caiu por um momento. Suas moedas estão seguras — a carteira continua tentando sozinha.",
+    "generic": "O serviço da carteira teve um problema ao ler a chain. Suas moedas estão seguras na chain.",
+    "details": "Detalhes técnicos"
   }
 }

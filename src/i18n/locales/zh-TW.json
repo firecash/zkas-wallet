@@ -66,7 +66,8 @@
     "feeSummary": "+ {{min}}–{{max}} 手續費（依合併硬幣數量調整）= 總計最高 {{total}}",
     "catchingUp": "仍在同步區塊鏈 — 完成後即可付款，以確保錢包掌握你所有的硬幣。",
     "warmBanner": "<b>⚡ 首次付款需要幾分鐘。</b><br/>正在尋找你的硬幣 — 僅此一次。你現在就可以開始付款。",
-    "reviewSend": "檢視發送"
+    "reviewSend": "檢視發送",
+    "waitingForSync": "仍在讀取鏈——跟上後即可傳送。"
   },
   "verify": {
     "messagePlaceholder": "已簽名的訊息…",
@@ -439,7 +440,7 @@
     "signatures": "簽名",
     "sectionAbout": "關於",
     "aboutZkas": "關於 ZKas",
-    "privateSends": "隱私發送"
+    "privateSends": "匿名傳送"
   },
   "setup": {
     "title": "無法連線至錢包服務",
@@ -450,7 +451,12 @@
     "webTransports": "網頁錢包需要 HTTPS 錢包服務 URL。",
     "daemonUrl": "守護程式網址",
     "checking": "檢查中…",
-    "save": "儲存"
+    "save": "儲存",
+    "safeOnChain": "你的幣安全地在鏈上。這只關乎應用程式如何讀取它們。",
+    "lastBalance": "最近確認的餘額",
+    "retry": "重試",
+    "advanced": "連線到其他錢包服務",
+    "restartEngine": "重新啟動裝置上的引擎"
   },
   "sendScene": {
     "warmEta": "約 {{n}} 分鐘",
@@ -618,7 +624,8 @@
     "sealed": "金額、發送方、接收方 — 皆已密封。",
     "viewKeyTitle": "錢包查看密鑰",
     "viewKeySummary": "以唯讀方式觀察此錢包",
-    "seedMoved": "在找你的復原種子嗎？已移至<b>設定 → 復原種子</b>，受你的應用程式鎖保護。"
+    "seedMoved": "在找你的復原種子嗎？已移至<b>設定 → 復原種子</b>，受你的應用程式鎖保護。",
+    "qrBuilding": "正在準備你的 QR 碼…"
   },
   "revealSeedCard": {
     "wrongPin": "PIN 碼錯誤。",
@@ -821,7 +828,8 @@
     "copyPhrase": "複製短語",
     "writeOnPaper": "按順序寫在紙上。",
     "written": "我已寫下",
-    "alsoFile": "也儲存加密備份檔案"
+    "alsoFile": "也儲存加密備份檔案",
+    "fillAllBlanks": "填入每個缺少的單字以繼續。"
   },
   "recoverWallet": {
     "errNotSecret": "這不像助記詞（12 個單字）或復原種子（64 個十六進位字元）。",
@@ -902,7 +910,11 @@
     "orOpenFile": "…或開啟備份檔案 (.json)",
     "backupFile": "備份檔案 (.json)",
     "errReadFile": "無法讀取該檔案。",
-    "selected": "已選擇：{{name}}"
+    "selected": "已選擇：{{name}}",
+    "wordsSoFar": "目前 12 個單字中的 {{n}} 個。",
+    "wordsOddLength": "{{n}} 個單字。復原短語是 12、18 或 24 個單字。",
+    "connectingWhy": "應用程式在建立錢包之前會先連線到錢包服務。",
+    "usePublicInstead": "改用公共服務"
   },
   "languagePicker": {
     "label": "語言",
@@ -1617,7 +1629,8 @@
     "amountZkas": "{{amount}} ZKAS",
     "blockEmission": "區塊發行量",
     "nextReduction": "下次減產",
-    "tailNote": "發行計畫以永久尾部發行結束；沒有固定的最終供應量。"
+    "tailNote": "發行計畫以永久尾部發行結束；沒有固定的最終供應量。",
+    "liveHiddenOnTor": "使用 Tor 時隱藏即時檢視，因為載入它會洩漏真實 IP。"
   },
   "blockView": {
     "title": "區塊",
@@ -1728,7 +1741,10 @@
     "forgotLink": "忘記{{secret}}？",
     "wipeWarning": "這會<b>從此裝置</b>清除所有錢包的資料——硬幣仍會留在鏈上，但每個錢包只能透過助記詞或備份檔復原。",
     "eraseDevice": "清除裝置並重新開始",
-    "cancel": "取消"
+    "cancel": "取消",
+    "sealed": "已在此裝置上封存",
+    "decrypting": "正在解密你的錢包",
+    "decrypted": "已解密"
   },
   "firstRunConnect": {
     "accessToken": "存取權杖",
@@ -1839,10 +1855,10 @@
     "changeLater": "你隨時可以在「設定」中更改，完全不影響錢包或餘額。"
   },
   "privateSends": {
-    "intro": "你的付款通常會附上一份加密到<b>你自己</b>密鑰的詳細副本，以便恢復後仍保留歷史記錄，且日後可證明付款。隱私發送則會省略該副本。",
-    "cost": "代價是永久的：隱私發送在恢復此錢包後無法找回，無法在其他裝置的歷史記錄中顯示，也無法向任何人證明。收款方仍會正常收到款項。",
-    "turnOn": "開啟隱私發送",
-    "turnOff": "關閉隱私發送"
+    "intro": "你的付款通常會帶上一份用<b>你自己的</b>金鑰加密的明細副本，這樣歷史記錄在復原後仍在，之後也能證明某筆付款。匿名傳送不保留這份副本。",
+    "cost": "代價是永久的，並且由你承擔：沒有任何副本可供任何人解密——<b>連你用自己的花費金鑰也不行</b>。一旦傳送，匿名付款在你復原此錢包時無法找回，不會出現在其他裝置的歷史記錄中，也無法向任何人證明。收款方仍照常收到。",
+    "turnOn": "開啟匿名傳送",
+    "turnOff": "關閉匿名傳送"
   },
   "paymentProof": {
     "title": "證明此付款",
@@ -1895,7 +1911,8 @@
       "muteConfirm": "再按一次即可靜音 {{name}}",
       "reportConfirm": "再按一次即可檢舉並靜音",
       "sendZkas": "發送 ZKAS",
-      "noAddress": "尚未發布地址。"
+      "noAddress": "尚未發布地址。",
+      "react": "回應"
     },
     "profile": {
       "copyKey": "複製公鑰",
@@ -1966,7 +1983,11 @@
     "profileWhy": "你的名稱、自我介紹及收款地址皆為公開資訊，可隨時變更。",
     "nameLabel": "名稱",
     "useMyAddress": "使用錢包地址",
-    "clearAddress": "移除地址"
+    "clearAddress": "移除地址",
+    "earlier": "更早的訊息",
+    "today": "今天",
+    "yesterday": "昨天",
+    "jumpLatest": "跳到最新"
   },
   "backgroundPermission": {
     "title": "讓錢包在背景同步？",
@@ -1983,5 +2004,10 @@
     "accept": "監控此錢包",
     "adding": "加入中…",
     "decline": "不，捨棄連結"
+  },
+  "daemonError": {
+    "network": "與網路的連線短暫中斷。你的幣是安全的——錢包會自行重試。",
+    "generic": "錢包服務在讀取鏈時遇到問題。你的幣在鏈上是安全的。",
+    "details": "技術細節"
   }
 }

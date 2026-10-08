@@ -3528,3 +3528,46 @@ body.reduced-effects .appear { animation-duration: 0.12s; }
    while the disclosure read as closed. Verified by rendering the import screen. */
 .setup-advanced:not([open]) > *:not(summary),
 .advanced-details:not([open]) > *:not(summary) { display: none; }
+
+/* ---------------------------------------------------------------- unlock
+   The lock screen was a bare card centred on the page background: no mark, no
+   theme, nothing tying it to the opening sequence the rest of the app now has.
+   It is also the screen where the app does its most interesting work — the seed
+   is sealed and Argon2 has to actually decrypt it — and it said nothing about
+   that beyond grey text on a disabled button. */
+.lockwrap {
+  background:
+    radial-gradient(760px 420px at 50% -12%, rgb(var(--ember-rgb) / 0.13), transparent 70%),
+    radial-gradient(520px 320px at 50% 112%, rgb(var(--ember-rgb) / 0.08), transparent 72%),
+    var(--bg);
+  flex-direction: column;
+  gap: 18px;
+}
+.lock-brand { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+/* The ring tightens while the seed is being decrypted and settles when it opens. */
+.lock-brand .bl-logo::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--ember-rgb) / 0.35);
+  border-top-color: rgb(var(--ember-rgb) / 0.9);
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.lock-brand.working .bl-logo::after { opacity: 1; animation: lock-spin 900ms linear infinite; }
+.lock-brand.opened .bl-logo::after {
+  animation: none;
+  border-color: rgb(var(--ember-rgb) / 0.9);
+  box-shadow: 0 0 18px rgb(var(--ember-rgb) / 0.45);
+}
+@keyframes lock-spin { to { transform: rotate(360deg); } }
+.lock-status { min-height: 20px; display: flex; align-items: center; justify-content: center; }
+.lock-status-text { font-size: 13px; letter-spacing: 0.04em; color: var(--ember-text); }
+.lock-status-text.sealed { color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; font-size: 11.5px; }
+.lock-brand.opened .lock-status-text { color: var(--ember); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lock-brand .bl-logo::after { animation: none !important; }
+}
+body.reduced-effects .lock-brand .bl-logo::after { animation: none !important; }

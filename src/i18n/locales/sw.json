@@ -114,7 +114,8 @@
     "feeSummary": "+ ada {{min}}–{{max}} (inategemea sarafu zinazounganishwa) = hadi {{total}} jumla",
     "catchingUp": "Bado inasawazisha na mnyororo — utaweza kulipa ikimaliza, ili mkoba ujue sarafu zako zote.",
     "warmBanner": "<b>⚡ Malipo yako ya kwanza yatachukua dakika chache.</b><br/>Kutafuta sarafu zako — hii inafanyika mara moja. Unaweza kuanza malipo sasa.",
-    "reviewSend": "Kagua tuma"
+    "reviewSend": "Kagua tuma",
+    "waitingForSync": "Bado inasoma mnyororo — utaweza kutuma mara tu itakapofika."
   },
   "sign": {
     "title": "Saini ujumbe",
@@ -363,7 +364,12 @@
     "webTransports": "Mkoba wa wavuti unahitaji URL ya huduma ya mkoba ya HTTPS.",
     "daemonUrl": "URL ya daemon",
     "checking": "Inakagua…",
-    "save": "Hifadhi"
+    "save": "Hifadhi",
+    "safeOnChain": "Sarafu zako ni salama kwenye mnyororo. Hii ni kuhusu jinsi programu inavyozisoma tu.",
+    "lastBalance": "Salio la mwisho lililothibitishwa",
+    "retry": "Jaribu tena",
+    "advanced": "Unganisha kwa huduma nyingine ya pochi",
+    "restartEngine": "Anzisha upya injini kwenye kifaa"
   },
   "sendScene": {
     "warmEta": "takriban dak {{n}} zimebaki",
@@ -438,7 +444,7 @@
     "fingerprint": "Alama ya kidole",
     "on": "Washa",
     "off": "Zima",
-    "privateSends": "Utumaji faragha"
+    "privateSends": "Utumaji usiojulikana"
   },
   "appearanceCard": {
     "title": "Rangi ya mwonekano",
@@ -618,7 +624,8 @@
     "sealed": "Kiasi, mtumaji, mpokeaji — zimefungwa.",
     "viewKeyTitle": "Ufunguo wa kutazama pochi",
     "viewKeySummary": "Tazama mkoba huu kusoma tu",
-    "seedMoved": "Unatafuta maneno yako ya kurejesha? Yamehamia <b>Mipangilio → Maneno ya kurejesha</b>, nyuma ya kufunga programu."
+    "seedMoved": "Unatafuta maneno yako ya kurejesha? Yamehamia <b>Mipangilio → Maneno ya kurejesha</b>, nyuma ya kufunga programu.",
+    "qrBuilding": "Inaandaa msimbo wako…"
   },
   "revealSeedCard": {
     "wrongPin": "PIN si sahihi.",
@@ -847,7 +854,11 @@
     "orOpenFile": "…au fungua faili ya backup (.json)",
     "backupFile": "Faili ya nakala rudufu (.json)",
     "errReadFile": "Haikuweza kusoma faili hiyo.",
-    "selected": "Imechaguliwa: {{name}}"
+    "selected": "Imechaguliwa: {{name}}",
+    "wordsSoFar": "Maneno {{n}} kati ya 12 hadi sasa.",
+    "wordsOddLength": "Maneno {{n}}. Kifungu cha urejeshaji kina maneno 12, 18 au 24.",
+    "connectingWhy": "Programu huunganishwa na huduma ya pochi kabla ya kuunda pochi.",
+    "usePublicInstead": "Tumia huduma ya umma badala yake"
   },
   "languagePicker": {
     "label": "Lugha",
@@ -916,7 +927,8 @@
     "copyPhrase": "Nakili maneno",
     "writeOnPaper": "Yaandike kwenye karatasi, kwa mpangilio.",
     "written": "Nimeyaandika",
-    "alsoFile": "Pia hifadhi faili ya hifadhi rudufu iliyosimbwa"
+    "alsoFile": "Pia hifadhi faili ya hifadhi rudufu iliyosimbwa",
+    "fillAllBlanks": "Jaza kila neno lililokosekana ili kuendelea."
   },
   "status": {
     "offlineLabel": "Haiwezi kufikia mtandao",
@@ -1608,7 +1620,8 @@
     "live": "Moja kwa moja",
     "offline": "Nje ya mtandao",
     "heroAria": "Dimbwi lililofichwa, moja kwa moja",
-    "heroTitle": "Dimbwi lililofichwa — moja kwa moja"
+    "heroTitle": "Dimbwi lililofichwa — moja kwa moja",
+    "liveHiddenOnTor": "Mwonekano wa moja kwa moja umefichwa kwenye Tor, kwa sababu kuupakia kungefichua IP halisi."
   },
   "blockView": {
     "title": "Bloku",
@@ -1728,7 +1741,10 @@
     "forgotLink": "Umesahau {{secret}}?",
     "wipeWarning": "Hii inafuta data ya kila mkoba <b>kutoka kwenye kifaa hiki</b> — sarafu zinabaki kwenye mnyororo, lakini kila mkoba unarejea tu kutoka kwa mbegu yake au faili la hifadhi rudufu.",
     "eraseDevice": "Futa kifaa hiki & anza upya",
-    "cancel": "Ghairi"
+    "cancel": "Ghairi",
+    "sealed": "Imefungwa kwenye kifaa hiki",
+    "decrypting": "Inasimbua pochi yako",
+    "decrypted": "Imesimbuliwa"
   },
   "firstRunConnect": {
     "accessToken": "Tokeni ya ufikiaji",
@@ -1839,10 +1855,10 @@
     "changeLater": "Unaweza kubadilisha hili wakati wowote chini ya Mipangilio, bila kugusa mkoba wako au salio lake."
   },
   "privateSends": {
-    "intro": "Malipo yako kwa kawaida hubeba nakala ya maelezo yake yaliyosimbwa kwa ufunguo <b>wako mwenyewe</b>, ili historia yako iweze kurejeshwa na uweze kuthibitisha malipo baadaye. Utumaji wa faragha huacha nakala hiyo.",
-    "cost": "Gharama ni ya kudumu: utumaji wa faragha hauwezi kurejeshwa baada ya kurejesha pochi hii, hauwezi kuonyeshwa kwenye historia kwenye kifaa kingine, na hauwezi kuthibitishwa kwa mtu yeyote. Mpokeaji bado ataupokea kawaida.",
-    "turnOn": "Washa utumaji faragha",
-    "turnOff": "Zima utumaji faragha"
+    "intro": "Malipo yako kwa kawaida hubeba nakala ya maelezo yake iliyosimbwa kwa ufunguo <b>wako mwenyewe</b>, ili historia yako iendelee baada ya kurejesha na uweze kuthibitisha malipo baadaye. Utumaji usiojulikana huacha nakala hiyo.",
+    "cost": "Gharama ni ya kudumu, na inakuangukia wewe: hakuna nakala ambayo mtu yeyote anaweza kuisimbua — <b>hata wewe, kwa ufunguo wako wa kutumia</b>. Baada ya kutumwa, malipo yasiyojulikana hayawezi kurejeshwa unaporejesha pochi hii, hayaonekani kwenye historia kwenye kifaa kingine, na hayawezi kuthibitishwa kwa mtu yeyote. Mpokeaji anayapokea kama kawaida.",
+    "turnOn": "Washa utumaji usiojulikana",
+    "turnOff": "Zima utumaji usiojulikana"
   },
   "paymentProof": {
     "title": "Thibitisha malipo haya",
@@ -1895,7 +1911,8 @@
       "muteConfirm": "Gusa tena ili kunyamazisha {{name}}",
       "reportConfirm": "Gusa tena ili kuripoti na kunyamazisha",
       "sendZkas": "Tuma ZKAS",
-      "noAddress": "Hakuna anwani bado."
+      "noAddress": "Hakuna anwani bado.",
+      "react": "Itikia"
     },
     "profile": {
       "copyKey": "Nakili ufunguo wa umma",
@@ -1966,7 +1983,11 @@
     "profileWhy": "Jina lako, maelezo mafupi, na anwani ambayo watu wanaweza kutuma ZKAS. Yote ni ya umma na yanaweza kubadilishwa wakati wowote.",
     "nameLabel": "Jina",
     "useMyAddress": "Tumia anwani yangu",
-    "clearAddress": "Ondoa anwani"
+    "clearAddress": "Ondoa anwani",
+    "earlier": "Jumbe za awali",
+    "today": "Leo",
+    "yesterday": "Jana",
+    "jumpLatest": "Nenda kwa mpya zaidi"
   },
   "backgroundPermission": {
     "title": "Ruhusu pochi isawazishe chinichini?",
@@ -1983,5 +2004,10 @@
     "accept": "Tazama pochi hii",
     "adding": "Inaongeza…",
     "decline": "Hapana, tupa kiungo"
+  },
+  "daemonError": {
+    "network": "Mawasiliano na mtandao yamekatika kwa muda. Sarafu zako ni salama — pochi inaendelea kujaribu yenyewe.",
+    "generic": "Huduma ya pochi ilikumbana na tatizo wakati wa kusoma mnyororo. Sarafu zako ni salama kwenye mnyororo.",
+    "details": "Maelezo ya kiufundi"
   }
 }

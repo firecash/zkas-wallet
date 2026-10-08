@@ -66,7 +66,8 @@
     "title": "Wyślij",
     "spendable": "{{amount}} do wydania",
     "recipientLabel": "Adres chroniony odbiorcy",
-    "addrPlaceholder": "zkas:…"
+    "addrPlaceholder": "zkas:…",
+    "waitingForSync": "Trwa odczyt łańcucha — wyślesz, gdy tylko nadrobi zaległości."
   },
   "sign": {
     "title": "Podpisz wiadomość",
@@ -291,7 +292,12 @@
     "webTransports": "Portfel internetowy wymaga adresu URL usługi portfela z HTTPS.",
     "daemonUrl": "URL demona",
     "checking": "Sprawdzanie…",
-    "save": "Zapisz"
+    "save": "Zapisz",
+    "safeOnChain": "Twoje monety są bezpieczne w łańcuchu. To dotyczy tylko sposobu, w jaki aplikacja je odczytuje.",
+    "lastBalance": "Ostatnie potwierdzone saldo",
+    "retry": "Spróbuj ponownie",
+    "advanced": "Połącz z inną usługą portfela",
+    "restartEngine": "Uruchom ponownie silnik na urządzeniu"
   },
   "sendScene": {
     "warmEta": "około {{n}} min do końca",
@@ -392,7 +398,7 @@
     "signatures": "Podpisy",
     "sectionAbout": "O aplikacji",
     "aboutZkas": "O ZKas",
-    "privateSends": "Prywatne wysyłki"
+    "privateSends": "Anonimowe wysyłki"
   },
   "renameWallet": {
     "title": "Zmień nazwę portfela",
@@ -493,7 +499,8 @@
     "sealed": "Kwoty, nadawca, odbiorca — chronione.",
     "viewKeyTitle": "Klucz podglądu portfela",
     "viewKeySummary": "Czytaj ten portfel tylko do odczytu",
-    "seedMoved": "Szukasz frazy odzyskiwania? Przeniesiono do <b>Ustawienia → Fraza odzyskiwania</b>, za blokadą aplikacji."
+    "seedMoved": "Szukasz frazy odzyskiwania? Przeniesiono do <b>Ustawienia → Fraza odzyskiwania</b>, za blokadą aplikacji.",
+    "qrBuilding": "Przygotowywanie kodu…"
   },
   "revealSeedCard": {
     "wrongPin": "Zły PIN.",
@@ -787,7 +794,8 @@
     "copyPhrase": "Kopiuj frazę",
     "writeOnPaper": "Zapisz je na papierze, w kolejności.",
     "written": "Zapisałem to",
-    "alsoFile": "Zapisz też zaszyfrowany plik kopii"
+    "alsoFile": "Zapisz też zaszyfrowany plik kopii",
+    "fillAllBlanks": "Uzupełnij każde brakujące słowo, aby kontynuować."
   },
   "recoverWallet": {
     "errNotSecret": "To nie wygląda na frazę odzyskiwania (12 słów) ani ziarno odzyskiwania (64 znaki hex).",
@@ -875,7 +883,11 @@
     "alreadyHave": "Masz już portfel?",
     "restoreFromFile": "Przywróć z pliku kopii",
     "importPhrase": "Importuj frazę odzyskiwania",
-    "watchWallet": "Obserwuj portfel (tylko do odczytu)"
+    "watchWallet": "Obserwuj portfel (tylko do odczytu)",
+    "wordsSoFar": "Na razie {{n}} z 12 słów.",
+    "wordsOddLength": "{{n}} słów. Fraza odzyskiwania ma 12, 18 lub 24 słowa.",
+    "connectingWhy": "Aplikacja łączy się z usługą portfela, zanim będzie mogła go utworzyć.",
+    "usePublicInstead": "Użyj zamiast tego usługi publicznej"
   },
   "consolidateDialog": {
     "errEnterSeed": "Wprowadź 64-znakowe ziarno odzyskiwania tego portfela.",
@@ -1617,7 +1629,8 @@
     "amountZkas": "{{amount}} ZKAS",
     "blockEmission": "Emisja blokowa",
     "nextReduction": "Następna redukcja",
-    "tailNote": "Harmonogram kończy się stałą emisją ogonową; nie ma ustalonego ostatecznego limitu podaży."
+    "tailNote": "Harmonogram kończy się stałą emisją ogonową; nie ma ustalonego ostatecznego limitu podaży.",
+    "liveHiddenOnTor": "Widok na żywo jest ukryty w sieci Tor, bo jego wczytanie ujawniłoby prawdziwy adres IP."
   },
   "blockView": {
     "title": "Blok",
@@ -1728,7 +1741,10 @@
     "forgotLink": "Zapomniałeś {{secret}}?",
     "wipeWarning": "To usunie dane wszystkich portfeli <b>z tego urządzenia</b> — monety pozostają w łańcuchu, ale każdy portfel można przywrócić tylko z frazy seed lub pliku kopii zapasowej.",
     "eraseDevice": "Wyczyść urządzenie i zacznij od nowa",
-    "cancel": "Anuluj"
+    "cancel": "Anuluj",
+    "sealed": "Zapieczętowane na tym urządzeniu",
+    "decrypting": "Odszyfrowywanie portfela",
+    "decrypted": "Odszyfrowano"
   },
   "mainNav": {
     "mine": "Kop",
@@ -1839,10 +1855,10 @@
     "opening": "Otwieranie…"
   },
   "privateSends": {
-    "intro": "Twoje płatności zwykle zawierają kopię szczegółów zaszyfrowaną <b>twoim własnym</b> kluczem, dzięki czemu historia przetrwa przywrócenie i możesz później udowodnić płatność. Prywatne wysyłki pomijają tę kopię.",
-    "cost": "Koszt jest trwały: prywatnej wysyłki nie da się odzyskać po przywróceniu portfela, nie będzie widoczna w historii na innym urządzeniu i nie można jej nikomu udowodnić. Odbiorca i tak otrzymuje ją normalnie.",
-    "turnOn": "Włącz prywatne wysyłki",
-    "turnOff": "Wyłącz prywatne wysyłki"
+    "intro": "Twoje płatności zwykle niosą kopię swoich szczegółów zaszyfrowaną <b>twoim własnym</b> kluczem, dzięki czemu historia przetrwa przywracanie, a płatność da się później udowodnić. Anonimowa wysyłka pomija tę kopię.",
+    "cost": "Koszt jest trwały i ponosisz go ty: nie istnieje kopia, którą ktokolwiek mógłby odszyfrować — <b>nawet ty, własnym kluczem wydatkowym</b>. Po wysłaniu anonimowej płatności nie da się jej odzyskać przy przywracaniu tego portfela, nie pojawi się w historii na innym urządzeniu i nie da się jej nikomu udowodnić. Odbiorca otrzymuje ją normalnie.",
+    "turnOn": "Włącz anonimowe wysyłki",
+    "turnOff": "Wyłącz anonimowe wysyłki"
   },
   "paymentProof": {
     "title": "Udowodnij tę płatność",
@@ -1895,7 +1911,8 @@
       "muteConfirm": "Dotknij ponownie, by wyciszyć {{name}}",
       "reportConfirm": "Dotknij ponownie, by zgłosić i wyciszyć",
       "sendZkas": "Wyślij ZKAS",
-      "noAddress": "Brak opublikowanego adresu."
+      "noAddress": "Brak opublikowanego adresu.",
+      "react": "Zareaguj"
     },
     "profile": {
       "copyKey": "Kopiuj klucz publiczny",
@@ -1966,7 +1983,11 @@
     "profileWhy": "Twoja nazwa, krótki opis i adres, na który ludzie mogą wysłać ZKAS. Wszystko jest publiczne i można to zmienić w każdej chwili.",
     "nameLabel": "Nazwa",
     "useMyAddress": "Użyj adresu portfela",
-    "clearAddress": "Usuń adres"
+    "clearAddress": "Usuń adres",
+    "earlier": "Wcześniejsze wiadomości",
+    "today": "Dzisiaj",
+    "yesterday": "Wczoraj",
+    "jumpLatest": "Przejdź do najnowszych"
   },
   "backgroundPermission": {
     "title": "Zsynchronizować portfel w tle?",
@@ -1983,5 +2004,10 @@
     "accept": "Obserwuj ten portfel​",
     "adding": "Dodawanie…​",
     "decline": "Nie, odrzuć link"
+  },
+  "daemonError": {
+    "network": "Na chwilę utracono połączenie z siecią. Twoje monety są bezpieczne — portfel sam ponawia próby.",
+    "generic": "Usługa portfela napotkała problem podczas odczytu łańcucha. Twoje monety są bezpieczne w łańcuchu.",
+    "details": "Szczegóły techniczne"
   }
 }
