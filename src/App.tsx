@@ -976,7 +976,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           if (next) {
             void (async () => {
               try {
-                const url = await ensureEmbedded(next, undefined);
+                const url = await ensureEmbedded(next, undefined, false);
                 setBase(url);
                 void bgSyncReconfigure();
               } catch {
@@ -7131,6 +7131,7 @@ function DaemonSetting() {
         // transport whose authenticated status endpoint really answered.
         url = await findReachableDaemon(raw, accessToken);
       }
+      await leavePhoneModeIfRemote(url);
       setBase(url);
       setWalletdBearer(url ? accessToken : "");
       location.reload();
@@ -7725,6 +7726,25 @@ function BiometricToggle() {
       )}
     </div>
   );
+}
+
+/// Pointing the app at a daemon that is not the on-device engine means it is no
+/// longer running on this phone — so stop saying that it is.
+///
+/// Every deliberate exit from phone mode clears the flag (leaveEmbedded, the
+/// onboarding "use public instead", leaveEngine, FirstRunConnect's failure path).
+/// The two places where a person types a URL by hand did not, and the flag is what
+/// the connection button and the privacy label read. The result was an app showing
+/// "On this phone" while posting `fvk_hex` to a remote server through /watch and
+/// /prepare — including the auto-repair, which fires on its own. A wallet may not
+/// tell someone their keys never leave the device while it is sending them away.
+async function leavePhoneModeIfRemote(url: string): Promise<void> {
+  if (!embeddedChosen()) return;
+  const loopback = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:|\/|$)/i.test(url.trim());
+  if (loopback) return; // a self-hosted engine on this device is still "on this phone"
+  setEmbeddedChosen(false);
+  // Nothing will talk to it any more; let it release the battery and the port.
+  await stopEmbedded().catch(() => {});
 }
 
 function AppLockSetting() {
@@ -8701,6 +8721,7 @@ function Setup({ error: requestError }: { error?: string | null }) {
             setError("");
             try {
               const url = await findReachableDaemon(base, getWalletdBearer());
+              await leavePhoneModeIfRemote(url);
               setBase(url);
               location.reload();
             } catch (cause) {

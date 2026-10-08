@@ -224,7 +224,18 @@ export function setEngineBusy(v: boolean): void {
 
 /** Start the engine (idempotent) and return its loopback base URL, e.g.
  * http://127.0.0.1:54123. Throws if the engine cannot start. */
-export async function ensureEmbedded(nodeAddr?: string, tor?: boolean): Promise<string> {
+/// What the RUNNING engine was actually started with.
+///
+/// `changed` used to be computed against localStorage, which the caller had
+/// already written — `rotatePublicNode()` flips the active-node flag and returns
+/// the NEW address, so `node !== embeddedNode()` was comparing a value with
+/// itself and was always false. Failover therefore early-returned the live port
+/// every time and the engine never left the dead node, while the UI switched to
+/// "on the backup now" and the offline card promised it would reconnect on its
+/// own. Comparing against what we actually started is the only honest test.
+let startedWith: { node: string; tor: boolean } | null = null;
+
+export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = true): Promise<string> {
   if (!embeddedAvailable()) throw new Error(i18n.t("embedded.unavailable"));
   // An address passed here is a CHOICE and gets pinned; nothing passed means "whichever
   // public node you assign me", which stays automatic so failover can move it later.
@@ -236,14 +247,18 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean): Promise<
   // Did the user change the node or the Tor toggle? start() is idempotent and would
   // otherwise keep the OLD transport, leaving e.g. a Tor-off switch stuck on a dead
   // SOCKS proxy (permanent "opening"). If so, stop the running engine and restart it.
-  const changed = node !== embeddedNode() || useTor !== embeddedTor();
+  const changed = startedWith ? node !== startedWith.node || useTor !== startedWith.tor : false;
   const already = await Native.status().catch(() => ({ port: 0, running: false }));
   if (already.running && already.port > 0 && !changed) return `http://127.0.0.1:${already.port}`;
   if (already.running && changed) {
     await stopEmbedded().catch(() => {});
     startPromise = null;
   }
-  if (explicit) setEmbeddedNode(node);
+  // `pin: false` is failover asking for a different node for now. Pinning there
+  // overwrote the PRIMARY with the backup and cleared the active-backup flag, so
+  // both slots became the same address and failover was permanently dead with the
+  // original primary forgotten.
+  if (explicit && pin) setEmbeddedNode(node);
   setEmbeddedTor(useTor);
   if (!startPromise) {
     startPromise = Native.start({ nodeAddr: node, socks: useTor ? ORBOT_SOCKS : undefined }).then((r) => r.port);
@@ -251,6 +266,7 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean): Promise<
   try {
     const port = await startPromise;
     if (!port) throw new Error("engine returned no port");
+    startedWith = { node, tor: useTor };
     void setEngineDebugLogs(embeddedDebugChosen());
     return `http://127.0.0.1:${port}`;
   } finally {
@@ -261,6 +277,11 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean): Promise<
 export async function stopEmbedded(): Promise<void> {
   if (!embeddedAvailable()) return;
   await Native.stop().catch(() => {});
+  // A start that is still in flight belongs to the engine we just stopped; leaving
+  // it set let the next ensureEmbedded await a cancelled start and adopt a dead
+  // port. The node-change path already did this; the public stop did not.
+  startPromise = null;
+  startedWith = null;
 }
 
 export async function embeddedBase(): Promise<string | null> {

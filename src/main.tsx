@@ -330,7 +330,24 @@ async function boot() {
   // bricked by an engine hiccup.
   if (embeddedChosen()) {
     try {
-      const url = await ensureEmbedded();
+      // BOUNDED. This await gates the entire UI: nothing renders until it settles,
+      // and `Native.start` blocks until the engine binds its port — which a dead
+      // SOCKS proxy (Tor on, Orbot gone) or a hanging gRPC dial can stall
+      // indefinitely. The result was a splash animating forever with no text and no
+      // controls, whose only remedy is force-stop, and whose next step for a normal
+      // person is "Clear app data" — which deletes the seed, because the seed lives
+      // in this WebView's localStorage. That is the one path here that loses money.
+      //
+      // Twenty seconds is far longer than binding a loopback port takes and far
+      // shorter than a person's patience with a frozen app. Nothing is lost by
+      // giving up: App.tsx starts the engine again on mount and adopts the port
+      // whenever it does arrive, so this await is an optimisation, not the mechanism.
+      const url = await Promise.race([
+        ensureEmbedded(),
+        new Promise<string>((_, reject) =>
+          setTimeout(() => reject(new Error("on-device engine did not bind a port within 20s")), 20_000),
+        ),
+      ]);
       setBase(url);
     } catch (e) {
       console.error("on-device engine did not start:", (e as Error)?.message ?? e);
