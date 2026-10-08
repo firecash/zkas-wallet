@@ -67,7 +67,8 @@
     "catchingUp": "Still catching up with the chain — you can pay once it finishes, so the wallet knows about all your coins.",
     "warmBanner": "<b>⚡ Your first payment will take a few minutes.</b><br/>Locating your coins — this happens once. You can start the payment now.",
     "reviewSend": "Review send",
-    "waitingForSync": "Still reading the chain — you can send the moment it catches up."
+    "waitingForSync": "Still reading the chain — you can send the moment it catches up.",
+    "unknownFailure": "The payment was refused and the wallet could not read why. Nothing was sent — check History before trying again."
   },
   "sign": {
     "title": "Sign message",

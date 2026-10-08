@@ -88,9 +88,26 @@ export async function pasteText(): Promise<PasteResult> {
 // decimal point, at most 8 places (a sompi is 1e-8 ZKAS — more digits are not
 // representable and silently round).
 export function sanitizeAmountInput(raw: string): string {
-  let v = raw.replace(/[^0-9.]/g, "");
-  const first = v.indexOf(".");
-  if (first !== -1) v = v.slice(0, first + 1) + v.slice(first + 1).replace(/\./g, "");
+  // Separators first, and this is not cosmetic. Stripping every non-[0-9.] turned
+  // "1,5" into "15" — a TEN-TIMES overpayment, typed by anyone who writes decimals
+  // with a comma, which is most of Europe and Latin America and the majority of
+  // the 24 languages this wallet ships in. Nothing on screen ever said 1.5.
+  //
+  // Both marks can appear together ("1.000,50", "1,000.50"), so the LAST one is
+  // the decimal separator and anything earlier is grouping. Arabic-Indic and
+  // Persian digits, and the Arabic decimal mark, map to their ASCII forms —
+  // otherwise an Arabic or Farsi keyboard produces an empty field.
+  const digits = raw
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\u066b\u066c]/g, (m) => (m === "\u066b" ? "." : ","));
+  const lastDot = digits.lastIndexOf(".");
+  const lastComma = digits.lastIndexOf(",");
+  const decimalAt = Math.max(lastDot, lastComma);
+  let v =
+    decimalAt === -1
+      ? digits.replace(/[^0-9]/g, "")
+      : digits.slice(0, decimalAt).replace(/[^0-9]/g, "") + "." + digits.slice(decimalAt + 1).replace(/[^0-9]/g, "");
   const dot = v.indexOf(".");
   if (dot !== -1) v = v.slice(0, dot + 1 + 8);
   return v;

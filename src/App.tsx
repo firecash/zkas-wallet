@@ -5855,6 +5855,29 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
   );
 }
 
+/// Why a send failed, in words, whatever was thrown.
+///
+/// `(e as Error).message` is `undefined` when the thrown value is not an Error —
+/// and the on-device signer throws a BARE STRING: wasm-bindgen does
+/// `throw takeFromExternrefTable0(...)`, handing back the Rust `Err(String)`
+/// directly. So every refusal from `verifyAndSignPayment` set `error` to
+/// undefined, `{error && ...}` rendered nothing, the confirm sheet closed, and the
+/// user was dropped back on a filled-in form with NO indication of whether their
+/// money had left.
+///
+/// That is the one failure that must never be silent: this signer is the check
+/// that a malicious daemon has not redirected the payment or burned the change as
+/// fee. It also carries PartialSendError, which reports money ALREADY in flight.
+/// The daemon's own HTTP errors displayed correctly throughout, because those are
+/// real Errors — which is precisely why this stayed invisible.
+function failureText(e: unknown): string {
+  if (typeof e === "string" && e.trim()) return e;
+  const msg = (e as { message?: unknown } | null)?.message;
+  if (typeof msg === "string" && msg.trim()) return msg;
+  const str = String(e ?? "");
+  return str && str !== "[object Object]" ? str : i18n.t("send.unknownFailure");
+}
+
 function Send({
   status,
   onSent,
@@ -6187,10 +6210,10 @@ function Send({
         setConfirming(true);
       } else if (e instanceof PartialSendError && e.parts.length > 0) {
         onSent(buildRows(e.parts, to.trim()), { stay: true });
-        setError(t("send.partialRecorded", { message: (e as Error).message }));
+        setError(t("send.partialRecorded", { message: failureText(e) }));
         setConfirming(false);
       } else {
-        setError((e as Error).message);
+        setError(failureText(e));
         setConfirming(false);
       }
     } finally {
@@ -7449,7 +7472,13 @@ function PrivateSendsCard({ on }: { on: boolean }) {
       <p className="muted small" style={{ marginTop: 0 }}>
         <Trans i18nKey="privateSends.intro" components={{ b: <b /> }} />
       </p>
-      <p className="muted small">{t("privateSends.cost")}</p>
+      {/* `cost` carries <b> markup, so it needs Trans like the line above it.
+          Through plain t() the one paragraph explaining a permanent, unrecoverable
+          trade-off rendered the tags as literal text: "— <b>not even you, with your
+          own spending key</b>." My own string, added earlier today. */}
+      <p className="muted small">
+        <Trans i18nKey="privateSends.cost" components={{ b: <b /> }} />
+      </p>
       {err && <div className="msg err">{err}</div>}
       <button className={"btn" + (value ? "" : " ghost")} disabled={busy} onClick={() => void set(!value)}>
         {busy ? <span className="spin" /> : value ? t("privateSends.turnOff") : t("privateSends.turnOn")}
