@@ -132,7 +132,15 @@ export function lastSeen(room: string): number {
 }
 
 export function markSeen(room: string, at: number): void {
-  if (at > lastSeen(room)) write(`${SEEN_KEY}_${room}`, String(at));
+  // `at` is the newest message's `created_at`, which is AUTHOR-SUPPLIED — the
+  // ingest path says so itself. Unclamped, one note dated 2100 (hostile, or just a
+  // skewed clock) wrote a cursor a lifetime into the future the first time anyone
+  // sat at the bottom of the room, and every unread signal for that room — the
+  // "New messages" rule, the jump badge, the room chip, the wallet-screen badge —
+  // read zero from then on, permanently, recoverable only by opting out of chat.
+  const now = Math.floor(Date.now() / 1000);
+  const safe = Math.min(at, now);
+  if (safe > lastSeen(room)) write(`${SEEN_KEY}_${room}`, String(safe));
 }
 
 /** Private messages already accounted for, by gift-wrap id.

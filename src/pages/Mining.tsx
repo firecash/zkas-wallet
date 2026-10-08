@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+/// The same shape WalletTools and Explorer already validate against.
+const ADDRESS_RE = /^(zkas|firecash):[a-z0-9]{50,100}$/i;
 import { Check, ChevronDown, Copy, Cpu, ExternalLink, Globe2, Network, Server, Square, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { api, loadStatusCache } from "../api";
 import { kaspaNodeProfiles, miningNodeProfiles } from "../connection-profiles";
 import { isDesktop } from "../desktop";
+import { clearnetAllowed } from "../lib/privacy";
 import {
   desktopServices,
   type ControlConfig,
@@ -186,8 +189,15 @@ export function Mining() {
     return result;
   }, [config, kaspaMode, mode, t, zkasMode]);
 
-  const valid = walletAddress.startsWith("zkas:")
-    && (mode === "solo" || kaspaAddress.startsWith("kaspa:"))
+  // A PREFIX is not an address. `walletAddress.startsWith("zkas:")` accepted the
+  // bare string "zkas:", and "zkas:ZZZZ!!!!" — characters outside the bech32
+  // charset — and started a solo-mining session paying block rewards to an
+  // address nobody holds, discovered hours or days later and unrecoverable. This
+  // is the same shape as the withdrawal that sat for 10 hours because only the
+  // prefix was checked. The app already owns the real test and uses it in
+  // WalletTools and Explorer; Mining is the one place that did not.
+  const valid = ADDRESS_RE.test(walletAddress.trim())
+    && (mode === "solo" || kaspaAddress.trim().startsWith("kaspa:"))
     && (zkasMode === "local" || !!zkasRpc.trim())
     && (mode === "solo" || kaspaMode === "local" || !!kaspaRpc.trim())
     && stratumPort >= 1024 && stratumPort <= 65535
@@ -533,15 +543,24 @@ export function Mining() {
               </div>
               <button className="btn ghost compact" onClick={() => setDashboardOpen(false)}>{t("mining.close")}</button>
             </div>
-            {/* Served by the bridge on loopback. Sandboxed: it is a local service the
-                app supervises, not app code, and it has no business reaching this
-                page's storage or scripts. */}
-            <iframe
-              className="dashboard-frame"
-              title={t("mining.dashboardFrameTitle")}
-              src={`http://127.0.0.1:${BRIDGE_DASHBOARD_PORT}/`}
-              sandbox="allow-scripts allow-same-origin"
-            />
+            {/* Served by the bridge on loopback — but the FRAME being local says
+                nothing about what the frame then loads. Measured: this page pulls
+                cdn.tailwindcss.com (remote JS, which `allow-scripts` then runs) and
+                two Google Fonts hosts, from the user's own IP, identically with Tor
+                on. The app's own CSP forbids exactly that (`font-src 'self'`), and a
+                cross-origin frame is not covered by the parent CSP, so it walked
+                around both the CSP and lib/privacy.ts. The Explorer hero already has
+                this gate; this one never got it. */}
+            {clearnetAllowed() ? (
+              <iframe
+                className="dashboard-frame"
+                title={t("mining.dashboardFrameTitle")}
+                src={`http://127.0.0.1:${BRIDGE_DASHBOARD_PORT}/`}
+                sandbox="allow-scripts allow-same-origin"
+              />
+            ) : (
+              <p className="msg warn small">{t("mining.dashboardHiddenPrivate")}</p>
+            )}
             <p className="subtle">
               {t("mining.dashboardNote")}
             </p>

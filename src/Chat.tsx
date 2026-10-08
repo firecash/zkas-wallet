@@ -1133,6 +1133,13 @@ export function ChatScreen({
   }
 
   async function saveName() {
+    // Is this the first-run "pick a name before you can send" prompt, or someone
+    // editing their profile? The two share this function, and it ended with an
+    // unconditional `if (draft.trim()) void send(draft)` — so changing your bio
+    // with anything sitting in the composer PUBLISHED it to the room. The button
+    // label already knew the difference: "Save and send" on first run, "Save" when
+    // editing. Sending the draft is only ever right on the first.
+    const firstRun = !nickname();
     const name = nameDraft.trim().slice(0, 32);
     const addr = addrDraft.trim();
     const about = aboutDraft.trim().slice(0, ABOUT_MAX);
@@ -1145,7 +1152,7 @@ export function ChatScreen({
     } catch {
       /* stored locally either way; it publishes with the next send */
     }
-    if (draft.trim()) void send(draft);
+    if (firstRun && draft.trim()) void send(draft);
   }
 
   async function toggleMute(pubkey: string) {
