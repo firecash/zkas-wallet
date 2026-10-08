@@ -4614,6 +4614,10 @@ function localTxToRow(t: LocalTx): ChainHistoryRow & { confs?: number } {
   };
 }
 
+/// The transaction sheet. It masks like everything else: it is opened FROM a
+/// history row that reads `••••••`, and it was printing the exact figure in 30px
+/// type, plus the fiat line and the network fee. The eye is a privacy control, and
+/// the one screen that enlarges an amount was the one screen ignoring it.
 function TxDetail({
   row,
   onClose,
@@ -4633,6 +4637,7 @@ function TxDetail({
   const [labelState, setLabelState] = useState("");
   const [proving, setProving] = useState(false);
   const price = useZkasPrice();
+  const hide = useHideBalances();
   const contact = findContact(row.recipient);
   const isConsolidation = isConsolidationRow(row);
   const kind = isConsolidation ? t("txDetail.kindConsolidation") : row.kind === "coinbase" ? t("txDetail.kindMined") : row.kind === "received" ? t("txDetail.kindReceived") : t("txDetail.kindSent");
@@ -4646,11 +4651,11 @@ function TxDetail({
     <div className="modalwrap" onClick={onClose}>
       <div className="card modalcard wide" onClick={(e) => e.stopPropagation()}>
         <h2 style={{ marginTop: 0 }}>{kind}</h2>
-        <div className="amt" style={{ fontSize: 30, marginBottom: fmtFiat(row.amountZkas, price) ? 2 : 10 }}>
-          {sign} {trimFc(row.amountZkas.toFixed(8))}
+        <div className="amt" style={{ fontSize: 30, marginBottom: !hide && fmtFiat(row.amountZkas, price) ? 2 : 10 }}>
+          {hide ? MASK : `${sign} ${trimFc(row.amountZkas.toFixed(8))}`}
           <span className="unit"> ZKAS</span>
         </div>
-        {fmtFiat(row.amountZkas, price) && (
+        {!hide && fmtFiat(row.amountZkas, price) && (
           <div className="muted small" style={{ marginBottom: 10 }}>≈ {fmtFiat(row.amountZkas, price)}</div>
         )}
 
@@ -4697,7 +4702,7 @@ function TxDetail({
         {row.feeSompi > 0 && (
           <div className="detail-row">
             <span className="k">{t("txDetail.networkFee")}</span>
-            <span className="v mono">{t("txDetail.zkasAmount", { amount: trimFc((row.feeSompi / 1e8).toFixed(8)) })}</span>
+            <span className="v mono">{hide ? MASK : t("txDetail.zkasAmount", { amount: trimFc((row.feeSompi / 1e8).toFixed(8)) })}</span>
           </div>
         )}
         {row.recipient && (
@@ -7142,7 +7147,9 @@ const History = memo(function History({
       )}
       {heldTxids > 0 && (
         <p className="muted small" style={{ marginTop: 14 }}>
-          {t("history.held", { count: heldTxids, amount: trimFc(heldZkas.toFixed(8)) })}
+          {/* Every row above this reads `••••••` when the eye is on; this line was
+              printing the exact figure held in flight. */}
+          {t("history.held", { count: heldTxids, amount: hide ? MASK : trimFc(heldZkas.toFixed(8)) })}
         </p>
       )}
       <RescanButton label={t("history.somethingMissing")} hint={t("history.rescanHint")} daaScore={daaScore} />
