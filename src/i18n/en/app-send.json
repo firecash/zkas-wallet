@@ -371,10 +371,10 @@
     "advanced": "Connect to a different wallet service"
   },
   "privateSends": {
-    "intro": "Your payments normally carry a copy of their details encrypted to <b>your own</b> key, so your history survives a restore and you can prove a payment later. Private sends leave that copy out.",
-    "cost": "The cost is permanent: a private send cannot be recovered after you restore this wallet, cannot be shown in history on another device, and cannot be proven to anyone. The recipient still receives it normally.",
-    "turnOn": "Turn private sends on",
-    "turnOff": "Turn private sends off"
+    "intro": "Your payments normally carry a copy of their details encrypted to <b>your own</b> key, so your history survives a restore and you can prove a payment later. An anonymous send leaves that copy out.",
+    "cost": "The cost is permanent, and it falls on you: there is no copy for anyone to decrypt — <b>not even you, with your own spending key</b>. Once sent, an anonymous payment cannot be recovered when you restore this wallet, cannot appear in history on another device, and cannot be proven to anyone. The recipient still receives it normally.",
+    "turnOn": "Turn anonymous sends on",
+    "turnOff": "Turn anonymous sends off"
   },
   "backgroundPermission": {
     "title": "Let the wallet sync in the background?",

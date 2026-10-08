@@ -462,6 +462,16 @@ export function ChatScreen({
    *  after switching rooms the rule was drawn from the previous room's cursor
    *  and marked week-old messages as new. */
   const [sinceOpen, setSinceOpen] = useState(() => lastSeen(currentRoom()));
+  /** What this session has actually READ, as opposed to where the "New messages"
+   *  rule is drawn.
+   *
+   *  These were one value, and that is why the badge kept counting messages that
+   *  were already on screen: `sinceOpen` is frozen when the room opens so the rule
+   *  stays put while you read — correct for the rule, wrong for the count, which
+   *  has to fall to zero as you read. Reported as "it said 27 unread while I was
+   *  already at the bottom". `markSeen` was advancing the STORED cursor the whole
+   *  time; nothing advanced the one the badge was computed from. */
+  const [seenUpTo, setSeenUpTo] = useState(() => lastSeen(currentRoom()));
   /** Unread, per room, for the rooms shown in the switcher. Filled by the single
    *  `peek` subscription; the open room is excluded because its own messages are
    *  already on screen. */
@@ -497,6 +507,13 @@ export function ChatScreen({
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, []);
+  /** Whether this room has already been positioned since it was opened.
+   *
+   *  Opening a room jumped straight to the newest message, so a room with unread
+   *  messages threw you past all of them and you had to scroll back up hunting for
+   *  the last one you had actually read. Telegram puts you AT the unread rule and
+   *  lets you read downwards, which is the whole reason the rule exists. */
+  const landedOnUnread = useRef(false);
   const atBottomRef = useRef(true);
   atBottomRef.current = atBottom;
 
@@ -679,6 +696,8 @@ export function ChatScreen({
   useEffect(() => {
     client.current?.setRoom(room);
     setSinceOpen(lastSeen(room));
+    setSeenUpTo(lastSeen(room));
+    landedOnUnread.current = false;
     setLimit(PAGE);
     // Whatever was counted for the room we just opened is now on screen.
     setPeek((prev) => (prev[room] ? { ...prev, [room]: 0 } : prev));
@@ -950,6 +969,43 @@ export function ChatScreen({
   }, [limit]);
 
   useLayoutEffect(() => {
+    // First paint of a freshly opened room: land on the unread rule if there is
+    // one, so the first thing on screen is the last message you had read and
+    // everything new is below it. Only once per room — after that the normal
+    // bottom-pinning applies, or you could never scroll away.
+    if (!landedOnUnread.current && rows.length) {
+      const el = listRef.current;
+      const rule = el?.querySelector<HTMLElement>(".chat-unread-rule");
+      // Only spend the one-shot once the question is actually answerable. The
+      // first paint can have rows while the unread rule is still a render away,
+      // and consuming it there left the room pinned to the bottom with the rule
+      // thousands of pixels above the viewport — measured at -3721px.
+      if (rule || !hasUnreadRow) landedOnUnread.current = true;
+      if (el && rule) {
+        // Measured against the list, not the page: offsetTop depends on which
+        // ancestor happens to be positioned, and this must not move the page.
+        // Re-anchor over the next few frames. Landing once is not enough: rows
+        // ABOVE the rule settle after first paint (fonts, avatars, a reply quote
+        // wrapping to two lines), and because they are above the viewport their
+        // height change slides the rule out of it — measured drifting 426px up
+        // from a single-shot landing.
+        const place = () => {
+          const r = el.querySelector<HTMLElement>(".chat-unread-rule");
+          if (!r) return;
+          const top = r.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop;
+          el.scrollTop = Math.max(0, top - 12);
+        };
+        place();
+        requestAnimationFrame(() => { place(); requestAnimationFrame(place); });
+        // The ref too, not just the state: the composer ResizeObserver and the
+        // visualViewport handler both re-pin through `atBottomRef`, and on mount
+        // they fire before a state update has propagated — which scrolled the room
+        // straight back to the newest message after it had correctly landed.
+        atBottomRef.current = false;
+        setAtBottom(false);
+        return;
+      }
+    }
     // Set scrollTop so the movement stays INSIDE the list. `scrollIntoView`
     // walks up every scrollable ancestor, which on a phone drags the page and
     // fights the keyboard.
@@ -958,13 +1014,30 @@ export function ChatScreen({
 
   useEffect(() => {
     const newest = messages[messages.length - 1];
-    if (newest && atBottom) markSeen(room, newest.created_at);
+    // Not before the room has been positioned. `atBottom` starts true, so this
+    // fired on mount and marked the whole backlog read — the unread rule was
+    // placed correctly and then instantly made meaningless.
+    // `atBottomRef`, not the state: the landing above runs in a LAYOUT effect and
+    // sets both, but this passive effect runs in the same commit and still sees the
+    // old `atBottom === true` — which marked the whole backlog read the instant a
+    // room opened, one frame after the unread rule had been placed correctly.
+    if (newest && atBottomRef.current && landedOnUnread.current) {
+      markSeen(room, newest.created_at);
+      // Sitting at the bottom IS reading it. Without this the badge only ever
+      // cleared by leaving and re-entering the room.
+      setSeenUpTo((prev) => (newest.created_at > prev ? newest.created_at : prev));
+    }
     if (newest) newestInRoom.current = Math.max(newestInRoom.current, newest.created_at);
   }, [messages, atBottom, room]);
 
+  /** Does the rendered window contain the unread rule? Drives the one-shot above:
+   *  without it we cannot tell "no unread messages" from "the rule has not been
+   *  rendered yet", and the two need opposite behaviour. */
+  const hasUnreadRow = useMemo(() => rows.some((r) => r.firstUnread), [rows]);
+
   const unreadCount = useMemo(
-    () => messages.reduce((n, m) => (m.created_at > sinceOpen && !m.mine ? n + 1 : n), 0),
-    [messages, sinceOpen],
+    () => messages.reduce((n, m) => (m.created_at > seenUpTo && !m.mine ? n + 1 : n), 0),
+    [messages, seenUpTo],
   );
 
   async function publishSigned(kind: number, tags: string[][], content: string): Promise<void> {

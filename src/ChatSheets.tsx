@@ -306,7 +306,11 @@ export function MessageMenu({
 
         {/* The message itself, lifted. Not a quotation of it — the same markup,
             so what you are acting on is unmistakably what you touched. */}
-        <div ref={lift} className="chat-menu-lift" aria-hidden="true">
+        {/* Tapping the lifted message dismisses, as every messenger does: it is the
+            thing directly under the finger that just opened this, so it is the most
+            likely place to tap to get out. The stack swallows clicks so the card and
+            the reaction bar keep working, which left this one spot inert. */}
+        <div ref={lift} className="chat-menu-lift" aria-hidden="true" onClick={onClose}>
           {preview}
         </div>
 
