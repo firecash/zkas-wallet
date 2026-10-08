@@ -208,11 +208,22 @@ function DashboardView() {
 
   useEffect(() => {
     void refreshAll();
-    const blocks = window.setInterval(() => void refreshBlocks(), 2_000);
-    const dashboard = window.setInterval(() => void refreshAll(), 15_000);
+    // Skip the tick while nobody is looking. Both Mining and NodeRunner already
+    // pause on `document.hidden`; Explorer never did, and it is the heaviest
+    // poller in the app — measured at 101 requests in 45 seconds to two off-device
+    // hosts with the tab hidden, about 8,000 an hour. On a privacy wallet that is
+    // also a long-lived, distinctive traffic signature from the user's own IP to
+    // zkas infrastructure, produced by a screen they are not even looking at.
+    // Teardown on leaving the route was already correct; this is the hidden case.
+    const blocks = window.setInterval(() => { if (!document.hidden) void refreshBlocks(); }, 2_000);
+    const dashboard = window.setInterval(() => { if (!document.hidden) void refreshAll(); }, 15_000);
+    // Coming back to the tab should be instant, not up to 15s stale.
+    const onVisible = () => { if (!document.hidden) void refreshAll(); };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearInterval(blocks);
       clearInterval(dashboard);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [refreshAll, refreshBlocks]);
 

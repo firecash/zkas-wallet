@@ -311,7 +311,7 @@ function walletTabs(roomy: boolean): Tab[] {
 /// carries liveness fields (`updated_unix`, and scan counters that tick even when
 /// the view is identical) which change every second and mean nothing on screen.
 /// Comparing those would defeat the purpose.
-function sameStatus(a: Status, b: Status): boolean {
+export function sameStatus(a: Status, b: Status): boolean {
   return (
     a.has_wallet === b.has_wallet &&
     a.address === b.address &&
@@ -341,6 +341,14 @@ function sameStatus(a: Status, b: Status): boolean {
     a.missing_history === b.missing_history &&
     a.history_from_daa === b.history_from_daa &&
     a.watch_only === b.watch_only &&
+    // Anonymous sends. Omitting it meant the daemon could confirm the setting had
+    // been turned ON and `sameStatus` would still judge the status unchanged, so
+    // `setStatus` kept the previous object, nothing re-rendered, and the Settings
+    // row went on reading "Off" until a full reload. That is an irreversible
+    // privacy choice being reported backwards — the user believes their payments
+    // still carry a recoverable copy when they no longer do. Same shape as
+    // `sameTxs` omitting `confTries` and freezing "Sending…" forever.
+    a.private_sends === b.private_sends &&
     // Scan progress only matters while it is being shown as progress.
     (a.synced ? true : a.scanned_blocks === b.scanned_blocks && a.chain_len === b.chain_len && a.blocks_behind === b.blocks_behind)
   );
