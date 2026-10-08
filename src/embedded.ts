@@ -201,7 +201,18 @@ export function embeddedChosen(): boolean {
 export function setEmbeddedChosen(on: boolean): void {
   try {
     if (on) localStorage.setItem(CHOICE_KEY, "1");
-    else localStorage.removeItem(CHOICE_KEY);
+    else {
+      localStorage.removeItem(CHOICE_KEY);
+      // Leaving phone mode also leaves Tor. The flag was written in exactly one
+      // place — `ensureEmbedded` — and cleared in none, so every exit from phone
+      // mode left it set. `privacyMode()` reads it, so the app then believed it
+      // was in "tor-only" while `defaultBase()` had fallen back to the clearnet
+      // hosted daemon: it disabled the explorer, the price and chat "because Tor
+      // is on" and simultaneously POSTed the full viewing key over the clearnet
+      // from the real IP. Clearing it here rather than at the five call sites so
+      // that no future exit path can forget.
+      localStorage.removeItem(TOR_KEY);
+    }
   } catch {
     /* ignore */
   }

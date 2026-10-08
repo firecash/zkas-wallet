@@ -13,7 +13,32 @@ import { WALLET_SERVICE_PORT } from "./ports";
 // desktop.ts imports nothing from here, so this cannot cycle.
 import { desktopRemoteBase } from "./desktop";
 import i18n from "./i18n";
-import { publicEndpoint } from "./lib/privacy";
+import { publicEndpoint, privacyMode } from "./lib/privacy";
+
+/// Refuse to talk to a wallet service that a privacy mode does not permit.
+///
+/// `req` and `probe` are the two call sites that carry the things worth
+/// protecting — `fvk_hex` to /wallet/watch and /wallet/prepare, the balance, the
+/// whole history — and they were the only egress paths in the app that never
+/// consulted the gate. Everything else (the chain proxy, the price, the services
+/// directory, the explorer, both chat sockets, the desktop update check) asks it.
+///
+/// That hole was reachable: leaving phone mode did not clear the Tor flag, so the
+/// app reported `tor-only` while `defaultBase()` had fallen back to the hosted
+/// clearnet daemon, and posted the viewing key in the clear from the real IP. The
+/// flag is fixed too, but a privacy guarantee must not rest on one boolean being
+/// tidied up — in a mode that promises Tor, a clearnet base is refused outright.
+function assertBaseAllowed(url: string): void {
+  if (privacyMode() === "open") return;
+  let host = "";
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return; // not absolute: same-origin, which is as private as the page itself
+  }
+  if (isOnionAddress(url) || isPrivateHost(host)) return;
+  throw new Error(i18n.t("api.blockedByPrivacy", { host }));
+}
 
 function defaultBase(): string {
   // Native mobile (Capacitor) loads the bundle from the device, so there is no
@@ -245,6 +270,7 @@ async function probe(url: string, path: string, headers: Record<string, string>,
   const ctl = new AbortController();
   const timer = globalThis.setTimeout(() => ctl.abort(), timeoutMs);
   try {
+    assertBaseAllowed(url);
     return await fetch(`${url}${path}`, { signal: ctl.signal, headers });
   } finally {
     clearTimeout(timer);
@@ -588,6 +614,7 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), timeoutMs);
     try {
+      assertBaseAllowed(getBase());
       res = await fetch(getBase() + path, {
         method,
         headers,

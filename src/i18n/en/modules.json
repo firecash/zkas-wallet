@@ -14,7 +14,8 @@
     "cannotReachEmbedded": "Cannot reach the embedded wallet engine. ({{detail}})",
     "notResponding": "The wallet service is not responding (timed out).",
     "cannotReachDaemon": "Cannot reach the wallet daemon. ({{detail}})",
-    "invalidResponse": "The wallet service returned an invalid response ({{status}})."
+    "invalidResponse": "The wallet service returned an invalid response ({{status}}).",
+    "blockedByPrivacy": "Blocked: {{host}} is not reachable privately, and Tor is on. Turn Tor off or choose an onion service."
   },
   "noncustodial": {
     "fragmentedDefault": "This payment needs more notes than one transaction can spend.",
