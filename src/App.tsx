@@ -100,7 +100,7 @@ import { OrbotHelp } from "./OrbotHelp";
 import { desktopServices } from "./desktop-services";
 import { ServiceLogsDialog } from "./components/ServiceLogsDialog";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, Eye, EyeOff, Server, Settings, ShieldAlert, Trash2, WalletCards } from "lucide-react";
-import { useHideBalances, toggleBalancesHidden, MASK } from "./hidebal";
+import { useHideBalances, toggleBalancesHidden, balancesHidden, MASK } from "./hidebal";
 import { useBackClose } from "./lib/backclose";
 // Chat is opt-in and most wallets never turn it on, yet its screens were ~32 KB
 // of the main chunk for everyone. The unread counter already imports the
@@ -1093,8 +1093,20 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           // An arrival found on opening was almost certainly already announced by the
           // background worker that woke for it. Saying it twice is noise; the record
           // above is the part that was missing.
-          if (!whileAway) notifyOs(i18n.t("app.receivedNotifTitle"), i18n.t("app.receivedNotifBody", { amount }));
-          toast.show("good", i18n.t("app.receivedToast", { amount }));
+          // The eye toggle masks the balance to `••••••` precisely so someone
+          // glancing cannot read it. Announcing the exact figure in a toast at the
+          // top of the screen — and in an OS notification on the lock screen —
+          // defeated that completely, and did it at the one moment the user is most
+          // likely to be looking at the phone in public. Hidden means hidden: the
+          // arrival is still announced, the amount is not.
+          const hideAmt = balancesHidden();
+          if (!whileAway) {
+            notifyOs(
+              i18n.t("app.receivedNotifTitle"),
+              hideAmt ? i18n.t("app.receivedNotifBodyHidden") : i18n.t("app.receivedNotifBody", { amount }),
+            );
+          }
+          toast.show("good", hideAmt ? i18n.t("app.receivedToastHidden") : i18n.t("app.receivedToast", { amount }));
           successFeedback();
         }
         lastFinalBalance.current = now;
@@ -3100,6 +3112,14 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
   const animBal = useCountUp(shownBal);
   const price = useZkasPrice();
   const hide = useHideBalances();
+  /// An amount printed in the hero's notice lines, masked when balances are hidden.
+  ///
+  /// These sit DIRECTLY UNDER the masked balance and were printing the exact figure
+  /// in accent colour — so the eye toggle hid `12.70` on one line and a bright
+  /// "+12.70 arriving" appeared on the next. The notice still says what happened;
+  /// only the number goes.
+  const noticeAmt = (v: number) => (hide ? MASK : trimFc(v.toFixed(8)));
+
   if (rebuilding) {
     return (
       <div className="card balance">
@@ -3232,14 +3252,14 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
             way, via `pending_in`, so that branch stays. */}
         {changeNotice.shown
           ? ownActivityExplainsRise(txs)
-            ? t("balanceHero.changeFromPayment", { amount: trimFc(changeNotice.amount.toFixed(8)) })
+            ? t("balanceHero.changeFromPayment", { amount: noticeAmt(changeNotice.amount) })
             : // No send recorded on this device: the daemon merged this wallet's own notes
               // in the background (or another device paid from the same wallet).
-              t("balanceHero.changeOwnTx", { amount: trimFc(changeNotice.amount.toFixed(8)) })
+              t("balanceHero.changeOwnTx", { amount: noticeAmt(changeNotice.amount) })
           : inNotice.shown
             ? ownActivityExplainsRise(txs)
-              ? t("balanceHero.changeFromPayment", { amount: trimFc(inNotice.amount.toFixed(8)) })
-              : t("balanceHero.arriving", { amount: trimFc(inNotice.amount.toFixed(8)) })
+              ? t("balanceHero.changeFromPayment", { amount: noticeAmt(inNotice.amount) })
+              : t("balanceHero.arriving", { amount: noticeAmt(inNotice.amount) })
             : ""}
       </div>
       <div className="sub notice-slot" style={{ color: "var(--ember)" }}>

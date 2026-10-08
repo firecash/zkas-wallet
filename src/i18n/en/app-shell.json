@@ -34,7 +34,9 @@
     "activityAria": "Wallet activity",
     "sectionsAria": "Wallet sections",
     "loading": "Loading…",
-    "close": "Close"
+    "close": "Close",
+    "receivedToastHidden": "A payment arrived",
+    "receivedNotifBodyHidden": "A payment arrived in your wallet."
   },
   "hostedNotice": {
     "browserWallet": "Browser wallet. <b><a>Get the safer app</a></b>."

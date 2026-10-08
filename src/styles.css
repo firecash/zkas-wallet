@@ -1631,7 +1631,10 @@ select { appearance: none; cursor: pointer; }
   opacity: 0.9;
 }
 @media (prefers-reduced-motion: reduce) {
-  .ss-coin, .ss-shield, .ss-streak, .ss-spark { animation: none !important; }
+  /* `.ss-payload` carries `ss-fire`, which throws the payload ~110px across the
+     screen and resets, forever. It was the single most motion-heavy thing in the
+     app and the only one missing from this list, so the OS setting did not stop it. */
+  .ss-coin, .ss-shield, .ss-streak, .ss-spark, .ss-payload { animation: none !important; }
 }
 
 /* Rescan callout — the recovery action, on Receive and History. Deliberately a
@@ -2902,7 +2905,7 @@ select { appearance: none; cursor: pointer; }
 /* Recovery phrase reveal: words are blurred until deliberately revealed, so the
    screen can be opened without exposing the phrase to whoever is nearby. */
 .seed-reveal { position: relative; margin-top: 10px; }
-.seed-reveal .seed-words { filter: blur(7px); transition: filter 0.2s ease; user-select: none; }
+.seed-reveal .seed-words { filter: blur(7px); transition: none /* a blur crossfading the recovery phrase into view is a 200ms partial reveal */ ease; user-select: none; }
 .seed-reveal.on .seed-words { filter: none; user-select: text; }
 .seed-reveal-btn { position: absolute; inset: 0; margin: auto; width: max-content; height: max-content; }
 
@@ -3045,13 +3048,22 @@ button, a, select, input, textarea, label, [role="tab"], [role="button"], .chip,
 }
 html { -webkit-text-size-adjust: 100%; }
 
-/* A phone does not need a 14 s blurred aurora loop behind the balance. */
+/* A phone does not need a 14 s blurred aurora loop behind the balance.
+   `.qr-frame` has never had an animation — the blurred element is `.qr-aura`, and
+   naming the wrong one meant a `filter: blur(15px)` layer animating scale, rotate
+   and opacity on a 9s loop for the whole time Receive was open, on phones, which
+   is exactly what these rules exist to prevent. Confirmed live with
+   `document.getAnimations()` at 390x844: `qr-breathe / running / iterations: null`.
+   A pulsing halo around a QR is also a beacon that says "there is an address on
+   this screen" across a room. */
 @media (max-width: 720px), (prefers-reduced-motion: reduce) {
   .balance-glow { animation: none; filter: none; }
+  .qr-aura { animation: none; filter: none; }
   .qr-frame, .qr-corner { animation: none; }
 }
 
 body.reduced-effects .balance-glow { animation: none; filter: none; }
+body.reduced-effects .qr-aura { animation: none; filter: none; }
 body.reduced-effects .qr-frame,
 body.reduced-effects .qr-corner { animation: none; }
 body.reduced-effects [class*="glass"],
