@@ -6049,10 +6049,28 @@ function Send({
   // tapping Max again refilled the same unpayable figure. `fees.ts` exists to
   // price this properly — ask it, for the note count this wallet actually has.
   const feeReserve = useMemo(() => {
-    const notes = Math.max(1, Math.min(status?.note_count ?? MAX_NOTES_PER_TX, MAX_NOTES_PER_TX));
+    // `?? ` only catches undefined. A daemon reloading or evicting a wallet answers
+    // note_count: 0 while the app still renders its cached balance, and 0 fell
+    // through to Math.max(1, 0) = 1 — the reserve for TWO notes, 0.0186 instead of
+    // 0.2458. That re-created the exact unpayable-Max failure this reserve exists
+    // to prevent. Unknown means worst case.
+    const reported = status?.note_count;
+    const notes = reported ? Math.max(1, Math.min(reported, MAX_NOTES_PER_TX)) : MAX_NOTES_PER_TX;
     const priced = feeReserveSompi(notes) / 1e8;
     return feeCustomSet ? Math.max(feeCustom, priced) : priced;
   }, [status?.note_count, feeCustomSet, feeCustom]);
+  /// What the fee actually costs, for the wallet in front of us.
+  ///
+  /// Everything the user READS about fees was the pair of constants FEE_FC (0.03)
+  /// and FEE_MAX_FC (0.045) — the fee for one or two notes, and for six. The
+  /// RESERVE was moved onto the priced curve when "Max" was found to produce
+  /// unpayable amounts, and the disclosure was left behind. On a 38-note wallet
+  /// the real fee is 0.2458, so the confirm screen quoted a ceiling 5.5x under the
+  /// truth, Max produced a stated total ABOVE the same screen's own spendable
+  /// figure, and "not enough funds" named a number smaller than the balance it was
+  /// refusing. Read from the same source the reserve uses.
+  const feeFloorFc = feeReserveSompi(1) / 1e8;
+  const feeShown = feeCustomSet ? feeCustom : feeReserve;
   const overspend = amtValid && amt + feeReserve > spendable + 1e-9;
   // The maturing balance would cover it — the shortfall is just not-yet-matured funds.
   const blockedByMaturing = overspend && amtValid && amt + feeReserve <= spendable + maturing + 1e-9;
@@ -6265,13 +6283,13 @@ function Send({
         <div className="confirm-row">
           <span className="muted">{t("send.networkFee")}</span>
           <span className="mono">
-            {feeCustomSet ? t("send.feeCustom", { fee: feeCustom }) : t("send.feeRange", { min: FEE_FC, max: FEE_MAX_FC })}
+            {feeCustomSet ? t("send.feeCustom", { fee: feeCustom }) : t("send.feeRange", { min: Number(feeFloorFc.toFixed(8)), max: Number(feeReserve.toFixed(8)) })}
           </span>
         </div>
         <div className="confirm-row total">
           <span>{t("send.total")}</span>
           <span className="mono">
-            {feeCustomSet ? t("send.totalExact", { total: Number((amt + feeCustom).toFixed(8)) }) : t("send.totalUpTo", { total: Number((amt + FEE_MAX_FC).toFixed(8)) })}
+            {feeCustomSet ? t("send.totalExact", { total: Number((amt + feeCustom).toFixed(8)) }) : t("send.totalUpTo", { total: Number((amt + feeReserve).toFixed(8)) })}
           </span>
         </div>
         {/* Normal payments are atomic at the transaction boundary. If this many
@@ -6546,12 +6564,12 @@ function Send({
       )}
       {overspend && !blockedByMaturing && (
         <div className="fieldhint bad">
-          {t("send.notEnough", { spendable: trimFc(spendable.toFixed(8)), need: trimFc((amt + FEE_MAX_FC).toFixed(8)), maxFee: FEE_MAX_FC })}
+          {t("send.notEnough", { spendable: trimFc(spendable.toFixed(8)), need: trimFc((amt + feeReserve).toFixed(8)), maxFee: Number(feeReserve.toFixed(8)) })}
         </div>
       )}
       {amtValid && !overspend && (
         <div className="fieldhint muted">
-          {t("send.feeSummary", { min: FEE_FC, max: FEE_MAX_FC, total: Number((amt + FEE_MAX_FC).toFixed(8)) })}
+          {t("send.feeSummary", { min: Number(feeFloorFc.toFixed(8)), max: Number(feeShown.toFixed(8)), total: Number((amt + feeShown).toFixed(8)) })}
         </div>
       )}
 
