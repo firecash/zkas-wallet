@@ -90,6 +90,6 @@ class EmbeddedEnginePlugin : Plugin() {
 
     companion object {
         // The public node's gRPC — same default the desktop shell uses.
-        const val DEFAULT_NODE = "185.147.157.125:16110"
+        const val DEFAULT_NODE = "seed.zkas.info:16110"
     }
 }

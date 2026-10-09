@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Mất kết nối mạng tạm thời. Đồng của bạn an toàn — ví sẽ tự thử lại.",
     "generic": "Dịch vụ ví gặp sự cố khi đọc chuỗi. Đồng của bạn an toàn trên chuỗi.",
-    "details": "Chi tiết kỹ thuật"
+    "details": "Chi tiết kỹ thuật",
+    "nodeBusy": "Nút công cộng đã đầy và từ chối ví này. Đồng của bạn vẫn an toàn. Ví sẽ tự thử lại, hoặc bạn có thể chuyển sang nút khác trong Cài đặt → Quyền riêng tư mạng."
   }
 }

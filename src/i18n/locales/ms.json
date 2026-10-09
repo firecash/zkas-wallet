@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Hilang hubungan dengan rangkaian seketika. Syiling anda selamat — dompet terus mencuba semula sendiri.",
     "generic": "Perkhidmatan dompet menghadapi masalah semasa membaca rantaian. Syiling anda selamat di rantaian.",
-    "details": "Butiran teknikal"
+    "details": "Butiran teknikal",
+    "nodeBusy": "Nod awam penuh dan menolak dompet ini. Syiling anda selamat. Ia akan cuba semula sendiri, atau anda boleh tukar ke nod lain di Tetapan → Privasi rangkaian."
   }
 }

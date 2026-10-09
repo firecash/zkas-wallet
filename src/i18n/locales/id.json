@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Kehilangan kontak dengan jaringan sejenak. Koin Anda aman — dompet terus mencoba sendiri.",
     "generic": "Layanan dompet mengalami masalah saat membaca rantai. Koin Anda aman di rantai.",
-    "details": "Detail teknis"
+    "details": "Detail teknis",
+    "nodeBusy": "Node publik penuh dan menolak dompet ini. Koin Anda aman. Akan mencoba ulang sendiri, atau ganti node lain di Pengaturan → Privasi jaringan."
   }
 }

@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Even contact met het netwerk verloren. Je munten zijn veilig — de wallet blijft het zelf opnieuw proberen.",
     "generic": "De walletservice kreeg een probleem bij het lezen van de keten. Je munten zijn veilig op de keten.",
-    "details": "Technische details"
+    "details": "Technische details",
+    "nodeBusy": "De openbare node zit vol en heeft deze wallet geweigerd. Je munten zijn veilig. Het probeert het zelf opnieuw, of je kunt in Instellingen → Netwerkprivacy naar de andere node overschakelen."
   }
 }

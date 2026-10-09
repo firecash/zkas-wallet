@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Imepoteza mawasiliano na mtandao kwa muda. Sarafu zako ziko salama — pochi inaendelea kujaribu yenyewe.",
     "generic": "Huduma ya pochi ilikumbana na tatizo wakati wa kusoma mnyororo. Sarafu zako ziko salama kwenye mnyororo.",
-    "details": "Maelezo ya kiufundi"
+    "details": "Maelezo ya kiufundi",
+    "nodeBusy": "Nodi ya umma imejaa na imekataa pochi hii. Sarafu zako ziko salama. Inajaribu yenyewe, au unaweza kubadilisha nodi nyingine katika Mipangilio → Usiri wa mtandao."
   }
 }

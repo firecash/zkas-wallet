@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Kurz den Kontakt zum Netzwerk verloren. Deine Münzen sind sicher – das Wallet versucht es automatisch weiter.",
     "generic": "Der Wallet-Dienst hatte ein Problem beim Lesen der Chain. Deine Münzen sind sicher auf der Chain.",
-    "details": "Technische Details"
+    "details": "Technische Details",
+    "nodeBusy": "Der öffentliche Node ist ausgelastet und hat dieses Wallet abgewiesen. Deine Coins sind sicher. Es versucht es selbstständig erneut, oder du kannst in den Einstellungen → Netzwerk-Privatsphäre zum anderen Node wechseln."
   }
 }

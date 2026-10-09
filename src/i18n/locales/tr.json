@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Ağ ile bir anlığına bağlantı kesildi. Paralarınız güvende — cüzdan kendi kendine yeniden denemeye devam ediyor.",
     "generic": "Cüzdan hizmeti zinciri okurken bir sorunla karşılaştı. Paralarınız zincirde güvende.",
-    "details": "Teknik ayrıntılar"
+    "details": "Teknik ayrıntılar",
+    "nodeBusy": "Genel düğüm kapasiteye ulaştı ve bu cüzdanı reddetti. Paralarınız güvende. Kendiliğinden yeniden dener veya Ayarlar → Ağ gizliliği'nden diğer düğüme geçebilirsiniz."
   }
 }

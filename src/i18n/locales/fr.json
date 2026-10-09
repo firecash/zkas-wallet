@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Perte de contact momentanée avec le réseau. Vos pièces sont en sécurité — le portefeuille réessaie automatiquement.",
     "generic": "Le service de portefeuille a rencontré un problème en lisant la chaîne. Vos pièces sont en sécurité sur la chaîne.",
-    "details": "Détails techniques"
+    "details": "Détails techniques",
+    "nodeBusy": "Le nœud public est saturé et a refusé ce portefeuille. Vos pièces sont en sécurité. Il réessaie automatiquement, ou vous pouvez passer à l’autre nœud dans Paramètres → Confidentialité réseau."
   }
 }

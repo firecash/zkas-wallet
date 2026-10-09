@@ -39,14 +39,25 @@ const NODE_KEY = "wallet_embedded_node";
  * their keys. Pointing all of them at one node we operate hands that node every such
  * user's IP and sync pattern — the record the chain exists to prevent. Spreading the
  * default across nodes does not fix that, but concentrating it makes it worse. */
-export const PUBLIC_EMBEDDED_NODES = ["185.147.157.125:16110", "160.187.211.153:16110"] as const;
+export const PUBLIC_EMBEDDED_NODES = ["seed.zkas.info:16110", "160.187.211.153:16110"] as const;
+
+/** The hardcoded addresses earlier builds shipped as defaults.
+ *
+ * Recognised so the migration below can replace one, and ONLY one of these — a
+ * node somebody typed themselves is theirs and is never touched. */
+const LEGACY_DEFAULT_NODES = ["185.147.157.125:16110", "160.187.211.153:16110"];
 
 /** Kept as the named default for display and for anything that wants one address. */
 export const DEFAULT_EMBEDDED_NODE = PUBLIC_EMBEDDED_NODES[0];
 
 const BACKUP_KEY = "wallet_embedded_node_backup";
 const ACTIVE_BACKUP_KEY = "wallet_embedded_node_using_backup";
-const SEEDED_KEY = "wallet_embedded_nodes_seeded_v2";
+// v3: the primary moved from a hardcoded IP to seed.zkas.info. The seed runs
+// ONCE per install and an existing install keeps whatever it has, so without a
+// new key every wallet already out there would stay pinned to the old address
+// for ever — and the whole point of a DNS name is that an address can change
+// without an app release.
+const SEEDED_KEY = "wallet_embedded_nodes_seeded_v3";
 
 /** Give this install a primary and a backup, once.
  *
@@ -65,8 +76,15 @@ function seedNodes(): void {
     if (localStorage.getItem(SEEDED_KEY)) return;
     localStorage.setItem(SEEDED_KEY, "1");
     const existing = (localStorage.getItem(NODE_KEY) || "").trim();
-    const shuffled = [...PUBLIC_EMBEDDED_NODES].sort(() => Math.random() - 0.5);
-    const primary = existing || shuffled[0];
+    // An address the user chose is theirs and survives. One of our own old
+    // hardcoded defaults is not a choice — it is what an earlier build happened
+    // to pin — so it gives way to the DNS name, which is the one that can be
+    // repointed without shipping a release.
+    const keep = existing && !LEGACY_DEFAULT_NODES.includes(existing) ? existing : "";
+    // No shuffle any more: seed.zkas.info already answers with either node, so
+    // the spread that the shuffle existed to create now happens in DNS, and
+    // every install can start from the name rather than an address.
+    const primary = keep || PUBLIC_EMBEDDED_NODES[0];
     const backup = PUBLIC_EMBEDDED_NODES.find((n) => n !== primary) ?? "";
     localStorage.setItem(NODE_KEY, primary);
     if (backup && !localStorage.getItem(BACKUP_KEY)) localStorage.setItem(BACKUP_KEY, backup);

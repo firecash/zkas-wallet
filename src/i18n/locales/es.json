@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Se perdió contacto con la red por un momento. Tus monedas están seguras — la billetera sigue reintentando sola.",
     "generic": "El servicio de billetera tuvo un problema al leer la cadena. Tus monedas están seguras en la cadena.",
-    "details": "Detalles técnicos"
+    "details": "Detalles técnicos",
+    "nodeBusy": "El nodo público está al máximo y rechazó esta billetera. Tus monedas están seguras. Reintenta solo, o cambia al otro nodo en Configuración → Privacidad de red."
   }
 }

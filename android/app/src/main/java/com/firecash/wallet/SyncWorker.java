@@ -64,7 +64,7 @@ public class SyncWorker extends Worker {
         if (embedded) {
             int port = EngineControl.port();
             if (port == 0) {
-                String node = p.getString("node", "185.147.157.125:16110");
+                String node = p.getString("node", "seed.zkas.info:16110");
                 String socks = p.getString("socks", "");
                 String dir = new File(getApplicationContext().getFilesDir(), "wallets").getAbsolutePath();
                 port = EngineControl.startEngine(node, dir, socks.isEmpty() ? null : socks);

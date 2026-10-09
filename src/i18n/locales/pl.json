@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Chwilowa utrata kontaktu z siecią. Twoje monety są bezpieczne — portfel sam próbuje ponownie.",
     "generic": "Usługa portfela napotkała problem podczas czytania łańcucha. Twoje monety są bezpieczne w łańcuchu.",
-    "details": "Szczegóły techniczne"
+    "details": "Szczegóły techniczne",
+    "nodeBusy": "Publiczny węzeł jest przeciążony i odrzucił ten portfel. Twoje monety są bezpieczne. Portfel ponawia próbę automatycznie lub możesz przełączyć się na inny węzeł w Ustawienia → Prywatność sieci."
   }
 }

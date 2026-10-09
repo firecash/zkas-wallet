@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Perso contatto con la rete per un attimo. Le tue monete sono al sicuro — il portafoglio riprova da solo.",
     "generic": "Il servizio portafoglio ha avuto un problema leggendo la catena. Le tue monete sono al sicuro sulla catena.",
-    "details": "Dettagli tecnici"
+    "details": "Dettagli tecnici",
+    "nodeBusy": "Il nodo pubblico è al completo e ha rifiutato questo portafoglio. I tuoi fondi sono al sicuro. Riprova automaticamente, oppure passa all'altro nodo in Impostazioni → Privacy di rete."
   }
 }

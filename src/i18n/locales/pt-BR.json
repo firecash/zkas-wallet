@@ -2008,6 +2008,7 @@
   "daemonError": {
     "network": "Perdeu contato com a rede por um momento. Suas moedas estão seguras — a carteira continua tentando sozinha.",
     "generic": "O serviço de carteira encontrou um problema ao ler a cadeia. Suas moedas estão seguras na cadeia.",
-    "details": "Detalhes técnicos"
+    "details": "Detalhes técnicos",
+    "nodeBusy": "O nó público está lotado e recusou esta carteira. Suas moedas estão seguras. Ela tenta novamente sozinha, ou você pode trocar para o outro nó em Configurações → Privacidade de rede."
   }
 }
