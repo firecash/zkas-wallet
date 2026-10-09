@@ -59,6 +59,7 @@ import { makeBackup, readBackup } from "./backup";
 import { listWallets as listAllWallets } from "./wallets";
 import { MANAGED_ZKAS_RPC, STANDALONE_ZKAS_RPC_EXAMPLE } from "./ports";
 import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
+import { failureText } from "./lib/failure";
 import { wipeWalletState } from "./walletstate";
 import {
   activeToken,
@@ -5971,14 +5972,6 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
 /// fee. It also carries PartialSendError, which reports money ALREADY in flight.
 /// The daemon's own HTTP errors displayed correctly throughout, because those are
 /// real Errors — which is precisely why this stayed invisible.
-function failureText(e: unknown): string {
-  if (typeof e === "string" && e.trim()) return e;
-  const msg = (e as { message?: unknown } | null)?.message;
-  if (typeof msg === "string" && msg.trim()) return msg;
-  const str = String(e ?? "");
-  return str && str !== "[object Object]" ? str : i18n.t("send.unknownFailure");
-}
-
 function Send({
   status,
   onSent,

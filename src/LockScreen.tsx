@@ -12,6 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { LanguageButton } from "./LanguagePicker";
+import { failureText } from "./lib/failure";
 import { useTranslation, Trans } from "react-i18next";
 import { listBackups, restoreBackup, setPassphrase, unlockVault, vaultStatus, type VaultState } from "./desktop";
 
@@ -24,11 +25,16 @@ export function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   const [error, setError] = useState("");
   const [restoring, setRestoring] = useState(false);
 
+  /// Bumped by "Try again" to re-run the status probe.
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    let alive = true;
+    setError("");
     vaultStatus()
-      .then((v) => setState(v.state))
-      .catch((e) => setError(String(e)));
-  }, []);
+      .then((v) => alive && setState(v.state))
+      .catch((e) => alive && setError(failureText(e)));
+    return () => { alive = false; };
+  }, [attempt]);
 
   // "encrypted" asks for the existing passphrase; everything else is setting one
   // for the first time (a fresh install, or a legacy cleartext wallet we are
@@ -62,11 +68,28 @@ export function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   if (restoring) return <RestoreFromBackup onDone={onUnlocked} onCancel={() => setRestoring(false)} />;
 
   if (state === null) {
+    // A REJECTED probe used to land here forever. The catch set `error`, but
+    // `state` stayed null, and the error is only rendered in the form below —
+    // which this branch returns before ever reaching. So a daemon that was not
+    // up yet left the desktop app on "Starting…" permanently, with nothing said
+    // and nothing to press: the whole wallet, unreachable, until a restart that
+    // the screen never suggested.
     return (
       <div className="lockwrap">
-      <LanguageButton compact />
+        <LanguageButton compact />
         <div className="card lockcard">
-          <p className="muted small">{t("lockScreen.starting")}</p>
+          {error ? (
+            <>
+              <h2>{t("lockScreen.cannotReachTitle")}</h2>
+              <p className="muted small">{t("lockScreen.cannotReachBody")}</p>
+              <div className="msg err">{error}</div>
+              <button className="btn" onClick={() => setAttempt((n) => n + 1)}>
+                {t("lockScreen.tryAgain")}
+              </button>
+            </>
+          ) : (
+            <p className="muted small">{t("lockScreen.starting")}</p>
+          )}
         </div>
       </div>
     );

@@ -18,7 +18,10 @@
     "unlock": "Unlock",
     "setPassphrase": "Set passphrase",
     "noReset": "There is no way to reset this passphrase — it is never sent anywhere and never stored. If you forget it, the only way back into this wallet is your seed phrase or a backup file, so keep one of those safe.",
-    "haveBackup": "Already have a backup file? <a>Restore from backup</a>"
+    "haveBackup": "Already have a backup file? <a>Restore from backup</a>",
+    "cannotReachTitle": "Cannot reach the wallet service",
+    "cannotReachBody": "The local wallet service has not answered. It may still be starting up.",
+    "tryAgain": "Try again"
   },
   "restoreFromBackup": {
     "errChooseFile": "Choose a backup file.",
