@@ -106,6 +106,7 @@
     "profileWhy": "Your name, a line about you, and an address people can send ZKAS to. All of it is public and can be changed any time.",
     "nameLabel": "Name",
     "useMyAddress": "Use my wallet address",
-    "clearAddress": "Remove address"
+    "clearAddress": "Remove address",
+    "profileOf": "Profile of {{name}}"
   }
 }

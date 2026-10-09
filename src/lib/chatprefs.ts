@@ -138,8 +138,20 @@ export function markSeen(room: string, at: number): void {
   // sat at the bottom of the room, and every unread signal for that room — the
   // "New messages" rule, the jump badge, the room chip, the wallet-screen badge —
   // read zero from then on, permanently, recoverable only by opting out of chat.
+  // Clamped to now + SKEW, not to now. Clamping to `now` looked right and was
+  // wrong: the sender's clock is routinely a few seconds AHEAD of the reader's,
+  // so `at` lands slightly in the future, `safe` collapses to `now`, and the
+  // cursor is written BEHIND the message that was just read. The message stays
+  // newer than the cursor, so the room keeps showing unread for a message
+  // sitting on screen — reported exactly that way: "i read last msg while it was
+  // showing like its unread".
+  //
+  // The allowance still defeats what the clamp was for. A note dated 2100 is
+  // pulled back to ten minutes out instead of writing a cursor a lifetime ahead,
+  // so it cannot silence every unread signal in the room forever.
+  const SKEW_TOLERANCE_SEC = 600;
   const now = Math.floor(Date.now() / 1000);
-  const safe = Math.min(at, now);
+  const safe = Math.min(at, now + SKEW_TOLERANCE_SEC);
   if (safe > lastSeen(room)) write(`${SEEN_KEY}_${room}`, String(safe));
 }
 

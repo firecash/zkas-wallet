@@ -6024,6 +6024,10 @@ function Send({
   // should mention before it happens rather than after.
   const isSelf = !!status?.address && to.trim().toLowerCase() === status.address.toLowerCase();
   const [busy, setBusy] = useState(false);
+  /// Set synchronously the moment a send starts, so a second tap landing
+  /// before React re-renders the disabled button cannot broadcast the payment
+  /// a second time. `busy` alone could not do this: it is state.
+  const sendInFlight = useRef(false);
   const [stage, setStage] = useState<SendStage | null>(null);
   // Chunk progress for a payment that spans several transactions (see SendProgress).
   const [sendProgress, setSendProgress] = useState<SendProgress | null>(null);
@@ -6184,6 +6188,14 @@ function Send({
   }, [confirming]);
 
   const doSend = async (allowMultipleTransactions = false) => {
+    // A SYNCHRONOUS guard, not just `disabled={busy}`. `busy` is React state, so
+    // the button only becomes disabled on the next render — and on a slow phone
+    // that render can lag a couple of hundred milliseconds behind the tap. Two
+    // taps inside that window both reached this function and broadcast the
+    // payment TWICE, each building its own transaction. The ref flips before any
+    // await, so the second call returns immediately.
+    if (sendInFlight.current) return;
+    sendInFlight.current = true;
     // Rows for one payment: ONE ROW PER TRANSACTION (see the recording comment
     // below), all stamped with the payment's shared preFc and a payId, so
     // `reconcile` releases their subtractions CUMULATIVELY — the first chunk's
@@ -6335,6 +6347,7 @@ function Send({
         setConfirming(false);
       }
     } finally {
+      sendInFlight.current = false;
       setBusy(false);
       setEngineBusy(false);
       setStage(null);

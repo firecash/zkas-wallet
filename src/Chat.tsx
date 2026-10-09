@@ -22,6 +22,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import i18n from "./i18n";
 import { getDeviceSeed } from "./lib/deviceseed";
 import { useBackClose } from "./lib/backclose";
 import { useToast } from "./toast";
@@ -170,10 +171,23 @@ function nameColor(hue: number): string {
 function Avatar({ person, big }: { person: Person; big?: boolean }) {
   // Generated, never fetched. A remote avatar URL would make every viewer's
   // client call a stranger's server on render — an IP leak and a free tracker.
+  //
+  // Tapping it opens that person's profile, which is what every messenger does
+  // and what this one did not: the profile sheet already existed, reachable
+  // ONLY by long-pressing a message and picking it out of a menu. Your own
+  // avatar in the header opened yours; a sender's avatar was inert and marked
+  // aria-hidden, so a screen reader could not reach it either.
+  //
+  // `data-profile` rather than an onClick: MessageRow is memoized and takes no
+  // callbacks, and the message list already delegates clicks by data attribute.
   return (
     <span
       className={big ? "chat-avatar big" : "chat-avatar"}
-      aria-hidden="true"
+      data-profile={person.pubkey}
+      role="button"
+      tabIndex={0}
+      aria-label={i18n.t("chat.profileOf", { name: person.name })}
+      title={person.name}
       style={{ background: `hsl(${person.hue} 58% 42%)` }}
     >
       {person.pubkey.slice(0, 2)}
@@ -276,7 +290,13 @@ function Bubble({
     <div className={"chat-bubble" + (jumbo(m.content) ? " jumbo" : "") + (pills ? " has-reacts" : "")} dir={dirOf(m.content)}>
       {firstOfTurn && !mine && (
         <div className="chat-author" style={{ color: nameColor(m.person.hue) }}>
-          <span className="chat-author-name" dir={dirOf(m.person.name || anon)}>{m.person.name || anon}</span>
+          <span
+            className="chat-author-name"
+            data-profile={m.person.pubkey}
+            role="button"
+            tabIndex={0}
+            dir={dirOf(m.person.name || anon)}
+          >{m.person.name || anon}</span>
           {/* Always visible, never styled away: a nickname is not an identity. */}
           <span className="chat-fp" dir="ltr">·{m.person.fingerprint}</span>
         </div>
@@ -1320,6 +1340,14 @@ export function ChatScreen({
       if (quote) {
         const to = quote.getAttribute("data-quote");
         if (to) goToMessage(to);
+        return;
+      }
+      // The sender's avatar or name opens their profile, as in Telegram, rather
+      // than falling through to the message menu.
+      const who = target.closest("[data-profile]");
+      if (who) {
+        const pubkey = who.getAttribute("data-profile");
+        if (pubkey) { setMenu(null); setSheet({ kind: "profile", pubkey }); }
         return;
       }
       if (target.closest(".chat-link")) return;
