@@ -192,7 +192,7 @@
     "share": "Share",
     "sealed": "Amounts, sender, recipient — sealed.",
     "viewKeyTitle": "Wallet view key",
-    "viewKeySummary": "Watch this wallet read-only",
+    "viewKeySummary": "Read-only",
     "seedMoved": "Looking for your recovery seed? It moved to <b>Settings → Recovery seed</b>, behind your app lock.",
     "qrBuilding": "Preparing your code…"
   },

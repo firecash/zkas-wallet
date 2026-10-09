@@ -2828,11 +2828,12 @@ select { appearance: none; cursor: pointer; }
 /* Title and summary ("Network privacy" · "Tor") share the row. Neither may push the
    chevron out: the title shrinks and wraps to a second line, the summary truncates
    with an ellipsis (the open row shows the full value anyway). */
-.setrow-title { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.setrow-title { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .setrow-right { margin-inline-start: auto; display: flex; align-items: center; gap: 10px; min-width: 0; flex: 0 1 auto; }
 .setrow-summary {
   color: var(--muted);
   font-size: 13px;
+  flex: 0 1 auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
