@@ -74,6 +74,8 @@ export function Mining() {
   const [busy, setBusy] = useState<Busy>(null);
   const [stage, setStage] = useState("");
   const [error, setError] = useState<string | null>(null);
+  /** True once a poll has failed: the figures on screen are a last-known reading. */
+  const [stale, setStale] = useState(false);
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
@@ -102,6 +104,16 @@ export function Mining() {
       setConfig(nextConfig);
       setStatus(nextStatus);
       setNode(nextNode);
+      setStale(false);
+    } catch (e) {
+      // Same failure the node page had: a dead poll wrote nothing, so the last
+      // good reading stayed on screen as if it were current - hashrate, accepted
+      // shares, uptime, all frozen at whatever they were when the supervisor
+      // died, with Stop still offered. Worse here, because the two polls below
+      // swallow their rejection with `.catch(() => undefined)`, so not even the
+      // error state was reached.
+      setStale(true);
+      throw e;
     } finally {
       refreshInFlight.current = false;
     }
@@ -336,6 +348,7 @@ export function Mining() {
       )}
       {config?.dual_mining_supported === false && <p className="subtle mining-platform-note">{t("mining.noDualBridge")}</p>}
       {error && <div className="control-error">{error}</div>}
+      {stale && <div className="msg warn small">{t("mining.stale")}</div>}
 
       {live && <section className="control-card mining-setup-card">
         <div className="card-title-row">

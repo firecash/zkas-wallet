@@ -242,7 +242,8 @@
     "dashboardFrameTitle": "Mining bridge dashboard",
     "dashboardNote": "Served by the mining bridge on this computer. It appears once mining is running.",
     "dashboardHiddenPrivate": "The bridge's dashboard is hidden while a privacy mode is on: the page it serves loads fonts and scripts from the public internet, which would reveal your address from this device.",
-    "modeFixed": "The mining mode is set when you start. Stop mining to change it."
+    "modeFixed": "The mining mode is set when you start. Stop mining to change it.",
+    "stale": "Lost contact with the mining service. The figures below are the last readings taken before that — they are not live."
   },
   "endpointField": {
     "hint": "Any node's IP and port — it does not have to be on this computer. e.g. 203.0.113.5:16110",
@@ -509,7 +510,8 @@
     "blockEmission": "Block emission",
     "nextReduction": "Next reduction",
     "tailNote": "The schedule ends in a permanent tail emission; it has no fixed terminal supply.",
-    "liveHiddenOnTor": "The live network view is hidden while Tor is on: it loads from explorer.zkas.info, which would see your real address. The figures below come through your wallet service."
+    "liveHiddenOnTor": "The live network view is hidden while Tor is on: it loads from explorer.zkas.info, which would see your real address. The figures below come through your wallet service.",
+    "unavailableOverTor": "The explorer is not reachable over Tor. Turn Tor off, or set an onion address for it, to see live chain data."
   },
   "blockView": {
     "title": "Block",

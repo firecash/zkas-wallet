@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { clearnetAllowed } from "../lib/privacy";
+import { clearnetAllowed, onionBase } from "../lib/privacy";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import {
@@ -153,7 +153,16 @@ function DashboardView() {
       // Something has to have arrived, or there is no snapshot to speak of.
       const anyFresh = [dag, network, shielded, halving, supply, pulse, blocks].some((r) => r !== null);
       if (!anyFresh) {
-        setError(previous ? t("dashboardView.liveUnavailable") : t("dashboardView.notResponding"));
+        // Distinguish "your privacy setting forbids this" from "the server is
+        // down". With Tor on and no onion to reach the chain API through, every
+        // endpoint is REFUSED before a request is made — and saying "not
+        // responding" blamed a server that was never contacted, next to a panel
+        // already explaining that the live view is hidden on Tor, and invited a
+        // retry that cannot possibly succeed.
+        const blocked = !clearnetAllowed() && !onionBase();
+        setError(blocked
+          ? t("dashboardView.unavailableOverTor")
+          : previous ? t("dashboardView.liveUnavailable") : t("dashboardView.notResponding"));
         return;
       }
       // `previous!` was a lie on a COLD cache. First visit, no saved snapshot,
