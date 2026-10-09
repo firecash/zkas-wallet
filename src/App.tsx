@@ -4616,8 +4616,9 @@ function SendScene({ stage, estimateMs, progress }: { stage?: SendStage; estimat
 /// hasn't attributed yet. The wallet's optimistic 0-conf list is the ONLY record
 /// of a send until the chain scan catches up, so it must open real details, not
 /// bounce straight to the explorer.
-function localTxToRow(t: LocalTx): ChainHistoryRow & { confs?: number } {
+function localTxToRow(t: LocalTx): ChainHistoryRow & { confs?: number; local?: boolean } {
   return {
+    local: true,
     kind: "sent",
     txid: t.txid,
     daaScore: 0,
@@ -4641,7 +4642,7 @@ function TxDetail({
   onSendAgain,
   onLabelSaved,
 }: {
-  row: ChainHistoryRow & { confs?: number };
+  row: ChainHistoryRow & { confs?: number; local?: boolean };
   onClose: () => void;
   onSendAgain?: (addr: string) => void;
   onLabelSaved?: () => void;
@@ -4660,7 +4661,10 @@ function TxDetail({
   const kind = isConsolidation ? t("txDetail.kindConsolidation") : row.kind === "coinbase" ? t("txDetail.kindMined") : row.kind === "received" ? t("txDetail.kindReceived") : t("txDetail.kindSent");
   const sign = row.kind === "sent" ? "−" : "+";
   const copy = async (what: string, value: string) => {
-    await copyText(value);
+    // `copyText` reports whether it worked and every caller threw that away, so
+    // "Copied ✓" flashed even when the clipboard was untouched — on an empty
+    // address, or wherever the permission is refused.
+    if (!(await copyText(value))) return;
     setCopied(what);
     setTimeout(() => setCopied(""), 1500);
   };
@@ -4691,6 +4695,14 @@ function TxDetail({
               ) : (
                 <span className="conf-pill wait" title={t("txDetail.awaitingConfirmation")}>{t("txDetail.awaitingConfirmation")}</span>
               )
+            ) : row.local ? (
+              // A device-recorded send with no confirmation count is NOT confirmed.
+              // The `null` fallback was written for chain rows, which are on-chain by
+              // definition — but `localTxToRow` passes `confs: t.confs`, undefined
+              // both while a send is unconfirmed and when the chain has never seen it.
+              // So the list said "NOT SEEN ON-CHAIN" and this sheet, for the same
+              // payment, said "Confirmed on-chain".
+              <span className="conf-pill wait" title={t("txDetail.awaitingConfirmation")}>{t("txDetail.awaitingConfirmation")}</span>
             ) : (
               <span className="conf-pill done" title={t("txDetail.confirmedOnChain")}>{t("txDetail.confirmedOnChain")}</span>
             )}
@@ -4907,8 +4919,8 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
     }
   };
   const copy = async () => {
-    await copyText(key);
-    setCopied(true);
+    const ok = await copyText(key);
+    setCopied(ok);
     setTimeout(() => setCopied(false), 1500);
   };
 
@@ -5043,9 +5055,14 @@ function SettingsPane({ status }: { status: Status }) {
         <AppearanceCard />
         <LanguagePicker />
       </Collapsible>
-      <Collapsible title={t("settingsPane.backgroundSync")}>
-        <BackgroundSyncCard />
-      </Collapsible>
+      {/* The card returns null off Android, but the row around it did not — so on
+          web and desktop "Background sync" opened to an empty body. DebugLogsCard
+          right below renders its own Collapsible for exactly this reason. */}
+      {bgSyncAvailable() && (
+        <Collapsible title={t("settingsPane.backgroundSync")}>
+          <BackgroundSyncCard />
+        </Collapsible>
+      )}
       <Collapsible title={t("settingsPane.autoConsolidation")} summary={isMaintenanceEnabled() ? t("settingsPane.on") : t("settingsPane.off")}>
         <AutoConsolidationCard />
       </Collapsible>
@@ -5179,7 +5196,10 @@ function AboutCard() {
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
-  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
+  // By CHARACTER, not by UTF-16 code unit. `parts[0][0]` split a surrogate pair,
+  // so a contact named "🎉🚀 Party Fund" got an avatar reading "\uFFFDP".
+  const first = (w?: string) => (w ? [...w][0] ?? "" : "");
+  return (first(parts[0]) + first(parts[1])).toUpperCase();
 }
 
 /// Pick someone to pay from the address book.
@@ -5321,7 +5341,13 @@ function ContactsCard() {
               className="btn"
               disabled={!looksLikeAddress(newAddr)}
               onClick={() => {
-                setEditing({ id: "", name: "", address: newAddr.trim(), createdUnix: 0 });
+                // If this address is already saved, EDIT that contact rather than
+                // opening a blank "New contact" form — `addContact` renames an
+                // existing address rather than duplicating it, so a blank name
+                // field here silently destroyed the name already stored. The
+                // other entry point (SaveContactDialog) already prefills.
+                const known = findContact(newAddr.trim());
+                setEditing(known ?? { id: "", name: "", address: newAddr.trim(), createdUnix: 0 });
                 setAdding(false);
                 setNewAddr("");
               }}
@@ -5482,8 +5508,8 @@ function RequestAmount({ address }: { address: string }) {
     try { setQr(dotQrDataUrl(uri, { size: 440, margin: 2 })); } catch { /* an unencodable URI leaves the previous code up */ }
   }, [uri, amount]);
   const copy = async () => {
-    await copyText(uri);
-    setCopied(true);
+    const ok = await copyText(uri);
+    setCopied(ok);
     setTimeout(() => setCopied(false), 1500);
   };
   const ready = !!amount.trim() && !!qr;
@@ -5556,8 +5582,8 @@ function Receive({ status }: { status: Status }) {
     }
   }, [addr]);
   const copy = async () => {
-    await copyText(addr);
-    setCopied(true);
+    const ok = await copyText(addr);
+    setCopied(ok);
     setTimeout(() => setCopied(false), 1600);
   };
   return (
@@ -6759,7 +6785,15 @@ function shortAddr(a: string): string {
 
 // In the UI language, not the OS locale (amounts stay as they are: they get copied).
 function fmtTime(ms: number): string {
+  // The year appears only once it is not the current one. Without it, a payment
+  // from last October and one from this October both read "Oct 8, 11:00 AM" —
+  // identical rows for transactions a year apart, in the one list people scan to
+  // find a specific payment. Adding it unconditionally would put a redundant year
+  // on every recent row, which is why it is conditional.
+  const d = new Date(ms);
+  const thisYear = d.getFullYear() === new Date().getFullYear();
   return formatDate(ms, {
+    ...(thisYear ? {} : { year: "numeric" }),
     month: "short",
     day: "numeric",
     hour: "2-digit",
