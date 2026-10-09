@@ -98,7 +98,8 @@
     "signatures": "Signatures",
     "sectionAbout": "About",
     "aboutZkas": "About ZKas",
-    "privateSends": "Anonymous sends"
+    "privateSends": "Anonymous sends",
+    "pausedOnPhone": "Paused on this phone"
   },
   "appearanceCard": {
     "title": "Accent color",

@@ -1178,7 +1178,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         lastFinalBalance.current = now;
         saveBaseline(now);
       }
-      let list = reconcile(parseFloat(s.balance_fc || "0"), !!s.synced, parseFloat(s.pending_out_fc || "0") || 0);
+      let list = reconcile(parseFloat(s.balance_fc || "0"), !!s.synced);
       // Ask the chain about every send that has no confirmation count yet — NOT
       // just the ones still flagged `pending`.
       //
@@ -1769,7 +1769,13 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                   onSent={onSent}
                   prefillTo={sendPrefill}
                   onPrefillConsumed={() => setSendPrefill(null)}
-                  outflow={pendingTotal(txs)}
+                  // The SAME figure the hero subtracts: max(daemon's pendingOut,
+                  // this device's record). Passing only the local total made Send
+                  // disagree with the balance above it whenever the daemon had
+                  // seen the spend and the local row had aged out — Max then
+                  // offered an amount the daemon would refuse. Its own doc says
+                  // the Send form must validate against the same figure.
+                  outflow={Math.max(pendingOutFc(status), pendingTotal(txs))}
                 />
               )}
             </div>
@@ -5223,7 +5229,22 @@ function SettingsPane({ status }: { status: Status }) {
           <BackgroundSyncCard />
         </Collapsible>
       )}
-      <Collapsible title={t("settingsPane.autoConsolidation")} summary={isMaintenanceEnabled() ? t("settingsPane.on") : t("settingsPane.off")}>
+      {/* The summary must match what actually runs. useMaintenance gates on
+          `isMaintenanceEnabled() && !embeddedChosen()`, so in phone mode — the
+          option this product pushes — the row read "On" while no merge ever
+          happened. The note count then climbs past MAX_NOTES_PER_TX and the
+          wallet quietly loses the ability to send its whole balance in one
+          payment, which is precisely what this feature promises to prevent. */}
+      <Collapsible
+        title={t("settingsPane.autoConsolidation")}
+        summary={
+          isMaintenanceEnabled()
+            ? embeddedChosen()
+              ? t("settingsPane.pausedOnPhone")
+              : t("settingsPane.on")
+            : t("settingsPane.off")
+        }
+      >
         <AutoConsolidationCard />
       </Collapsible>
       <Collapsible title={t("settingsPane.networkPrivacy")} summary={networkPrivacyLabel()}>

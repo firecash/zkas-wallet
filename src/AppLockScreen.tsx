@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { LanguageButton } from "./LanguagePicker";
 import { useTranslation, Trans } from "react-i18next";
 import { lockKind, unlock } from "./applock";
-import { enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured, unlockWithBiometric } from "./biometric";
+import { disableBiometricUnlock, enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured, unlockWithBiometric } from "./biometric";
 import { listWallets } from "./wallets";
 import { wipeWalletState } from "./walletstate";
 
@@ -257,7 +257,7 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
               <button
                 type="button"
                 className="btn small"
-                onClick={() => {
+                onClick={async () => {
                   for (const w of listWallets()) wipeWalletState(w.token);
                   wipeWalletState(null);
                   // The sealed record is unrecoverable without the secret — that is
@@ -269,6 +269,14 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
                   // and "erase this device" that keeps the recovery phrase is not
                   // an erase.
                   for (const k of ["device_mnemonic", "mnemonic_unsealed", "wallets_v1", "account_high_water"]) localStorage.removeItem(k);
+                  // The fingerprint binding too. Without this the flag survived
+                  // an erase while the secret it unlocks no longer opens
+                  // anything: Settings went on advertising "Fingerprint", every
+                  // open fired a scan prompt, the scan succeeded, and the app
+                  // stayed locked with no explanation — and the erased PIN sat
+                  // in the OS credential store indefinitely. The normal
+                  // "turn the lock off" path already does this.
+                  await disableBiometricUnlock().catch(() => undefined);
                   location.reload();
                 }}
               >

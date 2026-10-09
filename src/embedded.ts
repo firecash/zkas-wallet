@@ -258,7 +258,17 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = tru
   // Did the user change the node or the Tor toggle? start() is idempotent and would
   // otherwise keep the OLD transport, leaving e.g. a Tor-off switch stuck on a dead
   // SOCKS proxy (permanent "opening"). If so, stop the running engine and restart it.
-  const changed = startedWith ? node !== startedWith.node || useTor !== startedWith.tor : false;
+  // Against the last SUCCESSFUL start — from memory when this page has started
+  // the engine, otherwise from what was persisted then. `startedWith` is module
+  // state, so it is null after every reload while the native engine keeps
+  // running: treating that as "nothing changed" meant the function returned the
+  // live port BEFORE persisting anything, so a node or Tor change made at any
+  // point after the first reload was silently dropped — engine untouched,
+  // caller told it succeeded, the row still showing the old address. The
+  // persisted pair is the right baseline precisely because it is only written
+  // once a start has actually bound a port.
+  const baseline = startedWith ?? { node: embeddedNode(), tor: embeddedTor() };
+  const changed = node !== baseline.node || useTor !== baseline.tor;
   const already = await Native.status().catch(() => ({ port: 0, running: false }));
   if (already.running && already.port > 0 && !changed) return `http://127.0.0.1:${already.port}`;
   if (already.running && changed) {

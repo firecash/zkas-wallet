@@ -1259,6 +1259,18 @@ fn allowed_wallet_api_path(path: &str) -> bool {
             | "/api/wallet/settings"
             | "/api/wallet/rescan"
             | "/api/verify"
+            // Every path api.ts actually calls has to be here, or the desktop
+            // build — which proxies all wallet calls through this command —
+            // answers with "wallet API path is not allowed", and api.ts shows
+            // that string to the user. These four were missing, so on desktop
+            // only: "Prove payment" and "Verify a payment" were dead ends
+            // showing a raw backend string, and the pre-warm silently never ran.
+            // Note /api/verify above is a DIFFERENT endpoint from
+            // /api/proof/verify; having one did not cover the other.
+            | "/api/wallet/warm"
+            | "/api/wallet/proof"
+            | "/api/proof/verify"
+            | "/api/wallet/scan-receipt"
     )
 }
 
