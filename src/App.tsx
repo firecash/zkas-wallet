@@ -34,7 +34,7 @@ import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText, sanitizeAmountInput } from "./lib/utils";
 import { SEED_REQUIRED, resolveDeviceSeed, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
-import { masterMnemonic, setMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
+import { masterMnemonic, setMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -2430,6 +2430,10 @@ function ConnectionButton() {
 function WalletSwitcher({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   useBackClose(true, onClose);
+  /// Which add is running, so the buttons can show progress and refuse a second
+  /// tap — both of these mint a wallet, and two at once means two wallets.
+  const [adding, setAdding] = useState<null | "account" | "separate">(null);
+  const [addErr, setAddErr] = useState("");
   const active = activeToken();
   const registered = listWallets();
   // The first status poll registers legacy wallets. If the switcher is opened
@@ -2468,18 +2472,39 @@ function WalletSwitcher({ onClose }: { onClose: () => void }) {
           {/* Two genuinely different things, so the user picks rather than the app
               guessing: an ACCOUNT is covered by the backup they already made, a
               separate WALLET has its own phrase and needs its own backup. */}
+          {/* `void` discarded the reason, so a failed "Add account" was a button
+              that did nothing at all: no new wallet, no message. Both paths
+              report now, and both show a spinner while they work — creating an
+              account derives a key and registers a viewing key, which is not
+              instant on a phone. */}
           {hasMaster() && (
-            <button className="btn" onClick={() => void addAccountWallet()}>
-              {t("walletSwitcher.addAccount")}
+            <button className="btn" disabled={!!adding} onClick={() => {
+              setAddErr("");
+              setAdding("account");
+              addAccountWallet()
+                .catch((e) => setAddErr(failureText(e)))
+                .finally(() => setAdding(null));
+            }}>
+              {adding === "account" ? <span className="spin" /> : t("walletSwitcher.addAccount")}
             </button>
           )}
-          <button className={hasMaster() ? "btn ghost" : "btn"} onClick={() => void addSeparateWallet()}>
-            {t("walletSwitcher.addSeparate")}
+          <button className={hasMaster() ? "btn ghost" : "btn"} disabled={!!adding} onClick={() => {
+            setAddErr("");
+            setAdding("separate");
+            try {
+              addSeparateWallet(); // mints and reloads; nothing async to await
+            } catch (e) {
+              setAddErr(failureText(e));
+              setAdding(null);
+            }
+          }}>
+            {adding === "separate" ? <span className="spin" /> : t("walletSwitcher.addSeparate")}
           </button>
-          <button className="btn ghost" onClick={onClose}>
+          <button className="btn ghost" disabled={!!adding} onClick={onClose}>
             {t("walletSwitcher.close")}
           </button>
         </div>
+        {addErr && <div className="msg err" style={{ marginTop: 10 }}>{addErr}</div>}
         <p className="muted small" style={{ marginTop: 10 }}>
           {hasMaster()
             ? t("walletSwitcher.hintAccounts")
@@ -3568,8 +3593,11 @@ async function addAccountWallet(): Promise<void> {
     // Born now: the daemon fast-syncs from the tip instead of replaying a chain
     // this account cannot have history on.
     birthday = (await api.status().catch(() => null))?.daa_score ?? 0;
-  } catch {
-    return; // nothing was changed
+  } catch (e) {
+    // Silence here is why "Add account" looked like a dead button: the derive,
+    // the viewing-key step and the status call all ended in `return` with
+    // nothing on screen. Nothing was changed, but the user must be told.
+    throw new Error(failureText(e));
   }
 
   const previous = activeToken();
@@ -3586,13 +3614,24 @@ async function addAccountWallet(): Promise<void> {
     // account it just created. Register first, then reload into a ready wallet.
     const { address } = await api.watch(fvk, birthday);
     rememberBirthday(birthday, address);
-  } catch {
+    // Record the address on THIS token now. `api.watch` just returned the
+    // authoritative address for the key we registered, and this is the only
+    // moment both are known together. Leaving the row blank for a later poll to
+    // fill is what made every new account show the FIRST account's address in
+    // "Your wallets": the registry was written by whichever status response
+    // landed next, attributed to whatever token was active by then.
+    ensureRegistered(token, address);
+  } catch (e) {
     // Roll the half-made account back rather than stranding the user on an
     // onboarding screen for a wallet they did not ask to create.
     clearAccountOf(token);
+    // ...and give the index back. `setAccountOf` reserved it and the mark only
+    // ever rises, so every failed attempt used to burn one permanently: after a
+    // few, "Wallet 4" was labelled "Account 6".
+    releaseAccount(account);
     unregisterWallet(token);
     if (previous) switchWallet(previous);
-    return;
+    throw new Error(failureText(e));
   }
   location.reload();
 }

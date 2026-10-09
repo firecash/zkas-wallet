@@ -148,6 +148,29 @@ export function reserveAccount(account: number): void {
 }
 
 /**
+ * Give an index back after a creation that FAILED.
+ *
+ * `setAccountOf` reserves, and the mark only ever rises — so an "Add account"
+ * that failed partway (the daemon unreachable, the key not storable) burned the
+ * index anyway. A few failed attempts and the numbering ran ahead of reality:
+ * "Wallet 4" labelled "Account 6", reported exactly that way.
+ *
+ * Only the TOP of the range is given back, and only when nothing holds it. An
+ * index below the mark may already have derived a wallet that was later
+ * removed, and reissuing that one would recreate the removed wallet's keys —
+ * which is the whole reason the mark exists.
+ */
+export function releaseAccount(account: number): void {
+  try {
+    if (account !== highWater()) return;
+    for (const w of listWallets()) if (accountOf(w.token) === account) return;
+    localStorage.setItem(HWM_KEY, String(account - 1));
+  } catch {
+    /* best effort */
+  }
+}
+
+/**
  * The spending secret for a phrase-derived wallet, as the same 64-hex string every
  * existing code path already consumes. Returns "" when this token is not derived
  * from the master phrase (legacy/imported wallets resolve their own stored seed).
