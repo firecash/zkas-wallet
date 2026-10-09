@@ -190,8 +190,14 @@ describe("the wallet a user actually touches", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Send ZKAS" })).toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "Send ZKAS" }));
     const amount = await screen.findByPlaceholderText("0.00");
+    // "1.2.3" is garbage, and what matters is the rule that resolves it, which
+    // changed deliberately: a separator appearing MORE THAN ONCE is grouping
+    // (so "1.234.567" is 1234567, not 1234.567 — a thousand-fold error on an
+    // ordinary European amount). The old expectation here, 1.23, came from
+    // "first dot wins", which got that case wrong. test/amount-separators.test.ts
+    // pins every convention; this only checks the field stays sane.
     await user.type(amount, "1.2.3");
-    expect(amount).toHaveValue("1.23"); // one decimal point survives
+    expect(amount).toHaveValue("123");
     await user.clear(amount);
     await user.type(amount, "0.123456789");
     expect(amount).toHaveValue("0.12345678"); // clamped to a sompi

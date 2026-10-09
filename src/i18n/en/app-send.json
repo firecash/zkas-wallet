@@ -4,7 +4,7 @@
     "wrongSeed": "That seed belongs to a different wallet — it does not unlock this one. Check which wallet you are restoring, or switch to the wallet that seed belongs to.",
     "finishingMerge": "Finishing a background merge…",
     "fragmentedNothingSent": "{{message}} Nothing was signed or sent.",
-    "partialRecorded": "{{message}} The part already broadcast is recorded in History.",
+    "partialRecorded": "{{message}} {{sent}} ZKAS was already sent and is recorded in History. The amount below is the {{remaining}} ZKAS still to pay — check History before sending it.",
     "confirmTitle": "Confirm",
     "amount": "Amount",
     "zkasAmount": "{{amount}} ZKAS",

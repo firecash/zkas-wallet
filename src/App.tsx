@@ -32,7 +32,7 @@ import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./receipts";
 import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
-import { pasteText } from "./lib/utils";
+import { pasteText, sanitizeAmountInput } from "./lib/utils";
 import { SEED_REQUIRED, resolveDeviceSeed, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
@@ -60,6 +60,7 @@ import { listWallets as listAllWallets } from "./wallets";
 import { MANAGED_ZKAS_RPC, STANDALONE_ZKAS_RPC_EXAMPLE } from "./ports";
 import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
 import { failureText } from "./lib/failure";
+import { loadSendDraft, saveSendDraft, clearSendDraft } from "./lib/senddraft";
 import { wipeWalletState } from "./walletstate";
 import {
   activeToken,
@@ -198,14 +199,7 @@ function parsePaymentUri(text: string): { address: string; amount?: string; memo
 /// representable and silently round). Stripping only non-[0-9.] let "1.2.3"
 /// through, which parses as NaN and left the user staring at a disabled button
 /// with no explanation.
-function sanitizeAmountInput(raw: string): string {
-  let v = raw.replace(/[^0-9.]/g, "");
-  const first = v.indexOf(".");
-  if (first !== -1) v = v.slice(0, first + 1) + v.slice(first + 1).replace(/\./g, "");
-  const dot = v.indexOf(".");
-  if (dot !== -1) v = v.slice(0, dot + 1 + 8);
-  return v;
-}
+
 
 // "12.34500000" or "12.345" -> 12.345 (number); NaN if not a clean amount.
 function parseAmount(s: string): number {
@@ -5546,7 +5540,11 @@ function RequestAmount({ address }: { address: string }) {
     setCopied(ok);
     setTimeout(() => setCopied(false), 1500);
   };
-  const ready = !!amount.trim() && !!qr;
+  // `address` can be "" while the daemon has the wallet but has not opened it
+  // yet (api.ts documents exactly this). Without it in the gate, a fully styled
+  // QR rendered for the URI "?amount=5" — a request that pays nobody, with Copy
+  // and Share enabled.
+  const ready = !!address && !!amount.trim() && !!qr;
   return (
     <div className="request-amount">
       <label>{t("requestAmount.amountLabel")}</label>
@@ -5616,6 +5614,11 @@ function Receive({ status }: { status: Status }) {
     }
   }, [addr]);
   const copy = async () => {
+    // Copying "" succeeds — `navigator.clipboard.writeText("")` resolves — so an
+    // address the daemon has not produced yet reported "Copied ✓" while putting
+    // nothing on the clipboard (or emptying it). TxDetail already guards this;
+    // Receive, where people actually copy their address, did not.
+    if (!addr) return;
     const ok = await copyText(addr);
     setCopied(ok);
     setTimeout(() => setCopied(false), 1600);
@@ -5663,11 +5666,11 @@ function Receive({ status }: { status: Status }) {
             {addr}
           </div>
           <div className="row" style={{ marginTop: 12 }}>
-            <button className={"btn copybtn" + (copied ? " copied" : "")} onClick={copy}>
+            <button className={"btn copybtn" + (copied ? " copied" : "")} disabled={!addr} onClick={copy}>
               {copied ? t("receive.copied") : t("receive.copyAddress")}
             </button>
             {typeof navigator !== "undefined" && typeof navigator.share === "function" && (
-              <button className="btn ghost" onClick={() => { void navigator.share({ text: addr }).catch(() => {}); }}>
+              <button className="btn ghost" disabled={!addr} onClick={() => { if (addr) void navigator.share({ text: addr }).catch(() => {}); }}>
                 {t("receive.share")}
               </button>
             )}
@@ -5999,11 +6002,16 @@ function Send({
   const price = useZkasPrice();
   const hide = useHideBalances();
   const initialRequest = prefillTo ? parsePaymentUri(prefillTo) : null;
-  const [to, setTo] = useState(initialRequest?.address ?? "");
-  const [amount, setAmount] = useState(initialRequest?.amount ?? "");
+  // A draft kept across a reload. A phone reclaims a backgrounded tab freely,
+  // and it is likeliest to do so exactly when the user has switched to another
+  // app to copy a recipient address — so coming back used to mean an empty form
+  // and a lost paste. An explicit payment request in the URL still wins.
+  const restoredDraft = useRef(initialRequest ? null : loadSendDraft(activeToken() ?? ""));
+  const [to, setTo] = useState(initialRequest?.address ?? restoredDraft.current?.to ?? "");
+  const [amount, setAmount] = useState(initialRequest?.amount ?? restoredDraft.current?.amount ?? "");
   // Private note to the recipient, sealed inside their encrypted note. Supported
   // by the daemon since day one; the UI simply never offered it.
-  const [memo, setMemo] = useState(initialRequest?.memo ?? "");
+  const [memo, setMemo] = useState(initialRequest?.memo ?? restoredDraft.current?.memo ?? "");
   const [pickContact, setPickContact] = useState(false);
   // Offered after a successful send to an unknown address — the moment the user
   // actually knows who it was.
@@ -6024,10 +6032,14 @@ function Send({
   // should mention before it happens rather than after.
   const isSelf = !!status?.address && to.trim().toLowerCase() === status.address.toLowerCase();
   const [busy, setBusy] = useState(false);
+  /// Set synchronously the moment a send starts, so a second tap landing before
+  /// React re-renders the disabled button cannot broadcast the payment twice.
+  /// `busy` alone cannot do this: it is state, and the button only becomes
+  /// disabled on the next render.
+  const sendInFlight = useRef(false);
   /// Set synchronously the moment a send starts, so a second tap landing
   /// before React re-renders the disabled button cannot broadcast the payment
   /// a second time. `busy` alone could not do this: it is state.
-  const sendInFlight = useRef(false);
   const [stage, setStage] = useState<SendStage | null>(null);
   // Chunk progress for a payment that spans several transactions (see SendProgress).
   const [sendProgress, setSendProgress] = useState<SendProgress | null>(null);
@@ -6039,6 +6051,13 @@ function Send({
   const [unlock, setUnlock] = useState("");
   const [needSeed, setNeedSeed] = useState(false);
   const [confirming, setConfirming] = useState(false);
+
+  // Persist what is typed, so a tab the phone reclaims does not discard it.
+  // Three short strings, written only when they change.
+  useEffect(() => {
+    if (confirming || busy) return; // mid-send: the draft is about to be cleared
+    saveSendDraft(activeToken() ?? "", { to, amount, memo });
+  }, [to, amount, memo, confirming, busy]);
   const [fragmented, setFragmented] = useState(false);
   const [showConsolidate, setShowConsolidate] = useState(false);
   // What the last comparable send on this device took. `null` until one has
@@ -6088,8 +6107,13 @@ function Send({
   const applyRequest = useCallback((text: string) => {
     const { address, amount: amt, memo: m, label } = parsePaymentUri(text);
     setTo(address);
-    if (amt) setAmount(amt);
-    if (m) setMemo(m);
+    // Unconditionally, both of them. These were guarded by `if`, so scanning a
+    // plain address QR after a request QR replaced the recipient and KEPT the
+    // previous amount and memo: Bob's address, Alice's 10 ZKAS, and Alice's
+    // invoice number sealed into Bob's encrypted note. A malformed amount, which
+    // parsePaymentUri drops, did the same silently.
+    setAmount(amt ?? "");
+    setMemo(m ?? "");
     if (label && address && !findContact(address)) setSuggestedName(label);
   }, []);
 
@@ -6301,6 +6325,9 @@ function Send({
       const spent = r.parts?.length ? r.parts.length : 1;
       recordDuration("prepare", activeToken() ?? "default", Math.max(1, spent), Date.now() - sendStartedAt, startedWarm);
       const toAddr = to.trim();
+      // The payment is away: the draft has served its purpose and a recipient
+      // address should not linger in storage.
+      clearSendDraft();
       setTo("");
       setAmount("");
       setMemo("");
@@ -6340,7 +6367,19 @@ function Send({
         setConfirming(true);
       } else if (e instanceof PartialSendError && e.parts.length > 0) {
         onSent(buildRows(e.parts, to.trim()), { stay: true });
-        setError(t("send.partialRecorded", { message: failureText(e) }));
+        // Leave the REMAINDER in the amount field, not the original total. The
+        // success path clears the form; this path cleared nothing, so after a
+        // 100 ZKAS payment broadcast 60 and then failed, the form still read
+        // 100 and the error named no figure at all. One more tap on Review &
+        // send paid 160 against a 100 invoice. The figure is already in hand.
+        const sentFc = e.parts.reduce((n, part) => n + part.amount_sompi, 0) / 1e8;
+        const remaining = Math.max(0, Number((amt - sentFc).toFixed(8)));
+        setAmount(remaining > 0 ? trimFc(remaining.toFixed(8)) : "");
+        setError(t("send.partialRecorded", {
+          message: failureText(e),
+          sent: trimFc(sentFc.toFixed(8)),
+          remaining: trimFc(remaining.toFixed(8)),
+        }));
         setConfirming(false);
       } else {
         setError(failureText(e));
@@ -6369,13 +6408,23 @@ function Send({
         <div className="confirm-row">
           <span className="muted">{t("send.networkFee")}</span>
           <span className="mono">
-            {feeCustomSet ? t("send.feeCustom", { fee: feeCustom }) : t("send.feeRange", { min: Number(feeFloorFc.toFixed(8)), max: Number(feeReserve.toFixed(8)) })}
+            {/* A custom fee BELOW the node's floor is not what gets charged — the
+                node applies its own minimum regardless of what the caller asks,
+                which is why doSend passes the custom value only as a floor. So
+                presenting it as the exact fee understated the cost by up to
+                0.2448 ZKAS on a 38-note wallet, and History then recorded the
+                real figure, leaving two screens disagreeing about one payment. */}
+            {feeCustomSet && feeCustom >= feeFloorFc
+              ? t("send.feeCustom", { fee: feeCustom })
+              : t("send.feeRange", { min: Number(Math.max(feeCustomSet ? feeCustom : 0, feeFloorFc).toFixed(8)), max: Number(feeReserve.toFixed(8)) })}
           </span>
         </div>
         <div className="confirm-row total">
           <span>{t("send.total")}</span>
           <span className="mono">
-            {feeCustomSet ? t("send.totalExact", { total: Number((amt + feeCustom).toFixed(8)) }) : t("send.totalUpTo", { total: Number((amt + feeReserve).toFixed(8)) })}
+            {feeCustomSet && feeCustom >= feeFloorFc
+              ? t("send.totalExact", { total: Number((amt + feeCustom).toFixed(8)) })
+              : t("send.totalUpTo", { total: Number((amt + feeReserve).toFixed(8)) })}
           </span>
         </div>
         {/* Normal payments are atomic at the transaction boundary. If this many
@@ -6483,7 +6532,7 @@ function Send({
     <div className="card">
       <div className="sendhead">
         <h2 style={{ margin: 0 }}>{t("send.title")}</h2>
-        <span className="muted small">{t("send.spendable", { amount: hide ? MASK : trimFc(spendable.toFixed(8)) })}{!hide && fmtFiat(spendable, price) ? ` · ${fmtFiat(spendable, price)}` : ""}</span>
+        <span className="muted small">{t("send.spendable", { amount: hide ? MASK : trimFc(Math.max(0, spendable).toFixed(8)) })}{!hide && fmtFiat(spendable, price) ? ` · ${fmtFiat(spendable, price)}` : ""}</span>
       </div>
 
       <label>{t("send.recipientLabel")}</label>
@@ -6614,7 +6663,7 @@ function Send({
           <input
             value={customFee}
             onChange={(e) => setCustomFee(e.target.value.replace(/[^0-9.]/g, ""))}
-            placeholder={t("send.feePlaceholder", { min: FEE_FC, max: FEE_MAX_FC })}
+            placeholder={t("send.feePlaceholder", { min: Number(feeFloorFc.toFixed(8)), max: Number(feeReserve.toFixed(8)) })}
             inputMode="decimal"
             autoFocus
           />

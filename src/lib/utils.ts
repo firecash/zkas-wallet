@@ -101,9 +101,18 @@ export function sanitizeAmountInput(raw: string): string {
     .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
     .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
     .replace(/[\u066b\u066c]/g, (m) => (m === "\u066b" ? "." : ","));
-  const lastDot = digits.lastIndexOf(".");
-  const lastComma = digits.lastIndexOf(",");
-  const decimalAt = Math.max(lastDot, lastComma);
+  // Which mark is the DECIMAL one:
+  //  - both present ("1.000,50", "1,000.50") -> the last one; the other groups.
+  //  - one kind, repeated ("1.234.567")      -> grouping, there is no decimal.
+  //    Treating the last as the decimal here gave 1234.567 for 1.234.567 — a
+  //    thousand-fold error on a perfectly ordinary European amount.
+  //  - one kind, once ("1,5" / "0.5")        -> the decimal.
+  const dots = (digits.match(/\./g) ?? []).length;
+  const commas = (digits.match(/,/g) ?? []).length;
+  let decimalAt = -1;
+  if (dots > 0 && commas > 0) decimalAt = Math.max(digits.lastIndexOf("."), digits.lastIndexOf(","));
+  else if (dots === 1) decimalAt = digits.lastIndexOf(".");
+  else if (commas === 1) decimalAt = digits.lastIndexOf(",");
   let v =
     decimalAt === -1
       ? digits.replace(/[^0-9]/g, "")
