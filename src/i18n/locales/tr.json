@@ -1887,7 +1887,7 @@
     "readOnly": "Bu cihazda anahtar yok, odayı okuyabilir ama gönderemezsiniz.",
     "new": "yeni",
     "newMessages": "Yeni mesajlar",
-    "failedTap": "Gönderilemedi — tekrar dene",
+    "failedTap": "Gönderilemedi — seçenekler için dokun",
     "tipAddrLabel": "ZKAS adresiniz (isteğe bağlı)",
     "tipAddrWhy": "Adres yayınlamak, profilinizde çalışan bir Gönder ZKAS düğmesi oluşturur. Bu sohbet adını bir ödeme hedefine bağlar; bağlantısız kalmak için boş bırakın.",
     "rooms": {
@@ -1983,7 +1983,11 @@
     "today": "Bugün",
     "yesterday": "Dün",
     "jumpLatest": "En son mesaja git",
-    "profileOf": "{{name}} profili"
+    "profileOf": "{{name}} profili",
+    "disconnected": "Röleye bağlı değil",
+    "disconnectedHint": "Yeniden bağlanana kadar mesaj gönderilip alınamaz.",
+    "tryAgain": "Tekrar dene",
+    "emptyHint": "İlk mesajı sen yaz."
   },
   "backgroundPermission": {
     "body": "Bu telefon artık cüzdanı kendisi çalıştırıyor. Android uyuyan uygulamaları kendi programına alır; bu izin olmazsa cüzdan saatlerce geri kalır ve bir sonraki açışınızda yetişmesini beklersiniz. İzin vermek, cüzdanın güncel kalmak için yaklaşık 15 dakikada bir uyanmasını sağlar. Bunu daha sonra Android ayarlarından değiştirebilirsiniz.",

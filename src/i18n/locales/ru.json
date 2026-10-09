@@ -1983,7 +1983,11 @@
     "today": "Сегодня",
     "yesterday": "Вчера",
     "jumpLatest": "К последнему сообщению",
-    "profileOf": "Профиль {{name}}"
+    "profileOf": "Профиль {{name}}",
+    "disconnected": "Нет связи с реле",
+    "disconnectedHint": "Сообщения не будут отправляться или получаться до переподключения.",
+    "tryAgain": "Повторить",
+    "emptyHint": "Скажите первым."
   },
   "backgroundPermission": {
     "title": "Разрешить синхронизацию в фоне?​",

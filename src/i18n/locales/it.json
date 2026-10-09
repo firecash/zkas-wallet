@@ -1887,7 +1887,7 @@
     "readOnly": "Questo dispositivo non ha chiavi, quindi può leggere ma non scrivere.",
     "new": "nuovo",
     "newMessages": "Nuovi messaggi",
-    "failedTap": "Non inviato — tocca per riprovare",
+    "failedTap": "Non inviato — tocca per opzioni",
     "tipAddrLabel": "Il tuo indirizzo ZKAS (opzionale)",
     "tipAddrWhy": "Pubblicare un indirizzo aggiunge il pulsante Invia ZKAS al tuo profilo. Collega questo nome chat a una destinazione di pagamento, quindi lascialo vuoto per restare non collegabile.",
     "rooms": {
@@ -1983,7 +1983,11 @@
     "today": "Oggi",
     "yesterday": "Ieri",
     "jumpLatest": "Vai all'ultimo messaggio",
-    "profileOf": "Profilo di {{name}}"
+    "profileOf": "Profilo di {{name}}",
+    "disconnected": "Non connesso al relay",
+    "disconnectedHint": "I messaggi non possono essere inviati o ricevuti finché non si riconnette.",
+    "tryAgain": "Riprova",
+    "emptyHint": "Sii il primo a dire qualcosa."
   },
   "backgroundPermission": {
     "title": "Sincronizzare il portafoglio in background?",

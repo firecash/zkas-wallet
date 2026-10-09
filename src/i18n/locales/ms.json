@@ -1926,7 +1926,7 @@
     "readOnly": "Peranti ini tiada kunci, jadi boleh baca bilik tetapi tidak boleh hantar.",
     "new": "baru",
     "newMessages": "Mesej baharu",
-    "failedTap": "Tidak dihantar — ketik untuk cuba semula",
+    "failedTap": "Tak terhantar — ketik untuk pilihan",
     "tipAddrLabel": "Alamat ZKAS anda (pilihan)",
     "tipAddrWhy": "Menerbitkan alamat meletakkan butang Hantar ZKAS pada profil anda. Ia memautkan nama sembang ini ke destinasi pembayaran, jadi biarkan kosong untuk kekal tidak boleh dipautkan.",
     "rooms": {
@@ -1991,7 +1991,11 @@
     "today": "Hari ini",
     "yesterday": "Semalam",
     "jumpLatest": "Pergi ke mesej terkini",
-    "profileOf": "Profil {{name}}"
+    "profileOf": "Profil {{name}}",
+    "disconnected": "Tak bersambung ke relay",
+    "disconnectedHint": "Mesej tak boleh dihantar atau diterima sehingga ini bersambung semula.",
+    "tryAgain": "Cuba lagi",
+    "emptyHint": "Jadi orang pertama yang berkata sesuatu."
   },
   "confirmWatch": {
     "title": "Pantau dompet ini?",

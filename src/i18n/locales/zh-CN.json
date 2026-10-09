@@ -1887,7 +1887,7 @@
     "readOnly": "此设备无密钥，只能阅读聊天室，无法发布消息。",
     "new": "新消息",
     "newMessages": "新消息",
-    "failedTap": "发送失败，点击重试",
+    "failedTap": "未发送 — 点击查看选项",
     "tipAddrLabel": "你的ZKAS地址（可选）",
     "tipAddrWhy": "发布地址会在你的个人主页上显示发送ZKAS按钮，将聊天名称与收款地址关联。留空可保持匿名。",
     "rooms": {
@@ -1983,7 +1983,11 @@
     "today": "今天",
     "yesterday": "昨天",
     "jumpLatest": "跳至最新消息",
-    "profileOf": "{{name}} 的个人资料"
+    "profileOf": "{{name}} 的个人资料",
+    "disconnected": "未连接到中继",
+    "disconnectedHint": "重新连接前无法收发消息。",
+    "tryAgain": "重试",
+    "emptyHint": "第一个发言吧。"
   },
   "backgroundPermission": {
     "title": "允许钱包在后台同步？",

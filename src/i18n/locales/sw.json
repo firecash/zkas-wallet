@@ -1887,7 +1887,7 @@
     "readOnly": "Kifaa hiki hakina ufunguo, kwa hivyo kinaweza kusoma lakini si kutuma.",
     "new": "mpya",
     "newMessages": "Ujumbe mpya",
-    "failedTap": "Haikutumwa — gusa tena",
+    "failedTap": "Haijatumwa — gusa kwa chaguo",
     "tipAddrLabel": "Anwani yako ya ZKAS (si lazima)",
     "tipAddrWhy": "Kuchapisha anwani huweka kitufe cha Tuma ZKAS kwenye wasifu wako. Inaunganisha jina hili la gumzo na mahali pa kulipia, hivyo acha tupu ili usiweze kuunganishwa.",
     "rooms": {
@@ -1983,7 +1983,11 @@
     "today": "Leo",
     "yesterday": "Jana",
     "jumpLatest": "Nenda kwa jumbe mpya",
-    "profileOf": "Wasifu wa {{name}}"
+    "profileOf": "Wasifu wa {{name}}",
+    "disconnected": "Haijaunganishwa kwa relay",
+    "disconnectedHint": "Hauwezi kutuma au kupokea ujumbe hadi hii iunganishwe tena.",
+    "tryAgain": "Jaribu tena",
+    "emptyHint": "Kuwa wa kwanza kusema kitu."
   },
   "backgroundPermission": {
     "title": "Ruhusu pochi isawazishe chinichini?",

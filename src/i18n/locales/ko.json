@@ -1887,7 +1887,7 @@
     "readOnly": "이 기기에는 키가 없어서 읽기만 가능하고 글을 쓸 수 없어요.",
     "new": "새글",
     "newMessages": "새 메시지",
-    "failedTap": "전송 실패 — 탭하여 재시도",
+    "failedTap": "전송 실패 — 탭하여 옵션",
     "tipAddrLabel": "ZKAS 주소 (선택사항)",
     "tipAddrWhy": "주소를 공개하면 프로필에 ZKAS 보내기 버튼이 생깁니다. 채팅명을 결제 대상과 연결하므로, 연결을 원하지 않으면 비워두세요.",
     "rooms": {
@@ -1983,7 +1983,11 @@
     "today": "오늘 (9자)",
     "yesterday": "어제 (15자)",
     "jumpLatest": "최신 메시지로 이동 (39자)",
-    "profileOf": "{{name}}의 프로필 (31자)"
+    "profileOf": "{{name}}의 프로필 (31자)",
+    "disconnected": "릴레이 연결 끊김",
+    "disconnectedHint": "재연결될 때까지 메시지를 보내거나 받을 수 없습니다.",
+    "tryAgain": "재시도",
+    "emptyHint": "첫 메시지를 남겨보세요."
   },
   "backgroundPermission": {
     "title": "지갑 동기화를 백그라운드에서 허용할까요?​",

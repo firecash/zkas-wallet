@@ -1887,7 +1887,7 @@
     "readOnly": "Sin clave, solo puedes leer, no publicar.",
     "new": "nuevo",
     "newMessages": "Mensajes nuevos",
-    "failedTap": "No enviado — toca para reintentar",
+    "failedTap": "No enviado — toca para opciones",
     "tipAddrLabel": "Tu dirección ZKAS (opcional)",
     "tipAddrWhy": "Publicar una dirección agrega un botón Enviar ZKAS a tu perfil. Vincula este nombre de chat a un destino de pago; déjalo vacío para no ser vinculable.",
     "rooms": {
@@ -1983,7 +1983,11 @@
     "today": "Hoy",
     "yesterday": "Ayer",
     "jumpLatest": "Ir al último mensaje",
-    "profileOf": "Perfil de {{name}}"
+    "profileOf": "Perfil de {{name}}",
+    "disconnected": "No conectado al relay",
+    "disconnectedHint": "No se pueden enviar ni recibir mensajes hasta que se reconecte.",
+    "tryAgain": "Reintentar",
+    "emptyHint": "Sé el primero en decir algo."
   },
   "backgroundPermission": {
     "title": "¿Sincronizar la billetera en segundo plano?​",

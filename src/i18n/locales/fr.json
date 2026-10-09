@@ -1926,7 +1926,7 @@
     "readOnly": "Cet appareil n'a pas de clé, il peut donc lire le salon mais pas publier.",
     "new": "Nouveau",
     "newMessages": "Nouveaux messages",
-    "failedTap": "Non envoyé — appuyez pour réessayer",
+    "failedTap": "Non envoyé — appuyez pour options",
     "tipAddrLabel": "Votre adresse ZKAS (facultatif)",
     "tipAddrWhy": "Publier une adresse ajoute un bouton Envoyer ZKAS à votre profil. Elle lie ce nom de chat à une destination de paiement ; laissez-la vide pour rester non traçable.",
     "rooms": {
@@ -1991,7 +1991,11 @@
     "today": "Aujourd'hui",
     "yesterday": "Hier",
     "jumpLatest": "Aller au dernier message",
-    "profileOf": "Profil de {{name}}"
+    "profileOf": "Profil de {{name}}",
+    "disconnected": "Non connecté au relais",
+    "disconnectedHint": "Les messages ne peuvent être envoyés ni reçus tant que la connexion n'est pas rétablie.",
+    "tryAgain": "Réessayer",
+    "emptyHint": "Soyez le premier à dire quelque chose."
   },
   "confirmWatch": {
     "title": "Surveiller ce portefeuille ?",

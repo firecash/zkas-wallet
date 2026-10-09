@@ -1926,7 +1926,7 @@
     "readOnly": "Este dispositivo não tem chave, então pode ler a sala, mas não postar.",
     "new": "novo",
     "newMessages": "Novas mensagens",
-    "failedTap": "Não enviada — toque para reenviar",
+    "failedTap": "Não enviada — toque p/ opções",
     "tipAddrLabel": "Seu endereço ZKAS (opcional) ",
     "tipAddrWhy": "Publicar um endereço coloca um botão Enviar ZKAS no seu perfil. Ele vincula este nome de chat a um destino de pagamento; deixe vazio para permanecer anônimo.",
     "rooms": {
@@ -1991,7 +1991,11 @@
     "today": "Hoje",
     "yesterday": "Ontem",
     "jumpLatest": "Ir para a última mensagem",
-    "profileOf": "Perfil de {{name}}"
+    "profileOf": "Perfil de {{name}}",
+    "disconnected": "Desconectado do relay",
+    "disconnectedHint": "Mensagens não podem ser enviadas ou recebidas até reconectar.",
+    "tryAgain": "Tentar de novo",
+    "emptyHint": "Seja o primeiro a dizer algo."
   },
   "confirmWatch": {
     "title": "Observar esta carteira?",

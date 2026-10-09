@@ -719,6 +719,26 @@ export function ChatScreen({
       return;
     }
     if (ev.kind === KIND_NOTE) {
+      // The relay echoing OUR OWN note back is proof it accepted it — stronger
+      // than the OK frame, and the only evidence available from a relay that
+      // does not send one (in which case every message would otherwise show
+      // "Not sent" ten seconds after sending). Clears the failed mark too, so a
+      // message that was already delivered stops offering a retry that would
+      // publish a second copy.
+      if (ev.pubkey === meRef.current) {
+        setPendingAck((prev) => {
+          if (!prev.has(ev.id)) return prev;
+          const n = new Set(prev);
+          n.delete(ev.id);
+          return n;
+        });
+        setFailed((prev) => {
+          if (!prev.has(ev.id)) return prev;
+          const n = new Set(prev);
+          n.delete(ev.id);
+          return n;
+        });
+      }
       // A note from another room arrived on the `peek` subscription: it belongs
       // to a chip's counter, not to the open conversation.
       const where = ev.tags.find((tg) => tg[0] === "t")?.[1];
@@ -1047,9 +1067,26 @@ export function ChatScreen({
   // Only while scrolled up: at the bottom the view is pinned anyway, and
   // growing without bound there would keep every message of a long session
   // rendered.
+  /// Length at the last render, so growth is by the DELTA.
+  const prevLen = useRef(messages.length);
   useEffect(() => {
-    if (atBottomRef.current) return;
-    setLimit((n) => (messages.length > n ? messages.length : n));
+    const added = messages.length - prevLen.current;
+    prevLen.current = messages.length;
+    if (added <= 0 || atBottomRef.current) return;
+    // By the number that ARRIVED, not up to `messages.length`. Assigning the
+    // full length took `limit` from 40 to the whole relay backfill (200) on the
+    // first arrival: ~160 older rows inserted ABOVE the viewport in one commit
+    // with `scrollTop` untouched, so the text being read jumped backwards by
+    // the full inserted height — worse than the one-row drift this replaced.
+    // It also made `hasEarlier` false, which removed the "Earlier messages"
+    // control and the scroll-triggered paging for the rest of the session, and
+    // rendered every message in the store from then on.
+    //
+    // Growing by exactly the delta keeps the FIRST row of the window the same
+    // row: `slice(-limit)` drops one from the start for each one appended at
+    // the end, so matching the two leaves everything above the viewport where
+    // it was and needs no scroll compensation.
+    setLimit((n) => n + added);
   }, [messages.length]);
   const visible = useMemo(() => (hasEarlier ? messages.slice(-limit) : messages), [messages, limit, hasEarlier]);
 

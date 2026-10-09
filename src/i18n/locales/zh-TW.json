@@ -1887,7 +1887,7 @@
     "readOnly": "此裝置無密鑰，可讀取聊天室但無法發文。",
     "new": "新",
     "newMessages": "新訊息",
-    "failedTap": "未送出—點按重試",
+    "failedTap": "未傳送 — 點按選項",
     "tipAddrLabel": "你的 ZKAS 地址（選填）",
     "tipAddrWhy": "公開地址會在個人檔案上顯示「發送 ZKAS」按鈕，並將此聊天名稱連結到收款目的地；留空則可保持不可連結。",
     "rooms": {
@@ -1983,7 +1983,11 @@
     "today": "今天",
     "yesterday": "昨天",
     "jumpLatest": "前往最新訊息",
-    "profileOf": "{{name}} 的個人檔案"
+    "profileOf": "{{name}} 的個人檔案",
+    "disconnected": "未連線至中繼",
+    "disconnectedHint": "重新連線前無法收發訊息。",
+    "tryAgain": "重試",
+    "emptyHint": "搶先說點什麼吧。"
   },
   "backgroundPermission": {
     "title": "讓錢包在背景同步？",

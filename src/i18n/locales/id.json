@@ -1887,7 +1887,7 @@
     "readOnly": "Perangkat ini tidak memiliki kunci, jadi hanya bisa membaca ruangan, tidak bisa mengirim.",
     "new": "baru",
     "newMessages": "Pesan baru",
-    "failedTap": "Gagal kirim — ketuk untuk ulang",
+    "failedTap": "Tidak terkirim — ketuk opsi",
     "tipAddrLabel": "Alamat ZKAS Anda (opsional)",
     "tipAddrWhy": "Menerbitkan alamat akan menempatkan tombol Kirim ZKAS di profil Anda. Ini menghubungkan nama obrolan ke tujuan pembayaran, jadi biarkan kosong agar tetap tidak tertaut.",
     "rooms": {
@@ -1983,7 +1983,11 @@
     "today": "Hari ini",
     "yesterday": "Kemarin",
     "jumpLatest": "Ke pesan terbaru",
-    "profileOf": "Profil {{name}}"
+    "profileOf": "Profil {{name}}",
+    "disconnected": "Tidak terhubung ke relay",
+    "disconnectedHint": "Pesan tidak bisa dikirim atau diterima sampai ini tersambung kembali.",
+    "tryAgain": "Coba lagi",
+    "emptyHint": "Jadilah yang pertama bicara."
   },
   "backgroundPermission": {
     "title": "Sinkronkan dompet di latar belakang?",

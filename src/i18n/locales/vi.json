@@ -1887,7 +1887,7 @@
     "readOnly": "Thiết bị này không có khóa, chỉ đọc được tin nhắn, không đăng được.",
     "new": "Mới",
     "newMessages": "Tin nhắn mới",
-    "failedTap": "Chưa gửi — chạm để thử lại",
+    "failedTap": "Chưa gửi — chạm để xem",
     "tipAddrLabel": "Địa chỉ ZKAS của bạn (không bắt buộc)",
     "tipAddrWhy": "Đăng địa chỉ sẽ thêm nút Gửi ZKAS vào trang cá nhân của bạn. Nó liên kết tên chat này với một đích thanh toán, nên để trống nếu muốn ẩn danh. (216)",
     "rooms": {
@@ -1983,7 +1983,11 @@
     "today": "Hôm nay",
     "yesterday": "Hôm qua",
     "jumpLatest": "Đến tin mới nhất",
-    "profileOf": "Hồ sơ của {{name}}"
+    "profileOf": "Hồ sơ của {{name}}",
+    "disconnected": "Mất kết nối relay",
+    "disconnectedHint": "Không gửi/nhận tin nhắn được cho đến khi kết nối lại.",
+    "tryAgain": "Thử lại",
+    "emptyHint": "Hãy là người đầu tiên nhắn tin."
   },
   "backgroundPermission": {
     "title": "Cho phép ví đồng bộ trong nền?​",

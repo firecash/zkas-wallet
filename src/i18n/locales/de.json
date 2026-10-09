@@ -1926,7 +1926,7 @@
     "readOnly": "Dieses Gerät hat keinen Schlüssel, kann den Raum also lesen, aber nicht posten.",
     "new": "Neu",
     "newMessages": "Neue Nachrichten",
-    "failedTap": "Nicht gesendet – tippen zum Wiederholen",
+    "failedTap": "Nicht gesendet — tippe für Optionen",
     "tipAddrLabel": "Deine ZKAS-Adresse (optional)",
     "tipAddrWhy": "Eine veröffentlichte Adresse platziert den Senden-ZKAS-Button auf deinem Profil. Sie verknüpft diesen Chat-Namen mit einem Zahlungsziel – leer lassen, um nicht verknüpfbar zu bleiben.",
     "rooms": {
@@ -1991,7 +1991,11 @@
     "today": "Heute",
     "yesterday": "Gestern",
     "jumpLatest": "Zur neuesten Nachricht",
-    "profileOf": "Profil von {{name}}"
+    "profileOf": "Profil von {{name}}",
+    "disconnected": "Nicht mit Relay verbunden",
+    "disconnectedHint": "Solange keine Verbindung, keine Nachrichten.",
+    "tryAgain": "Erneut versuchen",
+    "emptyHint": "Sei der Erste, der etwas sagt."
   },
   "confirmWatch": {
     "title": "Wallet beobachten? ",

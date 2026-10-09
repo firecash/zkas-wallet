@@ -266,6 +266,9 @@ export class ChatClient {
     };
     ws.onerror = () => this.onState("error");
     ws.onclose = () => {
+      // Same reasoning as `close()`: a dropped socket says nothing about
+      // whether the relay took the message.
+      this.clearAcks();
       this.ws = null;
       if (!this.closed) {
         this.onState("offline");
@@ -336,8 +339,24 @@ export class ChatClient {
   close(): void {
     this.closed = true;
     if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.clearAcks();
     this.ws?.close();
     this.ws = null;
+  }
+
+  /**
+   * Drop the pending ack timers without declaring anything failed.
+   *
+   * A socket that closes is not evidence the relay refused anything. The timers
+   * used to survive it and fire ten seconds later, marking a message the relay
+   * had ACCEPTED and fanned out as "Not sent" — and the retry that offers
+   * re-signs with a fresh timestamp, so it publishes a SECOND copy: the sender
+   * sees one message, the room sees two. A phone changing networks or a Tor
+   * circuit rotating is enough to trigger it.
+   */
+  private clearAcks(): void {
+    for (const timer of this.awaitingAck.values()) clearTimeout(timer);
+    this.awaitingAck.clear();
   }
 
   private send(frame: unknown): void {

@@ -1926,7 +1926,7 @@
     "readOnly": "この端末には鍵がないため、閲覧のみ可能です。",
     "new": "新着",
     "newMessages": "新着メッセージ",
-    "failedTap": "未送信 — タップして再試行",
+    "failedTap": "未送信 — タップでオプション",
     "tipAddrLabel": "あなたのZKASアドレス（任意）",
     "tipAddrWhy": "アドレスを公開すると、プロフィールに「ZKASを送信」ボタンが表示されます。このチャット名と支払い先が紐づくため、空欄のままだと関連付けられません。",
     "rooms": {
@@ -1991,7 +1991,11 @@
     "today": "今日",
     "yesterday": "昨日",
     "jumpLatest": "最新メッセージへ",
-    "profileOf": "{{name}}のプロフィール"
+    "profileOf": "{{name}}のプロフィール",
+    "disconnected": "リレーに未接続",
+    "disconnectedHint": "再接続までメッセージの送受信はできません。",
+    "tryAgain": "再試行",
+    "emptyHint": "最初のメッセージをどうぞ。"
   },
   "confirmWatch": {
     "title": "このウォレットを監視しますか？",

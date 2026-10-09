@@ -1926,7 +1926,7 @@
     "readOnly": "Dit apparaat heeft geen sleutel, dus je kunt de ruimte lezen maar niet plaatsen.",
     "new": "Nieuw",
     "newMessages": "Nieuwe berichten",
-    "failedTap": "Niet verzonden — tik om opnieuw te proberen",
+    "failedTap": "Niet verzonden — tik voor opties",
     "tipAddrLabel": "Je ZKAS-adres (optioneel)",
     "tipAddrWhy": "Een adres publiceren plaatst een werkende 'ZKAS verzenden'-knop op je profiel. Het koppelt deze chatnaam aan een betaalbestemming, dus laat het leeg om onkoppelbaar te blijven.",
     "rooms": {
@@ -1991,7 +1991,11 @@
     "today": "Vandaag",
     "yesterday": "Gisteren",
     "jumpLatest": "Naar nieuwste bericht",
-    "profileOf": "Profiel van {{name}}"
+    "profileOf": "Profiel van {{name}}",
+    "disconnected": "Niet verbonden met de relay",
+    "disconnectedHint": "Berichten kunnen pas worden verzonden of ontvangen als dit opnieuw verbindt.",
+    "tryAgain": "Opnieuw",
+    "emptyHint": "Wees de eerste die iets zegt."
   },
   "confirmWatch": {
     "title": "Deze wallet bekijken?",
