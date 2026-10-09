@@ -840,8 +840,20 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       lastHiddenPoll.current = Date.now();
     }
     refreshInFlight.current = true;
+    // WHICH wallet this poll is about. Captured before the request, because the
+    // active token can change while it is in flight — `recreatePhraseAccounts`
+    // mints and activates a token per account with no reload between them, and
+    // the desktop shell can hand back a new token at any moment. Everything
+    // below used to read `wallet_token` AFTER the await and attribute this
+    // response to whatever was active by then.
+    const pollToken = localStorage.getItem("wallet_token");
     try {
       const s = await api.status();
+      // The wallet changed under us: this answer describes the previous one.
+      // Applying it wrote another wallet's address into the registry row of the
+      // new one — "Your wallets" then listed a wallet beside an address that was
+      // not its own — and briefly showed that wallet's balance too.
+      if (localStorage.getItem("wallet_token") !== pollToken) return;
       // Never let a transient poll un-render the wallet. While the daemon is reloading a
       // wallet (or a status call races a sync pass) it can answer has_wallet:false /
       // address:null for a beat. Rendering that verbatim unmounted the whole tab block —
@@ -1203,10 +1215,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // Keep the wallet registry in step: a wallet that existed before the
       // switcher (or one just created) must appear in the list, with an address
       // recognisable enough to pick from.
-      if (s.has_wallet && s.address) {
-        const t = localStorage.getItem("wallet_token");
-        if (t) ensureRegistered(t, s.address);
-      }
+      if (s.has_wallet && s.address && pollToken) ensureRegistered(pollToken, s.address);
       // ONLY snapshot a SYNCED wallet. A mid-scan balance is a partial count that
       // climbs from zero, so saving it overwrote the last known good figure with a
       // fraction of it — the safety net eating itself. A pool wallet rescanning at
@@ -3523,6 +3532,12 @@ async function recreatePhraseAccounts(phrase: string, wanted: number[], birthday
       }
       const { address } = await api.watch(fvk, birthday);
       rememberBirthday(birthday, address);
+      // Record THIS account's own address against its own token, here, where
+      // both are known for certain. Without it the row sat in "Your wallets"
+      // with no address until some later poll filled one in — and that poll
+      // attributed whatever it got to whichever token happened to be active,
+      // which during this very loop is a different one every iteration.
+      ensureRegistered(token, address);
     } catch {
       /* best-effort: a missing account can still be added by hand, in order */
     }
