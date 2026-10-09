@@ -20,16 +20,26 @@ import {
 const NetworkGlobe = lazy(() => import("../components/NetworkGlobe"));
 
 type Dashboard = {
-  dag: BlockdagInfo;
-  network: NetworkInfo;
-  shielded: ShieldedPoolInfo;
-  halving: HalvingInfo;
-  supply: CoinSupplyInfo;
-  pulse: PulseInfo;
-  blocks: BlockSummary[];
+  // Nullable because a panel whose endpoint has never answered has no value to
+  // show — on a cold cache there is nothing to fall back to. The renderers treat
+  // null as "—" rather than crashing the dashboard.
+  dag: BlockdagInfo | null;
+  network: NetworkInfo | null;
+  shielded: ShieldedPoolInfo | null;
+  halving: HalvingInfo | null;
+  supply: CoinSupplyInfo | null;
+  pulse: PulseInfo | null;
+  blocks: BlockSummary[] | null;
   nodes?: NodesInfo | null;
   savedAt: number;
 };
+
+/// A panel whose endpoint has never answered has no number to show. These render
+/// an em dash instead of a confident, wrong zero — `integer(undefined ?? 0)`
+/// would claim the chain has 0 peers when the truth is that we do not know.
+const DASH = "—";
+const num = (v: number | null | undefined, fmt: (n: number) => string): string =>
+  v == null || !Number.isFinite(v) ? DASH : fmt(v);
 
 const CACHE_KEY = "zkas_explorer_dashboard_v2";
 
@@ -146,14 +156,22 @@ function DashboardView() {
         setError(previous ? t("dashboardView.liveUnavailable") : t("dashboardView.notResponding"));
         return;
       }
+      // `previous!` was a lie on a COLD cache. First visit, no saved snapshot,
+      // one endpoint down: `anyFresh` passes on the seven that answered, then
+      // `previous!.dag` dereferences null, throws, and the catch below blanks the
+      // whole dashboard — the exact all-or-nothing failure the settled() rewrite
+      // above was meant to end, still reachable for anyone whose first ever visit
+      // caught a flaky endpoint. Missing panels are now simply absent, which the
+      // panels already render as a dash.
+      const keep = <T,>(fresh: T | null, before: T | undefined): T | null => fresh ?? before ?? null;
       const next: Dashboard = {
-        dag: dag ?? previous!.dag,
-        network: network ?? previous!.network,
-        shielded: shielded ?? previous!.shielded,
-        halving: halving ?? previous!.halving,
-        supply: supply ?? previous!.supply,
-        pulse: pulse ?? previous!.pulse,
-        blocks: blocks ?? previous!.blocks,
+        dag: keep(dag, previous?.dag),
+        network: keep(network, previous?.network),
+        shielded: keep(shielded, previous?.shielded),
+        halving: keep(halving, previous?.halving),
+        supply: keep(supply, previous?.supply),
+        pulse: keep(pulse, previous?.pulse),
+        blocks: keep(blocks, previous?.blocks),
         nodes: nodes ?? previous?.nodes ?? null,
         // Stamped only from data that actually arrived, so `savedAt` means "this is
         // how fresh the screen is" and the age shown to the user cannot flatter it.
@@ -185,7 +203,7 @@ function DashboardView() {
 
   const globeNodes = useMemo(() => data?.nodes?.nodes.map((node) => ({ id: node.id, lat: node.lat, lon: node.lon, self: node.self, country: node.country })) ?? [], [data?.nodes]);
   const globeLabels = useMemo(() => data?.nodes?.countries.map((country) => ({ code: country.code, name: country.name, count: country.count, lat: country.lat, lon: country.lon })) ?? [], [data?.nodes]);
-  const globeBlocks = useMemo(() => data?.blocks.map((block) => ({ hash: block.block_hash, blue: Number(block.blueScore) || 0, txs: block.txCount })) ?? [], [data?.blocks]);
+  const globeBlocks = useMemo(() => data?.blocks?.map((block) => ({ hash: block.block_hash, blue: Number(block.blueScore) || 0, txs: block.txCount })) ?? [], [data?.blocks]);
   const selectedNode = data?.nodes?.nodes.find((node) => node.id === activeNode);
 
   const refreshBlocks = useCallback(async () => {
@@ -267,10 +285,10 @@ function DashboardView() {
       ) : (
         <>
           <div className="explorer-metrics">
-            <div className="metric"><span title={t("dashboardView.daaScore")}>{t("dashboardView.daaScore")}</span><strong>{integer(data.dag.virtualDaaScore)}</strong></div>
-            <div className="metric"><span title={t("dashboardView.blockRate")}>{t("dashboardView.blockRate")}</span><strong>{t("dashboardView.bps", { bps: data.pulse.bps15m.toFixed(2) })}</strong></div>
-            <div className="metric"><span title={t("dashboardView.estHashrate")}>{t("dashboardView.estHashrate")}</span><strong>{hashrate(data.dag.difficulty * 2)}</strong></div>
-            <div className="metric"><span title={t("dashboardView.connectedPeers")}>{t("dashboardView.connectedPeers")}</span><strong>{integer(data.network.connectedPeers)}</strong></div>
+            <div className="metric"><span title={t("dashboardView.daaScore")}>{t("dashboardView.daaScore")}</span><strong>{data.dag ? integer(data.dag.virtualDaaScore) : DASH}</strong></div>
+            <div className="metric"><span title={t("dashboardView.blockRate")}>{t("dashboardView.blockRate")}</span><strong>{data.pulse ? t("dashboardView.bps", { bps: data.pulse.bps15m.toFixed(2) }) : DASH}</strong></div>
+            <div className="metric"><span title={t("dashboardView.estHashrate")}>{t("dashboardView.estHashrate")}</span><strong>{num(data.dag && data.dag.difficulty * 2, hashrate)}</strong></div>
+            <div className="metric"><span title={t("dashboardView.connectedPeers")}>{t("dashboardView.connectedPeers")}</span><strong>{num(data.network?.connectedPeers, integer)}</strong></div>
           </div>
 
           <section className="control-card explorer-map-card">
@@ -286,9 +304,9 @@ function DashboardView() {
 
           <div className="control-card explorer-work-card">
             <div className="card-title-row">
-              <div><h2>{t("dashboardView.networkWork")}</h2><p>{t("dashboardView.trailingHour", { hashrate: hashrate(data.pulse.workHashrateBins[data.pulse.workHashrateBins.length - 1] || data.dag.difficulty * 2) })}</p></div>
+              <div><h2>{t("dashboardView.networkWork")}</h2><p>{t("dashboardView.trailingHour", { hashrate: num(data.pulse?.workHashrateBins[data.pulse.workHashrateBins.length - 1] || (data.dag ? data.dag.difficulty * 2 : null), hashrate) })}</p></div>
             </div>
-            <Sparkline values={data.pulse.workHashrateBins} />
+            <Sparkline values={data.pulse?.workHashrateBins ?? []} />
           </div>
 
           <div className="explorer-columns">
@@ -303,7 +321,7 @@ function DashboardView() {
                 <span className={stale ? "status-pill" : "live-dot"}>{stale ? ageLabel : t("dashboardView.liveDot")}</span>
               </div>
               <div className="explorer-list">
-                {data.blocks.slice(0, 12).map((block) => (
+                {(data.blocks ?? []).slice(0, 12).map((block) => (
                   <button key={block.block_hash} onClick={() => navigate(`/explore/block/${block.block_hash}`)}>
                     <span><b>{t("dashboardView.blueScore", { score: integer(block.blueScore) })}</b><small className="mono">{short(block.block_hash, 7)}</small></span>
                     <span><b>{t("dashboardView.txCount", { n: block.txCount })}</b><small>{ago(block.timestamp)}</small></span>
@@ -315,15 +333,15 @@ function DashboardView() {
             <aside>
               <section className="control-card">
                 <h2>{t("dashboardView.mandatoryPrivacy")}</h2>
-                <div className="detail-row"><span className="k">{t("dashboardView.shieldedNotes")}</span><span className="v">{integer(data.shielded.noteCount)}</span></div>
-                <div className="detail-row"><span className="k">{t("dashboardView.privateSpends")}</span><span className="v">{integer(data.shielded.nullifierCount)}</span></div>
-                <div className="detail-row"><span className="k">{t("dashboardView.currentAnchor")}</span><span className="v mono">{data.shielded.anchor ? short(data.shielded.anchor, 7) : t("dashboardView.building")}</span></div>
+                <div className="detail-row"><span className="k">{t("dashboardView.shieldedNotes")}</span><span className="v">{num(data.shielded?.noteCount, integer)}</span></div>
+                <div className="detail-row"><span className="k">{t("dashboardView.privateSpends")}</span><span className="v">{num(data.shielded?.nullifierCount, integer)}</span></div>
+                <div className="detail-row"><span className="k">{t("dashboardView.currentAnchor")}</span><span className="v mono">{data.shielded?.anchor ? short(data.shielded.anchor, 7) : t("dashboardView.building")}</span></div>
               </section>
               <section className="control-card">
                 <h2>{t("dashboardView.supply")}</h2>
-                <div className="detail-row"><span className="k">{t("dashboardView.inCirculation")}</span><span className="v">{t("dashboardView.amountZkas", { amount: zkasFromSompi(data.supply.circulatingSupply) })}</span></div>
-                <div className="detail-row"><span className="k">{t("dashboardView.blockEmission")}</span><span className="v">{t("dashboardView.amountZkas", { amount: data.shielded.emissionPerBlock })}</span></div>
-                <div className="detail-row"><span className="k">{t("dashboardView.nextReduction")}</span><span className="v">{data.halving.nextHalvingDate}</span></div>
+                <div className="detail-row"><span className="k">{t("dashboardView.inCirculation")}</span><span className="v">{data.supply ? t("dashboardView.amountZkas", { amount: zkasFromSompi(data.supply.circulatingSupply) }) : DASH}</span></div>
+                <div className="detail-row"><span className="k">{t("dashboardView.blockEmission")}</span><span className="v">{data.shielded ? t("dashboardView.amountZkas", { amount: data.shielded.emissionPerBlock }) : DASH}</span></div>
+                <div className="detail-row"><span className="k">{t("dashboardView.nextReduction")}</span><span className="v">{data.halving ? data.halving.nextHalvingDate : DASH}</span></div>
                 <p className="subtle explorer-note">{t("dashboardView.tailNote")}</p>
               </section>
             </aside>
