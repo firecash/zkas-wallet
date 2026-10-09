@@ -22,6 +22,8 @@
     "invalid": "Not valid.",
     "confirmations_one": "{{count}} confirmation",
     "confirmations_other": "{{count}} confirmations",
-    "verifyNote": "The proof is checked against the transaction on chain: the disclosed recipient and amount must reproduce the commitment the block recorded."
+    "verifyNote": "The proof is checked against the transaction on chain: the disclosed recipient and amount must reproduce the commitment the block recorded.",
+    "undetermined": "This proof could not be checked.",
+    "undeterminedWhy": "The wallet service did not give an answer, so nothing is known about this payment either way. Try again in a moment — this is not evidence that the proof is false."
   }
 }

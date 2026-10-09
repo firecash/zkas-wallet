@@ -151,11 +151,25 @@ export function VerifyPayment() {
           </div>
         </div>
       )}
+      {/* "Not valid" and "I could not check" are different answers, and this tool
+          gave the first for both. There were only two branches — `valid` and
+          `!valid` — so a daemon that returned `{}` (hiccup, wrong version, wallet
+          still loading) produced a red shield reading "Not valid." with an EMPTY
+          reason underneath, not even a sentence. This screen is what someone opens
+          in a dispute: it must never say a payment is forged when all it knows is
+          that it failed to ask. */}
       {verdict && !verdict.valid && (
-        <div className="msg err">
-          <ShieldX aria-hidden="true" size={17} strokeWidth={2.2} /> {t("paymentProof.invalid")}
-          <div className="muted small">{verdict.reason}</div>
-        </div>
+        verdict.reason ? (
+          <div className="msg err">
+            <ShieldX aria-hidden="true" size={17} strokeWidth={2.2} /> {t("paymentProof.invalid")}
+            <div className="muted small">{verdict.reason}</div>
+          </div>
+        ) : (
+          <div className="msg warn">
+            <ShieldX aria-hidden="true" size={17} strokeWidth={2.2} /> {t("paymentProof.undetermined")}
+            <div className="muted small">{t("paymentProof.undeterminedWhy")}</div>
+          </div>
+        )
       )}
       <p className="muted small">
         <BadgeCheck aria-hidden="true" size={14} strokeWidth={2.2} /> {t("paymentProof.verifyNote")}
