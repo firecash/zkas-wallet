@@ -3072,6 +3072,31 @@ body.reduced-effects .action-sheet,
 body.reduced-effects .wallet-topline,
 body.reduced-effects .tabbar,
 body.reduced-effects .bottomnav { backdrop-filter: none; -webkit-backdrop-filter: none; }
+/* The rest of the never-ending loops. The rules above named four; the stylesheet
+   has fourteen `infinite` animations, so ten kept running on exactly the devices
+   this class exists to spare — the send scene alone runs four at once while a
+   payment is in flight, each on a transformed, filtered layer.
+
+   One-shot animations are deliberately LEFT ALONE: sheet-up, appear, pop,
+   toast-in and the rest are the app's feel, they cost one frame burst, and
+   killing them buys nothing.
+
+   Spinners are left alone too, and that is the important exception — `.spin`,
+   `lock-spin` and the shimmer are the only sign the app is still working. A
+   frozen spinner during a 37-second wallet creation reads as a crash, which is
+   worse on a slow device than the animation it saves. */
+body.reduced-effects .scan-laser,
+body.reduced-effects .sendscene .ss-coin,
+body.reduced-effects .sendscene .ss-payload,
+body.reduced-effects .sendscene .ss-streak,
+body.reduced-effects .sendscene .ss-spark,
+body.reduced-effects .meshtag,
+body.reduced-effects .meshtag--dim,
+body.reduced-effects .meshtag--block,
+body.reduced-effects .txrow.fresh { animation: none; }
+/* Skeletons keep a still placeholder rather than a sweeping gradient. */
+body.reduced-effects .skel { animation: none; opacity: 0.6; }
+
 body.reduced-effects * { transition-duration: 120ms !important; }
 body.reduced-effects .appear { animation-duration: 0.12s; }
 
