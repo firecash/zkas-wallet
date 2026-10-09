@@ -28,6 +28,12 @@ export interface SeedBackup {
    * re-creates accounts 1..accounts, so they do not look lost. Absent/0 for a
    * legacy hex seed. */
   accounts?: number;
+  /** The account indices that actually existed (v4+). `accounts` alone is a
+   * HIGH-WATER MARK, so a device holding accounts 0 and 5 restored as 0,1,2,3,4,5
+   * — four accounts that never existed, each registered with the daemon, and the
+   * wallet holding the money labelled "Wallet 6". Older files have only the
+   * maximum, so the restore still falls back to 1..accounts for them. */
+  accountList?: number[];
   saltB64: string;
   ivB64: string;
   ciphertextB64: string;
@@ -59,6 +65,7 @@ export async function makeBackup(
   network: string,
   birthday: number,
   accounts = 0,
+  accountList: number[] = [],
 ): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -75,6 +82,7 @@ export async function makeBackup(
     network,
     birthday,
     accounts: accounts > 0 ? Math.floor(accounts) : 0,
+    ...(accountList.length ? { accountList: [...new Set(accountList.map((n) => Math.floor(n)))].filter((n) => n > 0).sort((a, b) => a - b) } : {}),
     saltB64: b64(salt),
     ivB64: b64(iv),
     ciphertextB64: b64(ct),
@@ -87,7 +95,7 @@ export async function makeBackup(
 export async function readBackup(
   json: string,
   passphrase: string,
-): Promise<{ seedHex: string; birthday: number; accounts: number; network: string }> {
+): Promise<{ seedHex: string; birthday: number; accounts: number; accountList: number[]; network: string }> {
   let doc: SeedBackup;
   try {
     doc = JSON.parse(json);
@@ -116,7 +124,19 @@ export async function readBackup(
   const isPhrase = words.length >= 12 && words.length <= 24 && words.every((w) => /^[a-z]+$/i.test(w));
   if (!isHex && !isPhrase) throw new Error("Backup decrypted but does not contain a valid seed.");
   const accounts = Number(doc.accounts ?? 0);
-  return { seedHex, birthday: doc.birthday ?? 0, accounts: Number.isFinite(accounts) && accounts > 0 ? Math.floor(accounts) : 0, network: doc.network ?? "mainnet" };
+  // The explicit list when the file has one, otherwise 1..accounts from the
+  // high-water mark, which is all an older file can tell us.
+  const max = Number.isFinite(accounts) && accounts > 0 ? Math.floor(accounts) : 0;
+  const listed = Array.isArray(doc.accountList)
+    ? [...new Set(doc.accountList.map(Number).filter((n) => Number.isFinite(n) && n > 0).map(Math.floor))].sort((a, b) => a - b)
+    : null;
+  return {
+    seedHex,
+    birthday: doc.birthday ?? 0,
+    accounts: max,
+    accountList: listed && listed.length ? listed : Array.from({ length: max }, (_, i) => i + 1),
+    network: doc.network ?? "mainnet",
+  };
 }
 
 // --- Generic string encryption, shared with the app lock ------------------

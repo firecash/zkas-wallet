@@ -690,9 +690,35 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
     const token = localStorage.getItem("wallet_token") || "default";
     const address = backupPending(token);
     if (!address) return null;
-    const seed = getDeviceSeed();
+    // The PHRASE, not the key derived from it. `create()` stores
+    // `accountSeedHex(mnemonic, 0)` under the token and keeps the mnemonic
+    // separately, so reading `getDeviceSeed()` here handed SeedBackup 64 hex
+    // characters: it rendered the legacy single screen, skipped the
+    // write-it-down quiz entirely, and the user copied down an account key.
+    // That key restores this one wallet and nothing else — every account added
+    // later is unrecoverable from it, and the quiz that catches a mis-copied
+    // word never ran. Reproduced by creating a wallet and tapping Explore (the
+    // nav bar sits 40px under the card) before finishing the backup.
+    const account = accountOf(token);
+    const master = masterMnemonic();
+    const seed = account !== null && master ? master : getDeviceSeed();
     return seed ? { seed, address } : null;
   });
+  // ...and confirm that choice against the address, asynchronously, the way
+  // `walletBackupSecret` does. An account label can be stale; only deriving the
+  // address proves the phrase backs up THIS wallet.
+  useEffect(() => {
+    if (!freshSeed) return;
+    let alive = true;
+    void walletBackupSecret(freshSeed.address)
+      .then((correct) => {
+        if (alive && correct && correct !== freshSeed.seed) {
+          setFreshSeed({ seed: correct, address: freshSeed.address });
+        }
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [freshSeed?.address]);
   // The daemon lost this wallet's registration AND this device holds no key to
   // auto-repair with: show a recovery screen, never a bare "create a new wallet"
   // over someone's existing wallet.
@@ -3469,10 +3495,22 @@ async function persistDeviceSeed(seed: string): Promise<boolean> {
 /// active wallet is put back to the one that was restored. Before this a phrase
 /// restore re-established only account 0 and every other account — and its
 /// balance — simply did not appear, which reads as "my money is gone".
-async function recreatePhraseAccounts(phrase: string, highest: number, birthday: number): Promise<void> {
-  if (!(highest > 0) || !isPhraseSecret(phrase)) return;
+async function recreatePhraseAccounts(phrase: string, wanted: number[], birthday: number): Promise<void> {
+  if (!wanted.length || !isPhraseSecret(phrase)) return;
   const home = activeToken();
-  for (let account = 1; account <= highest; account++) {
+  // Accounts this device ALREADY has. Without this check a restore onto a
+  // device that still holds the same phrase minted a second token for every
+  // account it already had: six registry rows where there were three, three
+  // pairs sharing an address, and the duplicates with no address in the
+  // switcher. Reproduced by "Add separate wallet" -> "Restore from a backup
+  // file" with the phrase already on the device.
+  const present = new Set(
+    listAllWallets()
+      .map((w) => accountOf(w.token))
+      .filter((n): n is number => n !== null),
+  );
+  for (const account of wanted) {
+    if (account <= 0 || present.has(account)) continue;
     try {
       const secret = await accountSeedHex(phrase, account);
       const fvk = await fvkHex(secret);
@@ -4164,7 +4202,7 @@ function Onboard({
     setError("");
     try {
       if (!restoreJson.trim()) throw new Error(t("onboard.errChooseBackup"));
-      const { seedHex, birthday, accounts } = await readBackup(restoreJson, restorePass);
+      const { seedHex, birthday, accountList } = await readBackup(restoreJson, restorePass);
       // Derive before storing, as in doImport: a backup that decrypts to a
       // corrupt seed must not leave that seed on the device.
       const fvk = await fvkHex(seedHex);
@@ -4188,7 +4226,7 @@ function Onboard({
         // siblings back and the backup would silently be worth less than it is.
         await adoptExistingPhrase(tk, seedHex).catch(() => undefined);
       }
-      await recreatePhraseAccounts(seedHex, accounts, birthday);
+      await recreatePhraseAccounts(seedHex, accountList, birthday);
       onImported();
     } catch (e) {
       setError((e as Error).message);
@@ -5764,19 +5802,29 @@ function RevealSeedCard({ expectedAddress }: { expectedAddress?: string }) {
   };
 
   const copy = async () => {
+    // "Copied" must mean copied — this is a recovery phrase. Reporting success
+    // for a clipboard write that never happened is how somebody closes the
+    // screen believing their phrase is safe in a password manager.
+    let ok = false;
     try {
-      await copyText(seed);
+      ok = await copyText(seed);
     } catch {
-      /* clipboard may be blocked; seed is shown to copy by hand */
+      ok = false; // clipboard blocked; the words are on screen to copy by hand
     }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopied(ok);
+    if (ok) setTimeout(() => setCopied(false), 2000);
   };
 
   // A wallet derived from the device phrase shows the PHRASE (it restores every
   // account); a legacy wallet has only its raw seed. Label what is actually shown,
   // so nobody writes down 64 hex characters believing it is their phrase.
-  const showsPhrase = accountOf(activeToken() ?? "") !== null && !!masterMnemonic();
+  //
+  // Read off the RESOLVED value, not off the account label. `walletBackupSecret`
+  // verifies that the phrase derives this wallet's address and falls back to the
+  // raw seed when it does not — but this flag was computed the unverified way,
+  // so a stale account label put the heading "Your recovery phrase" above 64 hex
+  // characters: exactly the confusion the comment above exists to prevent.
+  const showsPhrase = seed ? !/^[0-9a-fA-F]{64}$/.test(seed.trim()) : accountOf(activeToken() ?? "") !== null && !!masterMnemonic();
   return (
     <div className="card">
       <h2>{showsPhrase ? t("revealSeedCard.titlePhrase") : t("revealSeedCard.titleSeed")}</h2>
@@ -8324,10 +8372,32 @@ function DeviceSeedBackup() {
   // "copy again" without re-encrypting.
   const [lastDoc, setLastDoc] = useState("");
   // The file must hold a COMPLETE backup — the phrase when there is one, so it
-  // restores every account, not just this one. See walletBackupSecret.
+  // restores every account, not just this one.
+  //
+  // Resolved by `walletBackupSecret`, not recomputed here. The local version
+  // took the master phrase whenever an account label existed, WITHOUT checking
+  // that the phrase derives this wallet's address — and the label can be stale
+  // while the phrase is a different one adopted later. The file was then
+  // encrypted with a phrase that cannot restore the wallet it is labelled for,
+  // carrying that wallet's birthday and account count. The reveal screen on the
+  // same page does verify, so the two disagreed about the same wallet.
   const derivedAccount = accountOf(activeToken() ?? "");
-  const seed = derivedAccount !== null && masterMnemonic() ? masterMnemonic() : getDeviceSeed();
-  const isPhraseBackup = derivedAccount !== null && !!masterMnemonic();
+  const [seed, setSeed] = useState("");
+  const [isPhraseBackup, setIsPhraseBackup] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const address = loadStatusCache()?.address;
+    void walletBackupSecret(address ?? undefined)
+      .then((secret) => {
+        if (!alive) return;
+        setSeed(secret);
+        // A phrase backup is one that actually restores every account: the
+        // secret has to BE the master phrase, not merely coexist with it.
+        setIsPhraseBackup(!!secret && secret === masterMnemonic() && derivedAccount !== null);
+      })
+      .catch(() => { if (alive) { setSeed(""); setIsPhraseBackup(false); } });
+    return () => { alive = false; };
+  }, [derivedAccount]);
   // A phrase backup restores EVERY account, so it must carry (a) the EARLIEST
   // birthday among them — the active account's own birthday could be later than
   // account 0's first funds, and a restore scanning from there would silently
@@ -8345,6 +8415,12 @@ function DeviceSeedBackup() {
       }, 0)
     : knownBirthday(loadStatusCache()?.address);
   const backupAccounts = isPhraseBackup ? phraseTokens.reduce((m, w) => Math.max(m, accountOf(w.token) ?? 0), 0) : 0;
+  // The indices that actually exist, not just the largest. A device holding
+  // accounts 0 and 5 restored as 0,1,2,3,4,5 — four accounts that never existed,
+  // each registered with the daemon, with the funded wallet labelled "Wallet 6".
+  const backupAccountList = isPhraseBackup
+    ? phraseTokens.map((w) => accountOf(w.token) ?? 0).filter((n) => n > 0)
+    : [];
   const backupNetwork = (() => {
     const a = loadStatusCache()?.address;
     return a ? networkOfAddress(a) : "mainnet";
@@ -8367,7 +8443,7 @@ function DeviceSeedBackup() {
       // Carry the wallet's real scan birthday (remembered at watch/restore time):
       // a backup saying 0 makes every restore rescan from GENESIS — minutes to an
       // hour — even for a wallet born yesterday.
-      const doc = await makeBackup(seed, pass, backupNetwork, backupBirthday, backupAccounts);
+      const doc = await makeBackup(seed, pass, backupNetwork, backupBirthday, backupAccounts, backupAccountList);
       setLastDoc(doc);
       if (isDesktop()) {
         setDone(await writeBackupFile(doc));
@@ -8499,7 +8575,7 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
     setBusy(true);
     try {
       const json = fileJson || (await readBackupFile(path.trim()));
-      const { seedHex, birthday, accounts } = await readBackup(json, pass);
+      const { seedHex, birthday, accountList } = await readBackup(json, pass);
       // This restores INTO the active wallet's slot. That slot already holds a
       // key (this screen is only offered when it does), so a backup of a
       // DIFFERENT wallet would silently overwrite the key of the one on screen —
@@ -8532,7 +8608,7 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
           await adoptExistingPhrase(tk, seedHex).catch(() => undefined);
         }
       }
-      await recreatePhraseAccounts(seedHex, accounts, birthday);
+      await recreatePhraseAccounts(seedHex, accountList, birthday);
       setOk(true);
     } catch (e) {
       setErr((e as Error).message);
