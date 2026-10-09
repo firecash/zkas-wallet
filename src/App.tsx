@@ -4,7 +4,7 @@ import { LanguagePicker, LanguageInline, LanguageNotice, LanguageButton } from "
 import { ProvePayment } from "./PaymentProof";
 import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo, memo, Fragment } from "react";
 import { createPortal } from "react-dom";
-import QRCode from "qrcode";
+import { dotQrDataUrl } from "./lib/dotqr";
 import { api, chainTx, findReachableDaemon, getBase, getToken, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, isOnionAddress, DEFAULT_WALLETD_PORT, isNative, localEngine, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { parsePairingUri } from "./pairing";
 import { attachTapHaptics, successFeedback } from "./haptics";
@@ -1057,7 +1057,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         void (async () => {
           try {
             if (localStorage.getItem("qr_" + addr)) return;
-            const url = await QRCode.toDataURL(addr, { margin: 1, width: 440 });
+            const url = dotQrDataUrl(addr, { size: 440, margin: 2 });
             localStorage.setItem("qr_" + addr, url);
           } catch {
             /* best-effort: Receive still encodes on demand */
@@ -4888,7 +4888,7 @@ function WatchOnAnotherDevice({ status }: { status: Status }) {
         fvk = watchKey();
       }
       setKey(fvk);
-      setQr(await QRCode.toDataURL(fvk, { margin: 1, width: 440 }));
+      setQr(dotQrDataUrl(fvk, { size: 440, margin: 2 }));
     } catch (e) {
       setError((e as Error)?.message === SEED_REQUIRED
         ? t("watchOnAnotherDevice.noKey")
@@ -5470,7 +5470,7 @@ function RequestAmount({ address }: { address: string }) {
   }, [address, amount, memo]);
   useEffect(() => {
     if (!amount.trim()) return;
-    QRCode.toDataURL(uri, { margin: 1, width: 440 }).then(setQr).catch(() => {});
+    try { setQr(dotQrDataUrl(uri, { size: 440, margin: 2 })); } catch { /* an unencodable URI leaves the previous code up */ }
   }, [uri, amount]);
   const copy = async () => {
     await copyText(uri);
@@ -5531,16 +5531,20 @@ function Receive({ status }: { status: Status }) {
       setQr(cached);
       return;
     }
-    QRCode.toDataURL(addr, { margin: 1, width: 440 })
-      .then((url) => {
-        setQr(url);
-        try {
-          localStorage.setItem("qr_" + addr, url);
-        } catch {
-          /* best-effort cache */
-        }
-      })
-      .catch(() => {});
+    // Synchronous now: drawing the SVG is string work, where toDataURL rasterised
+    // a canvas. The cache stays because it is still free, and the pre-warm on the
+    // app shell keeps the very first open instant.
+    try {
+      const url = dotQrDataUrl(addr, { size: 440, margin: 2 });
+      setQr(url);
+      try {
+        localStorage.setItem("qr_" + addr, url);
+      } catch {
+        /* best-effort cache */
+      }
+    } catch {
+      /* an address we cannot encode leaves the placeholder up */
+    }
   }, [addr]);
   const copy = async () => {
     await copyText(addr);
