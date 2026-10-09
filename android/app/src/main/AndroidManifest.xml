@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:tools="http://schemas.android.com/tools" xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
         android:allowBackup="false"
@@ -57,6 +57,19 @@
             android:name=".EngineForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- SyncWorker promotes itself with setForegroundAsync(..., DATA_SYNC) so the
+             process survives the screen going off. WorkManager runs that through its
+             OWN service, and on Android 14+ a foreground service must declare its type
+             in the manifest or the system throws when it starts. Merged onto
+             WorkManager's entry rather than redeclared, so its other attributes stay
+             whatever the library ships. Lint catches the omission as a fatal error,
+             which is how this was found — `compileReleaseJavaWithJavac` passes without
+             it, because the manifest is not Java. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <receiver android:name=".WalletWidget" android:exported="true">
             <intent-filter>
