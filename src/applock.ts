@@ -364,6 +364,19 @@ export function forgetWalletLock(token: string): void {
   if (!rec) return;
   delete rec.wallets[token];
   if (unlocked) delete unlocked[token];
+  // ...and every seed shelved FROM this wallet. `shelveMismatchedSeed` parks a
+  // seed that does not derive its wallet's address under `stray_<token>_<ts>`,
+  // and when a lock is on it SEALS it in this same record. The plaintext variant
+  // is swept by walletstate's `sweepScattered`; this one had no sweeper at all,
+  // so removing a wallet left its spending key sealed on the device forever —
+  // recoverable by anyone who later learns the lock passphrase.
+  const strayPrefix = `stray_${token}_`;
+  for (const key of Object.keys(rec.wallets)) {
+    if (key.startsWith(strayPrefix)) {
+      delete rec.wallets[key];
+      if (unlocked) delete unlocked[key];
+    }
+  }
   dropIfEmpty(rec);
 }
 

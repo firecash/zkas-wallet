@@ -48,3 +48,26 @@ describe("a wallet cannot quietly end up with no backup and no lock", () => {
     expect(isLockEnabled()).toBe(true);
   });
 });
+
+describe("removing a wallet removes the seeds shelved from it", () => {
+  // `shelveMismatchedSeed` parks a seed that does not derive its wallet's
+  // address under `stray_<token>_<ts>`, and SEALS it into the same lock record
+  // when a lock is on. `forgetWalletLock` deleted only the exact token, so the
+  // shelved spending key stayed on the device after the wallet was removed.
+  it("drops stray_<token>_* alongside the token itself", async () => {
+    localStorage.clear();
+    const { enableLock, sealNewSeed, forgetWalletLock } = await import("../src/applock");
+    await enableLock("correct horse battery staple");
+    await sealNewSeed("alpha", "11".repeat(32));
+    await sealNewSeed("stray_alpha_1700000000000", "22".repeat(32));
+    await sealNewSeed("beta", "33".repeat(32));
+
+    forgetWalletLock("alpha");
+
+    const rec = JSON.parse(localStorage.getItem("app_lock_v2") || "{}");
+    expect(Object.keys(rec.wallets)).not.toContain("alpha");
+    expect(Object.keys(rec.wallets)).not.toContain("stray_alpha_1700000000000");
+    // the other wallet is untouched
+    expect(Object.keys(rec.wallets)).toContain("beta");
+  });
+});
