@@ -5,6 +5,9 @@ import android.content.SharedPreferences;
 import androidx.work.Constraints;
 import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.NetworkType;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.OutOfQuotaPolicy;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 import com.getcapacitor.JSObject;
@@ -25,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 public class BackgroundSyncPlugin extends Plugin {
     static final String PREFS = "zkas_bg_sync";
     private static final String WORK_NAME = "zkas-bg-sync";
+    private static final String WORK_NOW = "zkas-bg-sync-now";
 
     private SharedPreferences prefs() {
         return getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -68,9 +72,34 @@ public class BackgroundSyncPlugin extends Plugin {
         call.resolve();
     }
 
+    /**
+     * Sync once, now, as expedited work.
+     *
+     * The periodic job cannot run more often than every 15 minutes — that is
+     * Android's floor, not a choice — and Doze pushes it further still, into
+     * whatever maintenance window the system decides on. So the moment the user
+     * leaves the app is the moment to catch up: it is the last point we know the
+     * wallet was wanted, and expedited work is granted a slot promptly even in
+     * Doze rather than waiting for that window.
+     *
+     * Unique with KEEP, so leaving and re-entering the app a few times cannot
+     * queue a pile of syncs.
+     */
+    @PluginMethod
+    public void syncNow(PluginCall call) {
+        if (!prefs().getBoolean("enabled", false)) { call.resolve(); return; }
+        OneTimeWorkRequest req = new OneTimeWorkRequest.Builder(SyncWorker.class)
+            .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .build();
+        WorkManager.getInstance(getContext()).enqueueUniqueWork(WORK_NOW, ExistingWorkPolicy.KEEP, req);
+        call.resolve();
+    }
+
     @PluginMethod
     public void disable(PluginCall call) {
         WorkManager.getInstance(getContext()).cancelUniqueWork(WORK_NAME);
+        WorkManager.getInstance(getContext()).cancelUniqueWork(WORK_NOW);
         prefs().edit().putBoolean("enabled", false).apply();
         call.resolve();
     }

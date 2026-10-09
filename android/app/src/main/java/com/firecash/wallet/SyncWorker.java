@@ -11,6 +11,9 @@ import android.os.Build;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import android.app.Notification;
+import android.content.pm.ServiceInfo;
+import androidx.work.ForegroundInfo;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 import java.io.BufferedReader;
@@ -62,6 +65,23 @@ public class SyncWorker extends Worker {
         String base;
         boolean startedHere = false;
         if (embedded) {
+            // THE REASON BACKGROUND SYNC DIED WITH THE SCREEN. The engine runs as
+            // plain threads inside this process. Android freezes a process with no
+            // foreground component seconds after the screen goes dark, so this
+            // worker would start the engine, get frozen mid-scan, and come back to
+            // nothing — "syncing only works while I am looking at it".
+            //
+            // EngineForegroundService exists for exactly this and was started only
+            // by EmbeddedEnginePlugin, i.e. only while the app was OPEN — never on
+            // the one path that runs with the screen off. Promoting the worker
+            // itself is better than starting that service separately: WorkManager
+            // owns the lifetime, so the notification cannot outlive the work.
+            try {
+                setForegroundAsync(syncForegroundInfo()).get();
+            } catch (Throwable t) {
+                // Quota exhausted, or the OS refused. The sync still runs; it just
+                // cannot promise to survive the screen going off this time.
+            }
             int port = EngineControl.port();
             if (port == 0) {
                 String node = p.getString("node", "seed.zkas.info:16110");
@@ -104,8 +124,38 @@ public class SyncWorker extends Worker {
             // foreground. `startedHere` alone is not enough: the app can open mid-run and
             // reuse this very engine (ensureEmbedded reuses a running instance), and stopping
             // it then would leave the foreground WebView talking to a dead loopback port.
-            if (startedHere && !appInForeground()) EngineControl.stopEngine();
+            if (startedHere && !appInForeground()) EngineControl.stopEngine(getApplicationContext());
         }
+    }
+
+    /**
+     * The ongoing notification Android requires while this worker holds the process.
+     *
+     * Same channel and id as EngineForegroundService, so a sync that starts in the
+     * background and a sync the open app starts cannot stack two notifications.
+     */
+    private ForegroundInfo syncForegroundInfo() {
+        Context ctx = getApplicationContext();
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel ch = new NotificationChannel(
+                EngineForegroundService.CHANNEL, "Wallet sync", NotificationManager.IMPORTANCE_LOW);
+            ch.setDescription("Shown while the wallet is syncing on this phone");
+            ch.setShowBadge(false);
+            ctx.getSystemService(NotificationManager.class).createNotificationChannel(ch);
+        }
+        PendingIntent tap = PendingIntent.getActivity(ctx, 0, new Intent(ctx, MainActivity.class),
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Notification n = new NotificationCompat.Builder(ctx, EngineForegroundService.CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_zkas)
+            .setContentTitle("ZKas")
+            .setContentText(EngineForegroundService.DEFAULT_TEXT)
+            .setContentIntent(tap)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build();
+        return Build.VERSION.SDK_INT >= 29
+            ? new ForegroundInfo(EngineForegroundService.NOTIFICATION_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            : new ForegroundInfo(EngineForegroundService.NOTIFICATION_ID, n);
     }
 
     /** GET base + /api/status → parsed JSON, or null on any transport/HTTP failure. */

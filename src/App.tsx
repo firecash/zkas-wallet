@@ -85,7 +85,7 @@ import {
 } from "./contacts";
 import { disableLock, enableLock, forgetWalletLock, forgetMnemonicLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed } from "./applock";
 import { disableBiometricUnlock, enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured } from "./biometric";
-import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncReconfigure, bgShouldPromptForBackground, bgRequestBackground, bgSuppressPrompt, markBackgroundPromptPending, takeBackgroundPromptPending } from "./bgsync";
+import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncNow, bgSyncReconfigure, bgShouldPromptForBackground, bgRequestBackground, bgSuppressPrompt, markBackgroundPromptPending, takeBackgroundPromptPending } from "./bgsync";
 import { startPrewarm, stopPrewarm } from "./prewarm";
 import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
@@ -1488,6 +1488,11 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       } catch {
         /* nothing to do — the periodic checkpoint still applies */
       }
+      // Hand the catch-up to the background worker as we go. This is the last
+      // moment we know the wallet was wanted, and the periodic job cannot run
+      // more often than every 15 minutes — Android's floor — with Doze pushing
+      // it further. An expedited one-shot is granted a slot promptly instead.
+      void bgSyncNow();
     };
     const onVis = () => {
       if (typeof document === "undefined") return;

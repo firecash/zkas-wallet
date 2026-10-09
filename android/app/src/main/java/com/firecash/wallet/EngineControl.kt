@@ -1,5 +1,7 @@
 package com.firecash.wallet
 
+import android.content.Context
+
 /**
  * Java-callable control of the embedded zkas-walletd engine (the UniFFI functions
  * return Kotlin `UShort`, which is awkward to call from Java — this exposes plain
@@ -43,11 +45,22 @@ object EngineControl {
         0L
     }
 
+    /**
+     * Stop the engine, and the notification that says it is running.
+     *
+     * The `ctx` overload exists because stopping only the engine left
+     * EngineForegroundService up: a permanent "Syncing your wallet on this
+     * phone…" over a dead engine, which is both a lie and a process Android is
+     * being asked to keep alive for nothing. EmbeddedEnginePlugin.stop() took
+     * both down; SyncWorker's path called this one and took only the engine.
+     */
     @JvmStatic
-    fun stopEngine() {
+    @JvmOverloads
+    fun stopEngine(ctx: Context? = null) {
         try {
             uniffi.zkas_walletd_mobile.stop()
         } catch (e: Throwable) {
         }
+        if (ctx != null) EngineForegroundService.stop(ctx)
     }
 }

@@ -23,6 +23,7 @@ interface BackgroundSyncPlugin {
   enable(): Promise<void>;
   disable(): Promise<void>;
   isEnabled(): Promise<{ enabled: boolean }>;
+  syncNow(): Promise<void>;
   backgroundStatus(): Promise<{ exempt: boolean; suppressed: boolean; shouldAsk: boolean; enabled: boolean }>;
   requestBackground(): Promise<{ shown: boolean }>;
   suppressBackgroundPrompt(opts: { on: boolean }): Promise<void>;
@@ -155,5 +156,26 @@ export function takeBackgroundPromptPending(): boolean {
     return had;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Catch up now, in the background, as the app is being left.
+ *
+ * The periodic job runs at most every 15 minutes — Android's floor, not a
+ * setting — and Doze defers it further into whatever maintenance window the
+ * system picks. Leaving the app is the last moment we know the wallet was
+ * wanted, so it is the right moment to spend one expedited slot: the OS grants
+ * those promptly even in Doze.
+ *
+ * Safe to call freely. It is a no-op when background sync is off, and the work
+ * is unique-with-KEEP, so leaving and reopening repeatedly cannot stack syncs.
+ */
+export async function bgSyncNow(): Promise<void> {
+  if (!bgSyncAvailable()) return;
+  try {
+    await Native.syncNow();
+  } catch {
+    /* the periodic job remains the floor; a missed nudge costs only latency */
   }
 }
