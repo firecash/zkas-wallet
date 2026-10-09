@@ -96,9 +96,18 @@ fi
 # ---- 2. sync source to the build host ----
 log "Syncing source to $BUILD_HOST:$BUILD_DIR"
 BH "mkdir -p '$BUILD_DIR'"
+# jniLibs is EXCLUDED from --delete on purpose. It holds the compiled on-device
+# engine (~50MB of .so across three ABIs), it is gitignored, and it therefore does
+# not exist in this checkout — so without this exclude, --delete wiped the engine
+# off the build host on every release. build-android.sh then treats a failed
+# engine build as "best-effort" and warns instead of stopping, so the run
+# completed and shipped a HOSTED-ONLY ~8MB APK that looks like a normal release.
+# Rebuilding the engine from scratch needs the Rust toolchain and a ~17GB target
+# cache, which is why the loss was expensive as well as silent.
 sshpass -e rsync -az --delete \
   --exclude .git --exclude node_modules --exclude dist --exclude release-artifacts \
   --exclude 'android/*/build' --exclude 'android/build' --exclude 'android/.gradle' \
+  --exclude 'android/app/src/main/jniLibs' \
   -e "ssh -o StrictHostKeyChecking=accept-new" \
   "$ROOT/" "$BUILD_USER@$BUILD_HOST:$BUILD_DIR/"
 
@@ -113,6 +122,22 @@ BH "set -e; source '$BUILD_ENV'; cd '$BUILD_DIR'; \
 APK_REMOTE="$BUILD_DIR/android/app/build/outputs/apk/release/app-release.apk"
 AAB_REMOTE="$BUILD_DIR/android/app/build/outputs/bundle/release/app-release.aab"
 BH "test -f '$APK_REMOTE' && test -f '$AAB_REMOTE'" || die "Android artifacts missing after build"
+
+# An APK that exists is not an APK worth shipping. The engine build is
+# best-effort by design, so every way it can fail ends in a working-but-crippled
+# hosted-only package, and the ONLY reliable tell is the size: ~70MB with the
+# native engine, ~8MB without it. Refuse rather than publish one by accident.
+APK_BYTES=$(BH "stat -c %s '$APK_REMOTE'")
+APK_MB=$(( APK_BYTES / 1000000 ))
+if [ "$APK_MB" -lt 30 ]; then
+  die "APK is ${APK_MB}MB — the on-device engine is MISSING (expected ~70MB).
+     The build logged 'engine build skipped' and carried on. Check, on $BUILD_HOST:
+       - $BUILD_DIR/android/app/src/main/jniLibs/*/libzkas_walletd_mobile.so exist
+       - zkas-signer/walletd-mobile/Cargo.toml path-deps point at ../../rk-main/
+       - cargo is on PATH and ENGINE_CRATE is set (see /root/zkas/android-env.sh)
+     Refusing to publish a hosted-only APK as a release."
+fi
+log "APK is ${APK_MB}MB — on-device engine present"
 
 # ---- 4. fetch artifacts ----
 OUT="$ROOT/release-artifacts/$TAG"; mkdir -p "$OUT"
