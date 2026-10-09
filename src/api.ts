@@ -557,6 +557,27 @@ export interface PrepareResp {
   }[];
 }
 
+/// Every request currently in flight, so `abortInFlight` can cut them loose.
+const inFlight = new Set<AbortController>();
+
+/**
+ * Abandon everything in flight.
+ *
+ * Called when the browser reports the network has come back: whatever was
+ * outstanding was issued over a connection that no longer exists and will only
+ * sit there until it times out, blocking the poll behind it.
+ */
+export function abortInFlight(): void {
+  for (const c of inFlight) {
+    try {
+      c.abort();
+    } catch {
+      /* already settled */
+    }
+  }
+  inFlight.clear();
+}
+
 async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 10_000): Promise<T> {
   let status: number;
   let statusText = "";
@@ -612,6 +633,14 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
     // poll — balance, sync, and sends all stuck behind it. Slow calls (proving,
     // cold wallet loads) pass a larger `timeoutMs`; chainTx has its own 4s bound.
     const ctl = new AbortController();
+    // Registered so a network change can cut it loose. A socket that survives a
+    // wifi-to-cellular switch is not refused, it HANGS — the request sits until
+    // its own timeout, and because the status poll serialises on an in-flight
+    // flag, nothing else runs meanwhile. Measured against a daemon that accepts
+    // and never answers: 55 seconds before the wallet said anything was wrong,
+    // and another 10 after the network came back, because the dead request
+    // still held the lock.
+    inFlight.add(ctl);
     const timer = setTimeout(() => ctl.abort(), timeoutMs);
     try {
       assertBaseAllowed(getBase());
@@ -625,6 +654,7 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
       if (ctl.signal.aborted) throw new Error(i18n.t("api.notResponding"));
       throw new Error(i18n.t("api.cannotReachDaemon", { detail: (e as Error).message }));
     } finally {
+      inFlight.delete(ctl);
       clearTimeout(timer);
     }
     status = res.status;
@@ -676,7 +706,14 @@ export async function touchWallet(token: string, timeoutMs = 20_000): Promise<bo
 }
 
 export const api = {
-  status: () => req<Status>("GET", "/api/status"),
+  // 4s, not the 10s default. This is the 1 Hz poll and the daemon answers it
+  // from memory in milliseconds, so a reply that takes longer than four seconds
+  // is a dead connection, not a slow one. At 10s a network change — which leaves
+  // sockets HANGING rather than refused — took five serialised timeouts, 55
+  // seconds measured, before the wallet admitted anything was wrong, and it
+  // looked frozen the whole time. One slow poll still changes nothing: the
+  // screen only flips after five consecutive failures.
+  status: () => req<Status>("GET", "/api/status", undefined, 4_000),
   balance: () => req<Balance>("GET", "/api/wallet/balance"),
   // Ask the daemon to build this wallet's spend index NOW, in the background, rather
   // than at the end of a caught-up sync pass — or, worst, on the first payment. The

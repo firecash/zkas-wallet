@@ -5,7 +5,7 @@ import { ProvePayment } from "./PaymentProof";
 import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo, memo, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { dotQrDataUrl } from "./lib/dotqr";
-import { api, chainTx, findReachableDaemon, getBase, getToken, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, isOnionAddress, DEFAULT_WALLETD_PORT, isNative, localEngine, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
+import { abortInFlight, api, chainTx, findReachableDaemon, getBase, getToken, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, isOnionAddress, DEFAULT_WALLETD_PORT, isNative, localEngine, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { parsePairingUri } from "./pairing";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
@@ -1403,7 +1403,29 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
     // being broadcast, so a slow poll here would be the only thing left making a payment
     // feel sluggish. The call is a cheap read of in-memory state.
     const t = setInterval(refresh, 1000);
-    return () => clearInterval(t);
+    // Come back the moment the network does. Changing network — wifi to
+    // cellular, a tunnel going up, a captive portal clearing — kills in-flight
+    // requests, and five failed polls put the "can't reach the wallet service"
+    // screen up. Nothing was listening for the recovery, so the wallet sat
+    // there until a hung request hit its 10s timeout and the next tick happened
+    // to succeed. Reported as being stuck on that screen after a network
+    // change. The browser tells us; `failedPolls` is reset so one more failure
+    // cannot flip it straight back.
+    const onOnline = () => {
+      // Abandon whatever is outstanding first. Those requests went out over a
+      // connection that no longer exists; they will not answer, and the poll
+      // serialises behind them, so without this the retry below returns
+      // immediately and the wallet waits for a dead socket to time out.
+      abortInFlight();
+      failedPolls.current = 0;
+      refreshInFlight.current = false;
+      void refresh();
+    };
+    window.addEventListener("online", onOnline);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("online", onOnline);
+    };
   }, [refresh]);
 
   // Resume: when the app returns to the foreground (screen on, task switch), the
