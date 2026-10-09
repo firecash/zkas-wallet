@@ -1887,7 +1887,7 @@
     "readOnly": "Brak klucza – możesz czytać, ale nie pisać.",
     "new": "Nowe",
     "newMessages": "Nowe wiadomości",
-    "failedTap": "Nie wysłano — dotknij, by ponowić",
+    "failedTap": "Nie wysłano — dotknij po opcje",
     "tipAddrLabel": "Twój adres ZKAS (opcjonalnie)",
     "tipAddrWhy": "Opublikowanie adresu umieszcza przycisk Wyślij ZKAS na Twoim profilu. Łączy tę nazwę czatu z docelową płatnością, więc pozostaw puste, by pozostać niepowiązanym.",
     "rooms": {
@@ -1983,7 +1983,11 @@
     "today": "Dziś",
     "yesterday": "Wczoraj",
     "jumpLatest": "Przejdź do najnowszej",
-    "profileOf": "Profil {{name}}"
+    "profileOf": "Profil {{name}}",
+    "disconnected": "Brak połączenia z przekaźnikiem",
+    "disconnectedHint": "Wysyłanie i odbieranie wiadomości będzie możliwe po ponownym połączeniu.",
+    "tryAgain": "Spróbuj ponownie",
+    "emptyHint": "Napisz coś pierwszy."
   },
   "backgroundPermission": {
     "title": "Zsynchronizować portfel w tle?",
