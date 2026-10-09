@@ -33,7 +33,10 @@ describe("desktop embedded wallet transport", () => {
       path: "/api/status",
       body: null,
       walletToken: "0123456789abcdef0123456789abcdef",
-      timeoutMs: 10_000,
+      // The 1 Hz status poll is bounded at 4s, not the 10s default: the daemon
+      // answers it from memory, so a longer wait only means a dead connection.
+      // See api.ts — at 10s a network change took 55 seconds to surface.
+      timeoutMs: 4_000,
       // No remote service chosen, so Rust talks to the embedded engine. A base
       // here would mean the call was being proxied somewhere else.
       base: null,
