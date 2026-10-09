@@ -129,26 +129,6 @@
     "exportFailed": "Could not export the CSV on this device.",
     "exportCsv": "Export CSV"
   },
-  "daemonSetting": {
-    "timedOut": "timed out after 5s",
-    "unreachable": "Couldn't reach a wallet service at {{url}} ({{detail}}). Make sure zkas-walletd is running there and the port is open. Nothing was changed — still using {{current}}.",
-    "title": "Connect to your own node",
-    "modeOwn": "your own ✓",
-    "modeHosted": "hosted",
-    "intro": "Your seed always signs on this device. But the hosted service still sees your <b>viewing key</b> — it can watch your balance, your history and where you send. To keep even that private, run <code>zkas-walletd</code> on your own node and connect this wallet straight to it.",
-    "enterIp": "Just enter your node's <b>IP address</b> — we add the rest.",
-    "nativeTransports": "The installed app supports HTTPS and plain HTTP LAN connections.",
-    "webTransports": "The web wallet requires HTTPS; use the installed app for plain HTTP on a LAN.",
-    "currentlyUsing": "Currently using <code>{{current}}</code>.",
-    "labelNative": "Walletd IP address or hostname",
-    "labelWeb": "HTTPS walletd URL",
-    "connect": "Connect",
-    "accessToken": "Access token",
-    "ifRequired": "(if required)",
-    "accessTokenPlaceholder": "Access token",
-    "portNote": "Uses port {{port}} by default — add <code>:port</code> only if you changed it.",
-    "resetHosted": "Reset to hosted default"
-  },
   "vaultSetting": {
     "title": "Security & backup",
     "plaintextWarning": "This wallet's seed is stored <b>unencrypted</b> on this computer — anyone who copies the file can spend your funds. Set a passphrase to encrypt it; your balance and history are untouched.",

@@ -9,6 +9,12 @@
          Add to Home Screen gives a full-screen, home-icon wallet; Apple allows
          no APK-style installs). Android Chrome offers its install prompt too. -->
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Declared, so browsers stop probing /favicon.ico. There is no .ico file, and
+         the SPA fallback answered that probe with index.html: 10KB of HTML served
+         as text/html, on every cold load, which the browser then discarded. The
+         PNGs already ship for the manifest. -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
