@@ -671,7 +671,16 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
     // Every activity starts at the top. Switching tabs used to inherit the
     // previous pane's scroll offset — tap Settings while deep in History and land
     // mid-page. Reset the window instead of scrolling the pane into view.
-    try { window.scrollTo({ top: 0, behavior: "auto" }); } catch { /* SSR */ }
+    // ...but not for the tabs that open a full-screen sheet over everything.
+    // Receive and Send render into a portal that covers the page, so scrolling
+    // the page underneath changes nothing a user can see — while still forcing
+    // the layout and paint of everything below. Profiled on the production build
+    // at 6x CPU, `scrollTo` was 190ms of a 622ms Receive tap: the single largest
+    // item, spent entirely on hidden content. The scroll still runs when the
+    // sheet CLOSES, which is the case it was written for.
+    if (tab !== "receive" && tab !== "send") {
+      try { window.scrollTo({ top: 0, behavior: "auto" }); } catch { /* SSR */ }
+    }
   }, [tab]);
   // A freshly created seed, held at the top level so the 4-second status poll
   // (which flips has_wallet true) can never unmount the backup screen mid-copy.
