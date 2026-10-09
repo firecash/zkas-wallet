@@ -3987,7 +3987,13 @@ function SyncDestination() {
   return (
     <div className="msg" style={{ textAlign: "start" }}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span className="muted small">
+        {/* A flex item SHRINKS before the row wraps, so on a 390px phone this
+            sentence was squeezed into a ~250px column beside the connection chip
+            — six ragged lines, with the chip itself truncated to "WALLET SE…".
+            A flex-basis makes the row wrap instead: the text keeps the full width
+            and the chip drops below it. This is the first screen a new user
+            sees. */}
+        <span className="muted small" style={{ flex: "1 1 260px", minWidth: 0 }}>
           <Trans i18nKey="syncDestination.intro" values={{ where }} components={{ b: <b /> }} />
         </span>
         <ConnectionButton />
