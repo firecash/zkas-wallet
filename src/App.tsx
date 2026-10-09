@@ -3117,6 +3117,17 @@ function isTransientNote(msg: string): boolean {
 /// whoever is not.
 function friendlyDaemonError(msg: string): string {
   const m = msg.toLowerCase();
+  // The node turning clients away is its OWN condition, not an unexplained
+  // fault. It is the commonest thing a phone meets in "run on this phone" mode:
+  // the engine dials a PUBLIC node, and a node serving a few hundred wallets
+  // reaches its client cap and refuses the next one. gRPC reports that as
+  // RESOURCE_EXHAUSTED, which matched nothing here and fell through to "hit a
+  // problem while reading the chain" — a sentence that explains nothing and
+  // sends people hunting for a node address to type, when the address was never
+  // wrong and the fix is to retry or use the other node.
+  if (/resource.?exhausted|too many clients|max.?clients|connection limit|server is busy/.test(m)) {
+    return i18n.t("daemonError.nodeBusy");
+  }
   if (/connection reset|connection refused|broken pipe|transport|rpc error|timed out|timeout|unavailable|eof/.test(m)) {
     return i18n.t("daemonError.network");
   }

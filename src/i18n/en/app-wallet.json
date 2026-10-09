@@ -227,6 +227,7 @@
   "daemonError": {
     "network": "Lost contact with the network for a moment. Your coins are safe — the wallet keeps retrying on its own.",
     "generic": "The wallet service hit a problem while reading the chain. Your coins are safe on the chain.",
-    "details": "Technical details"
+    "details": "Technical details",
+    "nodeBusy": "The public node is at capacity and turned this wallet away. Your coins are safe. It retries on its own, or you can switch to the other node in Settings → Network privacy."
   }
 }
