@@ -4112,11 +4112,26 @@ function Onboard({
     try {
       const seed = importHex.trim();
       const b = birthdayFromInputs();
+      // DERIVE BEFORE STORING. `fvkHex` is what actually validates the phrase —
+      // it throws on a bad BIP39 checksum — and it used to run one line AFTER the
+      // seed had been written to this device. So a single mistyped word left a
+      // stored secret for a wallet that was never registered: the app then
+      // believed a wallet existed, "Create new wallet" stayed unreachable, and the
+      // typed phrase sat in storage in the clear.
+      const fvk = await fvkHex(seed);
       // Key first, verified — never register a wallet this device cannot sign for.
       if (!(await persistDeviceSeed(seed))) {
         throw new Error(t("onboard.errStore"));
       }
-      const { address } = await api.watch(await fvkHex(seed), b);
+      let address: string;
+      try {
+        ({ address } = await api.watch(fvk, b));
+      } catch (e) {
+        // Registration failed, so this device must not keep a secret for a wallet
+        // the daemon has never heard of.
+        try { localStorage.removeItem(`device_seed_${activeToken()}`); } catch { /* ignore */ }
+        throw e;
+      }
       rememberBirthday(b, address);
       const importedToken = activeToken();
       if (importedToken) {
@@ -4128,7 +4143,10 @@ function Onboard({
       }
       onImported();
     } catch (e) {
-      setError((e as Error).message);
+      // The signer throws a BARE STRING for a bad phrase, so `.message` was
+      // undefined and the screen showed an empty error box: the button stopped
+      // spinning and nothing said why it had refused.
+      setError(failureText(e));
     } finally {
       setBusy(false);
     }
@@ -4145,11 +4163,20 @@ function Onboard({
     try {
       if (!restoreJson.trim()) throw new Error(t("onboard.errChooseBackup"));
       const { seedHex, birthday, accounts } = await readBackup(restoreJson, restorePass);
+      // Derive before storing, as in doImport: a backup that decrypts to a
+      // corrupt seed must not leave that seed on the device.
+      const fvk = await fvkHex(seedHex);
       // Key first and verified: never register a wallet this device cannot sign for.
       if (!(await persistDeviceSeed(seedHex))) {
         throw new Error(t("onboard.errStore"));
       }
-      const { address } = await api.watch(await fvkHex(seedHex), birthday);
+      let address: string;
+      try {
+        ({ address } = await api.watch(fvk, birthday));
+      } catch (e) {
+        try { localStorage.removeItem(`device_seed_${activeToken()}`); } catch { /* ignore */ }
+        throw e;
+      }
       rememberBirthday(birthday, address);
       const tk = activeToken();
       if (tk) {
@@ -4299,7 +4326,7 @@ function Onboard({
       <div className="card">
         <h2>{t("onboard.importTitle")}</h2>
         <label>{t("onboard.seedLabel")}</label>
-        <textarea value={importHex} onChange={(e) => setImportHex(e.target.value)} placeholder={t("onboard.importPlaceholder")} />
+        <textarea value={importHex} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} onChange={(e) => setImportHex(e.target.value)} placeholder={t("onboard.importPlaceholder")} />
         {phraseHint() && <div className="muted small" style={{ marginTop: -4, marginBottom: 6 }}>{phraseHint()}</div>}
         <label>{t("onboard.createdWhen")}</label>
         <input type="date" value={createdDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setCreatedDate(e.target.value)} />
