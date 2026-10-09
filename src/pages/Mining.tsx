@@ -327,8 +327,11 @@ export function Mining() {
       )}
       {live && (
         <div className="mode-tabs two" role="tablist">
-          <button className={mode === "solo" ? "active" : ""} disabled>{t("mining.tabZkas")}</button>
-          <button className={mode === "dual" ? "active" : ""} disabled>{t("mining.tabDual")}</button>
+          {/* A mode indicator, not a control: the mode is fixed for the run and
+              changing it means stopping. Dimmed buttons with no explanation read
+              as broken, so they say why. */}
+          <button className={mode === "solo" ? "active" : ""} disabled title={t("mining.modeFixed")}>{t("mining.tabZkas")}</button>
+          <button className={mode === "dual" ? "active" : ""} disabled title={t("mining.modeFixed")}>{t("mining.tabDual")}</button>
         </div>
       )}
       {config?.dual_mining_supported === false && <p className="subtle mining-platform-note">{t("mining.noDualBridge")}</p>}
@@ -336,8 +339,13 @@ export function Mining() {
 
       {live && <section className="control-card mining-setup-card">
         <div className="card-title-row">
-          <div><h2>{live ? t("mining.serviceTitle") : t("mining.setupTitle")}</h2><p>{live ? t("mining.serviceIntro") : t("mining.setupIntro")}</p></div>
-          {missing.length > 0 && !live && <span className="status-pill" title={t("mining.installs", { n: missing.length })}>{t("mining.installs", { n: missing.length })}</span>}
+          {/* This card renders only while mining is live, and every control in it
+              is disabled while live — it is the read-only "what you are running"
+              view; configuration happens in the start dialog. So the `!live` arms
+              below were unreachable: `setupTitle`, `setupIntro` and the install
+              count could never appear, in any state, in any of the 25 locales they
+              are translated into. */}
+          <div><h2>{t("mining.serviceTitle")}</h2><p>{t("mining.serviceIntro")}</p></div>
         </div>
 
         <div className="setup-section">

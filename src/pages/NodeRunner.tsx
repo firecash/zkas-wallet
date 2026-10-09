@@ -149,6 +149,8 @@ export function NodeRunner() {
   const closeStartDialog = useCallback(() => setShowStart(false), []);
   const closeLogsDialog = useCallback(() => setLogService(null), []);
 
+  /** True once a poll has failed: what is on screen is a last-known reading. */
+  const [stale, setStale] = useState(false);
   const refresh = useCallback(async () => {
     if (!desktop || refreshInFlight.current) return;
     refreshInFlight.current = true;
@@ -161,6 +163,16 @@ export function NodeRunner() {
       setConfig(nextConfig);
       setNode(nextNode);
       setWalletd(nextWalletd);
+      setStale(false);
+    } catch (e) {
+      // A failed poll used to write nothing and say nothing, so the page kept
+      // presenting the last good reading as live: "Synced", 6,229,623 blocks,
+      // 8 peers, PID 9931, with Stop still enabled — fifteen consecutive failures
+      // after the supervisor had gone, with no error anywhere on screen. Numbers
+      // nobody can refresh must not look current.
+      setStale(true);
+      setError((e as Error)?.message || String(e));
+      throw e;
     } finally {
       refreshInFlight.current = false;
     }
@@ -308,6 +320,7 @@ export function NodeRunner() {
       </header>
 
       {error && <div className="control-error">{error}</div>}
+      {stale && <div className="msg warn small">{t("nodeRunner.stale")}</div>}
 
       {!installed && (
         <section className="control-card install-card">
