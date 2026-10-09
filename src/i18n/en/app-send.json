@@ -178,7 +178,8 @@
     "customHint": "A wallet daemon you run yourself.",
     "addrPlaceholder": "host:port, http://<lan-ip>:8501, or .onion",
     "accessTokenPlaceholder": "Access token",
-    "connect": "Connect"
+    "connect": "Connect",
+    "timedOut": "That did not start within 20 seconds. If you chose Tor, check that Orbot is installed and running."
   },
   "backgroundSyncCard": {
     "title": "Background sync",

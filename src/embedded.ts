@@ -270,13 +270,23 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = tru
   // both slots became the same address and failover was permanently dead with the
   // original primary forgotten.
   if (explicit && pin) setEmbeddedNode(node);
-  setEmbeddedTor(useTor);
+  // The Tor flag is persisted only once the engine is actually UP. Writing it
+  // first bricked the wallet: if the start failed — Orbot not installed, which
+  // is the common case for someone trying the option for the first time — the
+  // flag survived while the app stayed on the clearnet hosted daemon. That is
+  // privacyMode() === "tor-only" pointed at a clearnet base, so every wallet
+  // call was refused, the price froze, chat reported blocked, and Explore said
+  // "hidden on Tor". Nothing in Settings cleared it: the Public service row was
+  // already the active choice, so tapping it did nothing, and only a SUCCESSFUL
+  // phone-mode start or onion connect ever rewrote the flag. The wallet could
+  // not be recovered from inside the app.
   if (!startPromise) {
     startPromise = Native.start({ nodeAddr: node, socks: useTor ? ORBOT_SOCKS : undefined }).then((r) => r.port);
   }
   try {
     const port = await startPromise;
     if (!port) throw new Error("engine returned no port");
+    setEmbeddedTor(useTor);
     startedWith = { node, tor: useTor };
     void setEngineDebugLogs(embeddedDebugChosen());
     return `http://127.0.0.1:${port}`;

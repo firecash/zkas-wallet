@@ -7604,11 +7604,24 @@ function NetworkPrivacyCard() {
   const run = (which: "phone" | "public" | "tor" | "custom", fn: () => Promise<void>) => {
     if (busy) return;
     setErr(""); setNeedTor(false); setBusy(which);
-    void fn()
+    // Bounded, because every one of these can hang. Starting the on-device
+    // engine against a SOCKS proxy that is not there never resolves, and while
+    // it hung this row read "Connecting…" forever with `disabled={!!busy}`
+    // greying out all three other options — no error, no retry, no way back
+    // except force-quitting the app. main.tsx already bounds the same call at
+    // boot for this exact reason; these two entry points did not.
+    const ENGINE_START_TIMEOUT_MS = 20_000;
+    const bounded = Promise.race([
+      fn(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(i18n.t("networkPrivacyCard.timedOut"))), ENGINE_START_TIMEOUT_MS),
+      ),
+    ]);
+    void bounded
       .then(() => location.reload())
       .catch((e) => {
         if (which === "tor") setNeedTor(true);
-        else setErr((e as Error).message || String(e));
+        else setErr(failureText(e));
         setBusy(null);
       });
   };

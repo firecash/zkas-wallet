@@ -43,7 +43,6 @@ import {
   ensureChatEngine,
   fingerprintOf,
   hueOf,
-  muteTags,
   noteTags,
   parseProfile,
   profileContent,
@@ -181,17 +180,16 @@ function Avatar({ person, big }: { person: Person; big?: boolean }) {
   // `data-profile` rather than an onClick: MessageRow is memoized and takes no
   // callbacks, and the message list already delegates clicks by data attribute.
   return (
-    <span
+    <button
+      type="button"
       className={big ? "chat-avatar big" : "chat-avatar"}
       data-profile={person.pubkey}
-      role="button"
-      tabIndex={0}
       aria-label={i18n.t("chat.profileOf", { name: person.name })}
       title={person.name}
       style={{ background: `hsl(${person.hue} 58% 42%)` }}
     >
       {person.pubkey.slice(0, 2)}
-    </span>
+    </button>
   );
 }
 
@@ -290,13 +288,12 @@ function Bubble({
     <div className={"chat-bubble" + (jumbo(m.content) ? " jumbo" : "") + (pills ? " has-reacts" : "")} dir={dirOf(m.content)}>
       {firstOfTurn && !mine && (
         <div className="chat-author" style={{ color: nameColor(m.person.hue) }}>
-          <span
+          <button
+            type="button"
             className="chat-author-name"
             data-profile={m.person.pubkey}
-            role="button"
-            tabIndex={0}
             dir={dirOf(m.person.name || anon)}
-          >{m.person.name || anon}</span>
+          >{m.person.name || anon}</button>
           {/* Always visible, never styled away: a nickname is not an identity. */}
           <span className="chat-fp" dir="ltr">·{m.person.fingerprint}</span>
         </div>
@@ -622,15 +619,12 @@ export function ChatScreen({
       return;
     }
     if (ev.kind === KIND_MUTE_LIST) {
-      // Our own list from another device merges by UNION: dropping a local mute
-      // because an older list arrived would un-block someone silently.
-      const remote = ev.tags.filter((tg) => tg[0] === "p").map((tg) => tg[1]);
-      setMuted((prev) => {
-        const merged = [...new Set([...prev, ...remote])];
-        if (merged.length === prev.length) return prev;
-        setMutedKeys(merged);
-        return merged;
-      });
+      // Ignored, for the same reason we no longer publish one. Nothing verifies
+      // the signature of anything a relay sends here, and this branch did not
+      // even check the author — so any kind-10000 frame the relay chose to
+      // deliver silently muted whoever its `p` tags named, permanently, merged
+      // by UNION into localStorage with no way to undo it from the app. Mutes
+      // are local; a remote list has no business changing them.
       return;
     }
     if (ev.kind === KIND_GIFT_WRAP) {
@@ -705,11 +699,22 @@ export function ChatScreen({
    *  anywhere else kept its unread count and the wallet screen went on showing
    *  "1 new" for a message already read. Closing the room is as clear a
    *  statement that it was read as reaching the bottom of it. */
+  /// Mirrors `seenUpTo` so the unmount cleanup can read its latest value.
+  const seenUpToRef = useRef(seenUpTo);
+  seenUpToRef.current = seenUpTo;
   useEffect(() => {
     const leaving = room;
     newestInRoom.current = 0;
     return () => {
-      if (newestInRoom.current) markSeen(leaving, newestInRoom.current);
+      // Mark what was actually READ, not everything that ARRIVED. This used to
+      // write `newestInRoom`, which advances for every message the room
+      // receives regardless of where the user is looking — so opening a room
+      // with 12 unread, reading none, and tapping away marked all 12 read and
+      // destroyed the "New messages" rule with them. `seenUpTo` only advances
+      // while the user is at the bottom with the unread rule behind them, which
+      // is the one position that means "read". Scrolled up, there genuinely are
+      // messages below that were not seen, so keeping the count is correct.
+      if (seenUpToRef.current) markSeen(leaving, seenUpToRef.current);
     };
   }, [room]);
 
@@ -768,6 +773,14 @@ export function ChatScreen({
     setSheet(null);
     setMenu(null);
     if (r === roomRef.current) return;
+    // A reply is to a message in THIS room. Carrying it across meant the next
+    // send went to the new room tagged with the old room's message id and its
+    // author — a note that reads as a reply to nothing in every client, quoting
+    // a stranger, while the local bubble showed no quote at all because the
+    // store had just been cleared. The draft goes too: text written for one
+    // room should not be posted into another by accident.
+    setReplyTo(null);
+    setDraft("");
     store.current.notes = new Map();
     bump();
     setRoom(r);
@@ -819,7 +832,8 @@ export function ChatScreen({
 
   useEffect(() => {
     if (me && client.current?.live) {
-      client.current.requestMuteList(me);
+      // No mute-list subscription: mutes are local now, so asking the relay for
+      // one only tells it which pubkey is yours and invites a frame we ignore.
       client.current.subscribeDms(me);
     }
   }, [me, state]);
@@ -1083,7 +1097,12 @@ export function ChatScreen({
     [ingest],
   );
 
-  async function send(retryBody?: string) {
+  /// `replacing` is the id of a failed message being retried. A retry re-signs
+  /// with a fresh timestamp, so it gets a NEW event id — and the old failed copy
+  /// was left in the store forever, showing the same text twice: one greyed
+  /// "Not sent" bubble and one delivered. Only a room switch or a reload cleared
+  /// it, and everyone else saw the message once.
+  async function send(retryBody?: string, replacing?: string) {
     const body = (retryBody ?? draft).trim();
     if (!body || sending) return;
     // The first message is the natural moment to ask for a name — not a signup
@@ -1107,7 +1126,16 @@ export function ChatScreen({
       localId = ev.id;
       ingest(ev); // optimistic; the relay echo dedupes by id
       client.current?.publish(signed);
-      setFailed((prev) => { const n = new Set(prev); n.delete(localId); return n; });
+      setFailed((prev) => {
+        const n = new Set(prev);
+        n.delete(localId);
+        if (replacing) n.delete(replacing);
+        return n;
+      });
+      if (replacing && replacing !== localId) {
+        store.current.notes.delete(replacing);
+        bump();
+      }
       setDraft("");
       setReplyTo(null);
       setAtBottom(true);
@@ -1183,11 +1211,14 @@ export function ChatScreen({
     setSheet(null);
     setMenu(null);
     toast.show("good", wasMuted ? t("chat.toast.unmuted") : t("chat.toast.muted"));
-    try {
-      await publishSigned(KIND_MUTE_LIST, muteTags(next), "");
-    } catch {
-      /* the local mute already applies; the list syncs on the next connection */
-    }
+    // Deliberately NOT published. This used to send a NIP-51 kind-10000 event
+    // whose `p` tags listed, in cleartext and signed by your chat identity,
+    // every person you had ever muted — to a relay whose operator this feature's
+    // own threat model treats as hostile, and readable by the muted person
+    // themselves. The sheet you mute from says the opposite in two places:
+    // "Muting is yours alone" and "Muting only affects this wallet". Keeping it
+    // local is what the app promises, and it is the private option; syncing it
+    // across devices would need NIP-51's ENCRYPTED content, not public tags.
   }
 
   /** Open the anchored menu on the bubble that was touched. */
@@ -1662,7 +1693,7 @@ export function ChatScreen({
           onProfile={() => { setMenu(null); setSheet({ kind: "profile", pubkey: openMessage.pubkey }); }}
           onMute={() => void toggleMute(openMessage.pubkey)}
           onCopy={() => { void navigator.clipboard?.writeText(openMessage.content); setMenu(null); toast.show("good", t("chat.toast.copied")); }}
-          onRetry={() => { setMenu(null); void send(openMessage.content); }}
+          onRetry={() => { setMenu(null); void send(openMessage.content, openMessage.id); }}
           onReport={() => {
             void publishSigned(KIND_REPORT, reportTags(openMessage, "spam"), "").catch(() => undefined);
             void toggleMute(openMessage.pubkey);
