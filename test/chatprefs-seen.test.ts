@@ -16,10 +16,21 @@ describe("chat read cursor", () => {
     expect(lastSeen("global")).toBeGreaterThanOrEqual(sentAt);
   });
 
-  it("still refuses a timestamp far in the future", () => {
-    const year2100 = Math.floor(new Date("2100-01-01").getTime() / 1000);
-    markSeen("global", year2100);
-    expect(lastSeen("global")).toBeLessThan(now() + 3600);
+  it("ignores a timestamp far in the future instead of clamping to the ceiling", () => {
+    // Clamping advanced the cursor to the ceiling, which marked every message
+    // arriving before that ceiling as already read — the room then opened at the
+    // bottom with real unread messages silently behind the user.
+    markSeen("global", now() - 50);
+    const before = lastSeen("global");
+    markSeen("global", Math.floor(new Date("2100-01-01").getTime() / 1000));
+    expect(lastSeen("global")).toBe(before);
+  });
+
+  it("a message arriving after a hostile one is still unread", () => {
+    markSeen("global", Math.floor(new Date("2100-01-01").getTime() / 1000));
+    // A genuine message from one minute ago must still count as newer than the
+    // cursor, i.e. unread.
+    expect(lastSeen("global")).toBeLessThan(now() - 59);
   });
 
   it("never moves the cursor backwards", () => {

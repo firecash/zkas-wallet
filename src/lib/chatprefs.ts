@@ -149,10 +149,22 @@ export function markSeen(room: string, at: number): void {
   // The allowance still defeats what the clamp was for. A note dated 2100 is
   // pulled back to ten minutes out instead of writing a cursor a lifetime ahead,
   // so it cannot silence every unread signal in the room forever.
-  const SKEW_TOLERANCE_SEC = 600;
+  // An out-of-range timestamp is IGNORED, not clamped to the ceiling. Clamping
+  // was my first fix and it was worse than the bug: one note dated an hour out
+  // — a broken clock, or someone being a nuisance — wrote a cursor ten minutes
+  // into the FUTURE, so every genuine message arriving in those ten minutes
+  // counted as already read. No "New messages" rule, no badge, and the room
+  // opened at the bottom with the unread ones silently behind you. Reported as
+  // being dumped at the end of a room with 22 unread.
+  //
+  // Ignoring it instead means the cursor only ever moves to a time a real
+  // message claims, within a few minutes of this device's clock: ordinary skew
+  // (the sender is seconds fast) still marks the message read, and an absurd
+  // one simply fails to advance anything.
+  const SKEW_TOLERANCE_SEC = 300;
   const now = Math.floor(Date.now() / 1000);
-  const safe = Math.min(at, now + SKEW_TOLERANCE_SEC);
-  if (safe > lastSeen(room)) write(`${SEEN_KEY}_${room}`, String(safe));
+  if (at > now + SKEW_TOLERANCE_SEC) return;
+  if (at > lastSeen(room)) write(`${SEEN_KEY}_${room}`, String(at));
 }
 
 /** Private messages already accounted for, by gift-wrap id.
