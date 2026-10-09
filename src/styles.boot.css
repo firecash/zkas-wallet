@@ -11,7 +11,12 @@
  * owns, and it must stay small and easy to compare against the inline copy.
  */
 
-.bl {
+/* Renamed from `.bl`: that collided with the `bl` (bottom-left) corner
+   modifier on `.qr-corner` and `.scan-corner`. Both are single-class
+   selectors, and this file is imported after styles.css, so `position: fixed;
+   inset: 0` won and parked the Receive sheet's bottom-left bracket in the
+   header, 6px outside the sheet. */
+.boot-screen {
   position: fixed;
   inset: 0;
   z-index: 50;

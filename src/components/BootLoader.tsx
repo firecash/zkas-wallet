@@ -14,7 +14,7 @@ export function BootLoader({ label }: { label?: string }) {
   const { t } = useTranslation();
   const text = label ?? t("bootLoader.opening");
   return (
-    <div className="bl" role="status" aria-live="polite" aria-label={text}>
+    <div className="boot-screen" role="status" aria-live="polite" aria-label={text}>
       <div className="bl-stack">
         <div className="bl-logo">
           <img src="./zkas-mark.png" width={88} height={88} alt="" aria-hidden="true" />

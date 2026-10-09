@@ -124,6 +124,14 @@ a { color: var(--ember-text); }
      the History kind filter. 44px is the rule the rest of the app follows. */
   .linkbtn { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 0; }
   .chip, .filterbar .chip { min-height: 44px; }
+
+  /* The rest of the controls a thumb misses, all measured on a 390x844 phone:
+     the sheet close button (36x36), the Receive Address/Request segments (40
+     tall), the accent swatches (38x38), the chat header buttons (30x30 and
+     32x34), the chat room chips and "Earlier messages" (29-35), the language
+     select (25 tall), the transaction-label field (34) and the "Get the safer
+     app" link (15 tall — the shortest target in the app, and it sits on every
+     screen). 44px is the rule the rest of the app already follows. */
 }
 
 .dot.on { background: var(--good); box-shadow: 0 0 8px var(--good); }
@@ -986,8 +994,8 @@ select { appearance: none; cursor: pointer; }
   min-width: 0;
   min-height: 44px;
   align-items: center;
-  gap: 9px;
-  padding: 7px 11px;
+  gap: 7px;
+  padding: 7px 9px;
   border: 1px solid rgb(var(--ember-rgb) / 0.5);
   border-radius: 14px;
   background: var(--ember-soft);
@@ -1001,7 +1009,7 @@ select { appearance: none; cursor: pointer; }
 .connection-button > span { display: flex; min-width: 0; flex: 1; flex-direction: column; line-height: 1.1; }
 /* Both lines truncate rather than wrap: "Servicio de billetera" / "Serviço de carteira"
    are wider than the chip gets on a phone with a wallet chip beside it. */
-.connection-button small { margin-bottom: 3px; overflow: hidden; color: var(--ember-text); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.connection-button small { margin-bottom: 3px; overflow: hidden; color: var(--ember-text); font-size: 10px; font-weight: 700; letter-spacing: .02em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 .connection-button b { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .connection-button > svg:first-child { color: var(--ember); flex: none; }
 .connection-button > svg:last-child { color: var(--muted); }
@@ -2828,12 +2836,15 @@ select { appearance: none; cursor: pointer; }
 /* Title and summary ("Network privacy" · "Tor") share the row. Neither may push the
    chevron out: the title shrinks and wraps to a second line, the summary truncates
    with an ellipsis (the open row shows the full value anyway). */
-.setrow-title { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.setrow-title { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: break-word; }
 .setrow-right { margin-inline-start: auto; display: flex; align-items: center; gap: 10px; min-width: 0; flex: 0 1 auto; }
 .setrow-summary {
   color: var(--muted);
   font-size: 13px;
+  /* Secondary: it gives way before the title does, and never takes more than a
+     third of the row. */
   flex: 0 1 auto;
+  max-width: 38%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3659,3 +3670,35 @@ body.reduced-effects .connection-button:active { transform: none; }
 /* A row that slides sideways under the pointer walks the eye down a column of
    amounts, and being hover-only the phone never saw it anyway. Colour instead. */
 .txrow:hover { transform: none; box-shadow: none; }
+
+
+/* Minimum tap target, everywhere. Measured on a 390x844 phone before this: the
+   sheet close button 36x36, the Receive Address/Request segments 40 tall, the
+   accent swatches 38x38, the chat header buttons 30x30 and 32x34, the chat
+   chips and "Earlier messages" 29-35, the language select 25 tall, the
+   transaction-label field 34, and the "Get the safer app" link 15 tall — the
+   shortest target in the app, present on every screen. */
+.action-sheet-close { width: 44px; height: 44px; margin-top: -34px; }
+.rcv-seg { min-height: 44px; }
+.swatch { width: 44px; height: 44px; }
+.chat-me, .chat-back, .chat-icon-btn { min-width: 44px; min-height: 44px; }
+.chat-chip, .chat-earlier { min-height: 44px; }
+.lang-button select, .setrow select, select.control-input { min-height: 44px; }
+input#tx-label { min-height: 44px; }
+.warnbar a { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* Very narrow phones (320px: iPhone SE 1, small Android). Three chips share the
+   top bar and all three clipped — "WALLET SERV…", "Wal…" for the wallet name,
+   and even the two-letter summary "On" cut to nine pixels. The caption is the
+   least informative part of the connection chip (the VALUE below it says "Web",
+   "On phone", "Over Tor"), so it goes first and the rest fits. */
+@media (max-width: 360px) {
+  .connection-button small { display: none; }
+  .connection-button { padding: 7px 8px; gap: 6px; }
+  /* The summary keeps its natural width here and the title wraps instead —
+     shrinking it cut "On" to nine pixels, which tells the user nothing. */
+  .setrow-summary { max-width: none; flex-shrink: 0; }
+  /* And the wallet name ends in an ellipsis rather than a hard cut. */
+  .walletbar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .walletbar-name { min-width: 0; }
+}
