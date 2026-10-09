@@ -8,7 +8,7 @@ android {
         applicationId "com.firecash.wallet"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 172
+        versionCode 173
         versionName "1.0.44-rc15"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
