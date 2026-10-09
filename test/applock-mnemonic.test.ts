@@ -34,6 +34,7 @@ describe("app lock seals the master mnemonic", () => {
   it("migrates a pre-existing plaintext phrase to sealed on first unlock", async () => {
     // Simulate the old world: a lock exists, but the phrase was written plaintext
     // before sealing covered it.
+    localStorage.setItem("device_seed_fixture", "11".repeat(32)); // something for the lock to seal
     await enableLock("s3cret", "passphrase");
     localStorage.setItem("device_mnemonic", PHRASE);
     lock();
@@ -56,6 +57,9 @@ describe("app lock seals the master mnemonic", () => {
 describe("OB-ZKW-02: plaintext fallbacks heal on unlock", () => {
   beforeEach(() => { localStorage.clear(); lock(); });
   it("re-seals a seed_unsealed_ fallback and removes the cleartext", async () => {
+    // Something for the lock to seal: enableLock refuses to write a record that
+    // seals nothing, because unlock() would have nothing to verify against.
+    localStorage.setItem("device_seed_fixture", "11".repeat(32));
     await enableLock("pw", "passphrase");
     // simulate a seal that raced an auto-lock: plaintext seed + flag left behind
     localStorage.setItem("device_seed_deadbeef", "a".repeat(64));

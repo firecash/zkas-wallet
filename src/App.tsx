@@ -60,6 +60,7 @@ import { listWallets as listAllWallets } from "./wallets";
 import { MANAGED_ZKAS_RPC, STANDALONE_ZKAS_RPC_EXAMPLE } from "./ports";
 import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
 import { failureText } from "./lib/failure";
+import { NothingToLock } from "./applock";
 import { loadSendDraft, saveSendDraft, clearSendDraft } from "./lib/senddraft";
 import { wipeWalletState } from "./walletstate";
 import {
@@ -1139,7 +1140,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         lastFinalBalance.current = now;
         saveBaseline(now);
       }
-      let list = reconcile(parseFloat(s.balance_fc || "0"), !!s.synced);
+      let list = reconcile(parseFloat(s.balance_fc || "0"), !!s.synced, parseFloat(s.pending_out_fc || "0") || 0);
       // Ask the chain about every send that has no confirmation count yet — NOT
       // just the ones still flagged `pending`.
       //
@@ -5008,9 +5009,26 @@ function StopWatching() {
             <button
               className="btn danger"
               onClick={() => {
-                clearWatchKey();
+                // The SAME sequence "Remove wallet" uses. Clearing the watch key
+                // and the registry entry left everything else behind: the token
+                // stayed active, the daemon still held the FVK under it, and the
+                // cached status still named the address — so the very first poll
+                // after the reload called `ensureRegistered` and the stranger's
+                // wallet came straight back as a fresh "Wallet N".
+                //
+                // Worse, `watch_fvk_<token>` was now gone while the wallet was
+                // not, so `isWatchOnly()` turned FALSE: the view-only card that
+                // holds the only "Stop watching" button disappeared, and the app
+                // offered Send, Reveal seed, Signatures and Tools for a wallet
+                // this device has no key for.
                 const token = localStorage.getItem("wallet_token");
-                if (token) unregisterWallet(token);
+                clearWatchKey();
+                if (token) {
+                  wipeWalletState(token);
+                  forgetWalletLock(token);
+                  forgetReceipts(token);
+                  unregisterWallet(token);
+                }
                 location.reload();
               }}
             >
@@ -7966,7 +7984,10 @@ function AppLockSetting() {
       setSecret("");
       setConfirmSecret("");
     } catch (e) {
-      setErr((e as Error).message);
+      // A watch-only device holds a viewing key and no seed, so there is nothing
+      // a lock could protect. Say so, rather than reporting success for a record
+      // that seals nothing and that isLockEnabled correctly ignores.
+      setErr(e instanceof NothingToLock ? t("appLockSetting.nothingToLock") : failureText(e));
     } finally {
       setBusy(false);
     }

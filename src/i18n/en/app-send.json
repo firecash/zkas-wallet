@@ -233,7 +233,8 @@
     "onNotePin": "<b>On.</b> Every wallet's key on this device is encrypted, and the app asks for your PIN to open. It re-locks itself after a few minutes in the background.",
     "onNotePassphrase": "<b>On.</b> Every wallet's key on this device is encrypted, and the app asks for your passphrase to open. It re-locks itself after a few minutes in the background.",
     "offIntro": "Your wallet keys are stored on this device <b>unencrypted</b>. Turn on a PIN or passphrase and every one of them is encrypted at rest, and the app asks for it on open — so someone holding this device, or a backup of its data, cannot spend from it.",
-    "setSecret": "Set a PIN or passphrase"
+    "setSecret": "Set a PIN or passphrase",
+    "nothingToLock": "There is no key on this device to lock yet. A watch-only wallet holds only a viewing key. Create or import a wallet first."
   },
   "switchWallet": {
     "title": "Wallets",

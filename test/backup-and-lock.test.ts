@@ -57,6 +57,7 @@ describe("removing a wallet removes the seeds shelved from it", () => {
   it("drops stray_<token>_* alongside the token itself", async () => {
     localStorage.clear();
     const { enableLock, sealNewSeed, forgetWalletLock } = await import("../src/applock");
+    localStorage.setItem("device_seed_fixture", "11".repeat(32)); // the lock needs something to seal
     await enableLock("correct horse battery staple");
     await sealNewSeed("alpha", "11".repeat(32));
     await sealNewSeed("stray_alpha_1700000000000", "22".repeat(32));

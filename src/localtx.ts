@@ -122,7 +122,7 @@ const PENDING_CONFIRMED_MAX_AGE_MS = 2 * 60 * 60 * 1000;
  * popped back into the displayed balance minutes before the daemon accounted for
  * them — spendable money that did not exist.
  */
-export function reconcile(daemonFc: number, synced: boolean): LocalTx[] {
+export function reconcile(daemonFc: number, synced: boolean, pendingOutFc = 0): LocalTx[] {
   const now = Date.now();
   const txs = loadTxs();
   // Group pending rows by payment (a row without a payId is its own group).
@@ -146,8 +146,21 @@ export function reconcile(daemonFc: number, synced: boolean): LocalTx[] {
     for (const r of rows) {
       cumulative += r.spentFc;
       const dropCovers = drop > 0 && drop >= cumulative - EPS;
+      // The daemon's OWN report of value leaving this wallet. The drop test
+      // compares a remembered balance against the current one, so any money
+      // RECEIVED while a send is pending masks it: receive 2.0 during a 5.0
+      // send and the drop is 3.0 against a 5.0 subtraction, which never clears.
+      // The wallet then showed a balance 5.0 too LOW — and refused to spend the
+      // difference, because `spendable` is understated identically — for the
+      // two-hour age-out. A mining wallet taking a coinbase every block could
+      // never satisfy the drop test at all.
+      //
+      // `pending_out_fc` cannot be masked that way: it counts outflow only. Once
+      // the daemon reports an outflow covering this payment, it has accounted
+      // for the spend and the local subtraction would double-count it.
+      const daemonSeesOutflow = pendingOutFc >= cumulative - EPS;
       const maxAge = r.confs != null ? PENDING_CONFIRMED_MAX_AGE_MS : PENDING_MAX_AGE_MS;
-      if (dropCovers || now - r.ts > maxAge) clear.add(r.txid);
+      if (dropCovers || daemonSeesOutflow || now - r.ts > maxAge) clear.add(r.txid);
     }
   }
   if (clear.size === 0) return txs;

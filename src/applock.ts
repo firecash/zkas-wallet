@@ -210,8 +210,27 @@ async function resealFallbacks(secret: string): Promise<void> {
 }
 
 /** Turn the lock on: seal every wallet's seed and drop the cleartext copies. */
+export class NothingToLock extends Error {
+  constructor() {
+    super("nothing-to-lock");
+    this.name = "NothingToLock";
+  }
+}
+
 export async function enableLock(secret: string, kind: "pin" | "passphrase"): Promise<void> {
   const seeds = { ...plaintextSeeds(), ...(unlocked ?? {}) };
+  // With nothing to seal — a watch-only device, which has a viewing key and no
+  // seed — this wrote `{version, kind, wallets: {}}`, a record that seals
+  // nothing. `isLockEnabled` reads that as NO LOCK, so the lock the user had
+  // just set did not exist: no lock screen on reload, Settings showing "Off",
+  // and any wallet created afterwards written to localStorage in the clear
+  // because persistDeviceSeed takes its plaintext branch when no lock is on.
+  // `unlock()` also treats an empty record as "nothing to verify" and accepts
+  // ANY input, so a biometric unlock could be enrolled against a lock that
+  // protects nothing. `dropIfEmpty` exists to forbid exactly this state; this
+  // was the one writer that bypassed it.
+  const phraseToSeal = sessionMnemonic ?? localStorage.getItem(MNEMONIC_KEY) ?? "";
+  if (Object.keys(seeds).length === 0 && !phraseToSeal) throw new NothingToLock();
   const wallets: Record<string, Sealed> = {};
   for (const [token, seedHex] of Object.entries(seeds)) wallets[token] = await seal(seedHex, secret);
   const phrase = sessionMnemonic ?? localStorage.getItem(MNEMONIC_KEY) ?? "";
