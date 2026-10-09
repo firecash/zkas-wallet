@@ -47,26 +47,6 @@
     "exportFailed": "Gagal eksport CSV pada peranti ini.",
     "exportCsv": "Eksport CSV"
   },
-  "daemonSetting": {
-    "timedOut": "tamat masa selepas 5s",
-    "unreachable": "Tidak dapat capai perkhidmatan dompet di {{url}} ({{detail}}). Pastikan zkas-walletd berjalan di sana dan port dibuka. Tiada perubahan — masih guna {{current}}.",
-    "title": "Sambung ke nod anda sendiri",
-    "modeOwn": "milik anda ✓",
-    "modeHosted": "dihoskan",
-    "intro": "Benih anda sentiasa menandatangani pada peranti ini. Tetapi perkhidmatan yang dihoskan masih melihat <b>kunci lihat</b> anda — ia boleh memantau baki, sejarah dan destinasi hantaran anda. Untuk merahsiakan itu juga, jalankan <code>zkas-walletd</code> pada nod sendiri dan sambungkan dompet ini terus kepadanya.",
-    "enterIp": "Masukkan <b>alamat IP</b> nod anda — kami tambah selebihnya.",
-    "nativeTransports": "Aplikasi terpasang menyokong sambungan HTTPS dan HTTP biasa LAN.",
-    "webTransports": "Dompet web perlukan HTTPS; guna aplikasi terpasang untuk HTTP biasa pada LAN.",
-    "currentlyUsing": "Sedang guna <code>{{current}}</code>.",
-    "labelNative": "Alamat IP atau nama hos Walletd",
-    "labelWeb": "URL walletd HTTPS",
-    "connect": "Sambung",
-    "accessToken": "Token akses",
-    "ifRequired": "(jika perlu)",
-    "accessTokenPlaceholder": "Token akses",
-    "portNote": "Guna port {{port}} secara lalai — tambah <code>:port</code> hanya jika diubah.",
-    "resetHosted": "Set semula ke lalai dihoskan"
-  },
   "vaultSetting": {
     "title": "Keselamatan & sandaran",
     "plaintextWarning": "Benih dompet ini disimpan <b>tanpa disulitkan</b> pada komputer ini — sesiapa yang salin fail boleh belanjakan dana anda. Tetapkan kata laluan untuk menyulitkannya; baki dan sejarah tidak terjejas.",
@@ -89,7 +69,7 @@
     "wrongSeed": "Frasa pemulihan itu milik dompet lain — ia tidak membuka kunci dompet ini. Semak dompet yang anda pulihkan, atau tukar ke dompet milik frasa itu.",
     "finishingMerge": "Menyelesaikan gabungan latar…",
     "fragmentedNothingSent": "{{message}} Tiada yang ditandatangani atau dihantar.",
-    "partialRecorded": "{{message}} Bahagian yang telah disiarkan direkodkan dalam Sejarah.",
+    "partialRecorded": "{{message}} {{sent}} ZKAS telah dihantar dan direkod dalam Sejarah. Jumlah di bawah ialah {{remaining}} ZKAS yang masih perlu dibayar — semak Sejarah sebelum menghantarnya.",
     "confirmTitle": "Sahkan",
     "amount": "Jumlah",
     "zkasAmount": "{{amount}} ZKAS",
@@ -152,7 +132,8 @@
     "catchingUp": "Masih menyegerak dengan rantaian — anda boleh bayar selepas selesai, supaya dompet tahu semua syiling anda.",
     "warmBanner": "<b>⚡ Bayaran pertama anda mengambil masa beberapa minit.</b><br/>Mencari syiling anda — ini berlaku sekali. Anda boleh mulakan bayaran sekarang.",
     "reviewSend": "Semak hantaran",
-    "waitingForSync": "Masih membaca rantai — anda boleh menghantar sebaik sahaja ia selesai."
+    "waitingForSync": "Masih membaca rantaian — anda boleh hantar sebaik sahaja ia segerak.",
+    "unknownFailure": "Bayaran ditolak dan dompet tidak dapat membaca sebabnya. Tiada apa-apa dihantar — semak Sejarah sebelum mencuba lagi."
   },
   "sign": {
     "title": "Tandatangan mesej",
@@ -197,7 +178,8 @@
     "customHint": "Daemon dompet yang anda jalankan sendiri.",
     "addrPlaceholder": "host:port, http://<lan-ip>:8501, atau .onion",
     "accessTokenPlaceholder": "Token akses",
-    "connect": "Sambung"
+    "connect": "Sambung",
+    "timedOut": "Itu tidak bermula dalam 20 saat. Jika anda memilih Tor, pastikan Orbot dipasang dan berjalan."
   },
   "backgroundSyncCard": {
     "title": "Segerak latar belakang",
@@ -310,7 +292,8 @@
     "onNotePin": "<b>Hidup.</b> Setiap kunci dompet pada peranti ini disulitkan, dan aplikasi meminta PIN anda untuk dibuka. Ia mengunci semula selepas beberapa minit di latar belakang.",
     "onNotePassphrase": "<b>Hidup.</b> Setiap kunci dompet pada peranti ini disulitkan, dan aplikasi meminta kata laluan anda untuk dibuka. Ia mengunci semula selepas beberapa minit di latar belakang.",
     "offIntro": "Kunci dompet anda disimpan pada peranti ini <b>tanpa disulitkan</b>. Hidupkan PIN atau kata laluan untuk menyulitkan setiap satu dalam storan, dan aplikasi memintanya apabila dibuka — jadi sesiapa yang memegang peranti ini, atau sandaran datanya, tidak boleh membuat perbelanjaan daripadanya.",
-    "setSecret": "Tetapkan PIN atau kata laluan"
+    "setSecret": "Tetapkan PIN atau kata laluan",
+    "nothingToLock": "Tiada kunci pada peranti ini untuk dikunci lagi. Dompet lihat sahaja hanya memegang kunci lihat. Cipta atau import dompet dahulu."
   },
   "backupWallet": {
     "minChars": "Guna sekurang-kurangnya 8 aksara.",
@@ -381,7 +364,8 @@
     "fingerprint": "Cap jari",
     "on": "Hidup",
     "off": "Mati",
-    "privateSends": "Penghantaran tanpa nama"
+    "privateSends": "Hantaran tanpa nama",
+    "pausedOnPhone": "Dijeda pada telefon ini"
   },
   "appearanceCard": {
     "title": "Warna aksen",
@@ -483,18 +467,18 @@
   "setup": {
     "title": "Tidak dapat capai perkhidmatan dompet",
     "nativeDown": "Perkhidmatan dompet tidak bertindak balas. Periksa sambungan anda dan cuba sebentar lagi — dana anda selamat pada rantaian.",
-    "hostedDown": "Perkhidmatan dompet yang dihoskan tidak bertindak balas. Tiada apa untuk anda jalankan — cuba sebentar lagi.",
+    "hostedDown": "Perkhidmatan dompet tidak bertindak balas buat masa ini. Tiada apa-apa untuk anda jalankan atau baiki — ia biasanya kembali sendiri.",
     "privacyNote": "Kunci perbelanjaan anda ada pada peranti ini walau apa pun — ia tidak pernah dihantar ke perkhidmatan. Apa yang berubah dengan menjalankan <code>zkas-walletd</code> sendiri ialah <b>privasi</b>: perkhidmatan yang dihoskan boleh lihat dompet mana yang bertanya tentang blok mana, dan daemon sendiri hanya nampak apa yang anda sudah tahu.",
     "nativeTransports": "Aplikasi yang dipasang menerima alamat LAN HTTPS dan HTTP biasa.",
     "webTransports": "Dompet web memerlukan URL perkhidmatan dompet HTTPS.",
     "daemonUrl": "URL Daemon",
     "checking": "Memeriksa…",
     "save": "Simpan",
-    "safeOnChain": "Syiling anda selamat pada rantai. Ini hanya tentang cara apl membacanya.",
-    "lastBalance": "Baki disahkan terakhir",
+    "safeOnChain": "Syiling anda selamat di rantaian. Ini hanya cara aplikasi membacanya.",
+    "lastBalance": "Baki terakhir disahkan",
     "retry": "Cuba lagi",
     "advanced": "Sambung ke perkhidmatan dompet lain",
-    "restartEngine": "Mulakan semula enjin pada peranti"
+    "restartEngine": "Mulakan semula enjin peranti"
   },
   "sendScene": {
     "warmEta": "lebih kurang {{n}} min lagi",
@@ -564,7 +548,7 @@
     "share": "Kongsi",
     "sealed": "Jumlah, pengirim, penerima — dirahsiakan.",
     "viewKeyTitle": "Kunci lihat dompet",
-    "viewKeySummary": "Lihat dompet ini secara baca sahaja",
+    "viewKeySummary": "Baca sahaja",
     "seedMoved": "Mencari benih pemulihan anda? Ia dipindahkan ke <b>Tetapan → Benih pemulihan</b>, di sebalik kunci aplikasi anda.",
     "qrBuilding": "Menyediakan kod anda…"
   },
@@ -638,7 +622,9 @@
     "chatAria": "Sembang komuniti ZKas",
     "chatOff": "mati · ketik untuk sediakan",
     "chatOpen": "bilik global",
-    "chatUnread": "{{n}} baharu"
+    "chatUnread": "{{n}} baharu",
+    "receivedToastHidden": "Bayaran tiba",
+    "receivedNotifBodyHidden": "Bayaran tiba dalam dompet anda."
   },
   "hostedNotice": {
     "browserWallet": "Dompet pelayar. <b><a>Dapatkan aplikasi lebih selamat</a></b>."
@@ -820,7 +806,7 @@
     "writeOnPaper": "Tulis di atas kertas, mengikut urutan.",
     "written": "Saya sudah mencatatnya",
     "alsoFile": "Simpan juga fail sandaran disulitkan",
-    "fillAllBlanks": "Isi setiap perkataan yang hilang untuk meneruskan."
+    "fillAllBlanks": "Isi setiap perkataan yang hilang untuk teruskan."
   },
   "recoverWallet": {
     "errNotSecret": "Itu bukan frasa pemulihan (12 perkataan) atau benih pemulihan (64 aksara hex).",
@@ -912,9 +898,9 @@
     "errReadFile": "Tidak dapat baca fail itu.",
     "selected": "Dipilih: {{name}}",
     "wordsSoFar": "{{n}} daripada 12 perkataan setakat ini.",
-    "wordsOddLength": "{{n}} perkataan. Frasa pemulihan ialah 12, 18 atau 24 perkataan.",
-    "connectingWhy": "Apl menyambung ke perkhidmatan dompet sebelum ia boleh mencipta dompet.",
-    "usePublicInstead": "Guna perkhidmatan awam sebaliknya"
+    "wordsOddLength": "{{n}} perkataan. Frasa pemulihan adalah 12, 18 atau 24 perkataan.",
+    "connectingWhy": "Perkhidmatan dompet anda masih menyegerak dengan rantaian. Dompet baru menunggu blok semasa, supaya ia tidak mengimbas tahun sejarah yang mustahil ada.",
+    "usePublicInstead": "Gunakan perkhidmatan dompet awam sebaliknya"
   },
   "languagePicker": {
     "label": "Bahasa",
@@ -1323,7 +1309,10 @@
     "dashboardTitle": "Papan pemuka pelombong",
     "close": "Tutup",
     "dashboardFrameTitle": "Papan pemuka jambatan perlombongan",
-    "dashboardNote": "Dihidangkan oleh jambatan perlombongan pada komputer ini. Ia muncul setelah perlombongan berjalan."
+    "dashboardNote": "Dihidangkan oleh jambatan perlombongan pada komputer ini. Ia muncul setelah perlombongan berjalan.",
+    "modeFixed": "Mod perlombongan ditetapkan semasa mula. Hentikan perlombongan untuk menukarnya. (84)",
+    "stale": "Hilang hubungan dengan perkhidmatan perlombongan. Angka di bawah adalah bacaan terakhir sebelum itu — ia tidak langsung. (151)",
+    "dashboardHiddenPrivate": "Papan pemuka jambatan disembunyikan semasa mod privasi dihidupkan: halaman yang disajikan memuatkan fon dan skrip dari internet awam, yang akan mendedahkan alamat anda dari peranti ini."
   },
   "walletTools": {
     "eyebrow": "Alatan dompet",
@@ -1444,7 +1433,8 @@
     "nodeLogsTitle": "Log nod ZKAS",
     "walletLogsTitle": "Log enjin dompet",
     "movingWalletToPublic": "Memindahkan dompet ke nod awam…",
-    "stoppingNode": "Memberhentikan nod…"
+    "stoppingNode": "Memberhentikan nod…",
+    "stale": "Hilang hubungan dengan penyelia nod. Angka di bawah adalah bacaan terakhir sebelum itu — ia tidak langsung. (153)"
   },
   "selfHost": {
     "copied": "Disalin",
@@ -1598,7 +1588,8 @@
     "blockEmission": "Emisi blok",
     "nextReduction": "Pengurangan seterusnya",
     "tailNote": "Jadual berakhir dengan pelepasan ekor kekal; tiada bekalan terminal tetap.",
-    "liveHiddenOnTor": "Paparan langsung disembunyikan pada Tor, kerana memuatkannya akan mendedahkan IP sebenar."
+    "liveHiddenOnTor": "Paparan rangkaian langsung disembunyikan semasa Tor dihidupkan: ia dimuat dari explorer.zkas.info, yang akan melihat alamat sebenar anda. Angka di bawah datang melalui perkhidmatan dompet anda. (220)",
+    "unavailableOverTor": "Penjelajah tidak boleh dicapai melalui Tor. Matikan Tor, atau tetapkan alamat onion untuknya, untuk melihat data rantaian langsung. (142)"
   },
   "blockView": {
     "title": "Blok",
@@ -1664,7 +1655,10 @@
     "unlock": "Buka kunci",
     "setPassphrase": "Tetapkan kata laluan",
     "noReset": "Frasa laluan ini tidak boleh diset semula — ia tidak dihantar atau disimpan. Jika terlupa, cara satu-satunya untuk masuk semula ialah frasa benih atau fail sandaran. Simpan salah satu dengan selamat.",
-    "haveBackup": "Sudah ada fail sandaran? <a>Pulihkan dari sandaran</a>"
+    "haveBackup": "Sudah ada fail sandaran? <a>Pulihkan dari sandaran</a>",
+    "cannotReachTitle": "Tidak dapat capai perkhidmatan dompet (41)",
+    "cannotReachBody": "Perkhidmatan dompet setempat tidak menjawab. Ia mungkin masih dimulakan. (93)",
+    "tryAgain": "Cuba lagi (15)"
   },
   "restoreFromBackup": {
     "errChooseFile": "Pilih fail sandaran.",
@@ -1710,9 +1704,9 @@
     "wipeWarning": "Ini memadam semua data dompet <b>dari peranti ini</b> — syiling kekal dalam rantai, tetapi setiap dompet hanya kembali daripada benih atau fail sandaran.",
     "eraseDevice": "Padam peranti & mula semula",
     "cancel": "Batal",
-    "sealed": "Dimeterai pada peranti ini",
-    "decrypting": "Menyahsulit dompet anda",
-    "decrypted": "Dinyahsulit"
+    "sealed": "Dimeterai pada peranti ini (34)",
+    "decrypting": "Menyahsulit dompet anda (36)",
+    "decrypted": "Dinyahsulit (15)"
   },
   "firstRunNode": {
     "errEnterAddress": "Masukkan alamat nod anda (hos:port).",
@@ -1837,7 +1831,8 @@
     "cannotReachEmbedded": "Tidak dapat mencapai enjin dompet terbenam. ({{detail}})",
     "notResponding": "Perkhidmatan dompet tidak bertindak balas (tamat masa).",
     "cannotReachDaemon": "Tidak dapat mencapai daemon dompet. ({{detail}})",
-    "invalidResponse": "Perkhidmatan dompet mengembalikan respons tidak sah ({{status}})."
+    "invalidResponse": "Perkhidmatan dompet mengembalikan respons tidak sah ({{status}}).",
+    "blockedByPrivacy": "Disekat: {{host}} tidak boleh dicapai secara peribadi, dan Tor dihidupkan. Matikan Tor atau pilih perkhidmatan onion."
   },
   "noncustodial": {
     "fragmentedDefault": "Bayaran ini memerlukan lebih banyak syiling daripada yang boleh dibelanjakan dalam satu transaksi.",
@@ -1855,10 +1850,10 @@
     "fewerThanThree": "Kurang daripada tiga syiling boleh dibelanjakan sekarang, jadi penggabungan tidak akan mengurangkan kiraan syiling dompet."
   },
   "privateSends": {
-    "intro": "Pembayaran anda biasanya membawa salinan butirannya yang disulitkan dengan kunci <b>anda sendiri</b>, supaya sejarah anda kekal selepas pemulihan dan anda boleh membuktikan pembayaran kemudian. Penghantaran tanpa nama meninggalkan salinan itu.",
-    "cost": "Kosnya kekal, dan ia ditanggung oleh anda: tiada salinan untuk sesiapa menyahsulit — <b>malah anda sendiri, dengan kunci perbelanjaan anda</b>. Setelah dihantar, pembayaran tanpa nama tidak boleh dipulihkan apabila anda memulihkan dompet ini, tidak muncul dalam sejarah pada peranti lain, dan tidak boleh dibuktikan kepada sesiapa. Penerima tetap menerimanya seperti biasa.",
-    "turnOn": "Hidupkan penghantaran tanpa nama",
-    "turnOff": "Matikan penghantaran tanpa nama"
+    "intro": "Bayaran anda biasanya membawa salinan butirannya yang disulitkan ke kunci <b>anda sendiri</b>, supaya sejarah anda terselamat semasa pemulihan dan anda boleh buktikan bayaran kemudian. Hantaran tanpa nama meninggalkan salinan itu.",
+    "cost": "Kosnya kekal, dan ia ditanggung oleh anda: tiada salinan untuk sesiapa menyahsulit — <b>malah anda, dengan kunci perbelanjaan anda sendiri</b>. Setelah dihantar, bayaran tanpa nama tidak boleh dipulihkan apabila anda memulihkan dompet ini, tidak boleh muncul dalam sejarah pada peranti lain, dan tidak boleh dibuktikan kepada sesiapa. Penerima masih menerimanya seperti biasa.",
+    "turnOn": "Hidupkan hantaran tanpa nama",
+    "turnOff": "Matikan hantaran tanpa nama"
   },
   "paymentProof": {
     "title": "Buktikan bayaran ini",
@@ -1883,7 +1878,9 @@
     "invalid": "Tidak sah.",
     "confirmations_one": "{{count}} pengesahan",
     "confirmations_other": "{{count}} pengesahan",
-    "verifyNote": "Bukti disemak terhadap transaksi pada rantaian: penerima dan jumlah yang didedahkan mesti menghasilkan komitmen yang direkodkan oleh blok."
+    "verifyNote": "Bukti disemak terhadap transaksi pada rantaian: penerima dan jumlah yang didedahkan mesti menghasilkan komitmen yang direkodkan oleh blok.",
+    "undetermined": "Bukti ini tidak dapat diperiksa. (42)",
+    "undeterminedWhy": "Perkhidmatan dompet tidak memberi jawapan, jadi tiada yang diketahui tentang pembayaran ini. Cuba lagi sebentar — ini bukan bukti bahawa bukti itu palsu. (212)"
   },
   "backgroundPermission": {
     "title": "Biarkan dompet menyegerak di latar belakang?",
@@ -1901,7 +1898,7 @@
     "consentEnable": "Hidupkan sembang",
     "consentLater": "Tidak sekarang",
     "consentOff": "Anda boleh matikan ini semula dalam Tetapan.",
-    "back": "← Dompet",
+    "back": "Dompet",
     "roomAria": "Sembang komuniti",
     "state": {
       "offline": "luar talian",
@@ -1950,8 +1947,7 @@
       "muteConfirm": "Tekan lagi untuk bisukan {{name}}",
       "reportConfirm": "Tekan lagi untuk lapor dan bisukan",
       "sendZkas": "Hantar ZKAS",
-      "noAddress": "Belum ada alamat diterbitkan.",
-      "react": "Beri reaksi"
+      "react": "Reaksi"
     },
     "profile": {
       "copyKey": "Salin kunci awam",
@@ -1974,8 +1970,7 @@
       "note": "Hanya anda berdua boleh membaca ini. Geganti melihat kunci sekali guna, bukan siapa bercakap dengan siapa.",
       "headerNote": "peribadi"
     },
-    "you": "anda",
-    "intro": "Semua orang di sini boleh baca apa yang anda pos, dan pos tidak boleh dipadam. Guna baris di atas untuk tukar bilik. Ketik mesej untuk reaksi atau balas, atau leret untuk balas.",
+    "intro": "Semua orang di sini boleh membaca apa yang anda siarkan, dan siaran tidak boleh dipadam. Ketik mesej untuk reaksi atau balas, atau leret untuk balas.",
     "torBlocked": "Sembang dimatikan kerana Tor hidup. Geganti dicapai terus, bukan melalui Tor, jadi sambungan akan mendedahkan alamat IP sebenar anda. Matikan Tor, atau tetapkan geganti dengan alamat .onion dalam Tetapan.",
     "torBlockedShort": "Tidak bersambung semasa Tor hidup.",
     "muted": {
@@ -1992,10 +1987,11 @@
     "nameLabel": "Nama",
     "useMyAddress": "Guna alamat dompet",
     "clearAddress": "Buang alamat",
-    "earlier": "Mesej terdahulu",
+    "earlier": "Mesej lebih awal",
     "today": "Hari ini",
     "yesterday": "Semalam",
-    "jumpLatest": "Lompat ke terkini"
+    "jumpLatest": "Pergi ke mesej terkini",
+    "profileOf": "Profil {{name}}"
   },
   "confirmWatch": {
     "title": "Pantau dompet ini?",
@@ -2006,8 +2002,8 @@
     "decline": "Tidak, buang pautan"
   },
   "daemonError": {
-    "network": "Sambungan ke rangkaian terputus sebentar. Syiling anda selamat — dompet terus mencuba sendiri.",
-    "generic": "Perkhidmatan dompet menghadapi masalah semasa membaca rantai. Syiling anda selamat pada rantai.",
+    "network": "Hilang hubungan dengan rangkaian seketika. Syiling anda selamat — dompet terus mencuba semula sendiri.",
+    "generic": "Perkhidmatan dompet menghadapi masalah semasa membaca rantaian. Syiling anda selamat di rantaian.",
     "details": "Butiran teknikal"
   }
 }

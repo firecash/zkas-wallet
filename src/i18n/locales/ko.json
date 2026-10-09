@@ -79,7 +79,7 @@
     "wrongSeed": "해당 시드는 다른 지갑의 것입니다 — 이 지갑을 잠금 해제할 수 없습니다. 복원 중인 지갑을 확인하거나, 해당 시드가 속한 지갑으로 전환하세요.",
     "finishingMerge": "백그라운드 병합 완료 중…",
     "fragmentedNothingSent": "{{message}} 서명되거나 전송된 것이 없습니다.",
-    "partialRecorded": "{{message}} 이미 전송된 부분은 거래 내역에 기록됩니다.",
+    "partialRecorded": "{{message}} {{sent}} ZKAS가 이미 전송되어 거래 내역에 기록되었습니다. 아래 금액은 아직 결제해야 할 {{remaining}} ZKAS입니다. 보내기 전에 거래 내역을 확인하세요. (210자)",
     "confirmTitle": "확인",
     "amount": "금액",
     "zkasAmount": "{{amount}} ZKAS",
@@ -115,7 +115,8 @@
     "spendable": "{{amount}} 사용 가능",
     "recipientLabel": "수신자 보호 주소",
     "addrPlaceholder": "zkas:…",
-    "waitingForSync": "아직 체인을 읽는 중입니다 — 따라잡는 즉시 보낼 수 있습니다."
+    "waitingForSync": "체인을 읽는 중입니다. 동기화가 완료되는 즉시 보낼 수 있습니다. (84자)",
+    "unknownFailure": "결제가 거부되었으며 지갑이 그 이유를 읽을 수 없습니다. 아무것도 전송되지 않았습니다. 다시 시도하기 전에 거래 내역을 확인하세요. (146자)"
   },
   "sign": {
     "title": "메시지 서명",
@@ -127,26 +128,6 @@
     "copySignature": "서명 복사",
     "sign": "서명",
     "fvkWarning": "서명하면 검증자에게 보기 키를 넘기게 됩니다. 이후 상대방은 이 지갑의 잔액, 거래 내역, 송금처를 볼 수 있습니다. 중요한 거래라면 별도 지갑에서 서명하세요. 설정에서 추가할 수 있습니다."
-  },
-  "daemonSetting": {
-    "timedOut": "5초 후 시간 초과",
-    "unreachable": "{{url}}에서 지갑 서비스에 연결할 수 없습니다 ({{detail}}). zkas-walletd가 실행 중이고 포트가 열려 있는지 확인하세요. 변경 사항 없음 — {{current}}을(를) 계속 사용합니다.",
-    "title": "내 노드에 연결",
-    "modeOwn": "내 노드 ✓",
-    "modeHosted": "호스팅",
-    "intro": "시드는 항상 이 기기에서 서명합니다. 하지만 호스팅 서비스는 여전히 <b>보기 키</b>를 볼 수 있어 잔액, 거래 내역, 전송 대상을 확인할 수 있습니다. 이마저도 비공개로 유지하려면 자체 노드에서 <code>zkas-walletd</code>를 실행하고 이 지갑을 직접 연결하세요.",
-    "enterIp": "노드의 <b>IP 주소</b>만 입력하세요 — 나머지는 자동 처리됩니다.",
-    "nativeTransports": "설치된 앱은 HTTPS 및 일반 HTTP LAN 연결을 지원합니다.",
-    "webTransports": "웹 지갑은 HTTPS가 필요합니다. LAN에서 일반 HTTP를 사용하려면 설치된 앱을 이용하세요.",
-    "currentlyUsing": "현재 <code>{{current}}</code> 사용 중.",
-    "labelNative": "Walletd IP 주소 또는 호스트명",
-    "labelWeb": "HTTPS walletd URL",
-    "connect": "연결",
-    "accessToken": "액세스 토큰",
-    "ifRequired": "(필요한 경우)",
-    "accessTokenPlaceholder": "액세스 토큰",
-    "portNote": "기본 포트 {{port}} 사용 — 변경 시에만 <code>:port</code>를 추가하세요.",
-    "resetHosted": "호스팅 기본값으로 초기화"
   },
   "vaultSetting": {
     "title": "보안 및 백업",
@@ -197,7 +178,8 @@
     "customHint": "직접 실행하는 지갑 데몬.",
     "addrPlaceholder": "host:port, http://<lan-ip>:8501, 또는 .onion",
     "accessTokenPlaceholder": "액세스 토큰",
-    "connect": "연결"
+    "connect": "연결",
+    "timedOut": "20초 이내에 시작되지 않았습니다. Tor를 선택했다면 Orbot이 설치되어 실행 중인지 확인하세요. (128자)"
   },
   "backgroundSyncCard": {
     "title": "백그라운드 동기화",
@@ -251,7 +233,8 @@
     "onNotePin": "<b>켜짐.</b> 이 기기의 모든 지갑 키가 암호화되며, 앱 실행 시 PIN을 요구합니다. 백그라운드에서 몇 분 후 자동으로 다시 잠깁니다.",
     "onNotePassphrase": "<b>켜짐.</b> 이 기기의 모든 지갑 키가 암호화되며, 앱 실행 시 암호문구를 요구합니다. 백그라운드에서 몇 분 후 자동으로 다시 잠깁니다.",
     "offIntro": "지갑 키가 이 기기에 <b>암호화되지 않은</b> 상태로 저장되어 있습니다. PIN이나 암호문구를 켜면 모든 키가 암호화되어 저장되며, 앱 실행 시 입력을 요구합니다. 따라서 기기나 데이터 백업을 가진 사람이 사용할 수 없습니다.",
-    "setSecret": "PIN 또는 비밀번호 설정"
+    "setSecret": "PIN 또는 비밀번호 설정",
+    "nothingToLock": "이 기기에 아직 잠글 키가 없습니다. 보기 전용 지갑은 보기 키만 보관합니다. 먼저 지갑을 생성하거나 가져오세요. (159자)"
   },
   "switchWallet": {
     "title": "지갑",
@@ -358,18 +341,18 @@
   "setup": {
     "title": "지갑 서비스에 연결할 수 없음",
     "nativeDown": "지갑 서비스가 응답하지 않습니다. 연결을 확인하고 잠시 후 다시 시도하세요 — 자금은 체인에 안전하게 있습니다.",
-    "hostedDown": "호스팅된 지갑 서비스가 응답하지 않습니다. 실행할 것이 없습니다 — 잠시 후 다시 시도하세요.",
+    "hostedDown": "지갑 서비스가 현재 응답하지 않습니다. 실행하거나 수정할 작업은 없습니다. 보통 저절로 복구됩니다. (147자)",
     "privacyNote": "어느 쪽이든 사용 키는 이 기기에 있습니다 — 서비스로 전송되지 않습니다. 자체 <code>zkas-walletd</code>를 실행하면 변경되는 것은 <b>개인정보 보호</b>입니다: 호스팅 서비스는 어떤 지갑이 어떤 블록을 요청하는지 볼 수 있지만, 자체 데몬은 이미 알고 있는 것만 봅니다.",
     "nativeTransports": "설치된 앱은 HTTPS 및 일반 HTTP LAN 주소를 허용합니다.",
     "webTransports": "웹 지갑은 HTTPS 지갑 서비스 URL이 필요합니다.",
     "daemonUrl": "데몬 URL",
     "checking": "확인 중…",
     "save": "저장",
-    "safeOnChain": "코인은 체인에 안전하게 있습니다. 이것은 앱이 읽는 방식의 문제일 뿐입니다.",
-    "lastBalance": "마지막으로 확인된 잔액",
-    "retry": "다시 시도",
-    "advanced": "다른 지갑 서비스에 연결",
-    "restartEngine": "기기 내 엔진 다시 시작"
+    "safeOnChain": "코인은 체인에 안전하게 보관됩니다. 이는 앱이 이를 읽는 방식일 뿐입니다. (91자)",
+    "lastBalance": "마지막 확인 잔액 (36자)",
+    "retry": "재시도 (15자)",
+    "advanced": "다른 지갑 서비스에 연결 (49자)",
+    "restartEngine": "기기 내 엔진 재시작 (37자)"
   },
   "sendScene": {
     "warmEta": "약 {{n}}분 남음",
@@ -444,7 +427,8 @@
     "fingerprint": "지문",
     "on": "켜기",
     "off": "끄기",
-    "privateSends": "익명 전송"
+    "privateSends": "익명 전송 (24자)",
+    "pausedOnPhone": "이 폰에서 일시 중지 (32자)"
   },
   "appearanceCard": {
     "title": "강조 색상",
@@ -599,7 +583,9 @@
     "chatAria": "ZKas 커뮤니티 채팅",
     "chatOff": "꺼짐 · 탭하여 설정",
     "chatOpen": "전체방",
-    "chatUnread": "{{n}}개 새 메시지"
+    "chatUnread": "{{n}}개 새 메시지",
+    "receivedToastHidden": "결제 도착 (28자)",
+    "receivedNotifBodyHidden": "지갑에 결제가 도착했습니다. (43자)"
   },
   "hostedNotice": {
     "browserWallet": "브라우저 지갑입니다. <b><a>더 안전한 앱 받기</a></b>."
@@ -623,9 +609,9 @@
     "share": "공유",
     "sealed": "금액, 발신자, 수신자 — 모두 보호됩니다.",
     "viewKeyTitle": "지갑 보기 키",
-    "viewKeySummary": "이 지갑을 읽기 전용으로 보기",
+    "viewKeySummary": "읽기 전용 (15자)",
     "seedMoved": "복구 시드를 찾으시나요? <b>설정 → 복구 시드</b>로 이동했습니다. 앱 잠금 뒤에 있습니다.",
-    "qrBuilding": "코드를 준비하는 중…"
+    "qrBuilding": "코드 준비 중… (32자)"
   },
   "revealSeedCard": {
     "wrongPin": "잘못된 PIN입니다.",
@@ -829,7 +815,7 @@
     "writeOnPaper": "종이에 순서대로 적으세요.",
     "written": "기록 완료",
     "alsoFile": "암호화된 백업 파일도 저장",
-    "fillAllBlanks": "계속하려면 빠진 단어를 모두 채우세요."
+    "fillAllBlanks": "계속하려면 모든 빈칸을 채우세요. (51자)"
   },
   "recoverWallet": {
     "errNotSecret": "복구 구문(12단어) 또는 복구 시드(64자 16진수)가 아닙니다.",
@@ -918,10 +904,10 @@
     "restoreFromFile": "백업 파일에서 복원",
     "importPhrase": "복구 구문 가져오기",
     "watchWallet": "지갑 보기 (읽기 전용)",
-    "wordsSoFar": "지금까지 12개 중 {{n}}개입니다.",
-    "wordsOddLength": "{{n}}개입니다. 복구 문구는 12, 18 또는 24개 단어입니다.",
-    "connectingWhy": "지갑을 만들기 전에 앱이 지갑 서비스에 연결합니다.",
-    "usePublicInstead": "대신 공개 서비스 사용"
+    "wordsSoFar": "지금까지 12개 중 {{n}}개 단어. (33자)",
+    "wordsOddLength": "{{n}}개 단어. 복구 구문은 12, 18 또는 24개 단어입니다. (76자)",
+    "connectingWhy": "지갑 서비스가 체인을 따라잡는 중입니다. 새 지갑은 현재 블록을 기다리므로 가질 수 없는 수년의 기록을 스캔하지 않습니다. (197자)",
+    "usePublicInstead": "공용 지갑 서비스 사용 (49자)"
   },
   "languagePicker": {
     "label": "언어",
@@ -1054,7 +1040,8 @@
     "cannotReachEmbedded": "내장 지갑 엔진에 연결할 수 없습니다. ({{detail}})",
     "notResponding": "지갑 서비스가 응답하지 않습니다(타임아웃).",
     "cannotReachDaemon": "지갑 데몬에 연결할 수 없습니다. ({{detail}})",
-    "invalidResponse": "지갑 서비스가 잘못된 응답을 반환했습니다({{status}})."
+    "invalidResponse": "지갑 서비스가 잘못된 응답을 반환했습니다({{status}}).",
+    "blockedByPrivacy": "차단됨: {{host}}에 개인적으로 접근할 수 없으며 Tor가 켜져 있습니다. Tor를 끄거나 온ion 서비스를 선택하세요. (132자)"
   },
   "noncustodial": {
     "fragmentedDefault": "이 결제에는 한 번의 거래로 처리할 수 있는 것보다 더 많은 코인이 필요합니다.",
@@ -1355,7 +1342,10 @@
     "dashboardTitle": "채굴 대시보드",
     "close": "닫기",
     "dashboardFrameTitle": "채굴 브리지 대시보드",
-    "dashboardNote": "이 컴퓨터의 채굴 브리지가 제공합니다. 채굴 실행 시 나타납니다."
+    "dashboardNote": "이 컴퓨터의 채굴 브리지가 제공합니다. 채굴 실행 시 나타납니다.",
+    "modeFixed": "시작 시 채굴 모드가 설정됩니다. 변경하려면 채굴을 중지하세요.",
+    "stale": "채굴 서비스와 연결이 끊겼습니다. 아래 수치는 그 이전의 마지막 측정값으로, 실시간이 아닙니다.",
+    "dashboardHiddenPrivate": "개인 정보 보호 모드가 켜져 있으면 브리지의 대시보드가 숨겨집니다. 제공하는 페이지는 공용 인터넷에서 글꼴과 스크립트를 로드하므로 이 기기에서 주소가 노출됩니다. (233자)"
   },
   "walletTools": {
     "eyebrow": "지갑 도구",
@@ -1476,7 +1466,8 @@
     "nodeLogsTitle": "ZKAS 노드 로그",
     "walletLogsTitle": "지갑 엔진 로그",
     "movingWalletToPublic": "공용 노드로 지갑 이동 중…",
-    "stoppingNode": "노드 중지 중…"
+    "stoppingNode": "노드 중지 중…",
+    "stale": "노드 감독자와 연결이 끊겼습니다. 아래 수치는 그 이전의 마지막 측정값으로, 실시간이 아닙니다."
   },
   "selfHost": {
     "webEyebrow": "자체 호스팅",
@@ -1630,7 +1621,8 @@
     "blockEmission": "블록 발행량",
     "nextReduction": "다음 반감기",
     "tailNote": "일정은 영구적인 테일 발행으로 종료되며, 고정된 최종 공급량은 없습니다.",
-    "liveHiddenOnTor": "Tor에서는 실시간 보기가 숨겨집니다. 불러오면 실제 IP가 드러나기 때문입니다."
+    "liveHiddenOnTor": "Tor가 켜져 있으면 실시간 네트워크 보기가 숨겨집니다. explorer.zkas.info에서 불러오는데, 이 사이트가 사용자의 실제 주소를 알게 됩니다. 아래 수치는 지갑 서비스를 통해 전달됩니다.",
+    "unavailableOverTor": "Tor로는 탐색기에 접속할 수 없습니다. Tor를 끄거나 온어드레스를 설정하여 실시간 체인 데이터를 확인하세요."
   },
   "blockView": {
     "title": "블록",
@@ -1696,7 +1688,10 @@
     "unlock": "잠금 해제",
     "setPassphrase": "비밀번호 설정",
     "noReset": "이 비밀번호는 재설정할 수 없습니다. 어디에도 전송되거나 저장되지 않습니다. 잊어버린 경우 복구 구문이나 백업 파일로만 지갑에 다시 접근할 수 있으니 안전하게 보관하세요.",
-    "haveBackup": "이미 백업 파일이 있나요? <a>백업에서 복원</a>"
+    "haveBackup": "이미 백업 파일이 있나요? <a>백업에서 복원</a>",
+    "cannotReachTitle": "지갑 서비스에 연결할 수 없음",
+    "cannotReachBody": "로컬 지갑 서비스가 응답하지 않습니다. 아직 시작 중일 수 있습니다.",
+    "tryAgain": "다시 시도"
   },
   "restoreFromBackup": {
     "errChooseFile": "백업 파일을 선택하세요.",
@@ -1742,8 +1737,8 @@
     "wipeWarning": "이 작업은 모든 지갑 데이터를 <b>이 기기에서</b> 삭제합니다. 코인은 온체인에 남지만, 각 지갑은 시드나 백업 파일로만 복구됩니다.",
     "eraseDevice": "기기 초기화 및 재시작",
     "cancel": "취소",
-    "sealed": "이 기기에 봉인됨",
-    "decrypting": "지갑을 복호화하는 중",
+    "sealed": "이 기기에서 봉인됨",
+    "decrypting": "지갑 복호화 중",
     "decrypted": "복호화 완료"
   },
   "mainNav": {
@@ -1855,10 +1850,10 @@
     "opening": "여는 중…"
   },
   "privateSends": {
-    "intro": "결제는 보통 세부 내용의 사본을 <b>당신의</b> 키로 암호화해 함께 담습니다. 복구 후에도 내역이 남고 나중에 결제를 증명할 수 있도록 하기 위해서입니다. 익명 전송은 그 사본을 남기지 않습니다.",
-    "cost": "이 대가는 영구적이며, 부담하는 쪽은 당신입니다. 누구도 복호화할 수 있는 사본이 없습니다 — <b>당신의 지출 키로도 불가능합니다</b>. 보낸 뒤에는 익명 결제를 이 지갑 복구 시 되살릴 수 없고, 다른 기기의 내역에도 나타나지 않으며, 누구에게도 증명할 수 없습니다. 받는 사람은 정상적으로 받습니다.",
-    "turnOn": "익명 전송 켜기",
-    "turnOff": "익명 전송 끄기"
+    "intro": "일반 결제 시 세부 정보 사본이 <b>사용자 본인의</b> 키로 암호화되어 기록되므로 복원 후에도 거래 내역이 유지되고 나중에 결제를 증명할 수 있습니다. 익명 전송은 이 사본을 남기지 않습니다. (255자)",
+    "cost": "이 비용은 영구적이며 사용자에게 부담됩니다. 누구도 해독할 사본이 없습니다. <b>자신의 지출 키를 가진 사용자조차도</b> 해독할 수 없습니다. 일단 전송된 익명 결제는 이 지갑을 복원할 때 복구할 수 없고, 다른 기기의 거래 내역에 나타나지 않으며, 누구에게도 증명할 수 없습니다. 수신자는 정상적으로 받습니다. (433자)",
+    "turnOn": "익명 전송 켜기 (37자)",
+    "turnOff": "익명 전송 끄기 (39자)"
   },
   "paymentProof": {
     "title": "이 결제 증명하기",
@@ -1883,7 +1878,9 @@
     "invalid": "유효하지 않음.",
     "confirmations_one": "{{count}}회 확인",
     "confirmations_other": "{{count}}회 확인",
-    "verifyNote": "증명은 체인 상의 거래와 대조됩니다. 공개된 수신자와 금액이 블록에 기록된 커밋먼트를 재현해야 합니다."
+    "verifyNote": "증명은 체인 상의 거래와 대조됩니다. 공개된 수신자와 금액이 블록에 기록된 커밋먼트를 재현해야 합니다.",
+    "undetermined": "이 증명을 확인할 수 없습니다.",
+    "undeterminedWhy": "지갑 서비스가 응답하지 않아 이 결제에 대해 알 수 있는 정보가 없습니다. 잠시 후 다시 시도하세요. 이는 증명이 거짓이라는 증거가 아닙니다."
   },
   "chat": {
     "nameSkip": "익명으로",
@@ -1911,8 +1908,7 @@
       "muteConfirm": "다시 탭하여 {{name}} 음소거",
       "reportConfirm": "다시 탭하여 신고 및 음소거",
       "sendZkas": "ZKAS 보내기",
-      "noAddress": "아직 주소가 없습니다.",
-      "react": "반응"
+      "react": "반응 (9자)"
     },
     "profile": {
       "copyKey": "공개 키 복사",
@@ -1932,11 +1928,10 @@
       "none": "아직 비공개 메시지가 없어요.",
       "start": "비공개 메시지 보내기",
       "placeholder": "비공개 메시지",
-      "note": "둘만 읽을 수 있어요. 릴레이는 일회용 키만 볼 뿐, 누가 누구에게 말하는지는 알 수 없어요.",
+      "note": "둘만 읽을 수 있습니다. 릴레이는 일회용 키만 볼 뿐 누가 누구에게 말하는지 알 수 없습니다. (121자)",
       "headerNote": "비공개"
     },
-    "you": "나",
-    "intro": "여기 있는 모든 사람이 작성한 글을 볼 수 있으며, 게시물은 삭제할 수 없습니다. 위쪽 행을 사용해 방을 변경하세요. 메시지를 탭해 반응하거나 답장하고, 스와이프해 답장하세요.",
+    "intro": "여기 있는 모든 사람이 게시물을 읽을 수 있으며 게시물은 삭제할 수 없습니다. 메시지를 탭하여 반응하거나 답장하거나 스와이프하여 답장하세요. (158자)",
     "consentTitle": "채팅을 켤까요?​",
     "consentPublic": "전체방 메시지는 공개되며 영구 저장됩니다. 삭제할 수 없습니다.",
     "consentIp": "릴레이 서버가 사용자의 IP 주소와 온라인 상태를 확인합니다. 지갑은 확인하지 않습니다.",
@@ -1944,7 +1939,7 @@
     "consentEnable": "채팅 켜기",
     "consentLater": "나중에",
     "consentOff": "설정에서 다시 끌 수 있습니다.",
-    "back": "← 지갑",
+    "back": "지갑 (10자)",
     "roomAria": "커뮤니티 채팅",
     "state": {
       "offline": "오프라인",
@@ -1984,10 +1979,11 @@
     "nameLabel": "이름",
     "useMyAddress": "내 지갑 주소 사용",
     "clearAddress": "주소 삭제",
-    "earlier": "이전 메시지",
-    "today": "오늘",
-    "yesterday": "어제",
-    "jumpLatest": "최신으로 이동"
+    "earlier": "이전 메시지 (26자)",
+    "today": "오늘 (9자)",
+    "yesterday": "어제 (15자)",
+    "jumpLatest": "최신 메시지로 이동 (39자)",
+    "profileOf": "{{name}}의 프로필 (31자)"
   },
   "backgroundPermission": {
     "title": "지갑 동기화를 백그라운드에서 허용할까요?​",
@@ -2006,8 +2002,8 @@
     "decline": "아니요, 링크 삭제"
   },
   "daemonError": {
-    "network": "네트워크 연결이 잠시 끊겼습니다. 코인은 안전하며 지갑이 알아서 다시 시도합니다.",
-    "generic": "지갑 서비스가 체인을 읽는 중 문제가 발생했습니다. 코인은 체인에 안전합니다.",
-    "details": "기술 세부 정보"
+    "network": "잠시 네트워크와 연결이 끊어졌습니다. 코인은 안전합니다. 지갑이 자동으로 재시도합니다. (134자)",
+    "generic": "지갑 서비스가 체인을 읽는 중 문제가 발생했습니다. 코인은 체인에 안전합니다. (119자)",
+    "details": "기술 세부 정보 (28자)"
   }
 }

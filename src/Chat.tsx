@@ -542,6 +542,7 @@ export function ChatScreen({
   const listRef = useRef<HTMLDivElement | null>(null);
   const composer = useRef<HTMLTextAreaElement | null>(null);
   const composeBox = useRef<HTMLDivElement | null>(null);
+  const screenBox = useRef<HTMLDivElement | null>(null);
 
   /** Put the newest message against the bottom of the list.
    *
@@ -590,12 +591,37 @@ export function ChatScreen({
   useEffect(() => {
     const el = composeBox.current;
     if (!el || typeof ResizeObserver === "undefined") return;
+    // Publish how tall the whole bottom stack is, so the jump-to-latest button
+    // can sit above it. Its `bottom` was a constant 84px, which is fine for a
+    // bare composer and wrong for everything else: with a reply pending, the
+    // 59px banner put the FAB directly over the banner's cancel X — measured as
+    // a 42x27 overlap, and elementFromPoint at the X's own centre returned the
+    // FAB, so "cancel reply" scrolled the room to the bottom instead. With a
+    // multi-line draft the composer grows to 137px and the FAB ends up INSIDE
+    // it, stacked on the send button.
+    //
+    // Measured from the top of the topmost footer element, because the reply
+    // banner and the warning banners are siblings ABOVE the composer, not
+    // inside the box being observed.
+    const publishFooter = () => {
+      const screen = screenBox.current;
+      if (!screen) return;
+      const bottom = screen.getBoundingClientRect().bottom;
+      let top = el.getBoundingClientRect().top;
+      for (const sel of [".chat-replying", ".chat-banner"]) {
+        const b = screen.querySelector<HTMLElement>(sel);
+        if (b) top = Math.min(top, b.getBoundingClientRect().top);
+      }
+      screen.style.setProperty("--chat-footer-h", `${Math.max(0, Math.round(bottom - top))}px`);
+    };
     const ro = new ResizeObserver(() => {
+      publishFooter();
       if (atBottomRef.current) pin();
     });
     ro.observe(el);
+    publishFooter();
     return () => ro.disconnect();
-  }, [pin, view.k, state, canPost]);
+  }, [pin, view.k, state, canPost, replyTo, error]);
 
   useEffect(() => {
     if (!canPost) return;
@@ -1502,7 +1528,7 @@ export function ChatScreen({
   };
 
   return createPortal(
-    <div className="chat-screen" role="dialog" aria-modal="true" aria-label={t("chat.roomAria")}>
+    <div className="chat-screen" ref={screenBox} role="dialog" aria-modal="true" aria-label={t("chat.roomAria")}>
       <header className="chat-head">
         {/* Back steps WITHIN chat first — thread → list → room → wallet — so a
             private conversation is not one tap from vanishing. */}
@@ -1665,7 +1691,27 @@ export function ChatScreen({
         {messages.length === 0 && (
           <div className="chat-blank">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16v11H9l-5 4Z" /></svg>
-            <b>{state === "live" ? t("chat.empty") : state === "blocked" ? t("chat.torBlocked") : t("chat.connecting")}</b>
+            {/* `offline` and `error` used to collapse into "Connecting to the
+                relay…", which then sat there for ever with the room header
+                simultaneously reporting offline — two contradictory claims on
+                one screen, no way to retry, and a fully enabled composer
+                inviting a message that cannot be sent. */}
+            <b>
+              {state === "live"
+                ? t("chat.empty")
+                : state === "blocked"
+                  ? t("chat.torBlocked")
+                  : state === "connecting"
+                    ? t("chat.connecting")
+                    : t("chat.disconnected")}
+            </b>
+            {state === "live" && <span className="chat-blank-sub">{t("chat.emptyHint")}</span>}
+            {(state === "offline" || state === "error") && (
+              <>
+                <span className="chat-blank-sub">{t("chat.disconnectedHint")}</span>
+                <button className="btn ghost small" onClick={() => client.current?.connect()}>{t("chat.tryAgain")}</button>
+              </>
+            )}
           </div>
         )}
         {listBody}

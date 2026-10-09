@@ -30,6 +30,10 @@
   --ember-ink: #04211c;
   --good: #35c46a;
   --bad: #f2604a;
+  /* A lighter error tone for small text on a dark surface. --bad is tuned for
+     fills and borders and measures 3.42:1 as 11px text on a chat bubble; this
+     clears 4.5:1 at 12px. */
+  --bad-text: #ff9182;
   --radius: 18px;
   --radius-sm: 12px;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);

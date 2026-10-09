@@ -52,7 +52,7 @@
     "wrongSeed": "Seed itu milik dompet lain — tidak membuka dompet ini. Periksa dompet yang dipulihkan, atau beralih ke dompet milik seed tersebut.",
     "finishingMerge": "Menyelesaikan penggabungan latar…",
     "fragmentedNothingSent": "{{message}} Tidak ada yang ditandatangani atau dikirim.",
-    "partialRecorded": "{{message}} Bagian yang sudah disiarkan tercatat di Riwayat.",
+    "partialRecorded": "{{message}} {{sent}} ZKAS sudah terkirim dan tercatat di Riwayat. Jumlah di bawah adalah {{remaining}} ZKAS yang masih harus dibayar — periksa Riwayat sebelum mengirimnya.",
     "confirmTitle": "Konfirmasi",
     "amount": "Jumlah",
     "zkasAmount": "{{amount}} ZKAS",
@@ -115,7 +115,8 @@
     "catchingUp": "Masih menyusul rantai — bayar setelah selesai, agar dompet tahu semua koin Anda.",
     "warmBanner": "<b>⚡ Pembayaran pertama butuh beberapa menit.</b><br/>Mencari koin Anda — ini terjadi sekali. Anda bisa mulai bayar sekarang.",
     "reviewSend": "Tinjau kiriman",
-    "waitingForSync": "Masih membaca rantai — Anda bisa mengirim begitu selesai."
+    "waitingForSync": "Masih membaca rantai — Anda bisa kirim begitu sudah tersinkron.",
+    "unknownFailure": "Pembayaran ditolak dan dompet tidak bisa membaca penyebabnya. Tidak ada yang terkirim — periksa Riwayat sebelum mencoba lagi."
   },
   "sign": {
     "title": "Tanda tangani pesan",
@@ -127,26 +128,6 @@
     "copySignature": "Salin tanda tangan",
     "sign": "Tanda tangani",
     "fvkWarning": "Menandatangani memberikan kunci lihat Anda ke pemverifikasi: setelah itu mereka dapat melihat saldo, riwayat, dan tujuan kiriman dompet ini. Jika itu penting, tanda tangani dari dompet terpisah — Anda bisa menambahkannya di Pengaturan."
-  },
-  "daemonSetting": {
-    "timedOut": "waktu habis setelah 5d",
-    "unreachable": "Tidak dapat menjangkau layanan dompet di {{url}} ({{detail}}). Pastikan zkas-walletd berjalan di sana dan port terbuka. Tidak ada perubahan — masih menggunakan {{current}}.",
-    "title": "Hubungkan ke node Anda sendiri",
-    "modeOwn": "milik Anda ✓",
-    "modeHosted": "hosting",
-    "intro": "Seed Anda selalu menandatangani di perangkat ini. Tapi layanan yang dihosting tetap melihat <b>kunci lihat</b> Anda — bisa memantau saldo, riwayat, dan tujuan kirim Anda. Agar itu tetap privat, jalankan <code>zkas-walletd</code> di node Anda sendiri dan hubungkan dompet ini langsung ke sana.",
-    "enterIp": "Masukkan <b>alamat IP</b> node Anda — kami tambahkan sisanya.",
-    "nativeTransports": "Aplikasi terinstal mendukung koneksi HTTPS dan HTTP LAN biasa.",
-    "webTransports": "Dompet web memerlukan HTTPS; gunakan aplikasi terinstal untuk HTTP biasa di LAN.",
-    "currentlyUsing": "Saat ini menggunakan <code>{{current}}</code>.",
-    "labelNative": "Alamat IP atau hostname Walletd",
-    "labelWeb": "URL walletd HTTPS",
-    "connect": "Hubungkan",
-    "accessToken": "Token akses",
-    "ifRequired": "(jika diperlukan)",
-    "accessTokenPlaceholder": "Token akses",
-    "portNote": "Gunakan port {{port}} bawaan — tambahkan <code>:port</code> hanya jika Anda mengubahnya.",
-    "resetHosted": "Atur ulang ke default hosting"
   },
   "vaultSetting": {
     "title": "Keamanan & cadangan",
@@ -197,7 +178,8 @@
     "customHint": "Daemon dompet yang Anda jalankan sendiri.",
     "addrPlaceholder": "host:port, http://<lan-ip>:8501, atau .onion",
     "accessTokenPlaceholder": "Token akses",
-    "connect": "Hubungkan"
+    "connect": "Hubungkan",
+    "timedOut": "Itu tidak mulai dalam 20 detik. Jika Anda memilih Tor, periksa apakah Orbot terpasang dan berjalan."
   },
   "backgroundSyncCard": {
     "title": "Sinkron latar belakang",
@@ -251,7 +233,8 @@
     "onNotePin": "<b>Aktif.</b> Kunci setiap dompet di perangkat ini dienkripsi, dan aplikasi meminta PIN Anda untuk membuka. Terkunci sendiri setelah beberapa menit di latar belakang.",
     "onNotePassphrase": "<b>Aktif.</b> Kunci setiap dompet di perangkat ini dienkripsi, dan aplikasi meminta kata sandi Anda untuk membuka. Terkunci sendiri setelah beberapa menit di latar belakang.",
     "offIntro": "Kunci dompet Anda disimpan di perangkat ini <b>tanpa enkripsi</b>. Aktifkan PIN atau kata sandi dan semuanya dienkripsi saat diam, dan aplikasi memintanya saat dibuka — sehingga orang yang memegang perangkat ini, atau cadangan datanya, tidak bisa membelanjakannya.",
-    "setSecret": "Atur PIN atau kata sandi"
+    "setSecret": "Atur PIN atau kata sandi",
+    "nothingToLock": "Belum ada kunci di perangkat ini untuk dikunci. Dompet hanya lihat hanya menyimpan kunci lihat. Buat atau impor dompet dulu."
   },
   "switchWallet": {
     "title": "Dompet",
@@ -358,15 +341,15 @@
   "setup": {
     "title": "Tidak dapat menjangkau layanan dompet",
     "nativeDown": "Layanan dompet tidak merespons. Periksa koneksi dan coba lagi — dana Anda aman di rantai.",
-    "hostedDown": "Layanan dompet yang dihosting tidak merespons. Tidak perlu menjalankan apa pun — coba lagi sebentar.",
+    "hostedDown": "Layanan dompet sedang tidak merespons. Tidak perlu dijalankan atau diperbaiki — biasanya kembali sendiri.",
     "privacyNote": "Kunci pengeluaran Anda tetap di perangkat ini — tidak pernah dikirim ke layanan. Menjalankan <code>zkas-walletd</code> sendiri mengubah <b>privasi</b>: layanan yang dihosting bisa melihat dompet mana yang menanyakan blok mana, daemon Anda sendiri hanya melihat yang sudah Anda ketahui.",
     "nativeTransports": "Aplikasi terpasang menerima HTTPS dan alamat LAN HTTP biasa.",
     "webTransports": "Dompet web memerlukan URL layanan dompet HTTPS.",
     "daemonUrl": "URL Daemon",
     "checking": "Memeriksa…",
     "save": "Simpan",
-    "safeOnChain": "Koin Anda aman di rantai. Ini hanya soal cara aplikasi membacanya.",
-    "lastBalance": "Saldo terkonfirmasi terakhir",
+    "safeOnChain": "Koin Anda aman di rantai. Ini hanya cara aplikasi membacanya.",
+    "lastBalance": "Saldo terakhir terkonfirmasi",
     "retry": "Coba lagi",
     "advanced": "Hubungkan ke layanan dompet lain",
     "restartEngine": "Mulai ulang mesin di perangkat"
@@ -444,7 +427,8 @@
     "fingerprint": "Sidik jari",
     "on": "Aktif",
     "off": "Nonaktif",
-    "privateSends": "Pengiriman anonim"
+    "privateSends": "Kiriman anonim",
+    "pausedOnPhone": "Dijeda di ponsel ini"
   },
   "appearanceCard": {
     "title": "Warna aksen",
@@ -599,7 +583,9 @@
     "chatAria": "Obrolan komunitas ZKas",
     "chatOff": "mati · ketuk untuk atur",
     "chatOpen": "ruang global",
-    "chatUnread": "{{n}} baru"
+    "chatUnread": "{{n}} baru",
+    "receivedToastHidden": "Pembayaran masuk",
+    "receivedNotifBodyHidden": "Pembayaran masuk ke dompet Anda."
   },
   "hostedNotice": {
     "browserWallet": "Dompet browser. <b><a>Dapatkan aplikasi lebih aman</a></b>."
@@ -623,7 +609,7 @@
     "share": "Bagikan",
     "sealed": "Jumlah, pengirim, penerima — tersegel.",
     "viewKeyTitle": "Kunci lihat dompet",
-    "viewKeySummary": "Lihat dompet ini hanya-baca",
+    "viewKeySummary": "Hanya baca",
     "seedMoved": "Cari frasa pemulihan? Pindah ke <b>Pengaturan → Frasa pemulihan</b>, di balik kunci aplikasi.",
     "qrBuilding": "Menyiapkan kode Anda…"
   },
@@ -913,8 +899,8 @@
     "selected": "Dipilih: {{name}}",
     "wordsSoFar": "{{n}} dari 12 kata sejauh ini.",
     "wordsOddLength": "{{n}} kata. Frasa pemulihan terdiri dari 12, 18, atau 24 kata.",
-    "connectingWhy": "Aplikasi terhubung ke layanan dompet sebelum dapat membuat dompet.",
-    "usePublicInstead": "Gunakan layanan publik saja"
+    "connectingWhy": "Layanan dompet Anda masih mengejar rantai. Dompet baru menunggu blok saat ini, sehingga tidak memindai tahun-tahun riwayat yang tidak mungkin dimiliki.",
+    "usePublicInstead": "Gunakan layanan dompet publik saja"
   },
   "languagePicker": {
     "label": "Bahasa",
@@ -1054,7 +1040,8 @@
     "cannotReachEmbedded": "Tidak dapat menjangkau mesin dompet tertanam. ({{detail}})",
     "notResponding": "Layanan dompet tidak merespons (habis waktu).",
     "cannotReachDaemon": "Tidak dapat menjangkau daemon dompet. ({{detail}})",
-    "invalidResponse": "Layanan dompet mengembalikan respons tidak valid ({{status}})."
+    "invalidResponse": "Layanan dompet mengembalikan respons tidak valid ({{status}}).",
+    "blockedByPrivacy": "Diblokir: {{host}} tidak dapat dijangkau secara pribadi, dan Tor aktif. Matikan Tor atau pilih layanan onion."
   },
   "noncustodial": {
     "fragmentedDefault": "Pembayaran ini butuh lebih banyak koin daripada yang bisa dibelanjakan satu transaksi.",
@@ -1355,7 +1342,10 @@
     "dashboardTitle": "Dasbor penambang",
     "close": "Tutup",
     "dashboardFrameTitle": "Dasbor bridge penambangan",
-    "dashboardNote": "Disajikan oleh bridge penambangan di komputer ini. Muncul saat penambangan berjalan."
+    "dashboardNote": "Disajikan oleh bridge penambangan di komputer ini. Muncul saat penambangan berjalan.",
+    "modeFixed": "Mode penambangan diatur saat mulai. Hentikan untuk mengubahnya.",
+    "stale": "Koneksi ke layanan penambangan terputus. Angka di bawah adalah bacaan terakhir sebelum itu—bukan data langsung.",
+    "dashboardHiddenPrivate": "Dasbor jembatan disembunyikan saat mode privasi aktif: halaman yang disajikannya memuat font dan skrip dari internet publik, yang akan mengungkap alamat Anda dari perangkat ini."
   },
   "walletTools": {
     "eyebrow": "Alat dompet",
@@ -1476,7 +1466,8 @@
     "nodeLogsTitle": "Log node ZKAS",
     "walletLogsTitle": "Log mesin dompet",
     "movingWalletToPublic": "Memindahkan dompet ke node publik…",
-    "stoppingNode": "Hentikan node…"
+    "stoppingNode": "Hentikan node…",
+    "stale": "Koneksi ke supervisor node terputus. Angka di bawah adalah bacaan terakhir sebelum itu—bukan data langsung."
   },
   "selfHost": {
     "copied": "Tersalin",
@@ -1621,7 +1612,8 @@
     "offline": "Offline",
     "heroAria": "Kolam terlindungi, langsung",
     "heroTitle": "Kolam terlindungi — langsung",
-    "liveHiddenOnTor": "Tampilan langsung disembunyikan di Tor, karena memuatnya akan membocorkan IP asli."
+    "liveHiddenOnTor": "Tampilan jaringan langsung disembunyikan saat Tor menyala: dimuat dari explorer.zkas.info, yang akan melihat alamat asli Anda. Angka di bawah berasal dari layanan dompet Anda.",
+    "unavailableOverTor": "Penjelajah tidak dapat dijangkau lewat Tor. Matikan Tor, atau atur alamat onion-nya, untuk melihat data rantai langsung."
   },
   "blockView": {
     "title": "Blok",
@@ -1696,7 +1688,10 @@
     "unlock": "Buka",
     "setPassphrase": "Atur kata sandi",
     "noReset": "Frasa sandi ini tidak bisa diatur ulang — tidak pernah dikirim atau disimpan di mana pun. Jika lupa, satu-satunya cara masuk kembali ke dompet ini adalah frasa seed atau file cadangan. Simpan salah satunya dengan aman.",
-    "haveBackup": "Sudah punya file cadangan? <a>Pulihkan dari cadangan</a>"
+    "haveBackup": "Sudah punya file cadangan? <a>Pulihkan dari cadangan</a>",
+    "cannotReachTitle": "Tidak dapat menjangkau layanan dompet",
+    "cannotReachBody": "Layanan dompet lokal tidak merespons. Mungkin masih memulai.",
+    "tryAgain": "Coba lagi"
   },
   "restoreFromBackup": {
     "errChooseFile": "Pilih file cadangan.",
@@ -1855,10 +1850,10 @@
     "opening": "Membuka…"
   },
   "privateSends": {
-    "intro": "Pembayaran Anda biasanya membawa salinan detailnya yang dienkripsi dengan kunci <b>Anda sendiri</b>, agar riwayat Anda bertahan setelah pemulihan dan Anda bisa membuktikan pembayaran nanti. Pengiriman anonim meninggalkan salinan itu.",
-    "cost": "Biayanya permanen, dan Anda yang menanggungnya: tidak ada salinan yang bisa didekripsi siapa pun — <b>bahkan Anda sendiri, dengan kunci belanja Anda</b>. Setelah terkirim, pembayaran anonim tidak bisa dipulihkan saat Anda memulihkan dompet ini, tidak muncul di riwayat perangkat lain, dan tidak bisa dibuktikan kepada siapa pun. Penerima tetap menerimanya seperti biasa.",
-    "turnOn": "Aktifkan pengiriman anonim",
-    "turnOff": "Matikan pengiriman anonim"
+    "intro": "Pembayaran Anda biasanya membawa salinan detailnya yang dienkripsi ke kunci <b>Anda sendiri</b>, sehingga riwayat bertahan saat pemulihan dan Anda bisa buktikan pembayaran nanti. Kiriman anonim meninggalkan salinan itu.",
+    "cost": "Biayanya permanen dan ditanggung Anda: tidak ada salinan untuk siapa pun mendekripsi — <b>bahkan Anda, dengan kunci pengeluaran sendiri</b>. Setelah terkirim, pembayaran anonim tidak bisa dipulihkan saat Anda memulihkan dompet ini, tidak muncul di riwayat di perangkat lain, dan tidak bisa dibuktikan ke siapa pun. Penerima tetap menerimanya secara normal.",
+    "turnOn": "Aktifkan kiriman anonim",
+    "turnOff": "Nonaktifkan kiriman anonim"
   },
   "paymentProof": {
     "title": "Buktikan pembayaran ini",
@@ -1883,7 +1878,9 @@
     "invalid": "Tidak valid.",
     "confirmations_one": "{{count}} konfirmasi",
     "confirmations_other": "{{count}} konfirmasi",
-    "verifyNote": "Bukti diperiksa terhadap transaksi di rantai: penerima dan jumlah yang diungkapkan harus mereproduksi komitmen yang dicatat oleh blok."
+    "verifyNote": "Bukti diperiksa terhadap transaksi di rantai: penerima dan jumlah yang diungkapkan harus mereproduksi komitmen yang dicatat oleh blok.",
+    "undetermined": "Bukti ini tidak dapat diperiksa.",
+    "undeterminedWhy": "Layanan dompet tidak memberi jawaban, jadi tidak ada yang diketahui tentang pembayaran ini. Coba lagi sebentar—ini bukan bukti bahwa bukti itu palsu."
   },
   "chat": {
     "nameSkip": "Anonim",
@@ -1911,8 +1908,7 @@
       "muteConfirm": "Ketuk lagi untuk membisukan {{name}}",
       "reportConfirm": "Ketuk lagi untuk lapor & bisukan",
       "sendZkas": "Kirim ZKAS",
-      "noAddress": "Belum ada alamat.",
-      "react": "Beri reaksi"
+      "react": "Reaksi"
     },
     "profile": {
       "copyKey": "Salin kunci publik",
@@ -1932,11 +1928,10 @@
       "none": "Belum ada pesan pribadi.",
       "start": "Pesan pribadi",
       "placeholder": "Pesan pribadi",
-      "note": "Hanya Anda berdua yang bisa membaca ini. Relay melihat kunci sekali pakai, bukan siapa bicara dengan siapa.",
+      "note": "Hanya kalian berdua yang bisa membaca ini. Relai melihat kunci sekali pakai, bukan siapa bicara dengan siapa.",
       "headerNote": "pribadi"
     },
-    "you": "Anda",
-    "intro": "Semua orang di sini bisa membaca yang Anda tulis, dan kiriman tidak bisa dihapus. Gunakan baris di atas untuk ganti ruang. Ketuk pesan untuk bereaksi atau membalas, atau geser untuk membalas.",
+    "intro": "Semua di sini bisa membaca yang Anda posting, dan postingan tidak bisa dihapus. Ketuk pesan untuk bereaksi atau membalas, atau geser untuk membalas.",
     "consentTitle": "Aktifkan obrolan?",
     "consentPublic": "Pesan di ruang global bersifat publik dan permanen. Tidak ada fitur hapus.",
     "consentIp": "Server relay melihat alamat IP Anda dan kapan Anda daring. Dompet Anda tidak.",
@@ -1944,7 +1939,7 @@
     "consentEnable": "Aktifkan obrolan",
     "consentLater": "Nanti",
     "consentOff": "Fitur ini bisa dimatikan lagi di Pengaturan.",
-    "back": "← Dompet",
+    "back": "Dompet",
     "roomAria": "Obrolan komunitas",
     "state": {
       "offline": "luring",
@@ -1987,7 +1982,8 @@
     "earlier": "Pesan sebelumnya",
     "today": "Hari ini",
     "yesterday": "Kemarin",
-    "jumpLatest": "Lompat ke terbaru"
+    "jumpLatest": "Ke pesan terbaru",
+    "profileOf": "Profil {{name}}"
   },
   "backgroundPermission": {
     "title": "Sinkronkan dompet di latar belakang?",
@@ -2006,7 +2002,7 @@
     "decline": "Tidak, buang tautan"
   },
   "daemonError": {
-    "network": "Koneksi ke jaringan terputus sesaat. Koin Anda aman — dompet terus mencoba sendiri.",
+    "network": "Kehilangan kontak dengan jaringan sejenak. Koin Anda aman — dompet terus mencoba sendiri.",
     "generic": "Layanan dompet mengalami masalah saat membaca rantai. Koin Anda aman di rantai.",
     "details": "Detail teknis"
   }

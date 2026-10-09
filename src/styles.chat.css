@@ -352,8 +352,8 @@
 }
 .chat-msg.mine .chat-time { color: color-mix(in srgb, var(--ember) 65%, var(--muted)); }
 .chat-tick { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.chat-msg.failed .chat-text { opacity: 0.55; }
-.chat-failed { display: block; margin-top: 2px; color: var(--bad); font-size: 11px; }
+.chat-msg.failed .chat-text { opacity: 0.8; }
+.chat-failed { display: block; margin-top: 2px; color: var(--bad-text, #ff8a9b); font-size: 12px; font-weight: 600; }
 
 /* The quoted message a reply is attached to. Tap it to go there. */
 .chat-quote {
@@ -460,7 +460,9 @@
   position: absolute;
   inset-inline-end: 14px;
   inset-inline-start: auto;
-  bottom: 84px;
+  /* Clears the whole footer stack — composer plus any reply or warning
+     banner above it — instead of assuming a bare composer. */
+  bottom: calc(var(--chat-footer-h, 60px) + 16px);
   transform: none;
   z-index: 3;
   display: grid;
@@ -743,3 +745,10 @@ button.chat-author-name:focus-visible { outline: 2px solid var(--accent); outlin
 /* One tick: handed to the relay, no verdict yet. Dimmed so the two-tick
    delivered state stays the confident one. */
 .chat-tick.sending { opacity: 0.55; }
+
+/* The empty/disconnected block: the icon was var(--border) on the page
+   background at 1.49:1, below the 3:1 minimum for a meaningful graphic, with a
+   single line of text in a 678px void and nothing to do. */
+.chat-blank svg { stroke: var(--muted); }
+.chat-blank-sub { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+.chat-blank .btn { margin-top: 12px; }

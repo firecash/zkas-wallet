@@ -8282,6 +8282,9 @@ function SwitchWallet() {
   const [askRemove, setAskRemove] = useState<WalletRef | null>(null);
   const [renaming, setRenaming] = useState<WalletRef | null>(null);
   const [err, setErr] = useState("");
+  /// Which add is in flight, so a second tap is refused. Each one mints a
+  /// wallet, and nothing else on this card says work is happening.
+  const [adding, setAdding] = useState<null | "account">(null);
   useEffect(() => {
     const h = () => bump((n) => n + 1);
     window.addEventListener("wallets-changed", h);
@@ -8342,13 +8345,24 @@ function SwitchWallet() {
         {hasMaster() && (
           <button
             className="btn"
+            disabled={!!adding}
             onClick={() => {
               // An ACCOUNT of the device's phrase: independent and unlinkable
               // on-chain, but covered by the backup already made.
-              addAccountWallet().catch((e) => setErr((e as Error).message));
+              //
+              // Guarded like the modal switcher's copy of this button. This one
+              // had no `disabled` and no spinner, and nothing on screen changes
+              // while the work runs — deriving a key and registering a viewing
+              // key is seconds on a phone — so a second tap was invited and
+              // accepted. Each tap mints a wallet.
+              setErr("");
+              setAdding("account");
+              addAccountWallet()
+                .catch((e) => setErr(failureText(e)))
+                .finally(() => setAdding(null));
             }}
           >
-            {t("switchWallet.addAccount")}
+            {adding === "account" ? <span className="spin" /> : t("switchWallet.addAccount")}
           </button>
         )}
         <button className={hasMaster() ? "btn ghost" : "btn"} onClick={() => void addSeparateWallet()}>

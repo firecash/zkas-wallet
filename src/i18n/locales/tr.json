@@ -79,7 +79,7 @@
     "wrongSeed": "Bu ifade başka bir cüzdana ait — bunu açmaz. Hangi cüzdanı geri yüklediğinizi kontrol edin veya ifadenin ait olduğu cüzdana geçin.",
     "finishingMerge": "Arka plan birleştirme bitiriliyor…",
     "fragmentedNothingSent": "{{message}} Hiçbir şey imzalanmadı veya gönderilmedi.",
-    "partialRecorded": "{{message}} Yayınlanan kısım Geçmiş'e kaydedildi.",
+    "partialRecorded": "{{message}} {{sent}} ZKAS zaten gönderildi ve Geçmiş'e kaydedildi. Aşağıdaki miktar, ödenmesi gereken {{remaining}} ZKAS'tır — göndermeden önce Geçmiş'i kontrol edin.",
     "confirmTitle": "Onayla",
     "amount": "Miktar",
     "zkasAmount": "{{amount}} ZKAS",
@@ -115,7 +115,8 @@
     "spendable": "{{amount}} harcanabilir",
     "recipientLabel": "Alıcı korumalı adresi",
     "addrPlaceholder": "zkas:…",
-    "waitingForSync": "Zincir hâlâ okunuyor — yetiştiği anda gönderebilirsiniz."
+    "waitingForSync": "Zincir hâlâ okunuyor — yetiştiği an gönderebilirsiniz.",
+    "unknownFailure": "Ödeme reddedildi ve cüzdan sebebini okuyamadı. Hiçbir şey gönderilmedi — tekrar denemeden önce Geçmiş'i kontrol edin."
   },
   "sign": {
     "title": "Mesaj imzala",
@@ -167,7 +168,8 @@
     "customHint": "Kendinizin çalıştırdığı bir cüzdan arka planı.",
     "addrPlaceholder": "host:port, http://<lan-ip>:8501 veya .onion",
     "accessTokenPlaceholder": "Erişim anahtarı",
-    "connect": "Bağlan"
+    "connect": "Bağlan",
+    "timedOut": "Bu 20 saniye içinde başlamadı. Tor'u seçtiyseniz, Orbot'un kurulu ve çalıştığından emin olun."
   },
   "backgroundSyncCard": {
     "title": "Arka planda eşitleme",
@@ -190,26 +192,6 @@
     "turnOff": "Kapat",
     "offerPin": "PIN'inizi yazmak yerine parmak izinizle açın.",
     "offerPassphrase": "Parolanızı yazmak yerine parmak izinizle açın."
-  },
-  "daemonSetting": {
-    "timedOut": "5 sn sonra zaman aşımı",
-    "unreachable": "{{url}} adresindeki cüzdan hizmetine ulaşılamadı ({{detail}}). zkas-walletd'in orada çalıştığından ve portun açık olduğundan emin olun. Hiçbir şey değiştirilmedi — {{current}} kullanılıyor.",
-    "title": "Kendi düğümüne bağlan",
-    "modeOwn": "kendi düğümün ✓",
-    "modeHosted": "barındırılan",
-    "intro": "Tohumunuz her zaman bu cihazda imzalar. Ancak barındırılan hizmet yine de <b>görüntüleme anahtarınızı</b> görür — bakiyenizi, geçmişinizi ve nereye gönderdiğinizi izleyebilir. Bunu bile gizli tutmak için kendi düğümünüzde <code>zkas-walletd</code> çalıştırın ve bu cüzdanı doğrudan ona bağlayın.",
-    "enterIp": "Sadece düğümünüzün <b>IP adresini</b> girin — gerisini biz hallederiz.",
-    "nativeTransports": "Yüklü uygulama HTTPS ve düz HTTP LAN bağlantılarını destekler.",
-    "webTransports": "Web cüzdanı HTTPS gerektirir; LAN'da düz HTTP için yüklü uygulamayı kullanın.",
-    "currentlyUsing": "Şu anda <code>{{current}}</code> kullanılıyor.",
-    "labelNative": "Walletd IP adresi veya ana bilgisayar adı",
-    "labelWeb": "HTTPS walletd URL'si",
-    "connect": "Bağlan",
-    "accessToken": "Erişim anahtarı",
-    "ifRequired": "(gerekirse)",
-    "accessTokenPlaceholder": "Erişim anahtarı",
-    "portNote": "Varsayılan olarak {{port}} portunu kullanır — yalnızca değiştirdiyseniz <code>:port</code> ekleyin.",
-    "resetHosted": "Barındırılan varsayılana sıfırla"
   },
   "vaultSetting": {
     "title": "Güvenlik ve yedekleme",
@@ -353,7 +335,8 @@
     "onNotePin": "<b>Açık.</b> Bu cihazdaki her cüzdanın anahtarı şifrelidir ve uygulama açılmak için PIN'inizi ister. Birkaç dakika arka planda kalınca kendini yeniden kilitler.",
     "onNotePassphrase": "<b>Açık.</b> Bu cihazdaki her cüzdanın anahtarı şifrelidir ve uygulama açılmak için parolanızı ister. Birkaç dakika arka planda kalınca kendini yeniden kilitler.",
     "offIntro": "Cüzdan anahtarlarınız bu cihazda <b>şifresiz</b> saklanıyor. Bir PIN veya parola açın, her biri beklemedeyken şifrelenir ve uygulama açılışta sorar — böylece bu cihazı veya verilerinin yedeğini elinde bulunduran biri harcama yapamaz.",
-    "setSecret": "PIN veya parola belirleyin"
+    "setSecret": "PIN veya parola belirleyin",
+    "nothingToLock": "Bu cihazda henüz kilitlenecek bir anahtar yok. Salt izleme cüzdanı yalnızca bir görüntüleme anahtarı tutar. Önce bir cüzdan oluşturun veya içe aktarın."
   },
   "txDetail": {
     "save": "Kaydet",
@@ -440,23 +423,24 @@
     "signatures": "İmzalar",
     "sectionAbout": "Hakkında",
     "aboutZkas": "ZKas Hakkında",
-    "privateSends": "Anonim gönderimler"
+    "privateSends": "Anonim gönderimler",
+    "pausedOnPhone": "Bu telefonda duraklatıldı"
   },
   "setup": {
     "title": "Cüzdan hizmetine ulaşılamıyor",
     "nativeDown": "Cüzdan hizmeti yanıt vermiyor. Bağlantınızı kontrol edin ve kısa süre sonra tekrar deneyin — fonlarınız zincirde güvende.",
-    "hostedDown": "Barındırılan cüzdan hizmeti yanıt vermiyor. Çalıştırmanız gereken bir şey yok — kısa süre sonra tekrar deneyin.",
+    "hostedDown": "Cüzdan hizmeti şu an yanıt vermiyor. Çalıştırmanız veya düzeltmeniz gereken bir şey yok — genelde kendi kendine düzelir.",
     "privacyNote": "Harcama anahtarınız her durumda bu cihazda — hizmete asla gönderilmez. Kendi <code>zkas-walletd</code>'nizi çalıştırmanın değiştirdiği şey <b>gizliliktir</b>: barındırılan hizmet hangi cüzdanın hangi blokları sorduğunu görebilir, kendi arkaplan programınız ise yalnızca zaten bildiğinizi görür.",
     "nativeTransports": "Yüklü uygulama HTTPS ve düz HTTP LAN adreslerini kabul eder.",
     "webTransports": "Web cüzdanı bir HTTPS cüzdan hizmeti URL'si gerektirir.",
     "daemonUrl": "Daemon URL",
     "checking": "Kontrol ediliyor…",
     "save": "Kaydet",
-    "safeOnChain": "Coinleriniz zincirde güvende. Bu yalnızca uygulamanın onları nasıl okuduğuyla ilgili.",
-    "lastBalance": "Son onaylanan bakiye",
+    "safeOnChain": "Paralarınız zincirde güvende. Bu yalnızca uygulamanın onları okuma şekli.",
+    "lastBalance": "Son onaylı bakiye",
     "retry": "Tekrar dene",
-    "advanced": "Başka bir cüzdan hizmetine bağlan",
-    "restartEngine": "Cihazdaki motoru yeniden başlat"
+    "advanced": "Farklı bir cüzdan hizmetine bağlan",
+    "restartEngine": "Cihaz içi motoru yeniden başlat"
   },
   "sendScene": {
     "warmEta": "yaklaşık {{n}} dk kaldı",
@@ -564,7 +548,7 @@
     "share": "Paylaş",
     "sealed": "Miktar, gönderen, alıcı — gizli.",
     "viewKeyTitle": "Cüzdan görüntüleme anahtarı",
-    "viewKeySummary": "Bu cüzdanı salt okunur izle",
+    "viewKeySummary": "Salt okunur",
     "seedMoved": "Kurtarma ifadenizi mi arıyorsunuz? <b>Ayarlar → Kurtarma ifadesi</b> bölümüne, uygulama kilidinizin arkasına taşındı.",
     "qrBuilding": "Kodunuz hazırlanıyor…"
   },
@@ -638,7 +622,9 @@
     "chatAria": "ZKas topluluk sohbeti",
     "chatOff": "kapalı · kurmak için dokun",
     "chatOpen": "genel oda",
-    "chatUnread": "{{n}} yeni"
+    "chatUnread": "{{n}} yeni",
+    "receivedToastHidden": "Bir ödeme geldi",
+    "receivedNotifBodyHidden": "Cüzdanınıza bir ödeme geldi."
   },
   "hostedNotice": {
     "browserWallet": "Tarayıcı cüzdanı. <b><a>Daha güvenli uygulamayı alın</a></b>."
@@ -795,7 +781,7 @@
     "writeOnPaper": "Sırayla kağıda yazın.",
     "written": "Yazdım",
     "alsoFile": "Ayrıca şifreli bir yedek dosyası kaydedin",
-    "fillAllBlanks": "Devam etmek için eksik her kelimeyi doldurun."
+    "fillAllBlanks": "Devam etmek için her boşluğu doldurun."
   },
   "recoverWallet": {
     "errNotSecret": "Bu bir kurtarma ifadesi (12 kelime) veya kurtarma tohumu (64 hex karakter) gibi görünmüyor.",
@@ -884,10 +870,10 @@
     "restoreFromFile": "Bir yedek dosyasından geri yükle",
     "importPhrase": "Kurtarma ifadesini içe aktar",
     "watchWallet": "Cüzdanı izle (salt görüntüleme)",
-    "wordsSoFar": "Şu ana kadar 12 kelimeden {{n}} tanesi.",
-    "wordsOddLength": "{{n}} kelime. Kurtarma ifadesi 12, 18 veya 24 kelimedir.",
-    "connectingWhy": "Uygulama bir cüzdan oluşturabilmek için önce bir cüzdan hizmetine bağlanır.",
-    "usePublicInstead": "Bunun yerine genel hizmeti kullan"
+    "wordsSoFar": "Şu ana kadar 12 kelimeden {{n}}.",
+    "wordsOddLength": "{{n}} kelime. Bir kurtarma ifadesi 12, 18 veya 24 kelime uzunluğundadır.",
+    "connectingWhy": "Cüzdan hizmetiniz hâlâ zincire yetişiyor. Yeni bir cüzdan, mevcut bloğu bekler, böylece sahip olamayacağı yıllarca geçmişi taramaz.",
+    "usePublicInstead": "Bunun yerine genel cüzdan hizmetini kullan"
   },
   "languagePicker": {
     "label": "Dil",
@@ -1289,7 +1275,10 @@
     "chooserIntro": "Ne kazılacağını ve işin nereden geldiğini seçin. Aynı ASIC hashing'i bir veya iki zincirde ödenebilir.",
     "whatToMine": "Ne kazılacak",
     "whatToMineNote": "Birleşik, tek ASIC'ten iki zincir öder.",
-    "zkasOnly": "Yalnızca ZKAS"
+    "zkasOnly": "Yalnızca ZKAS",
+    "modeFixed": "Madencilik modu başlatırken ayarlanır. Değiştirmek için madenciliği durdurun.",
+    "stale": "Madencilik hizmetiyle bağlantı kesildi. Aşağıdaki değerler, kesintiden önceki son okumalardır; canlı değildir.",
+    "dashboardHiddenPrivate": "Köprünün panosu, gizlilik modu açıkken gizlenir: sunduğu sayfa, genel internetten yazı tipleri ve betikler yükler ve bu, adresinizi bu cihazdan ifşa eder."
   },
   "walletTools": {
     "eyebrow": "Cüzdan araçları",
@@ -1444,7 +1433,8 @@
     "nodeLogsTitle": "ZKAS düğüm günlükleri",
     "walletLogsTitle": "Cüzdan motoru kayıtları",
     "movingWalletToPublic": "Cüzdan genel düğüme taşınıyor…",
-    "stoppingNode": "Düğüm durduruluyor…"
+    "stoppingNode": "Düğüm durduruluyor…",
+    "stale": "Düğüm denetleyicisiyle bağlantı kesildi. Aşağıdaki değerler, kesintiden önceki son okumalardır; canlı değildir."
   },
   "selfHost": {
     "webEyebrow": "Kendi sunucunda",
@@ -1598,7 +1588,8 @@
     "blockEmission": "Blok emisyonu",
     "nextReduction": "Sonraki azaltma",
     "tailNote": "Program kalıcı bir kuyruk emisyonuyla biter; sabit bir terminal arzı yoktur.",
-    "liveHiddenOnTor": "Canlı görünüm Tor üzerinde gizlenir, çünkü yüklenmesi gerçek IP’yi açığa çıkarır."
+    "liveHiddenOnTor": "Tor açıkken canlı ağ görünümü gizlenir: explorer.zkas.info üzerinden yüklenir ve gerçek adresinizi görebilir. Aşağıdaki değerler cüzdan hizmetinizden gelir.",
+    "unavailableOverTor": "Gezgine Tor üzerinden erişilemiyor. Canlı zincir verilerini görmek için Tor'u kapatın veya bir onion adresi ayarlayın."
   },
   "blockView": {
     "title": "Blok",
@@ -1664,7 +1655,10 @@
     "unlock": "Kilidi aç",
     "setPassphrase": "Parola belirle",
     "noReset": "Bu parola sıfırlanamaz — hiçbir yere gönderilmez veya saklanmaz. Unutursanız, cüzdana girmenin tek yolu tohum ifadeniz veya yedek dosyanızdır; bunlardan birini güvende tutun.",
-    "haveBackup": "Zaten yedek dosyanız var mı? <a>Yedekten geri yükle</a>"
+    "haveBackup": "Zaten yedek dosyanız var mı? <a>Yedekten geri yükle</a>",
+    "cannotReachTitle": "Cüzdan hizmetine erişilemiyor",
+    "cannotReachBody": "Yerel cüzdan hizmeti yanıt vermedi. Hâlâ başlatılıyor olabilir.",
+    "tryAgain": "Tekrar dene"
   },
   "restoreFromBackup": {
     "errChooseFile": "Bir yedek dosyası seçin.",
@@ -1710,9 +1704,9 @@
     "wipeWarning": "Bu, her cüzdanın verilerini <b>bu cihazdan</b> siler — coin'ler zincirde kalır, ancak her cüzdan yalnızca tohumundan veya yedek dosyasından geri gelir.",
     "eraseDevice": "Cihazı sil ve baştan başla",
     "cancel": "İptal",
-    "sealed": "Bu cihazda mühürlü",
-    "decrypting": "Cüzdanınız şifresi çözülüyor",
-    "decrypted": "Şifre çözüldü"
+    "sealed": "Bu cihazda kilitli",
+    "decrypting": "Cüzdanınız çözülüyor",
+    "decrypted": "Çözüldü"
   },
   "firstRunNode": {
     "errEnterAddress": "Düğüm adresini girin (host:port).",
@@ -1837,7 +1831,8 @@
     "cannotReachEmbedded": "Gömülü cüzdan motoruna ulaşılamıyor. ({{detail}})",
     "notResponding": "Cüzdan hizmeti yanıt vermiyor (zaman aşımı).",
     "cannotReachDaemon": "Cüzdan arka plan programına ulaşılamıyor. ({{detail}})",
-    "invalidResponse": "Cüzdan hizmeti geçersiz yanıt döndürdü ({{status}})."
+    "invalidResponse": "Cüzdan hizmeti geçersiz yanıt döndürdü ({{status}}).",
+    "blockedByPrivacy": "Engellendi: {{host}} özel olarak erişilemez ve Tor açık. Tor'u kapatın veya bir onion hizmeti seçin."
   },
   "noncustodial": {
     "fragmentedDefault": "Bu ödeme, bir işlemin harcayabileceğinden daha fazla jeton gerektiriyor.",
@@ -1855,10 +1850,10 @@
     "fewerThanThree": "Şu anda üçten az jeton harcanabilir, bu yüzden birleştirme cüzdanın jeton sayısını azaltmaz."
   },
   "privateSends": {
-    "intro": "Ödemeleriniz normalde ayrıntılarının bir kopyasını <b>kendi</b> anahtarınızla şifrelenmiş olarak taşır; böylece geçmişiniz bir geri yüklemeden sağ çıkar ve ödemeyi sonradan kanıtlayabilirsiniz. Anonim bir gönderim o kopyayı dışarıda bırakır.",
-    "cost": "Bedeli kalıcıdır ve bedeli siz ödersiniz: kimsenin çözebileceği bir kopya yoktur — <b>kendi harcama anahtarınızla siz bile</b>. Gönderildikten sonra anonim bir ödeme, bu cüzdanı geri yüklediğinizde kurtarılamaz, başka bir cihazdaki geçmişte görünmez ve kimseye kanıtlanamaz. Alıcı onu normal şekilde alır.",
-    "turnOn": "Anonim gönderimleri aç",
-    "turnOff": "Anonim gönderimleri kapat"
+    "intro": "Ödemeleriniz normalde ayrıntılarının bir kopyasını <b>kendi</b> anahtarınıza şifreleyerek taşır, böylece geçmişiniz geri yüklemede kalır ve daha sonra bir ödemeyi kanıtlayabilirsiniz. Anonim bir gönderim bu kopyayı dışarıda bırakır.",
+    "cost": "Maliyet kalıcıdır ve size aittir: kimsenin şifresini çözemeyeceği bir kopya yoktur — <b>kendi harcama anahtarınızla siz bile</b>. Bir kez gönderildiğinde, anonim bir ödeme bu cüzdanı geri yüklediğinizde kurtarılamaz, başka bir cihazda geçmişte görünemez ve kimseye kanıtlanamaz. Alıcı yine de normal şekilde alır.",
+    "turnOn": "Anonim gönderimi aç",
+    "turnOff": "Anonim gönderimi kapat"
   },
   "paymentProof": {
     "title": "Bu ödemeyi kanıtla",
@@ -1883,7 +1878,9 @@
     "invalid": "Geçerli değil.",
     "confirmations_one": "{{count}} onay",
     "confirmations_other": "{{count}} onay",
-    "verifyNote": "Kanıt, zincirdeki işleme karşı kontrol edilir: açıklanan alıcı ve miktar, bloğun kaydettiği taahhüdü yeniden üretmelidir."
+    "verifyNote": "Kanıt, zincirdeki işleme karşı kontrol edilir: açıklanan alıcı ve miktar, bloğun kaydettiği taahhüdü yeniden üretmelidir.",
+    "undetermined": "Bu kanıt kontrol edilemedi.",
+    "undeterminedWhy": "Cüzdan hizmeti yanıt vermedi, bu ödeme hakkında hiçbir şey bilinmiyor. Birazdan tekrar deneyin; bu, kanıtın yanlış olduğu anlamına gelmez."
   },
   "chat": {
     "nameSkip": "Anonim gönder",
@@ -1911,7 +1908,6 @@
       "muteConfirm": "Sessize almak için tekrar dokun {{name}}",
       "reportConfirm": "Bildirip sessize almak için tekrar dokun",
       "sendZkas": "ZKAS Gönder",
-      "noAddress": "Henüz adres yayınlanmadı.",
       "react": "Tepki ver"
     },
     "profile": {
@@ -1932,11 +1928,10 @@
       "none": "Henüz özel mesaj yok.",
       "start": "Özel mesaj gönder",
       "placeholder": "Özel mesaj",
-      "note": "Bunu yalnızca ikiniz okuyabilirsiniz. Aktarıcılar tek kullanımlık bir anahtar görür, kimin kiminle konuştuğunu değil.",
+      "note": "Bunu yalnızca ikiniz okuyabilir. Aktarıcı, kimin kiminle konuştuğunu değil, tek kullanımlık bir anahtar görür.",
       "headerNote": "gizli"
     },
-    "you": "siz",
-    "intro": "Buradaki herkes yazdıklarınızı okuyabilir ve mesajlar silinemez. Odayı değiştirmek için üstteki satırı kullanın. Tepki vermek veya yanıtlamak için bir mesaja dokunun veya yanıtlamak için kaydırın.",
+    "intro": "Buradaki herkes yayınladıklarınızı okuyabilir ve yayınlar silinemez. Tepki vermek veya yanıtlamak için bir mesaja dokunun ya da yanıtlamak için kaydırın.",
     "consentTitle": "Sohbet açılsın mı?",
     "consentPublic": "Genel odadaki mesajlar herkese açık ve kalıcıdır. Silme yoktur.",
     "consentIp": "Röle sunucusu IP adresinizi ve çevrimiçi olduğunuz zamanı görür. Cüzdanınız görmez.",
@@ -1944,7 +1939,7 @@
     "consentEnable": "Sohbeti aç",
     "consentLater": "Şimdi değil",
     "consentOff": "Bunu Ayarlar'dan tekrar kapatabilirsiniz.",
-    "back": "← Cüzdan",
+    "back": "Cüzdan",
     "roomAria": "Topluluk sohbeti",
     "state": {
       "offline": "çevrimdışı",
@@ -1984,10 +1979,11 @@
     "nameLabel": "Ad",
     "useMyAddress": "Cüzdan adresimi kullan",
     "clearAddress": "Adresi kaldır",
-    "earlier": "Önceki mesajlar",
+    "earlier": "Daha eski mesajlar",
     "today": "Bugün",
     "yesterday": "Dün",
-    "jumpLatest": "En yenilere git"
+    "jumpLatest": "En son mesaja git",
+    "profileOf": "{{name}} profili"
   },
   "backgroundPermission": {
     "body": "Bu telefon artık cüzdanı kendisi çalıştırıyor. Android uyuyan uygulamaları kendi programına alır; bu izin olmazsa cüzdan saatlerce geri kalır ve bir sonraki açışınızda yetişmesini beklersiniz. İzin vermek, cüzdanın güncel kalmak için yaklaşık 15 dakikada bir uyanmasını sağlar. Bunu daha sonra Android ayarlarından değiştirebilirsiniz.",
@@ -2006,8 +2002,8 @@
     "decline": "Hayır, bağlantıyı at"
   },
   "daemonError": {
-    "network": "Ağ bağlantısı bir anlığına koptu. Coinleriniz güvende — cüzdan kendi kendine denemeye devam ediyor.",
-    "generic": "Cüzdan hizmeti zinciri okurken bir sorunla karşılaştı. Coinleriniz zincirde güvende.",
+    "network": "Ağ ile bir anlığına bağlantı kesildi. Paralarınız güvende — cüzdan kendi kendine yeniden denemeye devam ediyor.",
+    "generic": "Cüzdan hizmeti zinciri okurken bir sorunla karşılaştı. Paralarınız zincirde güvende.",
     "details": "Teknik ayrıntılar"
   }
 }

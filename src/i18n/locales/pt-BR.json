@@ -79,7 +79,7 @@
     "wrongSeed": "Essa frase de recuperação pertence a outra carteira — ela não desbloqueia esta. Verifique qual carteira está restaurando ou troque para a carteira correspondente.",
     "finishingMerge": "Finalizando uma fusão em segundo plano…",
     "fragmentedNothingSent": "{{message}} Nada foi assinado ou enviado.",
-    "partialRecorded": "{{message}} A parte já transmitida está no Histórico.",
+    "partialRecorded": "{{message}} {{sent}} ZKAS já foi enviado e está registrado no Histórico. O valor abaixo é o {{remaining}} ZKAS ainda a pagar — veja o Histórico antes de enviar.",
     "confirmTitle": "Confirmar",
     "amount": "Valor",
     "zkasAmount": "{{amount}} ZKAS",
@@ -115,7 +115,8 @@
     "spendable": "{{amount}} disponível",
     "recipientLabel": "Endereço blindado do destinatário",
     "addrPlaceholder": "zkas:…",
-    "waitingForSync": "Ainda lendo a chain — você poderá enviar assim que terminar."
+    "waitingForSync": "Ainda lendo a cadeia — você pode enviar assim que ela alcançar.",
+    "unknownFailure": "O pagamento foi recusado e a carteira não conseguiu ler o motivo. Nada foi enviado — veja o Histórico antes de tentar de novo."
   },
   "sign": {
     "title": "Assinar mensagem",
@@ -127,26 +128,6 @@
     "copySignature": "Copiar assinatura",
     "sign": "Assinar",
     "fvkWarning": "Assinar entrega sua chave de visualização ao verificador: a partir daí ele pode ver o saldo, o histórico e os envios desta carteira. Se isso importa, assine de uma carteira separada — você pode adicionar uma em Configurações."
-  },
-  "daemonSetting": {
-    "timedOut": "tempo esgotado após 5s",
-    "unreachable": "Não foi possível acessar o serviço de carteira em {{url}} ({{detail}}). Verifique se o zkas-walletd está rodando lá e a porta está aberta. Nada foi alterado — ainda usando {{current}}.",
-    "title": "Conectar ao seu próprio nó",
-    "modeOwn": "seu próprio ✓",
-    "modeHosted": "hospedado",
-    "intro": "Sua seed sempre assina neste dispositivo. Mas o serviço hospedado ainda vê sua <b>chave de visualização</b> — ele pode ver seu saldo, histórico e envios. Para manter isso privado, rode o <code>zkas-walletd</code> no seu próprio nó e conecte esta carteira direto a ele.",
-    "enterIp": "Insira o <b>endereço IP</b> do seu nó — nós adicionamos o resto.",
-    "nativeTransports": "O app instalado suporta HTTPS e HTTP LAN simples.",
-    "webTransports": "A carteira web exige HTTPS; use o app instalado para HTTP LAN.",
-    "currentlyUsing": "Usando <code>{{current}}</code>.",
-    "labelNative": "IP ou hostname do walletd",
-    "labelWeb": "URL HTTPS do walletd",
-    "connect": "Conectar",
-    "accessToken": "Token de acesso",
-    "ifRequired": "(se necessário)",
-    "accessTokenPlaceholder": "Token de acesso",
-    "portNote": "Usa porta {{port}} por padrão — adicione <code>:porta</code> só se alterou.",
-    "resetHosted": "Redefinir para padrão hospedado"
   },
   "vaultSetting": {
     "title": "Segurança e backup",
@@ -197,7 +178,8 @@
     "customHint": "Um daemon de carteira que você mesmo roda.",
     "addrPlaceholder": "host:porta, http://<lan-ip>:8501 ou .onion",
     "accessTokenPlaceholder": "Token de acesso",
-    "connect": "Conectar"
+    "connect": "Conectar",
+    "timedOut": "Não iniciou em 20 segundos. Se escolheu Tor, veja se o Orbot está instalado e rodando."
   },
   "backgroundSyncCard": {
     "title": "Sincronização em segundo plano",
@@ -251,7 +233,8 @@
     "onNotePin": "<b>Ativo.</b> A chave de toda carteira neste dispositivo está criptografada, e o app pede seu PIN para abrir. Ele se bloqueia novamente após alguns minutos em segundo plano.",
     "onNotePassphrase": "<b>Ativo.</b> A chave de toda carteira neste dispositivo está criptografada, e o app pede sua senha para abrir. Ele se bloqueia novamente após alguns minutos em segundo plano.",
     "offIntro": "As chaves da sua carteira estão armazenadas neste dispositivo <b>sem criptografia</b>. Ative um PIN ou senha e cada uma delas será criptografada em repouso, e o app a pedirá ao abrir — assim, alguém com este dispositivo ou um backup de seus dados não pode gastar a partir dele.",
-    "setSecret": "Definir um PIN ou senha"
+    "setSecret": "Definir um PIN ou senha",
+    "nothingToLock": "Ainda não há chave neste dispositivo para bloquear. Uma carteira somente leitura só tem uma chave de visualização. Crie ou importe uma carteira primeiro."
   },
   "switchWallet": {
     "title": "Carteiras",
@@ -440,23 +423,24 @@
     "signatures": "Assinaturas",
     "sectionAbout": "Sobre",
     "aboutZkas": "Sobre o ZKas",
-    "privateSends": "Envios anônimos"
+    "privateSends": "Envios anônimos",
+    "pausedOnPhone": "Pausado neste telefone"
   },
   "setup": {
     "title": "Sem conexão com o serviço de carteira",
     "nativeDown": "O serviço de carteira não está respondendo. Verifique sua conexão e tente novamente em breve — seus fundos estão seguros na blockchain.",
-    "hostedDown": "O serviço de carteira hospedado não está respondendo. Nada para você rodar — tente novamente em breve.",
+    "hostedDown": "O serviço de carteira não está respondendo agora. Nada para você executar ou consertar — geralmente volta sozinho.",
     "privacyNote": "Sua chave de gasto está neste dispositivo de qualquer forma — nunca é enviada ao serviço. O que rodar seu próprio <code>zkas-walletd</code> muda é a <b>privacidade</b>: o serviço hospedado pode ver qual carteira está perguntando sobre quais blocos, e seu próprio daemon vê apenas o que você já sabe.",
     "nativeTransports": "O app instalado aceita endereços LAN HTTPS e HTTP simples.",
     "webTransports": "A carteira web requer uma URL de serviço de carteira HTTPS.",
     "daemonUrl": "URL do Daemon",
     "checking": "Verificando…",
     "save": "Salvar",
-    "safeOnChain": "Suas moedas estão seguras na chain. Isto é apenas sobre como o app as lê.",
+    "safeOnChain": "Suas moedas estão seguras na cadeia. Isso é só como o app as lê.",
     "lastBalance": "Último saldo confirmado",
-    "retry": "Tentar novamente",
+    "retry": "Tentar de novo",
     "advanced": "Conectar a outro serviço de carteira",
-    "restartEngine": "Reiniciar o motor no dispositivo"
+    "restartEngine": "Reiniciar o mecanismo no dispositivo"
   },
   "sendScene": {
     "warmEta": "cerca de {{n}} min restantes",
@@ -599,7 +583,9 @@
     "chatAria": "Chat da comunidade ZKas",
     "chatOff": "desligado · toque para configurar",
     "chatOpen": "sala global",
-    "chatUnread": "{{n}} novo"
+    "chatUnread": "{{n}} novo",
+    "receivedToastHidden": "Um pagamento chegou",
+    "receivedNotifBodyHidden": "Um pagamento chegou na sua carteira."
   },
   "hostedNotice": {
     "browserWallet": "Carteira no navegador. <b><a>Baixe o app mais seguro</a></b>."
@@ -623,7 +609,7 @@
     "share": "Compartilhar",
     "sealed": "Valores, remetente, destinatário — selados.",
     "viewKeyTitle": "Chave de visualização",
-    "viewKeySummary": "Ver esta carteira (somente leitura)",
+    "viewKeySummary": "Somente leitura",
     "seedMoved": "Procurando sua semente de recuperação? Ela foi para <b>Configurações → Semente de recuperação</b>, atrás do bloqueio do app.",
     "qrBuilding": "Preparando seu código…"
   },
@@ -820,7 +806,7 @@
     "writeOnPaper": "Escreva no papel, em ordem.",
     "written": "Eu anotei",
     "alsoFile": "Salve também um backup criptografado",
-    "fillAllBlanks": "Preencha cada palavra que falta para continuar."
+    "fillAllBlanks": "Preencha cada palavra faltando para continuar."
   },
   "recoverWallet": {
     "errNotSecret": "Isso não parece uma frase de recuperação (12 palavras) ou semente (64 caracteres hex).",
@@ -904,8 +890,8 @@
     "selected": "Selecionado: {{name}}",
     "wordsSoFar": "{{n}} de 12 palavras até agora.",
     "wordsOddLength": "{{n}} palavras. Uma frase de recuperação tem 12, 18 ou 24 palavras.",
-    "connectingWhy": "O app se conecta a um serviço de carteira antes de poder criar uma.",
-    "usePublicInstead": "Usar o serviço público"
+    "connectingWhy": "Seu serviço de carteira ainda está alcançando a cadeia. Uma carteira nova espera o bloco atual, para não escanear anos de histórico que não pode ter.",
+    "usePublicInstead": "Usar o serviço de carteira público"
   },
   "languagePicker": {
     "label": "Idioma",
@@ -1289,7 +1275,10 @@
     "dashboardTitle": "Painel do minerador",
     "close": "Fechar",
     "dashboardFrameTitle": "Painel da ponte de mineração",
-    "dashboardNote": "Servido pela ponte de mineração neste computador. Aparece quando a mineração está rodando."
+    "dashboardNote": "Servido pela ponte de mineração neste computador. Aparece quando a mineração está rodando.",
+    "modeFixed": "O modo de mineração é definido ao iniciar. Pare a mineração para alterá-lo. ",
+    "stale": "Perdeu contato com o serviço de mineração. Os valores abaixo são as últimas leituras feitas antes disso — não estão ao vivo.",
+    "dashboardHiddenPrivate": "O painel da ponte fica oculto enquanto um modo de privacidade está ativo: a página que ele serve carrega fontes e scripts da internet pública, o que revelaria seu endereço deste dispositivo."
   },
   "api": {
     "unauthorized": "O serviço de carteira está acessível, mas rejeitou o token de acesso. Copie o token da tela Host do computador que o executa.",
@@ -1306,7 +1295,8 @@
     "cannotReachEmbedded": "Não foi possível acessar o motor de carteira embutido. ({{detail}})",
     "notResponding": "O serviço de carteira não responde (expirou).",
     "cannotReachDaemon": "Não foi possível acessar o daemon da carteira. ({{detail}})",
-    "invalidResponse": "O serviço de carteira retornou resposta inválida ({{status}})."
+    "invalidResponse": "O serviço de carteira retornou resposta inválida ({{status}}).",
+    "blockedByPrivacy": "Bloqueado: {{host}} não é acessível de forma privada, e o Tor está ligado. Desligue o Tor ou escolha um serviço onion."
   },
   "noncustodial": {
     "fragmentedDefault": "Este pagamento precisa de mais moedas do que uma transação pode gastar.",
@@ -1426,7 +1416,8 @@
     "nodeLogsTitle": "Logs do nó ZKAS",
     "walletLogsTitle": "Logs do motor da carteira",
     "movingWalletToPublic": "Movendo carteira para o nó público…",
-    "stoppingNode": "Parando nó…"
+    "stoppingNode": "Parando nó…",
+    "stale": "Perdeu contato com o supervisor do nó. Os valores abaixo são as últimas leituras feitas antes disso — não estão ao vivo."
   },
   "selfHost": {
     "webEyebrow": "Auto-hospedagem",
@@ -1580,7 +1571,8 @@
     "blockEmission": "Emissão por bloco",
     "nextReduction": "Próxima redução",
     "tailNote": "O cronograma termina com emissão residual permanente; não há oferta final fixa.",
-    "liveHiddenOnTor": "A visão ao vivo fica oculta no Tor, porque carregá-la revelaria o IP real."
+    "liveHiddenOnTor": "A visualização ao vivo fica oculta com o Tor ligado: ela carrega de explorer.zkas.info, que veria seu endereço real. Os valores abaixo vêm pelo seu serviço de carteira.",
+    "unavailableOverTor": "O explorador não é acessível pelo Tor. Desligue o Tor ou defina um endereço onion para ver dados ao vivo da cadeia."
   },
   "blockView": {
     "title": "Bloco",
@@ -1646,7 +1638,10 @@
     "unlock": "Desbloquear",
     "setPassphrase": "Definir senha",
     "noReset": "Não há como redefinir esta senha — ela nunca é enviada nem armazenada. Se esquecê-la, o único acesso à carteira é pela frase de recuperação ou arquivo de backup. Mantenha um deles em segurança.",
-    "haveBackup": "Já tem um backup? <a>Restaurar do backup</a>"
+    "haveBackup": "Já tem um backup? <a>Restaurar do backup</a>",
+    "cannotReachTitle": "Não foi possível acessar o serviço de carteira",
+    "cannotReachBody": "O serviço de carteira local não respondeu. Pode estar ainda iniciando.",
+    "tryAgain": "Tentar de novo"
   },
   "restoreFromBackup": {
     "errChooseFile": "Escolha um arquivo de backup.",
@@ -1692,9 +1687,9 @@
     "wipeWarning": "Isso apaga os dados de toda carteira <b>deste dispositivo</b> — as moedas ficam na cadeia, mas cada carteira só volta com sua semente ou backup.",
     "eraseDevice": "Apagar este dispositivo e recomeçar",
     "cancel": "Cancelar",
-    "sealed": "Selada neste dispositivo",
+    "sealed": "Selado neste dispositivo",
     "decrypting": "Descriptografando sua carteira",
-    "decrypted": "Descriptografada"
+    "decrypted": "Descriptografado"
   },
   "firstRunNode": {
     "errEnterAddress": "Digite o endereço do seu nó (host:porta).",
@@ -1855,8 +1850,8 @@
     "interrupted": "Eventos ao vivo foram interrompidos. A consulta continuará tentando: {{error}}"
   },
   "privateSends": {
-    "intro": "Seus pagamentos normalmente carregam uma cópia dos seus detalhes criptografada com a <b>sua própria</b> chave, para que seu histórico sobreviva a uma restauração e você possa comprovar um pagamento depois. Um envio anônimo deixa essa cópia de fora.",
-    "cost": "O custo é permanente, e é você quem paga: não existe cópia que alguém possa descriptografar — <b>nem você, com a sua própria chave de gasto</b>. Depois de enviado, um pagamento anônimo não pode ser recuperado ao restaurar esta carteira, não aparece no histórico em outro dispositivo e não pode ser provado a ninguém. O destinatário recebe normalmente.",
+    "intro": "Seus pagamentos normalmente carregam uma cópia dos detalhes criptografada para <b>sua própria</b> chave, para que seu histórico sobreviva a uma restauração e você possa provar um pagamento depois. Um envio anônimo deixa essa cópia de fora.",
+    "cost": "O custo é permanente e recai sobre você: não há cópia para ninguém descriptografar — <b>nem você, com sua própria chave de gasto</b>. Uma vez enviado, um pagamento anônimo não pode ser recuperado ao restaurar esta carteira, não aparece no histórico em outro dispositivo e não pode ser provado a ninguém. O destinatário ainda o recebe normalmente.",
     "turnOn": "Ativar envios anônimos",
     "turnOff": "Desativar envios anônimos"
   },
@@ -1883,7 +1878,9 @@
     "invalid": "Inválido.",
     "confirmations_one": "{{count}} confirmação",
     "confirmations_other": "{{count}} confirmações",
-    "verifyNote": "A prova é verificada contra a transação na cadeia: o destinatário e o valor revelados devem reproduzir o compromisso registrado no bloco."
+    "verifyNote": "A prova é verificada contra a transação na cadeia: o destinatário e o valor revelados devem reproduzir o compromisso registrado no bloco.",
+    "undetermined": "Não foi possível verificar esta prova.",
+    "undeterminedWhy": "O serviço de carteira não respondeu, então nada se sabe sobre este pagamento. Tente novamente em instantes — isso não é evidência de que a prova seja falsa."
   },
   "backgroundPermission": {
     "title": "Deixar a carteira sincronizar em segundo plano?",
@@ -1901,7 +1898,7 @@
     "consentEnable": "Ativar chat",
     "consentLater": "Agora não",
     "consentOff": "Você pode desligar isso novamente em Configurações.",
-    "back": "← Carteira",
+    "back": "Carteira",
     "roomAria": "Chat da comunidade",
     "state": {
       "offline": "offline",
@@ -1950,7 +1947,6 @@
       "muteConfirm": "Toque de novo para silenciar {{name}}",
       "reportConfirm": "Toque de novo para denunciar e silenciar",
       "sendZkas": "Enviar ZKAS",
-      "noAddress": "Nenhum endereço publicado.",
       "react": "Reagir"
     },
     "profile": {
@@ -1971,11 +1967,10 @@
       "none": "Nenhuma mensagem privada ainda.",
       "start": "Enviar mensagem privada",
       "placeholder": "Mensagem privada",
-      "note": "Só vocês dois podem ler isto. Os relays veem uma chave única, não quem fala com quem.",
+      "note": "Só vocês dois podem ler isto. O relé vê uma chave única, não quem está falando com quem.",
       "headerNote": "privado"
     },
-    "you": "você",
-    "intro": "Todos aqui podem ler o que você publica, e as publicações não podem ser excluídas. Use a linha acima para trocar de sala. Toque em uma mensagem para reagir ou responder, ou deslize para responder. ",
+    "intro": "Todos aqui podem ler o que você posta, e posts não podem ser deletados. Toque numa mensagem para reagir ou responder, ou deslize para responder.",
     "torBlocked": "O chat está desligado porque o Tor está ativo. O relay é acessado diretamente, não pelo Tor, então conectar mostraria seu IP real. Desligue o Tor ou configure um relay com endereço .onion em Configurações.",
     "torBlockedShort": "Desconectado com Tor ativo.",
     "muted": {
@@ -1995,7 +1990,8 @@
     "earlier": "Mensagens anteriores",
     "today": "Hoje",
     "yesterday": "Ontem",
-    "jumpLatest": "Ir para as mais recentes"
+    "jumpLatest": "Ir para a última mensagem",
+    "profileOf": "Perfil de {{name}}"
   },
   "confirmWatch": {
     "title": "Observar esta carteira?",
@@ -2006,8 +2002,8 @@
     "decline": "Não, descartar link"
   },
   "daemonError": {
-    "network": "A conexão com a rede caiu por um momento. Suas moedas estão seguras — a carteira continua tentando sozinha.",
-    "generic": "O serviço da carteira teve um problema ao ler a chain. Suas moedas estão seguras na chain.",
+    "network": "Perdeu contato com a rede por um momento. Suas moedas estão seguras — a carteira continua tentando sozinha.",
+    "generic": "O serviço de carteira encontrou um problema ao ler a cadeia. Suas moedas estão seguras na cadeia.",
     "details": "Detalhes técnicos"
   }
 }

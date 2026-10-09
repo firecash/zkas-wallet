@@ -46,7 +46,7 @@
     "yesterday": "Yesterday",
     "jumpLatest": "Go to the latest message",
     "newMessages": "New messages",
-    "failedTap": "Not sent — tap to retry",
+    "failedTap": "Not sent — tap for options",
     "tipAddrLabel": "Your ZKAS address (optional)",
     "tipAddrWhy": "Publishing an address is what puts a working Send ZKAS button on your profile. It links this chat name to a payment destination, so leave it empty to stay unlinkable.",
     "rooms": {
@@ -107,6 +107,10 @@
     "nameLabel": "Name",
     "useMyAddress": "Use my wallet address",
     "clearAddress": "Remove address",
-    "profileOf": "Profile of {{name}}"
+    "profileOf": "Profile of {{name}}",
+    "disconnected": "Not connected to the relay",
+    "disconnectedHint": "Messages cannot be sent or received until this reconnects.",
+    "tryAgain": "Try again",
+    "emptyHint": "Be the first to say something."
   }
 }

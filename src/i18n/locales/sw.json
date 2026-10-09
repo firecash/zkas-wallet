@@ -52,7 +52,7 @@
     "wrongSeed": "Kifungu hicho ni cha mkoba tofauti — hakifungui huu. Angalia mkoba unaorejesha, au badili hadi mkoba wa kifungu hicho.",
     "finishingMerge": "Inamaliza muunganisho wa chinichini…",
     "fragmentedNothingSent": "{{message}} Hakuna kilichotiwa sahihi au kutumwa.",
-    "partialRecorded": "{{message}} Sehemu iliyotangazwa tayari imerekodiwa kwenye Historia.",
+    "partialRecorded": "{{message}} {{sent}} ZKAS tayari ilitumwa na imerekodiwa kwenye Historia. Kiasi hapa chini ni {{remaining}} ZKAS bado ya kulipa — angalia Historia kabla ya kuituma.",
     "confirmTitle": "Thibitisha",
     "amount": "Kiasi",
     "zkasAmount": "{{amount}} ZKAS",
@@ -115,7 +115,8 @@
     "catchingUp": "Bado inasawazisha na mnyororo — utaweza kulipa ikimaliza, ili mkoba ujue sarafu zako zote.",
     "warmBanner": "<b>⚡ Malipo yako ya kwanza yatachukua dakika chache.</b><br/>Kutafuta sarafu zako — hii inafanyika mara moja. Unaweza kuanza malipo sasa.",
     "reviewSend": "Kagua tuma",
-    "waitingForSync": "Bado inasoma mnyororo — utaweza kutuma mara tu itakapofika."
+    "waitingForSync": "Bado inasoma mnyororo — unaweza kutuma mara inapopatana.",
+    "unknownFailure": "Malipo yalikataliwa na pochi haikuweza kusoma sababu. Hakuna kilichotumwa — angalia Historia kabla ya kujaribu tena."
   },
   "sign": {
     "title": "Saini ujumbe",
@@ -127,26 +128,6 @@
     "copySignature": "Nakili sahihi",
     "sign": "Saini",
     "fvkWarning": "Kutia sahihi kunampa mthibitishaji ufunguo wako wa kutazama: kuanzia hapo anaweza kuona salio la pochi hii, historia yake na unapotuma. Ikiwa hilo ni muhimu, tia sahihi kutoka pochi nyingine — unaweza kuongeza moja kwenye Mipangilio."
-  },
-  "daemonSetting": {
-    "timedOut": "muda umeisha baada ya 5s",
-    "unreachable": "Haikuweza kufikia huduma ya mkoba kwenye {{url}} ({{detail}}). Hakikisha zkas-walletd inafanya kazi huko na lango liko wazi. Hakuna kilichobadilishwa — bado inatumia {{current}}.",
-    "title": "Unganisha kwenye nodi yako",
-    "modeOwn": "yako ✓",
-    "modeHosted": "inapangishwa",
-    "intro": "Mbegu yako husaini daima kwenye kifaa hiki. Lakini huduma inayopangisha bado inaona <b>ufunguo wako wa kutazama</b> — inaweza kuangalia salio lako, historia yako na unakotuma. Ili hata hilo liwe faragha, endesha <code>zkas-walletd</code> kwenye nodi yako mwenyewe na unganisha pochi hii moja kwa moja nayo.",
-    "enterIp": "Ingiza tu <b>anwani ya IP</b> ya nodi yako — tunaongeza iliyobaki.",
-    "nativeTransports": "Programu iliyosakinishwa inasaidia HTTPS na HTTP LAN.",
-    "webTransports": "Mkoba wa wavuti unahitaji HTTPS; tumia programu kwa HTTP kwenye LAN.",
-    "currentlyUsing": "Inatumia <code>{{current}}</code> sasa.",
-    "labelNative": "IP ya walletd au jina la seva",
-    "labelWeb": "URL ya walletd ya HTTPS",
-    "connect": "Unganisha",
-    "accessToken": "Tokeni ya ufikiaji",
-    "ifRequired": "(ikihitajika)",
-    "accessTokenPlaceholder": "Tokeni ya ufikiaji",
-    "portNote": "Inatumia lango {{port}} kwa chaguo-msingi — ongeza <code>:port</code> tu ikiwa ulibadilisha.",
-    "resetHosted": "Rejesha kwenye chaguo-msingi"
   },
   "vaultSetting": {
     "title": "Usalama na hifadhi nakala",
@@ -210,7 +191,8 @@
     "onNotePin": "<b>Imewashwa.</b> Ufunguo wa kila mkoba kwenye kifaa hiki umesimbwa, na programu inahitaji PIN yako ili kufungua. Inajifunga tena baada ya dakika chache ikiwa chinichini.",
     "onNotePassphrase": "<b>Imewashwa.</b> Ufunguo wa kila mkoba kwenye kifaa hiki umesimbwa, na programu inahitaji nenosiri lako ili kufungua. Inajifunga tena baada ya dakika chache ikiwa chinichini.",
     "offIntro": "Funguo za mkoba wako zimehifadhiwa kwenye kifaa hiki <b>bila kusimbwa</b>. Washa PIN au nenosiri na kila moja itasimbwa inapohifadhiwa, na programu itaihitaji inapofunguliwa — ili mtu aliye na kifaa hiki, au nakala rudufu ya data yake, asiweze kutumia fedha zake.",
-    "setSecret": "Weka PIN au nenosiri"
+    "setSecret": "Weka PIN au nenosiri",
+    "nothingToLock": "Hakuna ufunguo kwenye kifaa hiki cha kufunga bado. Pochi ya kutazama tu ina ufunguo wa kutazama pekee. Unda au ingiza pochi kwanza."
   },
   "switchWallet": {
     "title": "Pochi",
@@ -258,7 +240,8 @@
     "customHint": "Daemon ya mkoba unayoendesha wewe mwenyewe.",
     "addrPlaceholder": "host:port, http://<lan-ip>:8501, au .onion",
     "accessTokenPlaceholder": "Tokeni ya ufikiaji",
-    "connect": "Unganisha"
+    "connect": "Unganisha",
+    "timedOut": "Hiyo haikuanza ndani ya sekunde 20. Ukichagua Tor, hakikisha Orbot imesakinishwa na inaendesha."
   },
   "backgroundSyncCard": {
     "title": "Usawazishaji wa nyuma",
@@ -358,18 +341,18 @@
   "setup": {
     "title": "Haiwezi kufikia huduma ya mkoba",
     "nativeDown": "Huduma ya mkoba haijibu. Angalia muunganisho wako na ujaribu tena baadaye — fedha zako ziko salama kwenye mnyororo.",
-    "hostedDown": "Huduma ya mkoba iliyopangishwa haijibu. Hakuna chochote cha kuendesha — jaribu tena baadaye.",
+    "hostedDown": "Huduma ya pochi haijibu sasa. Hakuna cha kuendesha au kurekebisha — kwa kawaida inarudi yenyewe.",
     "privacyNote": "Ufunguo wako wa kutumia uko kwenye kifaa hiki hata hivyo — hautumwi kamwe kwa huduma. Kinachobadilika kwa kuendesha <code>zkas-walletd</code> yako mwenyewe ni <b>faragha</b>: huduma iliyopangishwa inaweza kuona ni mkoba gani unauliza kuhusu vitalu vipi, na daemon yako mwenyewe inaona tu kile unachokijua tayari.",
     "nativeTransports": "Programu iliyosakinishwa inakubali anwani za HTTPS na HTTP LAN wazi.",
     "webTransports": "Mkoba wa wavuti unahitaji URL ya huduma ya mkoba ya HTTPS.",
     "daemonUrl": "URL ya daemon",
     "checking": "Inakagua…",
     "save": "Hifadhi",
-    "safeOnChain": "Sarafu zako ni salama kwenye mnyororo. Hii ni kuhusu jinsi programu inavyozisoma tu.",
+    "safeOnChain": "Sarafu zako ziko salama kwenye mnyororo. Hii ndiyo jinsi programu inavyozisoma tu.",
     "lastBalance": "Salio la mwisho lililothibitishwa",
     "retry": "Jaribu tena",
-    "advanced": "Unganisha kwa huduma nyingine ya pochi",
-    "restartEngine": "Anzisha upya injini kwenye kifaa"
+    "advanced": "Unganisha kwa huduma tofauti ya pochi",
+    "restartEngine": "Anzisha tena injini ya kifaa"
   },
   "sendScene": {
     "warmEta": "takriban dak {{n}} zimebaki",
@@ -444,7 +427,8 @@
     "fingerprint": "Alama ya kidole",
     "on": "Washa",
     "off": "Zima",
-    "privateSends": "Utumaji usiojulikana"
+    "privateSends": "Tuma kwa siri",
+    "pausedOnPhone": "Imesitishwa kwenye simu hii"
   },
   "appearanceCard": {
     "title": "Rangi ya mwonekano",
@@ -599,7 +583,9 @@
     "chatAria": "Soga ya jamii ya ZKas",
     "chatOff": "mbali · gusa kusanidi",
     "chatOpen": "chumba cha wote",
-    "chatUnread": "{{n}} mpya"
+    "chatUnread": "{{n}} mpya",
+    "receivedToastHidden": "Malipo yamefika",
+    "receivedNotifBodyHidden": "Malipo yamefika kwenye pochi yako."
   },
   "hostedNotice": {
     "browserWallet": "Mkoba wa kivinjari. <b><a>Pata programu salama zaidi</a></b>."
@@ -623,7 +609,7 @@
     "share": "Shiriki",
     "sealed": "Kiasi, mtumaji, mpokeaji — zimefungwa.",
     "viewKeyTitle": "Ufunguo wa kutazama pochi",
-    "viewKeySummary": "Tazama mkoba huu kusoma tu",
+    "viewKeySummary": "Soma tu",
     "seedMoved": "Unatafuta maneno yako ya kurejesha? Yamehamia <b>Mipangilio → Maneno ya kurejesha</b>, nyuma ya kufunga programu.",
     "qrBuilding": "Inaandaa msimbo wako…"
   },
@@ -855,10 +841,10 @@
     "backupFile": "Faili ya nakala rudufu (.json)",
     "errReadFile": "Haikuweza kusoma faili hiyo.",
     "selected": "Imechaguliwa: {{name}}",
-    "wordsSoFar": "Maneno {{n}} kati ya 12 hadi sasa.",
-    "wordsOddLength": "Maneno {{n}}. Kifungu cha urejeshaji kina maneno 12, 18 au 24.",
-    "connectingWhy": "Programu huunganishwa na huduma ya pochi kabla ya kuunda pochi.",
-    "usePublicInstead": "Tumia huduma ya umma badala yake"
+    "wordsSoFar": "{{n}} kati ya maneno 12 kufikia sasa.",
+    "wordsOddLength": "Maneno {{n}}. Maneno ya kurejesha ni 12, 18 au 24 kwa urefu.",
+    "connectingWhy": "Huduma yako ya pochi bado inasawazisha na mnyororo. Pochi mpya inasubiri block ya sasa, ili isichunguze historia ya miaka ambayo haiwezi kuwa nayo.",
+    "usePublicInstead": "Tumia huduma ya pochi ya umma badala yake"
   },
   "languagePicker": {
     "label": "Lugha",
@@ -1054,7 +1040,8 @@
     "cannotReachEmbedded": "Haifikii injini ya mkoba iliyopachikwa. ({{detail}})",
     "notResponding": "Huduma ya mkoba haijibu (imeisha muda).",
     "cannotReachDaemon": "Haifikii daemon ya mkoba. ({{detail}})",
-    "invalidResponse": "Huduma ya mkoba ilirudisha jibu batili ({{status}})."
+    "invalidResponse": "Huduma ya mkoba ilirudisha jibu batili ({{status}}).",
+    "blockedByPrivacy": "Imezuiwa: {{host}} haifikiki kwa faragha, na Tor imewashwa. Zima Tor au chagua huduma ya kitunguu."
   },
   "noncustodial": {
     "fragmentedDefault": "Malipo haya yanahitaji sarafu zaidi ya muamala mmoja unavyoweza kutumia.",
@@ -1364,7 +1351,10 @@
     "dashboardTitle": "Dashibodi ya mchimbaji",
     "close": "Funga",
     "dashboardFrameTitle": "Dashibodi ya daraja la uchimbaji",
-    "dashboardNote": "Inatolewa na daraja la uchimbaji kwenye kompyuta hii. Inaonekana uchimbaji ukiwa unaendesha."
+    "dashboardNote": "Inatolewa na daraja la uchimbaji kwenye kompyuta hii. Inaonekana uchimbaji ukiwa unaendesha.",
+    "modeFixed": "Hali ya uchimbaji inawekwa unapoanza. Simamisha uchimbaji kuibadilisha.",
+    "stale": "Mawasiliano na huduma ya uchimbaji yamepotea. Takwimu zilizo chini ni za mwisho kuchukuliwa kabla ya hapo — si za moja kwa moja.",
+    "dashboardHiddenPrivate": "Dashibodi ya daraja imefichwa wakati hali ya faragha imewashwa: ukurasa wake hupakia fonti na hati kutoka kwa mtandao wa umma, ambazo zingefichua anwani yako kutoka kwa kifaa hiki."
   },
   "endpointField": {
     "hint": "IP na port ya nodi yoyote — si lazima iwe kwenye kompyuta hii. mf. 203.0.113.5:16110",
@@ -1476,7 +1466,8 @@
     "nodeLogsTitle": "Kumbukumbu za nodi ya ZKAS",
     "walletLogsTitle": "Kumbukumbu za injini ya pochi",
     "movingWalletToPublic": "Inahamisha pochi kwenye nodi ya umma…",
-    "stoppingNode": "Inasimamisha nodi…"
+    "stoppingNode": "Inasimamisha nodi…",
+    "stale": "Mawasiliano na msimamizi wa nodi yamepotea. Takwimu zilizo chini ni za mwisho kuchukuliwa kabla ya hapo — si za moja kwa moja."
   },
   "selfHost": {
     "copied": "Imenakiliwa",
@@ -1621,7 +1612,8 @@
     "offline": "Nje ya mtandao",
     "heroAria": "Dimbwi lililofichwa, moja kwa moja",
     "heroTitle": "Dimbwi lililofichwa — moja kwa moja",
-    "liveHiddenOnTor": "Mwonekano wa moja kwa moja umefichwa kwenye Tor, kwa sababu kuupakia kungefichua IP halisi."
+    "liveHiddenOnTor": "Mwonekano wa mtandao wa moja kwa moja umefichwa Tor ikiwa: hupakia kutoka explorer.zkas.info, ambayo ingeona anwani yako halisi. Takwimu zilizo chini zinakuja kupitia huduma yako ya pochi.",
+    "unavailableOverTor": "Kichunguzi hakipatikani kupitia Tor. Zima Tor, au weka anwani ya onion, ili kuona data ya mnyororo ya moja kwa moja."
   },
   "blockView": {
     "title": "Bloku",
@@ -1687,7 +1679,10 @@
     "unlock": "Fungua",
     "setPassphrase": "Weka nenosiri",
     "noReset": "Hakuna njia ya kuweka upya nenosiri hili — halitumwi popote wala kuhifadhiwa. Ukisahau, njia pekee ya kuingia tena kwenye mkoba huu ni maneno yako ya kurejesha au faili ya hifadhi rudufu, hivyo weka moja kwa usalama.",
-    "haveBackup": "Tayari una faili ya hifadhi rudufu? <a>Rejesha kutoka kwenye hifadhi rudufu</a>"
+    "haveBackup": "Tayari una faili ya hifadhi rudufu? <a>Rejesha kutoka kwenye hifadhi rudufu</a>",
+    "cannotReachTitle": "Haiwezi kufikia huduma ya pochi",
+    "cannotReachBody": "Huduma ya pochi ya ndani haijajibu. Inaweza kuwa bado inaanza.",
+    "tryAgain": "Jaribu tena"
   },
   "explorer": {
     "now": "sasa",
@@ -1743,8 +1738,8 @@
     "eraseDevice": "Futa kifaa hiki & anza upya",
     "cancel": "Ghairi",
     "sealed": "Imefungwa kwenye kifaa hiki",
-    "decrypting": "Inasimbua pochi yako",
-    "decrypted": "Imesimbuliwa"
+    "decrypting": "Inafungua pochi yako",
+    "decrypted": "Imefunguliwa"
   },
   "firstRunConnect": {
     "accessToken": "Tokeni ya ufikiaji",
@@ -1855,10 +1850,10 @@
     "changeLater": "Unaweza kubadilisha hili wakati wowote chini ya Mipangilio, bila kugusa mkoba wako au salio lake."
   },
   "privateSends": {
-    "intro": "Malipo yako kwa kawaida hubeba nakala ya maelezo yake iliyosimbwa kwa ufunguo <b>wako mwenyewe</b>, ili historia yako iendelee baada ya kurejesha na uweze kuthibitisha malipo baadaye. Utumaji usiojulikana huacha nakala hiyo.",
-    "cost": "Gharama ni ya kudumu, na inakuangukia wewe: hakuna nakala ambayo mtu yeyote anaweza kuisimbua — <b>hata wewe, kwa ufunguo wako wa kutumia</b>. Baada ya kutumwa, malipo yasiyojulikana hayawezi kurejeshwa unaporejesha pochi hii, hayaonekani kwenye historia kwenye kifaa kingine, na hayawezi kuthibitishwa kwa mtu yeyote. Mpokeaji anayapokea kama kawaida.",
-    "turnOn": "Washa utumaji usiojulikana",
-    "turnOff": "Zima utumaji usiojulikana"
+    "intro": "Malipo yako kwa kawaida hubeba nakala ya maelezo yake yaliyosimbwa kwa ufunguo <b>wako mwenyewe</b>, ili historia yako idumu baada ya kurejeshwa na uweze kuthibitisha malipo baadaye. Tuma bila kujulikana huacha nakala hiyo nje.",
+    "cost": "Gharama ni ya kudumu, na inakukumba wewe: hakuna nakala kwa mtu yeyote kusimbua — <b>hata wewe, kwa ufunguo wako mwenyewe</b>. Mara ikitumwa, malipo ya siri hayawezi kurejeshwa ukirejesha pochi hii, hayawezi kuonekana kwenye historia kwenye kifaa kingine, na hayawezi kuthibitishwa kwa mtu yeyote. Mpokeaji bado anapokea kawaida.",
+    "turnOn": "Washa tuma kwa siri",
+    "turnOff": "Zima tuma kwa siri"
   },
   "paymentProof": {
     "title": "Thibitisha malipo haya",
@@ -1883,7 +1878,9 @@
     "invalid": "Si sahihi.",
     "confirmations_one": "{{count}} uthibitisho",
     "confirmations_other": "{{count}} uthibitisho",
-    "verifyNote": "Uthibitisho unakaguliwa dhidi ya muamala kwenye mnyororo: mpokeaji na kiasi vilivyofichuliwa lazima vizalike ahadi iliyorekodiwa na bloku."
+    "verifyNote": "Uthibitisho unakaguliwa dhidi ya muamala kwenye mnyororo: mpokeaji na kiasi vilivyofichuliwa lazima vizalike ahadi iliyorekodiwa na bloku.",
+    "undetermined": "Uthibitisho huu haukuweza kukaguliwa.",
+    "undeterminedWhy": "Huduma ya pochi haikutoa jibu, kwa hivyo hakuna kinachojulikana kuhusu malipo haya. Jaribu tena baada ya muda — hii si ushahidi kuwa uthibitisho ni wa uongo."
   },
   "chat": {
     "nameSkip": "Tuma bila jina",
@@ -1911,8 +1908,7 @@
       "muteConfirm": "Gusa tena ili kunyamazisha {{name}}",
       "reportConfirm": "Gusa tena ili kuripoti na kunyamazisha",
       "sendZkas": "Tuma ZKAS",
-      "noAddress": "Hakuna anwani bado.",
-      "react": "Itikia"
+      "react": "Jibu"
     },
     "profile": {
       "copyKey": "Nakili ufunguo wa umma",
@@ -1932,11 +1928,10 @@
       "none": "Hakuna ujumbe faragha bado.",
       "start": "Tuma ujumbe faragha",
       "placeholder": "Ujumbe faragha",
-      "note": "Ni nyinyi wawili pekee mnaoweza kusoma hili. Vipeperushi huona ufunguo wa mara moja, si nani anayezungumza na nani.",
+      "note": "Ni nyinyi wawili tu mnaoweza kusoma hii. Relay inaona ufunguo wa mara moja, si nani anazungumza na nani.",
       "headerNote": "binafsi"
     },
-    "you": "wewe",
-    "intro": "Kila mtu hapa anaweza kusoma unachochapisha, na machapisho hayawezi kufutwa. Tumia safu iliyo juu kubadilisha chumba. Gusa ujumbe kujibu au kuitikia, au telezesha ili kujibu.",
+    "intro": "Kila mtu hapa anaweza kusoma unachochapisha, na machapisho hayawezi kufutwa. Gusa ujumbe kujibu au kuitikia, au telezesha ili kujibu.",
     "consentTitle": "Washa soga?",
     "consentPublic": "Ujumbe katika chumba cha wote ni wa umma na wa kudumu. Hakuna kufuta.",
     "consentIp": "Seva ya relay inaona anwani yako ya IP na wakati uko mtandaoni. Pochi yako haioni.",
@@ -1944,7 +1939,7 @@
     "consentEnable": "Washa soga",
     "consentLater": "Sio sasa",
     "consentOff": "Unaweza kuizima tena katika Mipangilio.",
-    "back": "← Pochi",
+    "back": "Pochi",
     "roomAria": "Soga ya jamii",
     "state": {
       "offline": "nje ya mtandao",
@@ -1987,7 +1982,8 @@
     "earlier": "Jumbe za awali",
     "today": "Leo",
     "yesterday": "Jana",
-    "jumpLatest": "Nenda kwa mpya zaidi"
+    "jumpLatest": "Nenda kwa jumbe mpya",
+    "profileOf": "Wasifu wa {{name}}"
   },
   "backgroundPermission": {
     "title": "Ruhusu pochi isawazishe chinichini?",
@@ -2006,8 +2002,8 @@
     "decline": "Hapana, tupa kiungo"
   },
   "daemonError": {
-    "network": "Mawasiliano na mtandao yamekatika kwa muda. Sarafu zako ni salama — pochi inaendelea kujaribu yenyewe.",
-    "generic": "Huduma ya pochi ilikumbana na tatizo wakati wa kusoma mnyororo. Sarafu zako ni salama kwenye mnyororo.",
+    "network": "Imepoteza mawasiliano na mtandao kwa muda. Sarafu zako ziko salama — pochi inaendelea kujaribu yenyewe.",
+    "generic": "Huduma ya pochi ilikumbana na tatizo wakati wa kusoma mnyororo. Sarafu zako ziko salama kwenye mnyororo.",
     "details": "Maelezo ya kiufundi"
   }
 }

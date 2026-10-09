@@ -52,7 +52,7 @@
     "wrongSeed": "Die herstelzin hoort bij een andere portemonnee — hij ontgrendelt deze niet. Controleer welke portemonnee je herstelt, of schakel over naar de portemonnee waar deze bij hoort.",
     "finishingMerge": "Achtergrondsamenvoeging afronden…",
     "fragmentedNothingSent": "{{message}} Niets is ondertekend of verzonden.",
-    "partialRecorded": "{{message}} Het al uitgezonden deel staat in Geschiedenis.",
+    "partialRecorded": "{{message}} {{sent}} ZKAS was al verzonden en staat in de geschiedenis. Het bedrag hieronder is de {{remaining}} ZKAS die nog betaald moet worden — controleer de geschiedenis voordat je het verzendt. ",
     "confirmTitle": "Bevestigen",
     "amount": "Bedrag",
     "zkasAmount": "{{amount}} ZKAS",
@@ -115,7 +115,8 @@
     "catchingUp": "Nog aan het synchroniseren met de blockchain — je kunt betalen zodra dit klaar is, zodat de portemonnee al je munten kent.",
     "warmBanner": "<b>⚡ Je eerste betaling duurt enkele minuten.</b><br/>Munten lokaliseren — dit gebeurt eenmalig. Je kunt de betaling nu starten.",
     "reviewSend": "Verzending bekijken",
-    "waitingForSync": "De chain wordt nog gelezen — je kunt versturen zodra dat klaar is."
+    "waitingForSync": "Nog de keten aan het lezen — je kunt verzenden zodra hij bij is.",
+    "unknownFailure": "De betaling werd geweigerd en de wallet kon niet lezen waarom. Er is niets verzonden — check de geschiedenis voor je het opnieuw probeert."
   },
   "sign": {
     "title": "Bericht ondertekenen",
@@ -127,26 +128,6 @@
     "copySignature": "Kopieer handtekening",
     "sign": "Teken",
     "fvkWarning": "Ondertekenen geeft de verificateur je kijksleutel: vanaf dan kunnen ze het saldo, de geschiedenis en je betalingen van deze wallet zien. Als dat belangrijk is, onderteken dan vanuit een aparte wallet — je kunt er een toevoegen in Instellingen."
-  },
-  "daemonSetting": {
-    "timedOut": "time-out na 5s",
-    "unreachable": "Kon geen walletdienst bereiken op {{url}} ({{detail}}). Controleer of zkas-walletd daar draait en de poort open is. Niets gewijzigd — {{current}} blijft in gebruik.",
-    "title": "Verbind met je eigen node",
-    "modeOwn": "je eigen ✓",
-    "modeHosted": "gehost",
-    "intro": "Je seed ondertekent altijd op dit apparaat. Maar de gehoste service ziet nog steeds je <b>kijksleutel</b> — die kan je saldo, geschiedenis en bestemmingen bekijken. Om ook dat privé te houden, draai je <code>zkas-walletd</code> op je eigen node en verbind je deze wallet er rechtstreeks mee.",
-    "enterIp": "Voer gewoon het <b>IP-adres</b> van je node in — wij vullen de rest aan.",
-    "nativeTransports": "De geïnstalleerde app ondersteunt HTTPS en gewone HTTP LAN-verbindingen.",
-    "webTransports": "De webportemonnee vereist HTTPS; gebruik de app voor gewone HTTP op een LAN.",
-    "currentlyUsing": "Momenteel in gebruik: <code>{{current}}</code>.",
-    "labelNative": "Walletd IP-adres of hostnaam",
-    "labelWeb": "HTTPS walletd URL",
-    "connect": "Verbinden",
-    "accessToken": "Toegangstoken",
-    "ifRequired": "(indien nodig)",
-    "accessTokenPlaceholder": "Toegangstoken",
-    "portNote": "Gebruikt standaard poort {{port}} — voeg <code>:port</code> alleen toe als je deze hebt gewijzigd.",
-    "resetHosted": "Herstel naar gehoste standaard"
   },
   "vaultSetting": {
     "title": "Beveiliging & back-up",
@@ -197,7 +178,8 @@
     "customHint": "Een wallet-daemon die je zelf draait.",
     "addrPlaceholder": "host:poort, http://<lan-ip>:8501, of .onion",
     "accessTokenPlaceholder": "Toegangstoken",
-    "connect": "Verbinden"
+    "connect": "Verbinden",
+    "timedOut": "Dat startte niet binnen 20 seconden. Als je Tor koos, check dan of Orbot geïnstalleerd is en draait."
   },
   "backgroundSyncCard": {
     "title": "Achtergrondsynchronisatie",
@@ -251,7 +233,8 @@
     "onNotePin": "<b>Aan.</b> Elke portemonneesleutel op dit apparaat is versleuteld en de app vraagt om je pincode bij het openen. Hij vergrendelt zichzelf na een paar minuten op de achtergrond.",
     "onNotePassphrase": "<b>Aan.</b> Elke portemonneesleutel op dit apparaat is versleuteld en de app vraagt om je wachtwoord bij het openen. Hij vergrendelt zichzelf na een paar minuten op de achtergrond.",
     "offIntro": "Je portemonneesleutels worden <b>onversleuteld</b> op dit apparaat opgeslagen. Schakel een pincode of wachtwoord in; dan worden ze allemaal versleuteld opgeslagen en vraagt de app ernaar bij het openen — zodat iemand met dit apparaat of een back-up van de gegevens er niets mee kan uitgeven.",
-    "setSecret": "Stel pincode of wachtwoord in"
+    "setSecret": "Stel pincode of wachtwoord in",
+    "nothingToLock": "Er is nog geen sleutel op dit apparaat om te vergrendelen. Een alleen-bekijken-wallet bevat alleen een kijksleutel. Maak eerst een wallet aan of importeer er een."
   },
   "switchWallet": {
     "title": "Wallets",
@@ -358,18 +341,18 @@
   "setup": {
     "title": "Kan walletdienst niet bereiken",
     "nativeDown": "De walletdienst reageert niet. Controleer je verbinding en probeer het zo opnieuw — je geld is veilig op de blockchain.",
-    "hostedDown": "De gehoste walletdienst reageert niet. Je hoeft zelf niets te starten — probeer het zo opnieuw.",
+    "hostedDown": "De walletservice reageert nu niet. Jij hoeft niets te doen — hij komt meestal vanzelf terug.",
     "privacyNote": "Je uitgavesleutel blijft sowieso op dit apparaat — die wordt nooit naar de dienst gestuurd. Wat het zelf draaien van <code>zkas-walletd</code> verandert is <b>privacy</b>: de gehoste dienst kan zien welke portemonnee naar welke blokken vraagt, en je eigen daemon ziet alleen wat je al weet.",
     "nativeTransports": "De geïnstalleerde app accepteert HTTPS en gewone HTTP LAN-adressen.",
     "webTransports": "De webportemonnee heeft een HTTPS-walletdienst-URL nodig.",
     "daemonUrl": "Daemon URL",
     "checking": "Controleren…",
     "save": "Opslaan",
-    "safeOnChain": "Je coins staan veilig op de chain. Dit gaat alleen over hoe de app ze uitleest.",
-    "lastBalance": "Laatst bevestigde saldo",
-    "retry": "Opnieuw proberen",
-    "advanced": "Verbinden met een andere wallet-service",
-    "restartEngine": "Engine op dit apparaat herstarten"
+    "safeOnChain": "Je munten zijn veilig op de keten. Dit is alleen hoe de app ze leest.",
+    "lastBalance": "Laatste bevestigde saldo",
+    "retry": "Opnieuw",
+    "advanced": "Verbind met een andere walletservice",
+    "restartEngine": "Herstart de engine op het apparaat"
   },
   "sendScene": {
     "warmEta": "ongeveer {{n}} min resterend",
@@ -444,7 +427,8 @@
     "fingerprint": "Vingerafdruk",
     "on": "Aan",
     "off": "Uit",
-    "privateSends": "Anonieme verzendingen"
+    "privateSends": "Anoniem verzenden",
+    "pausedOnPhone": "Gepauzeerd op deze telefoon"
   },
   "appearanceCard": {
     "title": "Accentkleur",
@@ -599,7 +583,9 @@
     "chatAria": "ZKas-communitychat",
     "chatOff": "uit · tik om in te stellen",
     "chatOpen": "globale ruimte",
-    "chatUnread": "{{n}} nieuw"
+    "chatUnread": "{{n}} nieuw",
+    "receivedToastHidden": "Betaling ontvangen",
+    "receivedNotifBodyHidden": "Er is een betaling in je wallet ontvangen."
   },
   "hostedNotice": {
     "browserWallet": "Browser-portemonnee. <b><a>Download de veiligere app</a></b>."
@@ -623,9 +609,9 @@
     "share": "Delen",
     "sealed": "Bedragen, afzender, ontvanger — afgeschermd.",
     "viewKeyTitle": "Wallet-kijksleutel",
-    "viewKeySummary": "Bekijk deze portemonnee alleen-lezen",
+    "viewKeySummary": "Alleen lezen",
     "seedMoved": "Op zoek naar je herstel-seed? Die staat nu in <b>Instellingen → Herstel-seed</b>, achter je appvergrendeling.",
-    "qrBuilding": "Je code wordt voorbereid…"
+    "qrBuilding": "Code voorbereiden…"
   },
   "revealSeedCard": {
     "wrongPin": "Verkeerde pincode.",
@@ -919,9 +905,9 @@
     "importPhrase": "Herstelzin importeren",
     "watchWallet": "Portemonnee bekijken (alleen bekijken)",
     "wordsSoFar": "{{n}} van de 12 woorden tot nu toe.",
-    "wordsOddLength": "{{n}} woorden. Een herstelzin bestaat uit 12, 18 of 24 woorden.",
-    "connectingWhy": "De app maakt verbinding met een wallet-service voordat er een wallet kan worden aangemaakt.",
-    "usePublicInstead": "Gebruik in plaats daarvan de publieke service"
+    "wordsOddLength": "{{n}} woorden. Een herstelzin is 12, 18 of 24 woorden lang.",
+    "connectingWhy": "Je walletservice is nog bezig met de keten. Een nieuwe wallet wacht op het huidige blok, zodat hij geen jaren aan geschiedenis scant die hij niet kan hebben.",
+    "usePublicInstead": "Gebruik de openbare walletservice"
   },
   "languagePicker": {
     "label": "Taal",
@@ -945,7 +931,8 @@
     "cannotReachEmbedded": "Kan de ingebouwde wallet-engine niet bereiken. ({{detail}})",
     "notResponding": "De wallet-service reageert niet (time-out).",
     "cannotReachDaemon": "Kan de wallet-daemon niet bereiken. ({{detail}})",
-    "invalidResponse": "De wallet-service gaf een ongeldig antwoord ({{status}})."
+    "invalidResponse": "De wallet-service gaf een ongeldig antwoord ({{status}}).",
+    "blockedByPrivacy": "Geblokkeerd: {{host}} is niet privé bereikbaar en Tor staat aan. Zet Tor uit of kies een onion-service."
   },
   "noncustodial": {
     "fragmentedDefault": "Deze betaling vereist meer munten dan één transactie kan uitgeven.",
@@ -1355,7 +1342,10 @@
     "dashboardTitle": "Miner dashboard",
     "close": "Sluiten",
     "dashboardFrameTitle": "Mining bridge dashboard",
-    "dashboardNote": "Geserveerd door de mining-bridge op deze computer. Verschijnt zodra mining draait."
+    "dashboardNote": "Geserveerd door de mining-bridge op deze computer. Verschijnt zodra mining draait.",
+    "modeFixed": "De miningsmodus wordt ingesteld bij het starten. Stop met minen om hem te wijzigen.",
+    "stale": "Contact met de miningservice verloren. De cijfers hieronder zijn de laatste metingen van daarvoor — ze zijn niet live.",
+    "dashboardHiddenPrivate": "Het dashboard van de bridge is verborgen terwijl een privacymodus aan staat: de pagina laadt lettertypen en scripts van het openbare internet, wat je adres van dit apparaat zou onthullen."
   },
   "walletTools": {
     "eyebrow": "Wallet-hulpmiddelen",
@@ -1469,7 +1459,8 @@
     "nodeLogsTitle": "ZKAS node logs",
     "walletLogsTitle": "Wallet engine logs",
     "movingWalletToPublic": "Wallet naar openbare node verplaatsen…",
-    "stoppingNode": "Node stoppen…"
+    "stoppingNode": "Node stoppen…",
+    "stale": "Contact met de nodesupervisor verloren. De cijfers hieronder zijn de laatste metingen van daarvoor — ze zijn niet live."
   },
   "endpointField": {
     "hint": "IP en poort van elke node — hoeft niet op deze computer te zijn. bv. 203.0.113.5:16110",
@@ -1621,7 +1612,8 @@
     "offline": "Offline",
     "heroAria": "Afgeschermde pool, live",
     "heroTitle": "Afgeschermde pool — live",
-    "liveHiddenOnTor": "De live-weergave is verborgen op Tor, omdat laden het echte IP-adres zou prijsgeven."
+    "liveHiddenOnTor": "Het live netwerkoverzicht is verborgen terwijl Tor aanstaat: het laadt van explorer.zkas.info, wat je echte adres zou zien. De cijfers hieronder komen via je walletservice.",
+    "unavailableOverTor": "De verkenner is niet bereikbaar via Tor. Zet Tor uit of stel een onionadres in om live ketengegevens te zien."
   },
   "blockView": {
     "title": "Blok",
@@ -1696,7 +1688,10 @@
     "unlock": "Ontgrendel",
     "setPassphrase": "Stel wachtwoord in",
     "noReset": "Deze wachtzin kan niet worden gereset — hij wordt nooit verzonden of opgeslagen. Vergeet u hem? Dan komt u alleen terug via uw seed of een back-upbestand. Houd dus een van beide veilig.",
-    "haveBackup": "Al een back-upbestand? <a>Herstel uit back-up</a>"
+    "haveBackup": "Al een back-upbestand? <a>Herstel uit back-up</a>",
+    "cannotReachTitle": "Kan walletservice niet bereiken",
+    "cannotReachBody": "De lokale walletservice heeft niet geantwoord. Hij start mogelijk nog op.",
+    "tryAgain": "Opnieuw"
   },
   "restoreFromBackup": {
     "errChooseFile": "Kies een back-upbestand.",
@@ -1743,7 +1738,7 @@
     "eraseDevice": "Wis dit apparaat & begin opnieuw",
     "cancel": "Annuleren",
     "sealed": "Verzegeld op dit apparaat",
-    "decrypting": "Je wallet wordt ontsleuteld",
+    "decrypting": "Wallet ontsleutelen",
     "decrypted": "Ontsleuteld"
   },
   "firstRunNode": {
@@ -1855,10 +1850,10 @@
     "thisSite": "deze site"
   },
   "privateSends": {
-    "intro": "Je betalingen dragen normaal een kopie van hun gegevens, versleuteld met <b>je eigen</b> sleutel, zodat je geschiedenis een herstel overleeft en je een betaling later kunt bewijzen. Een anonieme verzending laat die kopie weg.",
-    "cost": "De prijs is blijvend, en jij betaalt hem: er is geen kopie die iemand kan ontsleutelen — <b>ook jij niet, met je eigen uitgeefsleutel</b>. Eenmaal verzonden kan een anonieme betaling niet worden teruggehaald bij het herstellen van deze wallet, verschijnt niet in de geschiedenis op een ander apparaat en is aan niemand te bewijzen. De ontvanger krijgt hem gewoon.",
-    "turnOn": "Anonieme verzendingen aanzetten",
-    "turnOff": "Anonieme verzendingen uitzetten"
+    "intro": "Je betalingen dragen normaal een kopie van hun details mee, versleuteld naar <b>je eigen</b> sleutel, zodat je geschiedenis een herstel overleeft en je later een betaling kunt bewijzen. Een anonieme verzending laat die kopie weg.",
+    "cost": "De kosten zijn permanent en vallen op jou: er is geen kopie voor iemand om te ontsleutelen — <b>zelfs jij niet, met je eigen uitgavesleutel</b>. Een anonieme betaling kan niet worden teruggehaald bij herstel van deze wallet, verschijnt niet in de geschiedenis op een ander apparaat en kan aan niemand worden bewezen. De ontvanger ontvangt hem nog steeds normaal.",
+    "turnOn": "Anoniem verzenden aan",
+    "turnOff": "Anoniem verzenden uit"
   },
   "paymentProof": {
     "title": "Deze betaling bewijzen",
@@ -1883,7 +1878,9 @@
     "invalid": "Niet geldig.",
     "confirmations_one": "{{count}} bevestiging",
     "confirmations_other": "{{count}} bevestigingen",
-    "verifyNote": "Het bewijs wordt gecontroleerd tegen de transactie op de keten: de onthulde ontvanger en het bedrag moeten de commitment reproduceren die het blok heeft vastgelegd."
+    "verifyNote": "Het bewijs wordt gecontroleerd tegen de transactie op de keten: de onthulde ontvanger en het bedrag moeten de commitment reproduceren die het blok heeft vastgelegd.",
+    "undetermined": "Dit bewijs kon niet worden gecontroleerd.",
+    "undeterminedWhy": "De walletservice gaf geen antwoord, dus is er niets bekend over deze betaling. Probeer het zo opnieuw — dit is geen bewijs dat het bewijs onjuist is."
   },
   "backgroundPermission": {
     "title": "Wallet op achtergrond synchroniseren?​",
@@ -1901,7 +1898,7 @@
     "consentEnable": "Chat inschakelen",
     "consentLater": "Niet nu",
     "consentOff": "Je kunt dit later uitschakelen in Instellingen.",
-    "back": "← Wallet",
+    "back": "Wallet",
     "roomAria": "Communitychat",
     "state": {
       "offline": "offline",
@@ -1950,7 +1947,6 @@
       "muteConfirm": "Tik opnieuw om {{name}} te dempen",
       "reportConfirm": "Tik opnieuw om te rapporteren en dempen",
       "sendZkas": "ZKAS verzenden",
-      "noAddress": "Nog geen adres gepubliceerd.",
       "react": "Reageren"
     },
     "profile": {
@@ -1971,11 +1967,10 @@
       "none": "Nog geen privéberichten.",
       "start": "Privébericht sturen",
       "placeholder": "Privébericht",
-      "note": "Alleen jullie twee kunnen dit lezen. Relais zien een eenmalige sleutel, niet wie met wie praat.",
+      "note": "Alleen jullie twee kunnen dit lezen. De relay ziet een eenmalige sleutel, niet wie met wie praat.",
       "headerNote": "privé"
     },
-    "you": "jij",
-    "intro": "Iedereen hier kan lezen wat je plaatst, en berichten kunnen niet worden verwijderd. Gebruik de rij hierboven om van ruimte te wisselen. Tik op een bericht om te reageren of te antwoorden, of veeg het om te antwoorden. ",
+    "intro": "Iedereen hier kan lezen wat je plaatst, en berichten kunnen niet worden verwijderd. Tik op een bericht om te reageren of te antwoorden, of veeg het weg om te antwoorden.",
     "torBlocked": "Chat staat uit omdat Tor aan staat. De relay wordt direct bereikt, niet via Tor, dus verbinden zou je echte IP-adres tonen. Zet Tor uit of stel een relay met een .onion-adres in bij Instellingen.",
     "torBlockedShort": "Niet verbonden terwijl Tor aan staat.",
     "muted": {
@@ -1995,7 +1990,8 @@
     "earlier": "Eerdere berichten",
     "today": "Vandaag",
     "yesterday": "Gisteren",
-    "jumpLatest": "Naar de nieuwste"
+    "jumpLatest": "Naar nieuwste bericht",
+    "profileOf": "Profiel van {{name}}"
   },
   "confirmWatch": {
     "title": "Deze wallet bekijken?",
@@ -2006,8 +2002,8 @@
     "decline": "Nee, link weggooien"
   },
   "daemonError": {
-    "network": "Even geen verbinding met het netwerk. Je coins zijn veilig — de wallet probeert het vanzelf opnieuw.",
-    "generic": "De wallet-service liep tegen een probleem aan bij het lezen van de chain. Je coins staan veilig op de chain.",
+    "network": "Even contact met het netwerk verloren. Je munten zijn veilig — de wallet blijft het zelf opnieuw proberen.",
+    "generic": "De walletservice kreeg een probleem bij het lezen van de keten. Je munten zijn veilig op de keten.",
     "details": "Technische details"
   }
 }

@@ -4,7 +4,7 @@
     "wrongSeed": "該種子屬於另一個錢包，無法解鎖此錢包。請確認你要復原的錢包，或切換到該種子所屬的錢包。",
     "finishingMerge": "正在完成背景合併…",
     "fragmentedNothingSent": "{{message}} 未簽署或發送任何內容。",
-    "partialRecorded": "{{message}} 已廣播的部分已記錄於歷史紀錄。",
+    "partialRecorded": "{{message}} {{sent}} ZKAS 已發送，記錄在歷史記錄中。下方金額是待付的 {{remaining}} ZKAS — 發送前請先查看歷史記錄。",
     "confirmTitle": "確認",
     "amount": "金額",
     "zkasAmount": "{{amount}} ZKAS",
@@ -67,7 +67,8 @@
     "catchingUp": "仍在同步區塊鏈 — 完成後即可付款，以確保錢包掌握你所有的硬幣。",
     "warmBanner": "<b>⚡ 首次付款需要幾分鐘。</b><br/>正在尋找你的硬幣 — 僅此一次。你現在就可以開始付款。",
     "reviewSend": "檢視發送",
-    "waitingForSync": "仍在讀取鏈——跟上後即可傳送。"
+    "waitingForSync": "仍在讀取鏈資料 — 同步完成即可發送。",
+    "unknownFailure": "付款被拒，錢包無法讀取原因。未發送任何款項 — 重試前請先查看歷史記錄。"
   },
   "verify": {
     "messagePlaceholder": "已簽名的訊息…",
@@ -127,26 +128,6 @@
     "copySignature": "複製簽名",
     "sign": "簽名",
     "fvkWarning": "簽署會將你的查看密鑰交給驗證者：此後他們就能看到此錢包的餘額、歷史記錄和發送去向。若這點很重要，請用另一個錢包簽署——你可以在設定中新增一個。"
-  },
-  "daemonSetting": {
-    "timedOut": "5 秒後逾時",
-    "unreachable": "無法連線至 {{url}} 的錢包服務（{{detail}}）。請確認 zkas-walletd 正在該處執行且連接埠已開啟。未做任何變更 — 仍使用 {{current}}。",
-    "title": "連接到你自己的節點",
-    "modeOwn": "你自己的 ✓",
-    "modeHosted": "託管",
-    "intro": "你的種子一律在本裝置簽名。但託管服務仍會看到你的<b>查看密鑰</b> — 它能監看你的餘額、歷史記錄和發送去向。要連這點也保密，請在自己的節點上執行 <code>zkas-walletd</code> 並將此錢包直接連上它。",
-    "enterIp": "只需輸入節點的 <b>IP 位址</b> — 其餘我們會補上。",
-    "nativeTransports": "已安裝的應用程式支援 HTTPS 與純 HTTP 區域網路連線。",
-    "webTransports": "網頁錢包需要 HTTPS；區域網路純 HTTP 請使用已安裝的應用程式。",
-    "currentlyUsing": "目前使用 <code>{{current}}</code>。",
-    "labelNative": "Walletd IP 位址或主機名稱",
-    "labelWeb": "HTTPS walletd 網址",
-    "connect": "連接",
-    "accessToken": "存取權杖",
-    "ifRequired": "（若需要）",
-    "accessTokenPlaceholder": "存取權杖",
-    "portNote": "預設使用連接埠 {{port}} — 僅在變更時才需加上 <code>:port</code>。",
-    "resetHosted": "重設為託管預設值"
   },
   "vaultSetting": {
     "title": "安全性與備份",
@@ -210,7 +191,8 @@
     "onNotePin": "<b>已開啟。</b>此裝置上每個錢包的金鑰均已加密，開啟應用程式時需輸入 PIN。在背景運行數分鐘後會自動重新鎖定。",
     "onNotePassphrase": "<b>已開啟。</b>此裝置上每個錢包的金鑰均已加密，開啟應用程式時需輸入密碼。在背景運行數分鐘後會自動重新鎖定。",
     "offIntro": "你的錢包金鑰以<b>未加密</b>形式儲存於此裝置。開啟 PIN 或密碼後，所有金鑰在儲存時都會加密，且開啟應用程式時需輸入——即使有人拿到此裝置或其資料備份，也無法動用資產。",
-    "setSecret": "設定 PIN 碼或密碼"
+    "setSecret": "設定 PIN 碼或密碼",
+    "nothingToLock": "此裝置上尚無金鑰可鎖定。僅觀看錢包只持有查看密鑰。請先建立或導入錢包。"
   },
   "switchWallet": {
     "title": "錢包",
@@ -303,7 +285,8 @@
     "customHint": "你自己執行的錢包守護程式。",
     "addrPlaceholder": "主機:埠, http://<lan-ip>:8501, 或 .onion",
     "accessTokenPlaceholder": "存取權杖",
-    "connect": "連接"
+    "connect": "連接",
+    "timedOut": "20 秒內未啟動。若你選擇 Tor，請確認 Orbot 已安裝並執行中。"
   },
   "backgroundSyncCard": {
     "title": "背景同步",
@@ -440,23 +423,24 @@
     "signatures": "簽名",
     "sectionAbout": "關於",
     "aboutZkas": "關於 ZKas",
-    "privateSends": "匿名傳送"
+    "privateSends": "匿名發送",
+    "pausedOnPhone": "在此手機上暫停"
   },
   "setup": {
     "title": "無法連線至錢包服務",
     "nativeDown": "錢包服務沒有回應。請檢查連線並稍後再試——你的資金在鏈上安全無虞。",
-    "hostedDown": "託管錢包服務沒有回應。你無需執行任何程式——請稍後再試。",
+    "hostedDown": "錢包服務目前無回應。你無需操作或修復 — 通常會自行恢復。",
     "privacyNote": "你的花費金鑰始終在此裝置上——絕不會傳送至服務。自行執行 <code>zkas-walletd</code> 改變的是<b>隱私</b>：託管服務可看到哪個錢包查詢哪些區塊，而你自己的守護程式只看到你已知的資訊。",
     "nativeTransports": "已安裝的應用程式接受 HTTPS 與純 HTTP LAN 位址。",
     "webTransports": "網頁錢包需要 HTTPS 錢包服務 URL。",
     "daemonUrl": "守護程式網址",
     "checking": "檢查中…",
     "save": "儲存",
-    "safeOnChain": "你的幣安全地在鏈上。這只關乎應用程式如何讀取它們。",
-    "lastBalance": "最近確認的餘額",
+    "safeOnChain": "你的幣在鏈上很安全。這只是應用程式讀取它們的方式。",
+    "lastBalance": "最後確認餘額",
     "retry": "重試",
-    "advanced": "連線到其他錢包服務",
-    "restartEngine": "重新啟動裝置上的引擎"
+    "advanced": "連線至不同的錢包服務",
+    "restartEngine": "重新啟動裝置引擎"
   },
   "sendScene": {
     "warmEta": "約 {{n}} 分鐘",
@@ -599,7 +583,9 @@
     "chatAria": "ZKas 社群聊天",
     "chatOff": "關閉 · 點按設定",
     "chatOpen": "全球聊天室",
-    "chatUnread": "{{n}} 則新訊息"
+    "chatUnread": "{{n}} 則新訊息",
+    "receivedToastHidden": "收到一筆付款",
+    "receivedNotifBodyHidden": "你的錢包收到一筆付款。"
   },
   "hostedNotice": {
     "browserWallet": "瀏覽器錢包。<b><a>下載更安全的應用程式</a></b>。"
@@ -623,9 +609,9 @@
     "share": "分享",
     "sealed": "金額、發送方、接收方 — 皆已密封。",
     "viewKeyTitle": "錢包查看密鑰",
-    "viewKeySummary": "以唯讀方式觀察此錢包",
+    "viewKeySummary": "唯讀",
     "seedMoved": "在找你的復原種子嗎？已移至<b>設定 → 復原種子</b>，受你的應用程式鎖保護。",
-    "qrBuilding": "正在準備你的 QR 碼…"
+    "qrBuilding": "正在準備你的代碼…"
   },
   "revealSeedCard": {
     "wrongPin": "PIN 碼錯誤。",
@@ -829,7 +815,7 @@
     "writeOnPaper": "按順序寫在紙上。",
     "written": "我已寫下",
     "alsoFile": "也儲存加密備份檔案",
-    "fillAllBlanks": "填入每個缺少的單字以繼續。"
+    "fillAllBlanks": "填入所有遺漏的單詞以繼續。"
   },
   "recoverWallet": {
     "errNotSecret": "這不像助記詞（12 個單字）或復原種子（64 個十六進位字元）。",
@@ -911,10 +897,10 @@
     "backupFile": "備份檔案 (.json)",
     "errReadFile": "無法讀取該檔案。",
     "selected": "已選擇：{{name}}",
-    "wordsSoFar": "目前 12 個單字中的 {{n}} 個。",
-    "wordsOddLength": "{{n}} 個單字。復原短語是 12、18 或 24 個單字。",
-    "connectingWhy": "應用程式在建立錢包之前會先連線到錢包服務。",
-    "usePublicInstead": "改用公共服務"
+    "wordsSoFar": "已輸入 {{n}} / 12 個單詞。",
+    "wordsOddLength": "{{n}} 個單詞。恢復短語長度為 12、18 或 24 個單詞。",
+    "connectingWhy": "你的錢包服務仍在同步鏈資料。新錢包會等待當前區塊，以免掃描不可能存在的多年歷史記錄。",
+    "usePublicInstead": "改用公開錢包服務"
   },
   "languagePicker": {
     "label": "語言",
@@ -1047,7 +1033,8 @@
     "cannotReachEmbedded": "無法連線內嵌錢包引擎。（{{detail}}）",
     "notResponding": "錢包服務無回應（逾時）。",
     "cannotReachDaemon": "無法連線錢包守護程式。（{{detail}}）",
-    "invalidResponse": "錢包服務回傳無效回應（{{status}}）。"
+    "invalidResponse": "錢包服務回傳無效回應（{{status}}）。",
+    "blockedByPrivacy": "已封鎖：{{host}} 無法私下連線，且 Tor 已開啟。請關閉 Tor 或選擇洋蔥服務。"
   },
   "noncustodial": {
     "fragmentedDefault": "此付款需要的幣數量超過一筆交易可花費的數量。",
@@ -1275,7 +1262,10 @@
     "chooserIntro": "選擇挖礦目標與工作來源。同一 ASIC 算力可在一條或兩條鏈上獲得收益。",
     "whatToMine": "挖礦目標",
     "whatToMineNote": "合併挖礦以單一 ASIC 獲得兩條鏈的付款。",
-    "zkasOnly": "僅 ZKAS"
+    "zkasOnly": "僅 ZKAS",
+    "modeFixed": "挖礦模式在啟動時設定。停止挖礦即可變更。",
+    "stale": "與挖礦服務失去連線。以下數據是最後一次讀取的值，並非即時數據。",
+    "dashboardHiddenPrivate": "啟用隱私模式時，橋接器的儀表板會隱藏：其提供的頁面會從公開網路載入字型和腳本，這會從此裝置洩露你的地址。"
   },
   "networkGlobe": {
     "blockInfo": "已接受區塊",
@@ -1476,7 +1466,8 @@
     "nodeLogsTitle": "ZKAS 節點記錄",
     "walletLogsTitle": "錢包引擎記錄",
     "movingWalletToPublic": "正在將錢包移至公開節點…",
-    "stoppingNode": "正在停止節點…"
+    "stoppingNode": "正在停止節點…",
+    "stale": "與節點管理員失去連線。以下數據是最後一次讀取的值，並非即時數據。"
   },
   "selfHost": {
     "copied": "已複製",
@@ -1630,7 +1621,8 @@
     "blockEmission": "區塊發行量",
     "nextReduction": "下次減產",
     "tailNote": "發行計畫以永久尾部發行結束；沒有固定的最終供應量。",
-    "liveHiddenOnTor": "使用 Tor 時隱藏即時檢視，因為載入它會洩漏真實 IP。"
+    "liveHiddenOnTor": "即時網路檢視在 Tor 啟用時隱藏：它從 explorer.zkas.info 載入，該網站會看到您的真實位址。以下數據透過您的錢包服務取得。",
+    "unavailableOverTor": "瀏覽器無法透過 Tor 連線。請關閉 Tor，或為其設定洋蔥位址，以查看即時鏈上數據。"
   },
   "blockView": {
     "title": "區塊",
@@ -1696,7 +1688,10 @@
     "unlock": "解鎖",
     "setPassphrase": "設定密碼",
     "noReset": "此密碼無法重設——它絕不會傳送至任何地方，也絕不儲存。如果你忘記密碼，復原此錢包的唯一途徑是你的助記詞或備份檔，請務必妥善保管其中之一。",
-    "haveBackup": "已有備份檔？<a>從備份復原</a>"
+    "haveBackup": "已有備份檔？<a>從備份復原</a>",
+    "cannotReachTitle": "無法連線錢包服務",
+    "cannotReachBody": "本地錢包服務未回應。可能仍在啟動中。",
+    "tryAgain": "重試"
   },
   "restoreFromBackup": {
     "errChooseFile": "選擇一個備份檔案。",
@@ -1742,8 +1737,8 @@
     "wipeWarning": "這會<b>從此裝置</b>清除所有錢包的資料——硬幣仍會留在鏈上，但每個錢包只能透過助記詞或備份檔復原。",
     "eraseDevice": "清除裝置並重新開始",
     "cancel": "取消",
-    "sealed": "已在此裝置上封存",
-    "decrypting": "正在解密你的錢包",
+    "sealed": "已鎖定於此裝置",
+    "decrypting": "正在解密錢包",
     "decrypted": "已解密"
   },
   "firstRunConnect": {
@@ -1855,10 +1850,10 @@
     "changeLater": "你隨時可以在「設定」中更改，完全不影響錢包或餘額。"
   },
   "privateSends": {
-    "intro": "你的付款通常會帶上一份用<b>你自己的</b>金鑰加密的明細副本，這樣歷史記錄在復原後仍在，之後也能證明某筆付款。匿名傳送不保留這份副本。",
-    "cost": "代價是永久的，並且由你承擔：沒有任何副本可供任何人解密——<b>連你用自己的花費金鑰也不行</b>。一旦傳送，匿名付款在你復原此錢包時無法找回，不會出現在其他裝置的歷史記錄中，也無法向任何人證明。收款方仍照常收到。",
-    "turnOn": "開啟匿名傳送",
-    "turnOff": "關閉匿名傳送"
+    "intro": "你的付款通常會攜帶一份加密至<b>你自己的</b>金鑰的詳細資料副本，以便你的歷史記錄在恢復後仍存在，且日後可證明付款。匿名發送則會省略該副本。",
+    "cost": "此代價是永久性的，且由你承擔：沒有任何副本可供任何人解密 — <b>即使是你自己，使用你的花費金鑰也無法解密</b>。一旦發送，匿名付款在恢復此錢包時無法復原，無法出現在其他裝置的歷史記錄中，也無法向任何人證明。收款方仍可正常接收。",
+    "turnOn": "開啟匿名發送",
+    "turnOff": "關閉匿名發送"
   },
   "paymentProof": {
     "title": "證明此付款",
@@ -1883,7 +1878,9 @@
     "invalid": "無效。",
     "confirmations_one": "{{count}} 次確認",
     "confirmations_other": "{{count}} 次確認",
-    "verifyNote": "此證明會與鏈上交易比對：揭露的收款方和金額必須重現區塊記錄的承諾值。"
+    "verifyNote": "此證明會與鏈上交易比對：揭露的收款方和金額必須重現區塊記錄的承諾值。",
+    "undetermined": "此證明無法驗證。",
+    "undeterminedWhy": "錢包服務未提供回應，因此無法確認此付款的狀態。請稍後再試——這不代表證明有誤。"
   },
   "chat": {
     "nameSkip": "匿名發文",
@@ -1911,7 +1908,6 @@
       "muteConfirm": "再按一次即可靜音 {{name}}",
       "reportConfirm": "再按一次即可檢舉並靜音",
       "sendZkas": "發送 ZKAS",
-      "noAddress": "尚未發布地址。",
       "react": "回應"
     },
     "profile": {
@@ -1932,11 +1928,10 @@
       "none": "尚無私訊。",
       "start": "私訊",
       "placeholder": "私訊",
-      "note": "只有你們兩人能閱讀此內容。中繼站只會看到一次性密鑰，無法得知誰在與誰交談。",
+      "note": "只有你們兩人能閱讀此內容。中繼站只會看到一次性金鑰，不會知道誰在與誰交談。",
       "headerNote": "私密"
     },
-    "you": "你",
-    "intro": "這裡所有人都能看到你發的內容，且發文無法刪除。使用上方橫列切換聊天室。點按訊息可反應或回覆，滑動則可回覆。",
+    "intro": "這裡的每個人都能閱讀你發布的內容，且發布後無法刪除。點按訊息可回應或回覆，或滑動以回覆。",
     "consentTitle": "開啟聊天？",
     "consentPublic": "全球聊天室的訊息為公開且永久保存，無法刪除。",
     "consentIp": "中繼伺服器會看到您的 IP 位址與上線時間，您的錢包則不會。",
@@ -1944,7 +1939,7 @@
     "consentEnable": "開啟聊天",
     "consentLater": "稍後再說",
     "consentOff": "您之後可在設定中關閉此功能。",
-    "back": "← 錢包",
+    "back": "錢包",
     "roomAria": "社群聊天",
     "state": {
       "offline": "離線",
@@ -1984,10 +1979,11 @@
     "nameLabel": "名稱",
     "useMyAddress": "使用錢包地址",
     "clearAddress": "移除地址",
-    "earlier": "更早的訊息",
+    "earlier": "較早訊息",
     "today": "今天",
     "yesterday": "昨天",
-    "jumpLatest": "跳到最新"
+    "jumpLatest": "前往最新訊息",
+    "profileOf": "{{name}} 的個人檔案"
   },
   "backgroundPermission": {
     "title": "讓錢包在背景同步？",
@@ -2006,8 +2002,8 @@
     "decline": "不，捨棄連結"
   },
   "daemonError": {
-    "network": "與網路的連線短暫中斷。你的幣是安全的——錢包會自行重試。",
-    "generic": "錢包服務在讀取鏈時遇到問題。你的幣在鏈上是安全的。",
+    "network": "暫時與網路失去聯繫。你的幣很安全 — 錢包會自動持續重試。",
+    "generic": "錢包服務在讀取鏈資料時遇到問題。你的幣在鏈上很安全。",
     "details": "技術細節"
   }
 }

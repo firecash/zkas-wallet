@@ -52,7 +52,7 @@
     "wrongSeed": "Il seed appartiene a un altro portafoglio — non sblocca questo. Controlla quale portafoglio stai ripristinando o passa a quello giusto.",
     "finishingMerge": "Completamento merge in corso…",
     "fragmentedNothingSent": "{{message}} Nulla è stato firmato o inviato.",
-    "partialRecorded": "{{message}} La parte già trasmessa è registrata nella cronologia.",
+    "partialRecorded": "{{message}} {{sent}} ZKAS è già stato inviato ed è in Cronologia. L'importo sotto sono i {{remaining}} ZKAS ancora da pagare — controlla la Cronologia prima di inviarli. ",
     "confirmTitle": "Conferma",
     "amount": "Importo",
     "zkasAmount": "{{amount}} ZKAS",
@@ -115,7 +115,8 @@
     "catchingUp": "Ancora in sincronizzazione con la catena — potrai pagare quando finisce, così il portafoglio conosce tutte le tue monete.",
     "warmBanner": "<b>⚡ Il primo pagamento richiederà qualche minuto.</b><br/>Localizzo le tue monete — succede una volta. Puoi avviare il pagamento ora.",
     "reviewSend": "Rivedi invio",
-    "waitingForSync": "Sto ancora leggendo la catena: potrai inviare appena sarà aggiornata."
+    "waitingForSync": "Legge ancora la catena — puoi inviare appena recupera.",
+    "unknownFailure": "Pagamento rifiutato e il portafoglio non capisce perché. Non è stato inviato nulla — controlla la Cronologia prima di riprovare."
   },
   "sign": {
     "title": "Firma messaggio",
@@ -127,26 +128,6 @@
     "copySignature": "Copia firma",
     "sign": "Firma",
     "fvkWarning": "Firmare consegna la tua chiave di sola lettura al verificatore: da quel momento potrà vedere il saldo, la cronologia e le tue destinazioni. Se è un problema, firma da un altro portafoglio — puoi aggiungerlo nelle Impostazioni."
-  },
-  "daemonSetting": {
-    "timedOut": "timeout dopo 5s",
-    "unreachable": "Servizio wallet irraggiungibile a {{url}} ({{detail}}). Verifica che zkas-walletd sia in esecuzione e la porta sia aperta. Null'altro è cambiato — si usa ancora {{current}}.",
-    "title": "Connetti al tuo nodo",
-    "modeOwn": "tuo ✓",
-    "modeHosted": "ospitato",
-    "intro": "Il tuo seed firma sempre su questo dispositivo. Ma il servizio ospitato vede comunque la tua <b>chiave di sola lettura</b> — può vedere il tuo saldo, la cronologia e dove invii. Per mantenere private anche queste informazioni, esegui <code>zkas-walletd</code> sul tuo nodo e connetti questo portafoglio direttamente ad esso.",
-    "enterIp": "Inserisci l'<b>IP</b> del tuo nodo — il resto lo aggiungiamo noi.",
-    "nativeTransports": "L'app supporta connessioni HTTPS e HTTP plain su LAN.",
-    "webTransports": "Il wallet web richiede HTTPS; usa l'app per HTTP su LAN.",
-    "currentlyUsing": "In uso: <code>{{current}}</code>.",
-    "labelNative": "IP o hostname walletd",
-    "labelWeb": "URL HTTPS walletd",
-    "connect": "Connetti",
-    "accessToken": "Token di accesso",
-    "ifRequired": "(se richiesto)",
-    "accessTokenPlaceholder": "Token di accesso",
-    "portNote": "Usa porta {{port}} di default — aggiungi <code>:porta</code> solo se l'hai cambiata.",
-    "resetHosted": "Ripristina predefinito ospitato"
   },
   "vaultSetting": {
     "title": "Sicurezza e backup",
@@ -197,7 +178,8 @@
     "customHint": "Un demone wallet che esegui tu stesso.",
     "addrPlaceholder": "host:port, http://<lan-ip>:8501, o .onion",
     "accessTokenPlaceholder": "Token di accesso",
-    "connect": "Connetti"
+    "connect": "Connetti",
+    "timedOut": "Non è partito entro 20 secondi. Se hai scelto Tor, verifica che Orbot sia installato e attivo."
   },
   "backgroundSyncCard": {
     "title": "Sincronizzazione in background",
@@ -251,7 +233,8 @@
     "onNotePin": "<b>Attivo.</b> La chiave di ogni portafoglio su questo dispositivo è criptata e l'app chiede il PIN per aprirsi. Si blocca dopo qualche minuto in background.",
     "onNotePassphrase": "<b>Attivo.</b> La chiave di ogni portafoglio su questo dispositivo è criptata e l'app chiede la frase per aprirsi. Si blocca dopo qualche minuto in background.",
     "offIntro": "Le chiavi del portafoglio sono salvate su questo dispositivo <b>non criptate</b>. Attiva un PIN o una frase per criptarle tutte a riposo: l'app lo chiederà all'apertura, così chi ha il dispositivo o un backup non può spenderle.",
-    "setSecret": "Imposta un PIN o una password"
+    "setSecret": "Imposta un PIN o una password",
+    "nothingToLock": "Non c'è ancora nessuna chiave da bloccare su questo dispositivo. Un portafoglio solo osservazione ha solo una chiave di sola lettura. Prima crea o importa un portafoglio."
   },
   "switchWallet": {
     "title": "Portafogli",
@@ -358,18 +341,18 @@
   "setup": {
     "title": "Servizio wallet non raggiungibile",
     "nativeDown": "Il servizio wallet non risponde. Controlla la connessione e riprova tra poco: i tuoi fondi sono al sicuro sulla catena.",
-    "hostedDown": "Il servizio wallet ospitato non risponde. Non devi eseguire nulla: riprova tra poco.",
+    "hostedDown": "Il servizio portafoglio non risponde. Non devi fare nulla — di solito torna da solo.",
     "privacyNote": "La tua chiave di spesa è su questo dispositivo in ogni caso: non viene mai inviata al servizio. Ciò che cambia eseguendo il tuo <code>zkas-walletd</code> è la <b>privacy</b>: il servizio ospitato può vedere quale wallet chiede quali blocchi, mentre il tuo demone vede solo ciò che già sai.",
     "nativeTransports": "L'app installata accetta indirizzi LAN HTTPS e HTTP semplici.",
     "webTransports": "Il wallet web richiede un URL del servizio wallet HTTPS.",
     "daemonUrl": "URL del daemon",
     "checking": "Verifica…",
     "save": "Salva",
-    "safeOnChain": "Le tue monete sono al sicuro sulla catena. Questo riguarda solo come l’app le legge.",
+    "safeOnChain": "Le tue monete sono al sicuro sulla catena. È solo come l'app le legge.",
     "lastBalance": "Ultimo saldo confermato",
     "retry": "Riprova",
-    "advanced": "Connetti a un altro servizio di portafoglio",
-    "restartEngine": "Riavvia il motore sul dispositivo"
+    "advanced": "Connettiti a un servizio portafoglio diverso",
+    "restartEngine": "Riavvia il motore del dispositivo"
   },
   "sendScene": {
     "warmEta": "circa {{n}} min rimasti",
@@ -444,7 +427,8 @@
     "fingerprint": "Impronta digitale",
     "on": "Attivo",
     "off": "Disattivo",
-    "privateSends": "Invii anonimi"
+    "privateSends": "Invii anonimi",
+    "pausedOnPhone": "In pausa su questo telefono"
   },
   "appearanceCard": {
     "title": "Colore accento",
@@ -599,7 +583,9 @@
     "chatAria": "Chat community ZKas",
     "chatOff": "spento · tocca per configurare",
     "chatOpen": "stanza globale",
-    "chatUnread": "{{n}} nuovi"
+    "chatUnread": "{{n}} nuovi",
+    "receivedToastHidden": "Pagamento arrivato",
+    "receivedNotifBodyHidden": "Un pagamento è arrivato nel tuo portafoglio."
   },
   "hostedNotice": {
     "browserWallet": "Portafoglio browser. <b><a>Scarica l'app più sicura</a></b>."
@@ -623,9 +609,9 @@
     "share": "Condividi",
     "sealed": "Importi, mittente, destinatario — sigillati.",
     "viewKeyTitle": "Chiave di sola lettura",
-    "viewKeySummary": "Portafoglio in sola visualizzazione",
+    "viewKeySummary": "Sola lettura",
     "seedMoved": "Cerchi la frase di recupero? È in <b>Impostazioni → Frase di recupero</b>, dietro il blocco app.",
-    "qrBuilding": "Preparazione del tuo codice…"
+    "qrBuilding": "Preparo il codice…"
   },
   "revealSeedCard": {
     "wrongPin": "PIN errato.",
@@ -829,7 +815,7 @@
     "writeOnPaper": "Scrivile su carta, in ordine.",
     "written": "L'ho scritta",
     "alsoFile": "Salva anche un file di backup crittografato",
-    "fillAllBlanks": "Completa ogni parola mancante per continuare."
+    "fillAllBlanks": "Inserisci ogni parola mancante per continuare."
   },
   "recoverWallet": {
     "errNotSecret": "Non sembra una frase di recupero (12 parole) o un seed di recupero (64 caratteri esadecimali).",
@@ -918,10 +904,10 @@
     "restoreFromFile": "Ripristina da file di backup",
     "importPhrase": "Importa frase di recupero",
     "watchWallet": "Segui un wallet (sola visualizzazione)",
-    "wordsSoFar": "{{n}} parole su 12 finora.",
-    "wordsOddLength": "{{n}} parole. Una frase di recupero è di 12, 18 o 24 parole.",
-    "connectingWhy": "L’app si connette a un servizio di portafoglio prima di poterne creare uno.",
-    "usePublicInstead": "Usa invece il servizio pubblico"
+    "wordsSoFar": "{{n}} di 12 parole finora.",
+    "wordsOddLength": "{{n}} parole. Una frase di recupero è lunga 12, 18 o 24 parole.",
+    "connectingWhy": "Il tuo servizio portafoglio sta ancora recuperando la catena. Un portafoglio nuovo aspetta il blocco corrente, così non scansiona anni di cronologia che non può avere.",
+    "usePublicInstead": "Usa il servizio portafoglio pubblico"
   },
   "languagePicker": {
     "label": "Lingua",
@@ -1103,7 +1089,8 @@
     "cannotReachEmbedded": "Impossibile raggiungere il motore wallet integrato. ({{detail}})",
     "notResponding": "Il servizio wallet non risponde (timeout).",
     "cannotReachDaemon": "Impossibile raggiungere il demone wallet. ({{detail}})",
-    "invalidResponse": "Il servizio wallet ha restituito una risposta non valida ({{status}})."
+    "invalidResponse": "Il servizio wallet ha restituito una risposta non valida ({{status}}).",
+    "blockedByPrivacy": "Bloccato: {{host}} non è raggiungibile privatamente e Tor è attivo. Disattiva Tor o scegli un servizio onion."
   },
   "noncustodial": {
     "fragmentedDefault": "Questo pagamento richiede più monete di quante una transazione possa spendere.",
@@ -1306,7 +1293,10 @@
     "dashboardTitle": "Dashboard miner",
     "close": "Chiudi",
     "dashboardFrameTitle": "Dashboard bridge di mining",
-    "dashboardNote": "Servito dal bridge mining su questo computer. Appare quando il mining è attivo."
+    "dashboardNote": "Servito dal bridge mining su questo computer. Appare quando il mining è attivo.",
+    "modeFixed": "La modalità di mining si imposta all'avvio. Ferma il mining per cambiarla.",
+    "stale": "Contatto perso col servizio di mining. I dati sotto sono le ultime letture prima della perdita — non sono in tempo reale.",
+    "dashboardHiddenPrivate": "La dashboard del bridge è nascosta con la privacy attiva: la pagina carica font e script da internet pubblico, che rivelerebbero il tuo indirizzo da questo dispositivo."
   },
   "walletMaintenance": {
     "combining": "Unione monete…",
@@ -1476,7 +1466,8 @@
     "nodeLogsTitle": "Log nodo ZKAS",
     "walletLogsTitle": "Log del motore portafoglio",
     "movingWalletToPublic": "Spostamento portafoglio sul nodo pubblico…",
-    "stoppingNode": "Arresto nodo…"
+    "stoppingNode": "Arresto nodo…",
+    "stale": "Contatto perso col supervisore del nodo. I dati sotto sono le ultime letture prima della perdita — non sono in tempo reale."
   },
   "selfHost": {
     "copied": "Copiato",
@@ -1630,7 +1621,8 @@
     "blockEmission": "Emissione per blocco",
     "nextReduction": "Prossima riduzione",
     "tailNote": "Il programma termina con un'emissione residua permanente; non ha un'offerta terminale fissa.",
-    "liveHiddenOnTor": "La vista live è nascosta su Tor, perché caricarla rivelerebbe l’IP reale."
+    "liveHiddenOnTor": "La vista rete in tempo reale è nascosta con Tor attivo: carica da explorer.zkas.info, che vedrebbe il tuo vero indirizzo. I dati sotto arrivano dal tuo servizio portafoglio.",
+    "unavailableOverTor": "L'esploratore non è raggiungibile via Tor. Spegni Tor o imposta un indirizzo onion per vedere dati live della catena."
   },
   "blockView": {
     "title": "Blocco",
@@ -1667,7 +1659,10 @@
     "unlockIntro": "Il tuo seed è crittografato su questo dispositivo. Inserisci la passphrase per sbloccarlo.",
     "plaintextIntro": "Il seed di questo portafoglio è attualmente salvato <b>senza crittografia</b> su questo computer — chiunque abbia accesso al file potrebbe spendere i tuoi fondi. Imposta subito una passphrase e verrà crittografato in sede. Saldo e cronologia non vengono modificati.",
     "chooseIntro": "Scegli una passphrase. Crittografa il seed del portafoglio su questo computer, così i file lasciati su disco sono inutili per chiunque li copi.",
-    "passphraseLabel": "Password"
+    "passphraseLabel": "Password",
+    "cannotReachTitle": "Servizio portafoglio irraggiungibile",
+    "cannotReachBody": "Il servizio portafoglio locale non ha risposto. Potrebbe essere ancora in avvio.",
+    "tryAgain": "Riprova"
   },
   "restoreFromBackup": {
     "errChooseFile": "Scegli un file di backup.",
@@ -1714,7 +1709,7 @@
     "eraseDevice": "Cancella e ricomincia",
     "cancel": "Annulla",
     "sealed": "Sigillato su questo dispositivo",
-    "decrypting": "Decifratura del tuo portafoglio",
+    "decrypting": "Decifrando il portafoglio",
     "decrypted": "Decifrato"
   },
   "transactionView": {
@@ -1855,10 +1850,10 @@
     "opening": "Apertura…"
   },
   "privateSends": {
-    "intro": "I tuoi pagamenti portano normalmente una copia dei loro dettagli cifrata con la <b>tua</b> chiave, così la cronologia sopravvive a un ripristino e puoi dimostrare un pagamento in seguito. Un invio anonimo omette quella copia.",
-    "cost": "Il costo è permanente, e lo paghi tu: non esiste alcuna copia che qualcuno possa decifrare — <b>nemmeno tu, con la tua chiave di spesa</b>. Una volta inviato, un pagamento anonimo non può essere recuperato ripristinando questo portafoglio, non compare nella cronologia di un altro dispositivo e non può essere dimostrato a nessuno. Il destinatario lo riceve normalmente.",
-    "turnOn": "Attiva gli invii anonimi",
-    "turnOff": "Disattiva gli invii anonimi"
+    "intro": "I tuoi pagamenti di solito portano una copia dei dettagli crittata con la <b>tua</b> chiave, così la cronologia sopravvive a un ripristino e puoi provare un pagamento dopo. Un invio anonimo omette quella copia.",
+    "cost": "Il costo è permanente e ricade su di te: non c'è copia per nessuno — <b>nemmeno per te, con la tua chiave spesa</b>. Una volta inviato, un pagamento anonimo non può essere recuperato quando ripristini questo portafoglio, non appare nella cronologia su un altro dispositivo e non può essere provato a nessuno. Il destinatario lo riceve normalmente.",
+    "turnOn": "Attiva invii anonimi",
+    "turnOff": "Disattiva invii anonimi"
   },
   "paymentProof": {
     "title": "Prova questo pagamento",
@@ -1883,7 +1878,9 @@
     "invalid": "Non valido.",
     "confirmations_one": "{{count}} conferma",
     "confirmations_other": "{{count}} conferme",
-    "verifyNote": "La prova è verificata sulla transazione in catena: il destinatario e l'importo rivelati devono riprodurre l'impegno registrato nel blocco."
+    "verifyNote": "La prova è verificata sulla transazione in catena: il destinatario e l'importo rivelati devono riprodurre l'impegno registrato nel blocco.",
+    "undetermined": "Questa prova non può essere verificata.",
+    "undeterminedWhy": "Il servizio portafoglio non ha dato risposta, quindi non si sa nulla di questo pagamento. Riprova tra poco — non è indizio che la prova sia falsa."
   },
   "chat": {
     "nameSkip": "Invia come anonimo",
@@ -1911,7 +1908,6 @@
       "muteConfirm": "Tocca ancora per silenziare {{name}}",
       "reportConfirm": "Tocca ancora per segnalare e silenziare",
       "sendZkas": "Invia ZKAS",
-      "noAddress": "Nessun indirizzo pubblicato.",
       "react": "Reagisci"
     },
     "profile": {
@@ -1932,11 +1928,10 @@
       "none": "Ancora nessun messaggio privato.",
       "start": "Messaggio privato",
       "placeholder": "Messaggio privato",
-      "note": "Solo voi due potete leggere. I relay vedono una chiave usa e getta, non chi parla con chi.",
+      "note": "Solo voi due potete leggere. Il relay vede una chiave usa e getta, non chi parla con chi.",
       "headerNote": "privato"
     },
-    "you": "tu",
-    "intro": "Qui tutti leggono ciò che pubblichi e i post non si cancellano. Usa la riga sopra per cambiare stanza. Tocca un messaggio per reagire o rispondere, o scorri per rispondere. ",
+    "intro": "Tutti qui possono leggere i tuoi post, e i post non si possono cancellare. Tocca un messaggio per reagire o rispondere, o scorri per rispondere.",
     "consentTitle": "Attivare la chat?",
     "consentPublic": "I messaggi nella stanza globale sono pubblici e permanenti. Non si possono cancellare.",
     "consentIp": "Il server relay vede il tuo IP e quando sei online. Il tuo portafoglio no.",
@@ -1944,7 +1939,7 @@
     "consentEnable": "Attiva chat",
     "consentLater": "Non ora",
     "consentOff": "Puoi disattivarla dopo nelle Impostazioni.",
-    "back": "← Portafoglio",
+    "back": "Portafoglio",
     "roomAria": "Chat community",
     "state": {
       "offline": "offline",
@@ -1987,7 +1982,8 @@
     "earlier": "Messaggi precedenti",
     "today": "Oggi",
     "yesterday": "Ieri",
-    "jumpLatest": "Vai ai più recenti"
+    "jumpLatest": "Vai all'ultimo messaggio",
+    "profileOf": "Profilo di {{name}}"
   },
   "backgroundPermission": {
     "title": "Sincronizzare il portafoglio in background?",
@@ -2006,8 +2002,8 @@
     "decline": "No, scarta link"
   },
   "daemonError": {
-    "network": "Connessione alla rete persa per un momento. Le tue monete sono al sicuro: il portafoglio riprova da solo.",
-    "generic": "Il servizio del portafoglio ha avuto un problema leggendo la catena. Le tue monete sono al sicuro sulla catena.",
+    "network": "Perso contatto con la rete per un attimo. Le tue monete sono al sicuro — il portafoglio riprova da solo.",
+    "generic": "Il servizio portafoglio ha avuto un problema leggendo la catena. Le tue monete sono al sicuro sulla catena.",
     "details": "Dettagli tecnici"
   }
 }

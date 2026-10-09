@@ -58,7 +58,7 @@ export function ensureRegistered(token: string, address?: string): void {
     }
     return;
   }
-  list.push({ token, label: i18n.t("wallets.defaultLabel", { n: list.length + 1 }), address });
+  list.push({ token, label: i18n.t("wallets.defaultLabel", { n: nextLabelNumber(list) }), address });
   save(list);
 }
 
@@ -76,12 +76,33 @@ export function unregisterWallet(token: string): void {
 }
 
 /** Mint a token for a NEW wallet and make it active. Nothing else is touched. */
+/**
+ * The number for the next default label.
+ *
+ * NOT `list.length + 1`. Removing a wallet shortens the list, so the next one
+ * reuses a number that is still on screen: remove the second of three and the
+ * next "Add account" is a SECOND "Wallet 3", with the same avatar digit, both
+ * rows identical in the switcher and in the wallet bar — which is the only
+ * wallet identity the balance screen shows. Labels are persisted, so it
+ * survives every reload. Counting past the highest number actually in use
+ * keeps them unique without renumbering anything the user has already seen or
+ * renamed.
+ */
+function nextLabelNumber(list: WalletRef[]): number {
+  let highest = 0;
+  for (const w of list) {
+    const n = Number(w.label.match(/\d+/)?.[0] ?? 0);
+    if (Number.isFinite(n) && n > highest) highest = n;
+  }
+  return Math.max(highest + 1, list.length + 1);
+}
+
 export function addWallet(): string {
   const b = new Uint8Array(16);
   crypto.getRandomValues(b);
   const token = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
   const list = listWallets();
-  list.push({ token, label: i18n.t("wallets.defaultLabel", { n: list.length + 1 }) });
+  list.push({ token, label: i18n.t("wallets.defaultLabel", { n: nextLabelNumber(list) }) });
   save(list);
   localStorage.setItem("wallet_token", token);
   return token;

@@ -79,7 +79,7 @@
     "wrongSeed": "Cụm từ đó thuộc ví khác — không mở khóa được ví này. Kiểm tra ví bạn đang khôi phục, hoặc chuyển sang ví của cụm từ đó.",
     "finishingMerge": "Đang hoàn tất hợp nhất nền…",
     "fragmentedNothingSent": "{{message}} Không có gì được ký hoặc gửi.",
-    "partialRecorded": "{{message}} Phần đã phát được ghi vào Lịch sử.",
+    "partialRecorded": "{{message}} {{sent}} ZKAS đã được gửi và ghi trong Lịch sử. Số bên dưới là {{remaining}} ZKAS còn phải thanh toán — hãy kiểm tra Lịch sử trước khi gửi.",
     "confirmTitle": "Xác nhận",
     "amount": "Số lượng",
     "zkasAmount": "{{amount}} ZKAS",
@@ -115,7 +115,8 @@
     "spendable": "{{amount}} khả dụng",
     "recipientLabel": "Địa chỉ ẩn danh người nhận",
     "addrPlaceholder": "zkas:…",
-    "waitingForSync": "Vẫn đang đọc chuỗi — bạn có thể gửi ngay khi xong."
+    "waitingForSync": "Đang đọc chuỗi — bạn có thể gửi ngay khi đồng bộ xong.",
+    "unknownFailure": "Thanh toán bị từ chối và ví không đọc được lý do. Chưa gửi gì — hãy kiểm tra Lịch sử trước khi thử lại."
   },
   "sign": {
     "title": "Ký tin nhắn",
@@ -167,7 +168,8 @@
     "customHint": "Daemon ví bạn tự chạy.",
     "addrPlaceholder": "host:port, http://<lan-ip>:8501, hoặc .onion",
     "accessTokenPlaceholder": "Mã truy cập",
-    "connect": "Kết nối"
+    "connect": "Kết nối",
+    "timedOut": "Không khởi động được trong 20 giây. Nếu bạn chọn Tor, hãy kiểm tra Orbot đã được cài và chạy chưa."
   },
   "backgroundSyncCard": {
     "title": "Đồng bộ nền",
@@ -190,26 +192,6 @@
     "turnOff": "Tắt",
     "offerPin": "Mở khóa bằng vân tay thay vì nhập mã PIN.",
     "offerPassphrase": "Mở khóa bằng vân tay thay vì nhập mật khẩu."
-  },
-  "daemonSetting": {
-    "timedOut": "hết thời gian sau 5 giây",
-    "unreachable": "Không thể kết nối dịch vụ ví tại {{url}} ({{detail}}). Hãy đảm bảo zkas-walletd đang chạy và cổng mở. Chưa thay đổi gì — vẫn dùng {{current}}.",
-    "title": "Kết nối với nút của bạn",
-    "modeOwn": "của bạn ✓",
-    "modeHosted": "lưu trữ",
-    "intro": "Seed của bạn luôn ký trên thiết bị này. Nhưng dịch vụ lưu trữ vẫn thấy <b>khóa xem</b> của bạn — nó có thể theo dõi số dư, lịch sử và nơi bạn gửi. Để giữ kín cả những thông tin đó, hãy chạy <code>zkas-walletd</code> trên nút riêng của bạn và kết nối ví này trực tiếp tới đó.",
-    "enterIp": "Nhập <b>địa chỉ IP</b> nút của bạn — chúng tôi thêm phần còn lại.",
-    "nativeTransports": "Ứng dụng hỗ trợ HTTPS và HTTP LAN thường.",
-    "webTransports": "Ví web yêu cầu HTTPS; dùng ứng dụng cho HTTP LAN thường.",
-    "currentlyUsing": "Đang dùng <code>{{current}}</code>.",
-    "labelNative": "Địa chỉ IP hoặc tên máy chủ walletd",
-    "labelWeb": "URL HTTPS walletd",
-    "connect": "Kết nối",
-    "accessToken": "Mã truy cập",
-    "ifRequired": "(nếu cần)",
-    "accessTokenPlaceholder": "Mã truy cập",
-    "portNote": "Mặc định dùng cổng {{port}} — thêm <code>:cổng</code> nếu đã đổi.",
-    "resetHosted": "Đặt lại về mặc định lưu trữ"
   },
   "vaultSetting": {
     "title": "Bảo mật & sao lưu",
@@ -251,7 +233,8 @@
     "onNotePin": "<b>Đã bật.</b> Khóa của mọi ví trên thiết bị được mã hóa, ứng dụng yêu cầu mã PIN để mở. Tự khóa lại sau vài phút ở nền.",
     "onNotePassphrase": "<b>Đã bật.</b> Khóa của mọi ví trên thiết bị được mã hóa, ứng dụng yêu cầu mật khẩu để mở. Tự khóa lại sau vài phút ở nền.",
     "offIntro": "Khóa ví của bạn được lưu trên thiết bị <b>không mã hóa</b>. Bật mã PIN hoặc mật khẩu để mã hóa tất cả, ứng dụng sẽ yêu cầu khi mở — người cầm thiết bị hoặc bản sao dữ liệu không thể chi tiêu từ ví.",
-    "setSecret": "Đặt PIN hoặc mật khẩu"
+    "setSecret": "Đặt PIN hoặc mật khẩu",
+    "nothingToLock": "Chưa có khóa nào trên thiết bị này để khóa. Ví chỉ xem chỉ chứa khóa xem. Hãy tạo hoặc nhập ví trước."
   },
   "switchWallet": {
     "title": "Ví",
@@ -358,17 +341,17 @@
   "setup": {
     "title": "Không thể kết nối dịch vụ ví",
     "nativeDown": "Dịch vụ ví không phản hồi. Kiểm tra kết nối và thử lại — tiền của bạn an toàn trên chuỗi.",
-    "hostedDown": "Dịch vụ ví lưu trữ không phản hồi. Không cần bạn chạy gì — thử lại sau.",
+    "hostedDown": "Dịch vụ ví hiện không phản hồi. Bạn không cần chạy hay sửa gì — thường sẽ tự hoạt động lại.",
     "privacyNote": "Khóa chi tiêu của bạn luôn ở trên thiết bị này — không bao giờ gửi đến dịch vụ. Chạy <code>zkas-walletd</code> riêng thay đổi <b>quyền riêng tư</b>: dịch vụ lưu trữ thấy ví nào đang hỏi khối nào, còn daemon của bạn chỉ thấy những gì bạn đã biết.",
     "nativeTransports": "Ứng dụng đã cài chấp nhận HTTPS và địa chỉ LAN HTTP thường.",
     "webTransports": "Ví web yêu cầu URL dịch vụ ví HTTPS.",
     "daemonUrl": "URL Daemon",
     "checking": "Đang kiểm tra…",
     "save": "Lưu",
-    "safeOnChain": "Tiền của bạn an toàn trên chuỗi. Đây chỉ là cách ứng dụng đọc chúng.",
-    "lastBalance": "Số dư xác nhận gần nhất",
+    "safeOnChain": "Đồng của bạn an toàn trên chuỗi. Đây chỉ là cách ứng dụng đọc chúng.",
+    "lastBalance": "Số dư cuối",
     "retry": "Thử lại",
-    "advanced": "Kết nối tới dịch vụ ví khác",
+    "advanced": "Kết nối dịch vụ ví khác",
     "restartEngine": "Khởi động lại engine trên thiết bị"
   },
   "sendScene": {
@@ -470,7 +453,8 @@
     "signatures": "Chữ ký",
     "sectionAbout": "Giới thiệu",
     "aboutZkas": "Về ZKas",
-    "privateSends": "Gửi ẩn danh"
+    "privateSends": "Gửi ẩn danh",
+    "pausedOnPhone": "Tạm dừng trên máy này"
   },
   "appearanceCard": {
     "title": "Màu chủ đạo",
@@ -599,7 +583,9 @@
     "chatAria": "Trò chuyện cộng đồng ZKas",
     "chatOff": "tắt · chạm để thiết lập",
     "chatOpen": "phòng chung",
-    "chatUnread": "{{n}} mới"
+    "chatUnread": "{{n}} mới",
+    "receivedToastHidden": "Đã nhận thanh toán",
+    "receivedNotifBodyHidden": "Một thanh toán đã đến ví của bạn."
   },
   "hostedNotice": {
     "browserWallet": "Ví trình duyệt. <b><a>Tải ứng dụng an toàn hơn</a></b>."
@@ -623,9 +609,9 @@
     "share": "Chia sẻ",
     "sealed": "Số lượng, người gửi, người nhận — được niêm phong.",
     "viewKeyTitle": "Khóa xem ví",
-    "viewKeySummary": "Xem ví này ở chế độ chỉ đọc",
+    "viewKeySummary": "Chỉ xem",
     "seedMoved": "Tìm cụm từ khôi phục? Nó đã chuyển đến <b>Cài đặt → Cụm từ khôi phục</b>, sau khóa ứng dụng.",
-    "qrBuilding": "Đang chuẩn bị mã của bạn…"
+    "qrBuilding": "Đang tạo mã…"
   },
   "revealSeedCard": {
     "wrongPin": "Sai mã PIN.",
@@ -820,7 +806,7 @@
     "writeOnPaper": "Ghi chúng ra giấy, theo thứ tự.",
     "written": "Tôi đã ghi lại",
     "alsoFile": "Cũng lưu tệp sao lưu mã hóa",
-    "fillAllBlanks": "Điền đủ mọi từ còn thiếu để tiếp tục."
+    "fillAllBlanks": "Điền mọi từ còn thiếu để tiếp tục."
   },
   "recoverWallet": {
     "errNotSecret": "Đó không phải cụm từ khôi phục (12 từ) hay hạt giống (64 ký tự hex).",
@@ -909,10 +895,10 @@
     "restoreFromFile": "Khôi phục từ tệp sao lưu",
     "importPhrase": "Nhập cụm từ khôi phục",
     "watchWallet": "Xem ví (chỉ xem)",
-    "wordsSoFar": "Hiện có {{n}} trên 12 từ.",
-    "wordsOddLength": "{{n}} từ. Cụm từ khôi phục gồm 12, 18 hoặc 24 từ.",
-    "connectingWhy": "Ứng dụng kết nối tới dịch vụ ví trước khi có thể tạo ví.",
-    "usePublicInstead": "Dùng dịch vụ công cộng thay thế"
+    "wordsSoFar": "{{n}} trên 12 từ.",
+    "wordsOddLength": "{{n}} từ. Cụm từ khôi phục dài 12, 18 hoặc 24 từ.",
+    "connectingWhy": "Dịch vụ ví của bạn đang bắt kịp chuỗi. Ví mới chờ khối hiện tại để không quét năm lịch sử không thể có.",
+    "usePublicInstead": "Dùng dịch vụ ví công cộng"
   },
   "languagePicker": {
     "label": "Ngôn ngữ",
@@ -1323,7 +1309,10 @@
     "dashboardTitle": "Bảng điều khiển đào",
     "close": "Đóng",
     "dashboardFrameTitle": "Bảng điều khiển cầu nối đào",
-    "dashboardNote": "Do bridge đào trên máy này phục vụ. Hiện khi đào đang chạy."
+    "dashboardNote": "Do bridge đào trên máy này phục vụ. Hiện khi đào đang chạy.",
+    "modeFixed": "Chế độ đào được đặt khi bạn khởi động. Dừng đào để thay đổi.",
+    "stale": "Mất kết nối với dịch vụ đào. Các số dưới đây là lần đọc cuối trước đó — không còn trực tiếp.",
+    "dashboardHiddenPrivate": "Bảng điều khiển của cầu nối bị ẩn khi chế độ riêng tư bật: trang đó tải phông chữ và script từ internet công cộng, sẽ lộ địa chỉ của bạn từ thiết bị này."
   },
   "endpointField": {
     "hint": "IP và cổng của node bất kỳ — không cần trên máy này. VD: 203.0.113.5:16110",
@@ -1444,7 +1433,8 @@
     "nodeLogsTitle": "Nhật ký nút ZKAS",
     "walletLogsTitle": "Nhật ký ví",
     "movingWalletToPublic": "Đang chuyển ví sang nút công cộng…",
-    "stoppingNode": "Đang dừng nút…"
+    "stoppingNode": "Đang dừng nút…",
+    "stale": "Mất kết nối với bộ giám sát nút. Các số dưới đây là lần đọc cuối trước đó — không còn trực tiếp."
   },
   "selfHost": {
     "copied": "Đã sao chép",
@@ -1598,7 +1588,8 @@
     "blockEmission": "Phát hành khối",
     "nextReduction": "Giảm tiếp theo",
     "tailNote": "Lịch trình kết thúc bằng phát thải đuôi vĩnh viễn; không có nguồn cung cuối cố định.",
-    "liveHiddenOnTor": "Chế độ xem trực tiếp bị ẩn trên Tor, vì tải nó sẽ lộ IP thật."
+    "liveHiddenOnTor": "Chế độ xem mạng trực tiếp bị ẩn khi bật Tor: nó tải từ explorer.zkas.info, nơi có thể thấy địa chỉ thật của bạn. Các số dưới đây đến qua dịch vụ ví của bạn.",
+    "unavailableOverTor": "Trình khám phá không truy cập được qua Tor. Tắt Tor hoặc đặt địa chỉ onion để xem dữ liệu chuỗi trực tiếp."
   },
   "blockView": {
     "title": "Khối",
@@ -1664,7 +1655,10 @@
     "unlock": "Mở khóa",
     "setPassphrase": "Đặt mật khẩu",
     "noReset": "Không thể đặt lại mật khẩu này — nó không bao giờ được gửi hay lưu trữ ở đâu. Nếu quên, cách duy nhất vào ví là cụm từ hạt giống hoặc tệp sao lưu, hãy giữ chúng an toàn.",
-    "haveBackup": "Đã có tệp sao lưu? <a>Khôi phục từ sao lưu</a>"
+    "haveBackup": "Đã có tệp sao lưu? <a>Khôi phục từ sao lưu</a>",
+    "cannotReachTitle": "Không thể kết nối dịch vụ ví",
+    "cannotReachBody": "Dịch vụ ví cục bộ chưa phản hồi. Có thể đang khởi động.",
+    "tryAgain": "Thử lại"
   },
   "restoreFromBackup": {
     "errChooseFile": "Chọn một tệp sao lưu.",
@@ -1710,8 +1704,8 @@
     "wipeWarning": "Thao tác này xóa dữ liệu mọi ví <b>khỏi thiết bị này</b> — xu vẫn trên chuỗi, nhưng mỗi ví chỉ phục hồi được từ hạt giống hoặc tệp sao lưu.",
     "eraseDevice": "Xóa thiết bị & bắt đầu lại",
     "cancel": "Hủy",
-    "sealed": "Đã niêm phong trên thiết bị này",
-    "decrypting": "Đang giải mã ví của bạn",
+    "sealed": "Đã khóa trên thiết bị này",
+    "decrypting": "Đang giải mã ví",
     "decrypted": "Đã giải mã"
   },
   "firstRunNode": {
@@ -1837,7 +1831,8 @@
     "cannotReachEmbedded": "Không thể kết nối engine ví nhúng. ({{detail}})",
     "notResponding": "Dịch vụ ví không phản hồi (hết giờ).",
     "cannotReachDaemon": "Không thể kết nối daemon ví. ({{detail}})",
-    "invalidResponse": "Dịch vụ ví trả về phản hồi không hợp lệ ({{status}})."
+    "invalidResponse": "Dịch vụ ví trả về phản hồi không hợp lệ ({{status}}).",
+    "blockedByPrivacy": "Đã chặn: {{host}} không thể truy cập riêng tư và Tor đang bật. Tắt Tor hoặc chọn dịch vụ onion."
   },
   "noncustodial": {
     "fragmentedDefault": "Khoản thanh toán này cần nhiều đồng hơn một giao dịch có thể chi.",
@@ -1855,8 +1850,8 @@
     "fewerThanThree": "Hiện có ít hơn ba đồng khả dụng, nên việc gộp sẽ không giảm số lượng đồng trong ví."
   },
   "privateSends": {
-    "intro": "Các khoản thanh toán của bạn thường mang theo một bản sao chi tiết được mã hóa bằng khóa <b>của chính bạn</b>, để lịch sử còn lại sau khi khôi phục và bạn có thể chứng minh khoản thanh toán về sau. Gửi ẩn danh bỏ bản sao đó đi.",
-    "cost": "Cái giá là vĩnh viễn, và bạn là người trả: không có bản sao nào để bất kỳ ai giải mã — <b>kể cả chính bạn, với khóa chi tiêu của mình</b>. Sau khi gửi, một khoản thanh toán ẩn danh không thể khôi phục khi bạn khôi phục ví này, không xuất hiện trong lịch sử trên thiết bị khác, và không thể chứng minh với bất kỳ ai. Người nhận vẫn nhận bình thường.",
+    "intro": "Các thanh toán thường mang bản sao chi tiết được mã hóa bằng khóa <b>của bạn</b>, để lịch sử tồn tại khi khôi phục và bạn có thể chứng minh thanh toán sau này. Gửi ẩn danh bỏ bản sao đó.",
+    "cost": "Chi phí là vĩnh viễn và thuộc về bạn: không có bản sao cho ai giải mã — <b>kể cả bạn, với khóa chi tiêu của mình</b>. Một khi đã gửi, thanh toán ẩn danh không thể khôi phục khi khôi phục ví này, không xuất hiện trong lịch sử trên thiết bị khác, và không thể chứng minh cho ai. Người nhận vẫn nhận bình thường.",
     "turnOn": "Bật gửi ẩn danh",
     "turnOff": "Tắt gửi ẩn danh"
   },
@@ -1883,7 +1878,9 @@
     "invalid": "Không hợp lệ.",
     "confirmations_one": "{{count}} xác nhận",
     "confirmations_other": "{{count}} xác nhận",
-    "verifyNote": "Bằng chứng được kiểm tra với giao dịch trên chuỗi: người nhận và số lượng được tiết lộ phải khớp với cam kết mà khối đã ghi lại."
+    "verifyNote": "Bằng chứng được kiểm tra với giao dịch trên chuỗi: người nhận và số lượng được tiết lộ phải khớp với cam kết mà khối đã ghi lại.",
+    "undetermined": "Không thể kiểm tra bằng chứng này.",
+    "undeterminedWhy": "Dịch vụ ví không trả lời, nên không biết gì về khoản thanh toán này. Thử lại sau — điều này không chứng tỏ bằng chứng sai."
   },
   "chat": {
     "nameSkip": "Ẩn danh",
@@ -1911,8 +1908,7 @@
       "muteConfirm": "Chạm lại để tắt tiếng {{name}}",
       "reportConfirm": "Chạm lại để báo cáo và tắt tiếng",
       "sendZkas": "Gửi ZKAS",
-      "noAddress": "Chưa có địa chỉ nào.",
-      "react": "Bày tỏ cảm xúc"
+      "react": "Phản hồi"
     },
     "profile": {
       "copyKey": "Sao chép khóa công khai",
@@ -1932,11 +1928,10 @@
       "none": "Chưa có tin nhắn riêng nào.",
       "start": "Nhắn riêng",
       "placeholder": "Tin nhắn riêng",
-      "note": "Chỉ hai bạn đọc được. Relay thấy khóa dùng một lần, không biết ai nói với ai.",
+      "note": "Chỉ hai bạn đọc được. Relay thấy khóa một lần, không biết ai nói với ai.",
       "headerNote": "riêng"
     },
-    "you": "bạn",
-    "intro": "Mọi người ở đây đều đọc được bài bạn đăng và bài không thể xóa. Dùng hàng trên để đổi phòng. Chạm vào tin nhắn để phản hồi hoặc trả lời, hoặc vuốt để trả lời.",
+    "intro": "Mọi người ở đây đều đọc được bài bạn đăng, và bài không thể xóa. Chạm tin nhắn để phản hồi hoặc trả lời, hoặc vuốt để trả lời.",
     "consentTitle": "Bật trò chuyện?",
     "consentPublic": "Tin nhắn trong phòng chung là công khai và vĩnh viễn. Không thể xóa.",
     "consentIp": "Máy chủ relay thấy địa chỉ IP và lúc bạn online. Ví của bạn thì không.",
@@ -1944,7 +1939,7 @@
     "consentEnable": "Bật trò chuyện",
     "consentLater": "Để sau",
     "consentOff": "Bạn có thể tắt lại trong Cài đặt.",
-    "back": "← Ví",
+    "back": "Ví",
     "roomAria": "Trò chuyện cộng đồng",
     "state": {
       "offline": "ngoại tuyến",
@@ -1984,10 +1979,11 @@
     "nameLabel": "Tên (8)",
     "useMyAddress": "Dùng địa chỉ ví (34)",
     "clearAddress": "Xóa địa chỉ (23)",
-    "earlier": "Tin nhắn trước",
+    "earlier": "Tin nhắn cũ",
     "today": "Hôm nay",
     "yesterday": "Hôm qua",
-    "jumpLatest": "Đến tin mới nhất"
+    "jumpLatest": "Đến tin mới nhất",
+    "profileOf": "Hồ sơ của {{name}}"
   },
   "backgroundPermission": {
     "title": "Cho phép ví đồng bộ trong nền?​",
@@ -2006,8 +2002,8 @@
     "decline": "Không, bỏ đường dẫn"
   },
   "daemonError": {
-    "network": "Mất kết nối mạng trong giây lát. Tiền của bạn an toàn — ví sẽ tự thử lại.",
-    "generic": "Dịch vụ ví gặp sự cố khi đọc chuỗi. Tiền của bạn an toàn trên chuỗi.",
+    "network": "Mất kết nối mạng tạm thời. Đồng của bạn an toàn — ví sẽ tự thử lại.",
+    "generic": "Dịch vụ ví gặp sự cố khi đọc chuỗi. Đồng của bạn an toàn trên chuỗi.",
     "details": "Chi tiết kỹ thuật"
   }
 }

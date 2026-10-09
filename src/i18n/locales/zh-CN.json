@@ -4,7 +4,7 @@
     "wrongSeed": "该助记词属于另一个钱包，无法解锁此钱包。请检查你恢复的是哪个钱包，或切换到该助记词所属的钱包。",
     "finishingMerge": "正在完成后台合并…",
     "fragmentedNothingSent": "{{message}} 未签名或发送任何内容。",
-    "partialRecorded": "{{message}} 已广播的部分已记录在历史记录中。",
+    "partialRecorded": "{{message}} {{sent}} ZKAS 已发送并记录在历史中。下方金额为仍需支付的 {{remaining}} ZKAS — 发送前请查看历史。",
     "confirmTitle": "确认",
     "amount": "金额",
     "zkasAmount": "{{amount}} ZKAS",
@@ -67,7 +67,8 @@
     "catchingUp": "仍在与链同步——完成后即可支付，以便钱包识别你的所有币。",
     "warmBanner": "<b>⚡ 首次支付需要几分钟。</b><br/>正在定位你的币——仅此一次。现在即可开始支付。",
     "reviewSend": "检查发送",
-    "waitingForSync": "仍在读取链——跟上后即可发送。"
+    "waitingForSync": "正在读取链数据 — 同步完成后即可发送。",
+    "unknownFailure": "支付被拒绝，钱包无法读取原因。未发送任何内容 — 重试前请查看历史。"
   },
   "sign": {
     "title": "签名消息",
@@ -127,26 +128,6 @@
     "recoveredNote": "通过查看密钥从链上恢复。点击付款查看详情。",
     "exportFailed": "此设备无法导出 CSV。",
     "exportCsv": "导出 CSV"
-  },
-  "daemonSetting": {
-    "timedOut": "5 秒后超时",
-    "unreachable": "无法连接 {{url}} 的钱包服务（{{detail}}）。请确认 zkas-walletd 正在运行且端口已开放。未做任何更改 — 仍使用 {{current}}。",
-    "title": "连接自己的节点",
-    "modeOwn": "自己的 ✓",
-    "modeHosted": "托管",
-    "intro": "你的种子始终在本设备签名。但托管服务仍能看到你的<b>查看密钥</b>——它能监视你的余额、历史记录和发送去向。要连这也保密，请在自己的节点上运行 <code>zkas-walletd</code> 并直连此钱包。",
-    "enterIp": "只需输入节点的<b>IP地址</b> — 其余部分自动补全。",
-    "nativeTransports": "已安装应用支持 HTTPS 和局域网纯 HTTP 连接。",
-    "webTransports": "网页钱包需 HTTPS；局域网纯 HTTP 请使用已安装应用。",
-    "currentlyUsing": "当前使用 <code>{{current}}</code>。",
-    "labelNative": "Walletd IP 地址或主机名",
-    "labelWeb": "HTTPS walletd URL",
-    "connect": "连接",
-    "accessToken": "访问令牌",
-    "ifRequired": "（如需要）",
-    "accessTokenPlaceholder": "访问令牌",
-    "portNote": "默认端口 {{port}} — 仅当更改过端口时才添加 <code>:port</code>。",
-    "resetHosted": "重置为托管默认值"
   },
   "vaultSetting": {
     "title": "安全与备份",
@@ -210,7 +191,8 @@
     "onNotePin": "<b>已开启。</b> 本设备上每个钱包的密钥均已加密，应用打开时需输入PIN码。后台运行几分钟后会自动重新锁定。",
     "onNotePassphrase": "<b>已开启。</b> 本设备上每个钱包的密钥均已加密，应用打开时需输入密码。后台运行几分钟后会自动重新锁定。",
     "offIntro": "你的钱包密钥以<b>未加密</b>状态存储在此设备上。开启PIN码或密码后，所有密钥都将静态加密，应用打开时需输入——这样即使他人拿到设备或数据备份，也无法从中转账。",
-    "setSecret": "设置PIN码或密码"
+    "setSecret": "设置PIN码或密码",
+    "nothingToLock": "此设备上尚无密钥可锁定。仅观察钱包仅持有查看密钥。请先创建或导入钱包。"
   },
   "switchWallet": {
     "title": "钱包",
@@ -258,7 +240,8 @@
     "customHint": "你自己运行的钱包守护程序。",
     "addrPlaceholder": "host:port, http://<lan-ip>:8501 或 .onion",
     "accessTokenPlaceholder": "访问令牌",
-    "connect": "连接"
+    "connect": "连接",
+    "timedOut": "20 秒内未启动。若选择了 Tor，请检查 Orbot 是否已安装并运行。"
   },
   "backgroundSyncCard": {
     "title": "后台同步",
@@ -440,23 +423,24 @@
     "signatures": "签名",
     "sectionAbout": "关于",
     "aboutZkas": "关于 ZKas",
-    "privateSends": "匿名发送"
+    "privateSends": "匿名发送",
+    "pausedOnPhone": "此手机已暂停"
   },
   "setup": {
     "title": "无法连接钱包服务",
     "nativeDown": "钱包服务无响应。请检查连接并稍后重试——你的资金在链上很安全。",
-    "hostedDown": "托管钱包服务无响应。无需你运行任何程序——请稍后重试。",
+    "hostedDown": "钱包服务当前无响应。无需您操作或修复 — 通常会自动恢复。",
     "privacyNote": "你的花费密钥始终在本设备上——绝不会发送给服务。运行自己的<code>zkas-walletd</code>改变的是<b>隐私</b>：托管服务能看见哪个钱包在查询哪些区块，而你自己的守护进程只看到你已知的信息。",
     "nativeTransports": "已安装的应用接受 HTTPS 和纯 HTTP LAN 地址。",
     "webTransports": "网页钱包需要 HTTPS 钱包服务 URL。",
     "daemonUrl": "守护进程 URL",
     "checking": "检查中…",
     "save": "保存",
-    "safeOnChain": "你的币安全地在链上。这只关乎应用如何读取它们。",
-    "lastBalance": "最近确认的余额",
+    "safeOnChain": "您的币在链上安全无虞。这只是应用读取它们的方式。",
+    "lastBalance": "上次已确认余额",
     "retry": "重试",
     "advanced": "连接到其他钱包服务",
-    "restartEngine": "重启设备上的引擎"
+    "restartEngine": "重启设备引擎"
   },
   "sendScene": {
     "warmEta": "约 {{n}} 分钟剩余",
@@ -564,9 +548,9 @@
     "share": "分享",
     "sealed": "金额、发送方、接收方——全部密封。",
     "viewKeyTitle": "钱包查看密钥",
-    "viewKeySummary": "以只读方式查看此钱包",
+    "viewKeySummary": "只读",
     "seedMoved": "在找你的恢复种子？它已移至<b>设置 → 恢复种子</b>，受应用锁保护。",
-    "qrBuilding": "正在准备你的二维码…"
+    "qrBuilding": "正在生成二维码…"
   },
   "revealSeedCard": {
     "wrongPin": "PIN 码错误。",
@@ -638,7 +622,9 @@
     "chatAria": "ZKas 社区聊天",
     "chatOff": "关闭 · 点击设置",
     "chatOpen": "全球房间",
-    "chatUnread": "{{n}} 条新"
+    "chatUnread": "{{n}} 条新",
+    "receivedToastHidden": "收到一笔支付",
+    "receivedNotifBodyHidden": "您的钱包收到了一笔支付。"
   },
   "hostedNotice": {
     "browserWallet": "浏览器钱包。<b><a>下载更安全的 App</a></b>。"
@@ -795,7 +781,7 @@
     "writeOnPaper": "按顺序写在纸上。",
     "written": "我已记下",
     "alsoFile": "同时保存加密备份文件",
-    "fillAllBlanks": "填入每个缺失的单词以继续。"
+    "fillAllBlanks": "填写所有缺失的单词以继续。"
   },
   "recoverWallet": {
     "errNotSecret": "这不像助记词（12个词）或恢复种子（64个十六进制字符）。",
@@ -911,10 +897,10 @@
     "backupFile": "备份文件 (.json)",
     "errReadFile": "无法读取该文件。",
     "selected": "已选择：{{name}}",
-    "wordsSoFar": "目前 12 个单词中的 {{n}} 个。",
-    "wordsOddLength": "{{n}} 个单词。恢复短语是 12、18 或 24 个单词。",
-    "connectingWhy": "应用在创建钱包之前会先连接到钱包服务。",
-    "usePublicInstead": "改用公共服务"
+    "wordsSoFar": "已输入 {{n}}/12 个单词。",
+    "wordsOddLength": "{{n}} 个单词。助记词长度为 12、18 或 24 个单词。",
+    "connectingWhy": "您的钱包服务仍在同步链数据。新钱包会等待当前区块，以免扫描不可能存在的多年历史。",
+    "usePublicInstead": "改用公共钱包服务"
   },
   "languagePicker": {
     "label": "语言",
@@ -945,7 +931,8 @@
     "cannotReachEmbedded": "无法连接嵌入式钱包引擎。（{{detail}}）",
     "notResponding": "钱包服务无响应（超时）。",
     "cannotReachDaemon": "无法连接钱包守护进程。（{{detail}}）",
-    "invalidResponse": "钱包服务返回无效响应（{{status}}）。"
+    "invalidResponse": "钱包服务返回无效响应（{{status}}）。",
+    "blockedByPrivacy": "已屏蔽：{{host}} 无法通过隐私方式访问，且 Tor 已开启。请关闭 Tor 或选择洋葱服务。"
   },
   "noncustodial": {
     "fragmentedDefault": "这笔支付需要的币数超过单笔交易可花费的数量。",
@@ -1364,7 +1351,10 @@
     "dashboardTitle": "矿机面板",
     "close": "关闭",
     "dashboardFrameTitle": "挖矿桥接面板",
-    "dashboardNote": "由本机挖矿桥提供。挖矿运行后显示。"
+    "dashboardNote": "由本机挖矿桥提供。挖矿运行后显示。",
+    "modeFixed": "挖矿模式在启动时设定。停止挖矿即可更改。",
+    "stale": "与挖矿服务失去联系。以下数据为断开前最后一次读数，并非实时。",
+    "dashboardHiddenPrivate": "隐私模式开启时，桥接面板已隐藏：其页面从公共互联网加载字体和脚本，会从本设备泄露您的地址。"
   },
   "endpointField": {
     "hint": "任意节点的IP和端口——不必是本机。例如 203.0.113.5:16110",
@@ -1476,7 +1466,8 @@
     "nodeLogsTitle": "ZKAS 节点日志",
     "walletLogsTitle": "钱包引擎日志",
     "movingWalletToPublic": "正在将钱包移至公共节点…",
-    "stoppingNode": "正在停止节点…"
+    "stoppingNode": "正在停止节点…",
+    "stale": "与节点管理器失去联系。以下数据为断开前最后一次读数，并非实时。"
   },
   "selfHost": {
     "webEyebrow": "自托管",
@@ -1621,7 +1612,8 @@
     "offline": "离线",
     "heroAria": "隐私池，在线",
     "heroTitle": "隐私池 — 在线",
-    "liveHiddenOnTor": "使用 Tor 时隐藏实时视图，因为加载它会泄露真实 IP。"
+    "liveHiddenOnTor": "开启 Tor 时隐藏实时网络视图：它从 explorer.zkas.info 加载，会暴露你的真实地址。以下数据通过钱包服务获取。",
+    "unavailableOverTor": "浏览器无法通过 Tor 访问。关闭 Tor 或设置其洋葱地址以查看实时链数据。"
   },
   "blockView": {
     "title": "区块",
@@ -1687,7 +1679,10 @@
     "unlock": "解锁",
     "setPassphrase": "设置密码",
     "noReset": "此密码无法重置——它不会被发送或存储。忘记后只能通过助记词或备份文件恢复钱包，请妥善保管。",
-    "haveBackup": "已有备份文件？<a>从备份恢复</a>"
+    "haveBackup": "已有备份文件？<a>从备份恢复</a>",
+    "cannotReachTitle": "无法连接钱包服务",
+    "cannotReachBody": "本地钱包服务未响应。可能仍在启动中。",
+    "tryAgain": "重试"
   },
   "explorer": {
     "now": "刚刚",
@@ -1742,8 +1737,8 @@
     "wipeWarning": "这将<b>从本设备</b>清除所有钱包数据——币仍在链上，但每个钱包只能通过助记词或备份文件恢复。",
     "eraseDevice": "擦除此设备并重新开始",
     "cancel": "取消",
-    "sealed": "已在此设备上封存",
-    "decrypting": "正在解密你的钱包",
+    "sealed": "本机已锁定",
+    "decrypting": "正在解密钱包",
     "decrypted": "已解密"
   },
   "mainNav": {
@@ -1855,8 +1850,8 @@
     "opening": "打开中…"
   },
   "privateSends": {
-    "intro": "你的付款通常会带上一份用<b>你自己的</b>密钥加密的明细副本，这样历史记录在恢复后仍在，之后也能证明某笔付款。匿名发送不保留这份副本。",
-    "cost": "代价是永久的，并且由你承担：没有任何副本可供任何人解密——<b>连你用自己的花费密钥也不行</b>。一旦发送，匿名支付在你恢复此钱包时无法找回，不会出现在其他设备的历史记录中，也无法向任何人证明。收款方仍照常收到。",
+    "intro": "您的支付通常会将详情副本加密到<b>您自己的</b>密钥，以便恢复后保留历史并可后续证明支付。匿名发送则不保留此副本。",
+    "cost": "代价是永久性的，且由您承担：没有任何副本可供任何人解密 — <b>即使您自己持有消费密钥也不行</b>。一旦发送，匿名支付在恢复此钱包时无法找回，无法在其他设备的历史中显示，也无法向任何人证明。接收方仍可正常接收。",
     "turnOn": "开启匿名发送",
     "turnOff": "关闭匿名发送"
   },
@@ -1883,7 +1878,9 @@
     "invalid": "无效。",
     "confirmations_one": "{{count}} 次确认",
     "confirmations_other": "{{count}} 次确认",
-    "verifyNote": "该证明根据链上交易进行查验：披露的收款方和金额必须能重现区块中记录的承诺。"
+    "verifyNote": "该证明根据链上交易进行查验：披露的收款方和金额必须能重现区块中记录的承诺。",
+    "undetermined": "无法验证此证明。",
+    "undeterminedWhy": "钱包服务未给出答复，因此无法确认这笔支付的状态。请稍后重试——这不代表证明有误。"
   },
   "chat": {
     "nameSkip": "匿名发布",
@@ -1911,7 +1908,6 @@
       "muteConfirm": "再次点击以静音{{name}}",
       "reportConfirm": "再次点击以举报并静音",
       "sendZkas": "发送ZKAS",
-      "noAddress": "尚未发布地址。",
       "react": "回应"
     },
     "profile": {
@@ -1932,11 +1928,10 @@
       "none": "暂无私信。",
       "start": "发送私信",
       "placeholder": "私信",
-      "note": "只有你们两人可阅读。中继仅看到一次性密钥，无法得知对话双方。",
+      "note": "只有你们两人可读此内容。中继看到的是一次性密钥，而非谁在与谁对话。",
       "headerNote": "私密"
     },
-    "you": "你",
-    "intro": "这里所有人都能看到你发布的内容，且帖子无法删除。使用上方行切换房间。点击消息可回复或回应，滑动可回复。",
+    "intro": "此处所有人都可阅读您的帖子，且帖子无法删除。点击消息可回应或回复，或滑动以回复。",
     "consentTitle": "开启聊天？",
     "consentPublic": "全球房间中的消息公开且永久保存，无法删除。",
     "consentIp": "中继服务器会看到你的 IP 地址和在线状态，但你的钱包不会。",
@@ -1944,7 +1939,7 @@
     "consentEnable": "开启聊天",
     "consentLater": "稍后",
     "consentOff": "你稍后可在设置中关闭。",
-    "back": "← 钱包",
+    "back": "钱包",
     "roomAria": "社区聊天",
     "state": {
       "offline": "离线",
@@ -1984,10 +1979,11 @@
     "nameLabel": "昵称",
     "useMyAddress": "使用我的钱包地址",
     "clearAddress": "移除地址",
-    "earlier": "更早的消息",
+    "earlier": "更早消息",
     "today": "今天",
     "yesterday": "昨天",
-    "jumpLatest": "跳到最新"
+    "jumpLatest": "跳至最新消息",
+    "profileOf": "{{name}} 的个人资料"
   },
   "backgroundPermission": {
     "title": "允许钱包在后台同步？",
@@ -2006,8 +2002,8 @@
     "decline": "不，丢弃链接"
   },
   "daemonError": {
-    "network": "与网络的连接短暂中断。你的币是安全的——钱包会自行重试。",
-    "generic": "钱包服务在读取链时遇到问题。你的币在链上是安全的。",
-    "details": "技术细节"
+    "network": "与网络短暂失去联系。您的币安全无虞 — 钱包会自动重试。",
+    "generic": "钱包服务在读取链数据时遇到问题。您的币在链上安全无虞。",
+    "details": "技术详情"
   }
 }

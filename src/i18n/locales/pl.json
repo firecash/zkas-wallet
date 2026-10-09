@@ -31,7 +31,7 @@
     "wrongSeed": "To ziarno należy do innego portfela – nie odblokowuje tego. Sprawdź, który portfel przywracasz, lub przełącz na portfel, do którego należy to ziarno.",
     "finishingMerge": "Kończenie scalania w tle…",
     "fragmentedNothingSent": "{{message}} Nic nie podpisano ani nie wysłano.",
-    "partialRecorded": "{{message}} Część już rozgłoszona jest zapisana w Historii.",
+    "partialRecorded": "{{message}} {{sent}} ZKAS zostało już wysłane i jest w historii. Poniższa kwota to {{remaining}} ZKAS do zapłaty — sprawdź historię przed wysłaniem.",
     "confirmTitle": "Potwierdź",
     "amount": "Kwota",
     "zkasAmount": "{{amount}} ZKAS",
@@ -67,7 +67,8 @@
     "spendable": "{{amount}} do wydania",
     "recipientLabel": "Adres chroniony odbiorcy",
     "addrPlaceholder": "zkas:…",
-    "waitingForSync": "Trwa odczyt łańcucha — wyślesz, gdy tylko nadrobi zaległości."
+    "waitingForSync": "Wciąż czytam łańcuch — wyślesz, gdy dogoni.",
+    "unknownFailure": "Płatność została odrzucona, a portfel nie odczytał przyczyny. Nic nie zostało wysłane — sprawdź historię przed ponowną próbą."
   },
   "sign": {
     "title": "Podpisz wiadomość",
@@ -128,26 +129,6 @@
     "exportFailed": "Nie udało się wyeksportować CSV na tym urządzeniu.",
     "exportCsv": "Eksportuj CSV"
   },
-  "daemonSetting": {
-    "timedOut": "przekroczono czas (5s)",
-    "unreachable": "Nie można połączyć się z usługą portfela pod {{url}} ({{detail}}). Upewnij się, że zkas-walletd tam działa i port jest otwarty. Nic nie zmieniono — nadal używasz {{current}}.",
-    "title": "Połącz z własnym węzłem",
-    "modeOwn": "własny ✓",
-    "modeHosted": "hostowany",
-    "intro": "Twój seed zawsze podpisuje na tym urządzeniu. Ale usługa hostowana wciąż widzi twój <b>klucz podglądu</b> — może śledzić twoje saldo, historię i dokąd wysyłasz. Aby nawet to zachować w tajemnicy, uruchom <code>zkas-walletd</code> na własnym węźle i połącz ten portfel bezpośrednio z nim.",
-    "enterIp": "Wpisz <b>adres IP</b> węzła — resztę dodamy.",
-    "nativeTransports": "Aplikacja obsługuje HTTPS i zwykłe HTTP w sieci LAN.",
-    "webTransports": "Portfel web wymaga HTTPS; w LAN używaj aplikacji dla zwykłego HTTP.",
-    "currentlyUsing": "Obecnie używasz <code>{{current}}</code>.",
-    "labelNative": "Adres IP lub hostname walletd",
-    "labelWeb": "URL walletd HTTPS",
-    "connect": "Połącz",
-    "accessToken": "Token dostępu",
-    "ifRequired": "(jeśli wymagane)",
-    "accessTokenPlaceholder": "Token dostępu",
-    "portNote": "Domyślnie port {{port}} — dodaj <code>:port</code> tylko jeśli zmieniono.",
-    "resetHosted": "Przywróć domyślny hostowany"
-  },
   "vaultSetting": {
     "title": "Bezpieczeństwo i kopia",
     "plaintextWarning": "Ziarno tego portfela jest przechowywane <b>niezaszyfrowane</b> na tym komputerze — każdy, kto skopiuje plik, może wydać środki. Ustaw hasło, by je zaszyfrować; saldo i historia pozostają bez zmian.",
@@ -197,7 +178,8 @@
     "customHint": "Demon portfela, który sam uruchamiasz.",
     "addrPlaceholder": "host:port, http://<lan-ip>:8501 lub .onion",
     "accessTokenPlaceholder": "Token dostępu",
-    "connect": "Połącz"
+    "connect": "Połącz",
+    "timedOut": "Nie uruchomiło się w 20 sekund. Jeśli wybrałeś Tor, sprawdź, czy Orbot jest zainstalowany i działa."
   },
   "backgroundSyncCard": {
     "title": "Synchronizacja w tle",
@@ -251,7 +233,8 @@
     "onNotePin": "<b>Włączona.</b> Klucz każdego portfela na tym urządzeniu jest zaszyfrowany, a aplikacja prosi o PIN przy otwarciu. Blokuje się ponownie po kilku minutach w tle.",
     "onNotePassphrase": "<b>Włączona.</b> Klucz każdego portfela na tym urządzeniu jest zaszyfrowany, a aplikacja prosi o hasło przy otwarciu. Blokuje się ponownie po kilku minutach w tle.",
     "offIntro": "Klucze portfeli są przechowywane na tym urządzeniu <b>bez szyfrowania</b>. Włącz PIN lub hasło — każdy z nich zostanie zaszyfrowany, a aplikacja poprosi o niego przy otwarciu. Osoba mająca to urządzenie lub kopię danych nie będzie mogła wydać środków.",
-    "setSecret": "Ustaw PIN lub hasło"
+    "setSecret": "Ustaw PIN lub hasło",
+    "nothingToLock": "Na tym urządzeniu nie ma jeszcze klucza do zablokowania. Portfel tylko do odczytu przechowuje tylko klucz podglądu. Najpierw utwórz lub zaimportuj portfel."
   },
   "switchWallet": {
     "title": "Portfele",
@@ -286,18 +269,18 @@
   "setup": {
     "title": "Nie można połączyć z usługą portfela",
     "nativeDown": "Usługa portfela nie odpowiada. Sprawdź połączenie i spróbuj ponownie — środki są bezpieczne w łańcuchu.",
-    "hostedDown": "Hostowana usługa portfela nie odpowiada. Nie musisz nic uruchamiać — spróbuj ponownie.",
+    "hostedDown": "Usługa portfela nie odpowiada. Nie musisz nic robić — zwykle wraca sama.",
     "privacyNote": "Twój klucz wydawania jest na tym urządzeniu — nigdy nie jest wysyłany do usługi. Uruchomienie własnego <code>zkas-walletd</code> zmienia <b>prywatność</b>: hostowana usługa widzi, który portfel pyta o które bloki, a twój własny demon widzi tylko to, co już wiesz.",
     "nativeTransports": "Zainstalowana aplikacja akceptuje adresy HTTPS i HTTP LAN.",
     "webTransports": "Portfel internetowy wymaga adresu URL usługi portfela z HTTPS.",
     "daemonUrl": "URL demona",
     "checking": "Sprawdzanie…",
     "save": "Zapisz",
-    "safeOnChain": "Twoje monety są bezpieczne w łańcuchu. To dotyczy tylko sposobu, w jaki aplikacja je odczytuje.",
+    "safeOnChain": "Twoje monety są bezpieczne w łańcuchu. To tylko sposób, w jaki aplikacja je odczytuje.",
     "lastBalance": "Ostatnie potwierdzone saldo",
     "retry": "Spróbuj ponownie",
     "advanced": "Połącz z inną usługą portfela",
-    "restartEngine": "Uruchom ponownie silnik na urządzeniu"
+    "restartEngine": "Uruchom ponownie silnik urządzenia"
   },
   "sendScene": {
     "warmEta": "około {{n}} min do końca",
@@ -398,7 +381,8 @@
     "signatures": "Podpisy",
     "sectionAbout": "O aplikacji",
     "aboutZkas": "O ZKas",
-    "privateSends": "Anonimowe wysyłki"
+    "privateSends": "Anonimowe wysyłanie",
+    "pausedOnPhone": "Wstrzymane na tym telefonie"
   },
   "renameWallet": {
     "title": "Zmień nazwę portfela",
@@ -498,9 +482,9 @@
     "share": "Udostępnij",
     "sealed": "Kwoty, nadawca, odbiorca — chronione.",
     "viewKeyTitle": "Klucz podglądu portfela",
-    "viewKeySummary": "Czytaj ten portfel tylko do odczytu",
+    "viewKeySummary": "Tylko do odczytu",
     "seedMoved": "Szukasz frazy odzyskiwania? Przeniesiono do <b>Ustawienia → Fraza odzyskiwania</b>, za blokadą aplikacji.",
-    "qrBuilding": "Przygotowywanie kodu…"
+    "qrBuilding": "Przygotowuję kod…"
   },
   "revealSeedCard": {
     "wrongPin": "Zły PIN.",
@@ -638,7 +622,9 @@
     "chatAria": "Czat społeczności ZKas",
     "chatOff": "wył. · dotknij, by skonfigurować",
     "chatOpen": "pokój globalny",
-    "chatUnread": "{{n}} nowe"
+    "chatUnread": "{{n}} nowe",
+    "receivedToastHidden": "Otrzymano płatność",
+    "receivedNotifBodyHidden": "Otrzymano płatność w twoim portfelu."
   },
   "hostedNotice": {
     "browserWallet": "Portfel przeglądarkowy. <b><a>Pobierz bezpieczniejszą aplikację</a></b>."
@@ -795,7 +781,7 @@
     "writeOnPaper": "Zapisz je na papierze, w kolejności.",
     "written": "Zapisałem to",
     "alsoFile": "Zapisz też zaszyfrowany plik kopii",
-    "fillAllBlanks": "Uzupełnij każde brakujące słowo, aby kontynuować."
+    "fillAllBlanks": "Uzupełnij wszystkie brakujące słowa, aby kontynuować."
   },
   "recoverWallet": {
     "errNotSecret": "To nie wygląda na frazę odzyskiwania (12 słów) ani ziarno odzyskiwania (64 znaki hex).",
@@ -884,10 +870,10 @@
     "restoreFromFile": "Przywróć z pliku kopii",
     "importPhrase": "Importuj frazę odzyskiwania",
     "watchWallet": "Obserwuj portfel (tylko do odczytu)",
-    "wordsSoFar": "Na razie {{n}} z 12 słów.",
+    "wordsSoFar": "{{n}} z 12 słów.",
     "wordsOddLength": "{{n}} słów. Fraza odzyskiwania ma 12, 18 lub 24 słowa.",
-    "connectingWhy": "Aplikacja łączy się z usługą portfela, zanim będzie mogła go utworzyć.",
-    "usePublicInstead": "Użyj zamiast tego usługi publicznej"
+    "connectingWhy": "Twoja usługa portfela wciąż dogania łańcuch. Nowy portfel czeka na bieżący blok, aby nie skanować lat historii, których nie może mieć.",
+    "usePublicInstead": "Użyj publicznej usługi portfela"
   },
   "consolidateDialog": {
     "errEnterSeed": "Wprowadź 64-znakowe ziarno odzyskiwania tego portfela.",
@@ -945,7 +931,8 @@
     "cannotReachEmbedded": "Nie można połączyć się z wbudowanym silnikiem. ({{detail}})",
     "notResponding": "Usługa portfela nie odpowiada (limit czasu).",
     "cannotReachDaemon": "Nie można połączyć się z demonem portfela. ({{detail}})",
-    "invalidResponse": "Usługa portfela zwróciła nieprawidłową odpowiedź ({{status}})."
+    "invalidResponse": "Usługa portfela zwróciła nieprawidłową odpowiedź ({{status}}).",
+    "blockedByPrivacy": "Zablokowano: {{host}} jest nieosiągalny prywatnie, a Tor jest włączony. Wyłącz Tor lub wybierz usługę cebulową."
   },
   "noncustodial": {
     "fragmentedDefault": "Ta płatność wymaga więcej monet, niż jedna transakcja może wydać.",
@@ -1364,7 +1351,10 @@
     "dashboardTitle": "Panel koparki",
     "close": "Zamknij",
     "dashboardFrameTitle": "Panel mostka kopania",
-    "dashboardNote": "Udostępniany przez most wydobywczy na tym komputerze. Pojawi się po uruchomieniu wydobywania."
+    "dashboardNote": "Udostępniany przez most wydobywczy na tym komputerze. Pojawi się po uruchomieniu wydobywania.",
+    "modeFixed": "Tryb kopania jest ustawiany przy starcie. Zatrzymaj kopanie, by go zmienić.",
+    "stale": "Utracono kontakt z usługą kopania. Poniższe wartości pochodzą z ostatniego odczytu — nie są na bieżąco.",
+    "dashboardHiddenPrivate": "Panel mostu jest ukryty, gdy włączony jest tryb prywatności: strona ładuje czcionki i skrypty z publicznego internetu, co ujawniłoby twój adres z tego urządzenia."
   },
   "endpointField": {
     "hint": "IP i port dowolnego węzła — nie musi być na tym komputerze. np. 203.0.113.5:16110",
@@ -1476,7 +1466,8 @@
     "nodeLogsTitle": "Logi węzła ZKAS",
     "walletLogsTitle": "Logi silnika portfela",
     "movingWalletToPublic": "Przenoszenie portfela do węzła publicznego…",
-    "stoppingNode": "Zatrzymywanie węzła…"
+    "stoppingNode": "Zatrzymywanie węzła…",
+    "stale": "Utracono kontakt z nadzorcą węzła. Poniższe wartości pochodzą z ostatniego odczytu — nie są na bieżąco."
   },
   "selfHost": {
     "webEyebrow": "Własny hosting",
@@ -1630,7 +1621,8 @@
     "blockEmission": "Emisja blokowa",
     "nextReduction": "Następna redukcja",
     "tailNote": "Harmonogram kończy się stałą emisją ogonową; nie ma ustalonego ostatecznego limitu podaży.",
-    "liveHiddenOnTor": "Widok na żywo jest ukryty w sieci Tor, bo jego wczytanie ujawniłoby prawdziwy adres IP."
+    "liveHiddenOnTor": "Widok sieci na żywo jest ukryty, gdy Tor jest włączony: ładuje się z explorer.zkas.info, co ujawniłoby Twój prawdziwy adres. Poniższe dane pochodzą z usługi portfela.",
+    "unavailableOverTor": "Eksplorator jest nieosiągalny przez Tora. Wyłącz Tora lub ustaw dla niego adres cebulowy, by zobaczyć dane łańcucha na żywo."
   },
   "blockView": {
     "title": "Blok",
@@ -1696,7 +1688,10 @@
     "unlock": "Odblokuj",
     "setPassphrase": "Ustaw hasło",
     "noReset": "Nie ma możliwości zresetowania tego hasła — nigdzie nie jest wysyłane ani przechowywane. Jeśli je zapomnisz, jedynym sposobem na odzyskanie portfela jest fraza odzyskiwania lub plik kopii zapasowej, więc przechowuj je bezpiecznie.",
-    "haveBackup": "Masz już plik kopii zapasowej? <a>Przywróć z kopii</a>"
+    "haveBackup": "Masz już plik kopii zapasowej? <a>Przywróć z kopii</a>",
+    "cannotReachTitle": "Nie można połączyć się z usługą portfela",
+    "cannotReachBody": "Lokalna usługa portfela nie odpowiada. Może się jeszcze uruchamiać.",
+    "tryAgain": "Spróbuj ponownie"
   },
   "restoreFromBackup": {
     "errChooseFile": "Wybierz plik kopii zapasowej.",
@@ -1742,9 +1737,9 @@
     "wipeWarning": "To usunie dane wszystkich portfeli <b>z tego urządzenia</b> — monety pozostają w łańcuchu, ale każdy portfel można przywrócić tylko z frazy seed lub pliku kopii zapasowej.",
     "eraseDevice": "Wyczyść urządzenie i zacznij od nowa",
     "cancel": "Anuluj",
-    "sealed": "Zapieczętowane na tym urządzeniu",
+    "sealed": "Zablokowany na tym urządzeniu",
     "decrypting": "Odszyfrowywanie portfela",
-    "decrypted": "Odszyfrowano"
+    "decrypted": "Odszyfrowany"
   },
   "mainNav": {
     "mine": "Kop",
@@ -1855,10 +1850,10 @@
     "opening": "Otwieranie…"
   },
   "privateSends": {
-    "intro": "Twoje płatności zwykle niosą kopię swoich szczegółów zaszyfrowaną <b>twoim własnym</b> kluczem, dzięki czemu historia przetrwa przywracanie, a płatność da się później udowodnić. Anonimowa wysyłka pomija tę kopię.",
-    "cost": "Koszt jest trwały i ponosisz go ty: nie istnieje kopia, którą ktokolwiek mógłby odszyfrować — <b>nawet ty, własnym kluczem wydatkowym</b>. Po wysłaniu anonimowej płatności nie da się jej odzyskać przy przywracaniu tego portfela, nie pojawi się w historii na innym urządzeniu i nie da się jej nikomu udowodnić. Odbiorca otrzymuje ją normalnie.",
-    "turnOn": "Włącz anonimowe wysyłki",
-    "turnOff": "Wyłącz anonimowe wysyłki"
+    "intro": "Twoje płatności zwykle niosą kopię szczegółów zaszyfrowaną <b>twoim</b> kluczem, więc historia przetrwa przywrócenie, a ty możesz później udowodnić płatność. Anonimowe wysłanie pomija tę kopię.",
+    "cost": "Koszt jest trwały i spada na ciebie: nie ma kopii do odszyfrowania — <b>nawet dla ciebie z twoim kluczem wydawania</b>. Po wysłaniu anonimowa płatność nie może zostać odzyskana przy przywróceniu portfela, nie pojawi się w historii na innym urządzeniu i nie może być nikomu udowodniona. Odbiorca nadal otrzymuje ją normalnie.",
+    "turnOn": "Włącz anonimowe wysyłanie",
+    "turnOff": "Wyłącz anonimowe wysyłanie"
   },
   "paymentProof": {
     "title": "Udowodnij tę płatność",
@@ -1883,7 +1878,9 @@
     "invalid": "Nieważny.",
     "confirmations_one": "{{count}} potwierdzenie",
     "confirmations_other": "{{count}} potwierdzeń",
-    "verifyNote": "Dowód jest sprawdzany względem transakcji w łańcuchu: ujawniony odbiorca i kwota muszą odtworzyć zobowiązanie zapisane w bloku."
+    "verifyNote": "Dowód jest sprawdzany względem transakcji w łańcuchu: ujawniony odbiorca i kwota muszą odtworzyć zobowiązanie zapisane w bloku.",
+    "undetermined": "Nie można sprawdzić tego dowodu.",
+    "undeterminedWhy": "Usługa portfela nie udzieliła odpowiedzi, więc nic nie wiadomo o tej płatności. Spróbuj za chwilę — to nie dowód, że dowód jest fałszywy."
   },
   "chat": {
     "nameSkip": "Anonimowo",
@@ -1911,8 +1908,7 @@
       "muteConfirm": "Dotknij ponownie, by wyciszyć {{name}}",
       "reportConfirm": "Dotknij ponownie, by zgłosić i wyciszyć",
       "sendZkas": "Wyślij ZKAS",
-      "noAddress": "Brak opublikowanego adresu.",
-      "react": "Zareaguj"
+      "react": "Reaguj"
     },
     "profile": {
       "copyKey": "Kopiuj klucz publiczny",
@@ -1932,11 +1928,10 @@
       "none": "Brak prywatnych wiadomości.",
       "start": "Napisz prywatnie",
       "placeholder": "Wiadomość prywatna",
-      "note": "Tylko wy dwoje to czytacie. Przekaźniki widzą jednorazowy klucz, nie kto z kim rozmawia.",
+      "note": "Tylko was dwoje to widzi. Przekaźnik widzi jednorazowy klucz, nie kto z kim rozmawia.",
       "headerNote": "prywatnie"
     },
-    "you": "ty",
-    "intro": "Każdy tutaj widzi, co piszesz, a postów nie można usunąć. Użyj górnego wiersza, by zmienić pokój. Stuknij wiadomość, by zareagować lub odpowiedzieć, albo przesuń ją, by odpisać.",
+    "intro": "Każdy tutaj widzi, co piszesz, a postów nie można usunąć. Stuknij wiadomość, aby zareagować lub odpowiedzieć, albo przesuń, by odpowiedzieć.",
     "consentTitle": "Włączyć czat?",
     "consentPublic": "Wiadomości w pokoju globalnym są publiczne i trwałe. Nie ma opcji usunięcia.",
     "consentIp": "Serwer przekaźnika widzi Twój adres IP i czas aktywności. Twój portfel – nie.",
@@ -1944,7 +1939,7 @@
     "consentEnable": "Włącz czat",
     "consentLater": "Nie teraz",
     "consentOff": "Możesz to wyłączyć w Ustawieniach.",
-    "back": "← Portfel",
+    "back": "Portfel",
     "roomAria": "Czat społeczności",
     "state": {
       "offline": "offline",
@@ -1984,10 +1979,11 @@
     "nameLabel": "Nazwa",
     "useMyAddress": "Użyj adresu portfela",
     "clearAddress": "Usuń adres",
-    "earlier": "Wcześniejsze wiadomości",
-    "today": "Dzisiaj",
+    "earlier": "Wcześniejsze",
+    "today": "Dziś",
     "yesterday": "Wczoraj",
-    "jumpLatest": "Przejdź do najnowszych"
+    "jumpLatest": "Przejdź do najnowszej",
+    "profileOf": "Profil {{name}}"
   },
   "backgroundPermission": {
     "title": "Zsynchronizować portfel w tle?",
@@ -2006,8 +2002,8 @@
     "decline": "Nie, odrzuć link"
   },
   "daemonError": {
-    "network": "Na chwilę utracono połączenie z siecią. Twoje monety są bezpieczne — portfel sam ponawia próby.",
-    "generic": "Usługa portfela napotkała problem podczas odczytu łańcucha. Twoje monety są bezpieczne w łańcuchu.",
+    "network": "Chwilowa utrata kontaktu z siecią. Twoje monety są bezpieczne — portfel sam próbuje ponownie.",
+    "generic": "Usługa portfela napotkała problem podczas czytania łańcucha. Twoje monety są bezpieczne w łańcuchu.",
     "details": "Szczegóły techniczne"
   }
 }
