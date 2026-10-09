@@ -24,6 +24,8 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import i18n from "./i18n";
 import { getDeviceSeed } from "./lib/deviceseed";
+import { loadSentDms, recordSentDm } from "./lib/dmlog";
+import { activeToken } from "./wallets";
 import { useBackClose } from "./lib/backclose";
 import { useToast } from "./toast";
 import { MessageMenu, MutedSheet, ProfileSheet, RoomsSheet, QUICK_REACTION, type Anchor } from "./ChatSheets";
@@ -312,10 +314,20 @@ function Bubble({
       </p>
       <span className="chat-time">
         <span dir="ltr">{hhmm(m.created_at)}</span>
+        {/* One tick while the relay has not answered, two once it has. The
+            double tick used to appear the moment the message was handed to the
+            socket, so a refused message — rate limit, proof-of-work, a blocked
+            room — read as delivered for ever and the sender never knew. */}
         {mine && !m.failed && (
-          <svg className="chat-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M3 13l4 4L14 7M12 16l2 2 7-11" />
-          </svg>
+          m.sending ? (
+            <svg className="chat-tick sending" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="chat-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M3 13l4 4L14 7M12 16l2 2 7-11" />
+            </svg>
+          )
         )}
       </span>
       {m.failed && <span className="chat-failed">{failedLabel}</span>}
@@ -453,6 +465,10 @@ export function ChatScreen({
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState<Set<string>>(new Set());
+  /// Published, no verdict from the relay yet. Drives ONE tick instead of two:
+  /// the double tick used to be painted the instant a message was handed to the
+  /// socket, so a message the relay refused looked delivered for ever.
+  const [pendingAck, setPendingAck] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [askName, setAskName] = useState(false);
   const [nameDraft, setNameDraft] = useState(nickname());
@@ -468,7 +484,20 @@ export function ChatScreen({
   // One screen, three views: the room, the list of private conversations, and
   // one conversation. Keeping them here means one socket and one layout.
   const [view, setView] = useState<{ k: "room" } | { k: "dms" } | { k: "dm"; peer: string }>({ k: "room" });
-  const [dms, setDms] = useState<Map<string, Array<{ id: string; sender: string; content: string; created_at: number }>>>(new Map());
+  // Seeded from the durable sent-DM log, so your own half of every conversation
+  // is there on first paint instead of only until the next reload.
+  const [dms, setDms] = useState<Map<string, Array<{ id: string; sender: string; content: string; created_at: number; mine?: boolean }>>>(() => {
+    const seeded = new Map<string, Array<{ id: string; sender: string; content: string; created_at: number; mine?: boolean }>>();
+    try {
+      const mine = loadSentDms(activeToken() ?? "");
+      for (const [peer, rows] of Object.entries(mine)) {
+        seeded.set(peer, rows.map((r) => ({ id: r.id, sender: "", content: r.content, created_at: r.created_at, mine: true })));
+      }
+    } catch {
+      /* a readable thread matters more than a restored one */
+    }
+    return seeded;
+  });
   /** Every gift wrap addressed to us that this session has seen arrive, by id.
    *  Unread is decided on these ids — see `seenDmWraps`, and note that a wrap's
    *  own timestamp is randomised and cannot be compared against a cursor. */
@@ -641,9 +670,12 @@ export function ChatScreen({
           const open = await engine.unwrapDm(id.privkey_hex, JSON.stringify(ev));
           // A wrap we sent carries OUR pubkey as sender; the peer is then the
           // recipient on the rumor. NIP-17 sends one wrap to each side.
-          const peer = open.sender === id.pubkey_hex
-            ? (ev.tags.find((tg) => tg[0] === "p")?.[1] ?? open.sender)
-            : open.sender;
+          // A wrap we sent to OURSELVES carries no recoverable counterparty, so
+          // it cannot be filed. We no longer publish those, but one may still
+          // arrive from an older build of this app; ignore it rather than open a
+          // conversation with ourselves. Our sent messages come from dmlog.
+          if (open.sender === id.pubkey_hex) return;
+          const peer = open.sender;
           setDms((prev) => {
             const next = new Map(prev);
             const thread = [...(next.get(peer) ?? [])];
@@ -683,7 +715,16 @@ export function ChatScreen({
   // and a fresh backfill before the first message appeared. `setRoom` replaces
   // the two room subscriptions on the live socket instead.
   useEffect(() => {
-    const c = new ChatClient(roomRef.current, ingest, setState);
+    const c = new ChatClient(roomRef.current, ingest, setState, (id, accepted) => {
+      setPendingAck((prev) => {
+        if (!prev.has(id)) return prev;
+        const n = new Set(prev);
+        n.delete(id);
+        return n;
+      });
+      // Refused, or answered by silence: the message did not go.
+      if (!accepted) setFailed((prev) => new Set(prev).add(id));
+    });
     client.current = c;
     c.connect();
     return () => c.close();
@@ -845,17 +886,26 @@ export function ChatScreen({
     const engine = await ensureChatEngine();
     const id = await engine.chatIdentity(getDeviceSeed(), 0);
     const theirs = await engine.wrapDm(id.privkey_hex, peer, body);
-    const mine = await engine.wrapDm(id.privkey_hex, id.pubkey_hex, body);
-    // Theirs first: it is the copy that matters. If the socket drops between the
-    // two, the caller still hears about it rather than the failure being
-    // swallowed by the optional-chain and the message looking sent.
     if (!client.current?.live) throw new Error("offline");
     client.current.publish(theirs);
-    client.current.publish(mine);
+    // The NIP-17 self-copy is NOT published. `dm_unwrap` returns no recipient
+    // and a self-wrap's only `p` tag is our own pubkey, so neither this device
+    // nor another one of ours can tell which conversation it belongs to — it
+    // resolved its "peer" to US and opened a phantom thread with ourselves while
+    // the real thread lost our half. Nothing can consume it correctly today, so
+    // sending it only costs the relay an event. The sent side is recorded below
+    // instead, against the peer it actually went to.
+    const sent = {
+      id: `sent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      peer,
+      content: body,
+      created_at: Math.floor(Date.now() / 1000),
+    };
+    recordSentDm(activeToken() ?? "", sent);
     setDms((prev) => {
       const next = new Map(prev);
       const thread = [...(next.get(peer) ?? [])];
-      thread.push({ id: `local-${Date.now()}`, sender: id.pubkey_hex, content: body, created_at: Math.floor(Date.now() / 1000) });
+      thread.push({ id: sent.id, sender: id.pubkey_hex, content: body, created_at: sent.created_at, mine: true });
       next.set(peer, thread);
       return next;
     });
@@ -916,11 +966,13 @@ export function ChatScreen({
       const who = person(ev.pubkey);
       const mine = !!me && ev.pubkey === me;
       const bad = failed.has(ev.id);
+      const waiting = pendingAck.has(ev.id);
       const had = cache.get(ev.id);
       if (
         had &&
         had.mine === mine &&
         had.failed === bad &&
+        had.sending === waiting &&
         had.person.name === who.name &&
         had.person.zkas === who.zkas &&
         had.person.about === who.about &&
@@ -935,6 +987,7 @@ export function ChatScreen({
         replyTo: ev.tags.find((tg) => tg[0] === "e")?.[1],
         mine,
         failed: bad,
+        sending: waiting,
       };
       cache.set(ev.id, next);
       out.push(next);
@@ -944,7 +997,7 @@ export function ChatScreen({
     // `created_at` is author-supplied, so ties break on id to keep the order
     // stable rather than jittering between renders.
     return out.sort((a, b) => a.created_at - b.created_at || a.id.localeCompare(b.id));
-  }, [mutedSet, me, person, failed, rev]);
+  }, [mutedSet, me, person, failed, pendingAck, rev]);
 
   useEffect(() => {
     // Muted authors are filtered out of `messages`, so asking only about those
@@ -957,6 +1010,21 @@ export function ChatScreen({
 
   /** The window of history that is actually in the document. */
   const hasEarlier = messages.length > limit;
+  // Grow the window by whatever arrives while the user is scrolled up, so the
+  // slice keeps the same TOP row. It was a fixed-size tail: `slice(-limit)`
+  // with `limit` changed only by "Earlier messages". So every message that
+  // arrived dropped the oldest row OUT of the window, above the viewport, and
+  // the content under the reader's eyes slid up by that row's height. In a busy
+  // room the text crawled continuously while being read, and each jump could
+  // push the reader back past the load-more threshold.
+  //
+  // Only while scrolled up: at the bottom the view is pinned anyway, and
+  // growing without bound there would keep every message of a long session
+  // rendered.
+  useEffect(() => {
+    if (atBottomRef.current) return;
+    setLimit((n) => (messages.length > n ? messages.length : n));
+  }, [messages.length]);
   const visible = useMemo(() => (hasEarlier ? messages.slice(-limit) : messages), [messages, limit, hasEarlier]);
 
   /** Rows, with the turn structure resolved once instead of inside the map.
@@ -1125,7 +1193,11 @@ export function ChatScreen({
       const ev = JSON.parse(signed) as ChatEvent;
       localId = ev.id;
       ingest(ev); // optimistic; the relay echo dedupes by id
-      client.current?.publish(signed);
+      // The id goes with it: the tick below is optimistic, and `onAck` turns it
+      // into a real one — or marks the message failed when the relay refuses or
+      // never answers.
+      setPendingAck((prev) => new Set(prev).add(ev.id));
+      client.current?.publish(signed, ev.id);
       setFailed((prev) => {
         const n = new Set(prev);
         n.delete(localId);
@@ -1549,7 +1621,9 @@ export function ChatScreen({
           <p className="chat-service">{t("chat.dm.note")}</p>
           {(dms.get(view.peer) ?? []).map((dm) => {
             const who = person(dm.sender);
-            const isMine = dm.sender === me;
+            // `mine` is explicit for rows restored from the sent log: they have no
+            // sender to compare, because `me` is derived from the seed after mount.
+            const isMine = dm.mine ?? dm.sender === me;
             return (
               <div key={dm.id} className={"chat-msg last first" + (isMine ? " mine" : "")}>
                 {!isMine && <Avatar person={who} />}

@@ -83,6 +83,8 @@ export interface ChatMessage extends ChatEvent {
   /** Local-only delivery state for our own messages. */
   pending?: boolean;
   failed?: boolean;
+  /** Published, but the relay has not said OK yet. One tick, not two. */
+  sending?: boolean;
 }
 
 // ------------------------------------------------------------------- engine
@@ -116,7 +118,12 @@ export function hueOf(pubkey: string): number {
 // ------------------------------------------------------------------ transport
 
 type Handler = (ev: ChatEvent) => void;
+/** How long to wait for a relay's OK before calling a publish failed. */
+const ACK_TIMEOUT_MS = 10_000;
+
 type StateHandler = (s: ConnectionState) => void;
+/** The relay's verdict on a published event: NIP-01's `["OK", id, ok, reason]`. */
+export type AckHandler = (id: string, accepted: boolean, reason: string) => void;
 export type ConnectionState =
   | "offline"
   | "connecting"
@@ -166,16 +173,20 @@ export class ChatClient {
   private ws: WebSocket | null = null;
   private onEvent: Handler;
   private onState: StateHandler;
+  private onAck: AckHandler;
+  /** Events published and not yet answered, so a silent relay can time out. */
+  private awaitingAck = new Map<string, ReturnType<typeof setTimeout>>();
   private room: string;
   private closed = false;
   private retry = 0;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private asked = new Set<string>();
 
-  constructor(room: string, onEvent: Handler, onState: StateHandler) {
+  constructor(room: string, onEvent: Handler, onState: StateHandler, onAck: AckHandler = () => {}) {
     this.room = room;
     this.onEvent = onEvent;
     this.onState = onState;
+    this.onAck = onAck;
   }
 
   get live(): boolean {
@@ -239,6 +250,19 @@ export class ChatClient {
       }
       if (!Array.isArray(frame)) return;
       if (frame[0] === "EVENT" && frame[2]) this.onEvent(frame[2] as ChatEvent);
+      // NIP-01's verdict on something we published. Nothing read this, so a
+      // message the relay REFUSED — rate limit, proof-of-work requirement, a
+      // blocked room — was painted with the delivered tick and left there. The
+      // sender believed it had gone; nobody else ever saw it.
+      if (frame[0] === "OK" && typeof frame[1] === "string") {
+        const id = frame[1];
+        const timer = this.awaitingAck.get(id);
+        if (timer) {
+          clearTimeout(timer);
+          this.awaitingAck.delete(id);
+        }
+        this.onAck(id, frame[2] === true, typeof frame[3] === "string" ? frame[3] : "");
+      }
     };
     ws.onerror = () => this.onState("error");
     ws.onclose = () => {
@@ -295,9 +319,18 @@ export class ChatClient {
     this.send(["REQ", "mutes", { kinds: [KIND_MUTE_LIST], authors: [pubkey], limit: 1 }]);
   }
 
-  publish(signedJson: string): void {
+  /** Publish, and expect a verdict. `id` lets the caller match the `OK` frame. */
+  publish(signedJson: string, id?: string): void {
     if (!this.live) throw new Error("offline");
     this.ws!.send(`["EVENT",${signedJson}]`);
+    if (!id) return;
+    // A relay that simply never answers is as much a failure as one that
+    // refuses. Without this the message would sit on "sending" for ever.
+    const timer = setTimeout(() => {
+      this.awaitingAck.delete(id);
+      this.onAck(id, false, "timeout");
+    }, ACK_TIMEOUT_MS);
+    this.awaitingAck.set(id, timer);
   }
 
   close(): void {

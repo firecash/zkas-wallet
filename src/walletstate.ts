@@ -1,3 +1,4 @@
+import { forgetSentDms } from "./lib/dmlog";
 // Removing a wallet, completely.
 //
 // A wallet's state is scattered across storage by design — the daemon holds the
@@ -47,6 +48,13 @@ const PER_WALLET_PREFIXES = [
  * erased — wallet could leave its spending key on the device.
  */
 function sweepScattered(token: string): void {
+  // Private messages this wallet sent. Keyed inside one JSON blob rather than by
+  // key name, so it needs its own removal rather than a prefix match.
+  try {
+    forgetSentDms(token);
+  } catch {
+    /* ignore */
+  }
   for (let i = localStorage.length - 1; i >= 0; i--) {
     const k = localStorage.key(i);
     if (!k) continue;

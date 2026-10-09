@@ -739,3 +739,7 @@ button.chat-author-name:focus-visible { outline: 2px solid var(--accent); outlin
    focused nothing they could see. Show it on focus as well as on hover. */
 .chat-msg:focus-within .chat-quick,
 .chat-quick:focus-visible { opacity: 1; }
+
+/* One tick: handed to the relay, no verdict yet. Dimmed so the two-tick
+   delivered state stays the confident one. */
+.chat-tick.sending { opacity: 0.55; }
