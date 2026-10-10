@@ -223,7 +223,14 @@ else
   # CI creates the release with a placeholder body ("Desktop builds."). Put the
   # first-launch notes on it — but never over notes someone has written by hand.
   cur_body="$(gh_api "https://api.github.com/repos/$REPO/releases/$rel_id" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("body") or "")' 2>/dev/null || true)"
-  if [ -z "$cur_body" ] || [ "$cur_body" = "Desktop builds." ]; then
+  # Any one-line CI placeholder, not just the exact string "Desktop builds."
+  # v1.0.44 shipped with "macOS (Intel) desktop wallet." as its entire release
+  # page, because the guard matched one literal and treated every other
+  # placeholder as notes somebody had written by hand. Real notes run to many
+  # lines; a placeholder is one short line naming a build.
+  placeholder=0
+  if [ "$(printf '%s' "$cur_body" | wc -l)" -le 1 ] && [ "${#cur_body}" -lt 120 ]; then placeholder=1; fi
+  if [ -z "$cur_body" ] || [ "$placeholder" = 1 ]; then
     gh_api -X PATCH "https://api.github.com/repos/$REPO/releases/$rel_id" -d "{\"body\":$release_body_json}" >/dev/null && echo "release notes written to $TAG"
   fi
 fi
