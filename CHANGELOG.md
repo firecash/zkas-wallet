@@ -4,6 +4,45 @@ Entries describe what changed for the person using the wallet. Where a fix was
 caused by an earlier change in this same list, it says so — the sequence is
 more useful than the tidy version.
 
+## 1.0.45
+
+Everything here came from deliberately breaking the wallet: a daemon made to
+return 500s, empty bodies, malformed rows and nonsense figures; the network cut
+mid-send; two tabs fighting over one wallet; a browser with site data blocked.
+
+### Highlights
+
+- **A wallet switch in another tab could re-target a payment already on the
+  Confirm screen.** The sheet kept showing the first wallet's amount and
+  recipient while the payment was prepared, signed and broadcast from the
+  second. A payment now refuses to proceed if the wallet changed under it.
+- **A wallet creation that failed at the last step kept your recovery phrase
+  and never showed it** — then became the device master, so the next "Add
+  account" built a real, fundable wallet from a phrase you had never seen and
+  would never be reminded to write down. A failure now rolls the whole thing
+  back.
+- **A daemon wrong about being synced could show "0 ZKAS · Ready"** for a funded
+  wallet, and that zero was saved as the last confirmed balance, outliving the
+  daemon and surviving a reload.
+- **A single malformed history row, or an empty response, took down the whole
+  wallet** — balance, Send and Receive — not just the History tab.
+- **A browser with site data blocked showed an unrecoverable error screen.** The
+  wallet now runs with ephemeral storage instead, behaving like a fresh device.
+- Removing a wallet left its private messages on the device.
+
+Full detail in
+[CHANGELOG.md](https://github.com/firecash/zkas-wallet/blob/main/CHANGELOG.md).
+
+### Everything else
+
+- History responses are sanitised at the API boundary: a row that cannot be
+  understood is dropped rather than repaired, because inventing an amount puts
+  a wrong number in a list of payments.
+- Release notes lead with highlights and link the full changelog.
+- The release script recognises any CI placeholder body, not one literal
+  string — v1.0.44 first published with "macOS (Intel) desktop wallet." as its
+  entire release page.
+
 ## 1.0.44
 
 ### Highlights
