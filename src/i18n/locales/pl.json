@@ -68,7 +68,8 @@
     "recipientLabel": "Adres chroniony odbiorcy",
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Wciąż czytam łańcuch — wyślesz, gdy dogoni.",
-    "unknownFailure": "Płatność została odrzucona, a portfel nie odczytał przyczyny. Nic nie zostało wysłane — sprawdź historię przed ponowną próbą."
+    "unknownFailure": "Płatność została odrzucona, a portfel nie odczytał przyczyny. Nic nie zostało wysłane — sprawdź historię przed ponowną próbą.",
+    "walletChanged": "Podczas dokonywania płatności zmienił się aktywny portfel, więc nic nie zostało wysłane. Sprawdź, w którym portfelu jesteś, i spróbuj ponownie."
   },
   "sign": {
     "title": "Podpisz wiadomość",

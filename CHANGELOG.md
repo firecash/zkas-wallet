@@ -6,6 +6,35 @@ more useful than the tidy version.
 
 ## 1.0.44
 
+### Highlights
+
+- **Typing a decimal comma sent ten times the amount.** `1,5` became `15`, in
+  both Send and payment requests.
+- **A partial send left the full amount in the form**, so one more tap could pay
+  160 against a 100 invoice.
+- **A wallet switch in another tab could re-target a payment already on the
+  Confirm screen**, spending from an account you never chose.
+- **A wallet creation that failed at the last step kept your recovery phrase and
+  never showed it**, then built real accounts from it.
+- **The backup card showed a derived key instead of your recovery phrase** and
+  skipped the write-it-down step.
+- **Background sync stopped the moment the screen went off** on Android.
+- **Chat history is kept on the device** instead of re-downloading a week of it
+  on every open, and private messages you sent survive a reload.
+- **Your chat blocklist was being published to the relay** while the screen said
+  it was private.
+- Every new account showed the first account's address; two wallets could end up
+  sharing a name.
+- A malformed history row, an empty response, or a browser with site data
+  blocked could take the whole wallet down.
+- After a network change the wallet froze for about a minute before recovering.
+- The release script had been deleting the on-device engine before every build.
+
+Full detail below, and in
+[CHANGELOG.md](https://github.com/firecash/zkas-wallet/blob/main/CHANGELOG.md).
+
+### Everything else
+
 The release that came out of a line-by-line audit of the whole app: the money
 path, keys and backups, chat, the Android background worker, 24 locales, the
 desktop shell, and the screens themselves. Several entries below are fixes to

@@ -116,7 +116,8 @@
     "warmBanner": "<b>⚡ Je eerste betaling duurt enkele minuten.</b><br/>Munten lokaliseren — dit gebeurt eenmalig. Je kunt de betaling nu starten.",
     "reviewSend": "Verzending bekijken",
     "waitingForSync": "Nog de keten aan het lezen — je kunt verzenden zodra hij bij is.",
-    "unknownFailure": "De betaling werd geweigerd en de wallet kon niet lezen waarom. Er is niets verzonden — check de geschiedenis voor je het opnieuw probeert."
+    "unknownFailure": "De betaling werd geweigerd en de wallet kon niet lezen waarom. Er is niets verzonden — check de geschiedenis voor je het opnieuw probeert.",
+    "walletChanged": "De actieve wallet is gewijzigd tijdens het maken van deze betaling, dus er is niets verzonden. Controleer in welke wallet je zit en probeer het opnieuw."
   },
   "sign": {
     "title": "Bericht ondertekenen",

@@ -116,7 +116,8 @@
     "warmBanner": "<b>⚡ Malipo yako ya kwanza yatachukua dakika chache.</b><br/>Kutafuta sarafu zako — hii inafanyika mara moja. Unaweza kuanza malipo sasa.",
     "reviewSend": "Kagua tuma",
     "waitingForSync": "Bado inasoma mnyororo — unaweza kutuma mara inapopatana.",
-    "unknownFailure": "Malipo yalikataliwa na pochi haikuweza kusoma sababu. Hakuna kilichotumwa — angalia Historia kabla ya kujaribu tena."
+    "unknownFailure": "Malipo yalikataliwa na pochi haikuweza kusoma sababu. Hakuna kilichotumwa — angalia Historia kabla ya kujaribu tena.",
+    "walletChanged": "Pochi inayotumika ilibadilika wakati malipo haya yalipokuwa yakifanywa, kwa hivyo hakuna chochote kilichotumwa. Angalia uko kwenye pochi gani kisha ujaribu tena."
   },
   "sign": {
     "title": "Saini ujumbe",

@@ -182,7 +182,12 @@ except OSError:
     sys.exit(0)
 m = re.search(rf"^## {re.escape(version)}\s*$(.*?)(?=^## |\Z)", text, re.S | re.M)
 if m:
-    body = m.group(1).strip()
+    section = m.group(1).strip()
+    # Prefer a "### Highlights" block when the version has one. A release page
+    # is read by somebody deciding whether to download; 175 lines of detail is
+    # a changelog, not release notes, and that is what the link is for.
+    h = re.search(r"^### Highlights\s*$(.*?)(?=^### |\Z)", section, re.S | re.M)
+    body = h.group(1).strip() if h else section
     if body:
         print(body)
 PYEOF

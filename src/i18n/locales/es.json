@@ -116,7 +116,8 @@
     "recipientLabel": "Dirección blindada del destinatario",
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Leyendo la cadena — podrás enviar en cuanto se ponga al día.",
-    "unknownFailure": "El pago fue rechazado y la billetera no pudo saber por qué. No se envió nada — revisa el historial antes de intentar de nuevo."
+    "unknownFailure": "El pago fue rechazado y la billetera no pudo saber por qué. No se envió nada — revisa el historial antes de intentar de nuevo.",
+    "walletChanged": "La billetera activa cambió mientras se realizaba este pago, así que no se envió nada. Revisa en qué billetera estás e inténtalo de nuevo."
   },
   "sign": {
     "title": "Firmar mensaje",

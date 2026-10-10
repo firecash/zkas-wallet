@@ -116,7 +116,8 @@
     "recipientLabel": "Địa chỉ ẩn danh người nhận",
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Đang đọc chuỗi — bạn có thể gửi ngay khi đồng bộ xong.",
-    "unknownFailure": "Thanh toán bị từ chối và ví không đọc được lý do. Chưa gửi gì — hãy kiểm tra Lịch sử trước khi thử lại."
+    "unknownFailure": "Thanh toán bị từ chối và ví không đọc được lý do. Chưa gửi gì — hãy kiểm tra Lịch sử trước khi thử lại.",
+    "walletChanged": "Ví đang dùng đã thay đổi trong lúc thanh toán nên không gửi được gì. Hãy kiểm tra lại ví và thử lại."
   },
   "sign": {
     "title": "Ký tin nhắn",

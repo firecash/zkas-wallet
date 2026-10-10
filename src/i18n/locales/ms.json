@@ -133,7 +133,8 @@
     "warmBanner": "<b>⚡ Bayaran pertama anda mengambil masa beberapa minit.</b><br/>Mencari syiling anda — ini berlaku sekali. Anda boleh mulakan bayaran sekarang.",
     "reviewSend": "Semak hantaran",
     "waitingForSync": "Masih membaca rantaian — anda boleh hantar sebaik sahaja ia segerak.",
-    "unknownFailure": "Bayaran ditolak dan dompet tidak dapat membaca sebabnya. Tiada apa-apa dihantar — semak Sejarah sebelum mencuba lagi."
+    "unknownFailure": "Bayaran ditolak dan dompet tidak dapat membaca sebabnya. Tiada apa-apa dihantar — semak Sejarah sebelum mencuba lagi.",
+    "walletChanged": "Dompet aktif bertukar semasa pembayaran ini dibuat, jadi tiada apa-apa dihantar. Periksa dompet anda dan cuba lagi."
   },
   "sign": {
     "title": "Tandatangan mesej",

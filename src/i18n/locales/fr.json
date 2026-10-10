@@ -116,7 +116,8 @@
     "recipientLabel": "Adresse protégée du destinataire",
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Lecture de la chaîne en cours — vous pourrez envoyer dès qu'elle sera à jour.",
-    "unknownFailure": "Le paiement a été refusé sans explication. Rien n'a été envoyé — vérifiez l'historique avant de réessayer."
+    "unknownFailure": "Le paiement a été refusé sans explication. Rien n'a été envoyé — vérifiez l'historique avant de réessayer.",
+    "walletChanged": "Le portefeuille actif a changé pendant ce paiement, donc rien n'a été envoyé. Vérifiez dans quel portefeuille vous êtes et réessayez."
   },
   "sign": {
     "title": "Signer un message",

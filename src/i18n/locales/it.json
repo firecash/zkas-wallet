@@ -116,7 +116,8 @@
     "warmBanner": "<b>⚡ Il primo pagamento richiederà qualche minuto.</b><br/>Localizzo le tue monete — succede una volta. Puoi avviare il pagamento ora.",
     "reviewSend": "Rivedi invio",
     "waitingForSync": "Legge ancora la catena — puoi inviare appena recupera.",
-    "unknownFailure": "Pagamento rifiutato e il portafoglio non capisce perché. Non è stato inviato nulla — controlla la Cronologia prima di riprovare."
+    "unknownFailure": "Pagamento rifiutato e il portafoglio non capisce perché. Non è stato inviato nulla — controlla la Cronologia prima di riprovare.",
+    "walletChanged": "Il portafoglio attivo è cambiato mentre stavi effettuando il pagamento, quindi non è stato inviato nulla. Controlla in quale portafoglio ti trovi e riprova."
   },
   "sign": {
     "title": "Firma messaggio",

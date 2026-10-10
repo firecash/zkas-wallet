@@ -116,7 +116,8 @@
     "recipientLabel": "Endereço blindado do destinatário",
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Ainda lendo a cadeia — você pode enviar assim que ela alcançar.",
-    "unknownFailure": "O pagamento foi recusado e a carteira não conseguiu ler o motivo. Nada foi enviado — veja o Histórico antes de tentar de novo."
+    "unknownFailure": "O pagamento foi recusado e a carteira não conseguiu ler o motivo. Nada foi enviado — veja o Histórico antes de tentar de novo.",
+    "walletChanged": "A carteira ativa mudou enquanto este pagamento era feito, então nada foi enviado. Verifique em qual carteira você está e tente novamente."
   },
   "sign": {
     "title": "Assinar mensagem",

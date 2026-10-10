@@ -116,7 +116,8 @@
     "warmBanner": "<b>⚡ Pembayaran pertama butuh beberapa menit.</b><br/>Mencari koin Anda — ini terjadi sekali. Anda bisa mulai bayar sekarang.",
     "reviewSend": "Tinjau kiriman",
     "waitingForSync": "Masih membaca rantai — Anda bisa kirim begitu sudah tersinkron.",
-    "unknownFailure": "Pembayaran ditolak dan dompet tidak bisa membaca penyebabnya. Tidak ada yang terkirim — periksa Riwayat sebelum mencoba lagi."
+    "unknownFailure": "Pembayaran ditolak dan dompet tidak bisa membaca penyebabnya. Tidak ada yang terkirim — periksa Riwayat sebelum mencoba lagi.",
+    "walletChanged": "Dompet aktif berubah saat pembayaran ini dibuat, jadi tidak ada yang terkirim. Periksa dompet Anda dan coba lagi."
   },
   "sign": {
     "title": "Tanda tangani pesan",

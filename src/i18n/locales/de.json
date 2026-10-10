@@ -116,7 +116,8 @@
     "recipientLabel": "Abgeschirmte Empfängeradresse",
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Liest noch die Chain – du kannst senden, sobald sie aufholt.",
-    "unknownFailure": "Die Zahlung wurde abgelehnt, Grund unbekannt. Es wurde nichts gesendet – prüf den Verlauf, bevor du es erneut versuchst."
+    "unknownFailure": "Die Zahlung wurde abgelehnt, Grund unbekannt. Es wurde nichts gesendet – prüf den Verlauf, bevor du es erneut versuchst.",
+    "walletChanged": "Das aktive Wallet hat sich während der Zahlung geändert, daher wurde nichts gesendet. Prüfe, in welchem Wallet du bist, und versuche es erneut."
   },
   "sign": {
     "title": "Nachricht signieren",

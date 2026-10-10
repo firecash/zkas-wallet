@@ -116,7 +116,8 @@
     "recipientLabel": "Alıcı korumalı adresi",
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Zincir hâlâ okunuyor — yetiştiği an gönderebilirsiniz.",
-    "unknownFailure": "Ödeme reddedildi ve cüzdan sebebini okuyamadı. Hiçbir şey gönderilmedi — tekrar denemeden önce Geçmiş'i kontrol edin."
+    "unknownFailure": "Ödeme reddedildi ve cüzdan sebebini okuyamadı. Hiçbir şey gönderilmedi — tekrar denemeden önce Geçmiş'i kontrol edin.",
+    "walletChanged": "Bu ödeme yapılırken aktif cüzdan değişti, bu yüzden hiçbir şey gönderilmedi. Hangi cüzdanda olduğunuzu kontrol edip tekrar deneyin."
   },
   "sign": {
     "title": "Mesaj imzala",
