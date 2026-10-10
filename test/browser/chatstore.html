@@ -1,0 +1,54 @@
+<!doctype html><meta charset="utf-8"><body><pre id="out">running…</pre>
+<script type="module">
+import * as S from "./chatstore.mjs";
+const log = [];
+const ok = (name, cond, extra = "") => log.push(`${cond ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
+try {
+  const note = (id, t) => ({ id, created_at: t, kind: 1, content: "m" + id, tags: [], pubkey: "p" });
+
+  // round-trip
+  await S.saveNotes("global", [note("a", 100), note("b", 200), note("c", 150)]);
+  const back = await S.loadRoom("global");
+  ok("room round-trips", back.length === 3, `got ${back.length}`);
+  ok("oldest-first order", back.map(n => n.id).join("") === "acb", back.map(n => n.id).join(""));
+
+  // a second room is separate
+  await S.saveNotes("fr", [note("x", 300)]);
+  ok("rooms are separate", (await S.loadRoom("global")).length === 3 && (await S.loadRoom("fr")).length === 1);
+
+  // cursor + overlap
+  await S.setCursor("room:global", 1000);
+  const c = await S.cursor("room:global");
+  ok("cursor applies overlap", c === 1000 - S.__test.CURSOR_OVERLAP_SEC, `got ${c}`);
+  await S.setCursor("room:global", 500);
+  ok("cursor never goes backwards", (await S.cursor("room:global")) === 1000 - S.__test.CURSOR_OVERLAP_SEC);
+  ok("unknown cursor is 0", (await S.cursor("room:nope")) === 0);
+
+  // pruning keeps the NEWEST
+  const many = Array.from({ length: S.__test.MAX_NOTES_PER_ROOM + 50 }, (_, i) => note("p" + i, i));
+  await S.saveNotes("big", many);
+  const kept = await S.loadRoom("big", 10_000);
+  ok("prunes to the cap", kept.length === S.__test.MAX_NOTES_PER_ROOM, `kept ${kept.length}`);
+  ok("prune keeps the newest", kept[kept.length - 1].id === "p" + (many.length - 1), kept[kept.length-1].id);
+
+  // DMs are scoped per identity
+  await S.saveDm({ id: "d1", me: "ME", peer: "BOB", sender: "BOB", content: "hi", created_at: 10 });
+  await S.saveDm({ id: "d2", me: "ME", peer: "BOB", sender: "ME", content: "yo", created_at: 20, mine: true });
+  await S.saveDm({ id: "d3", me: "OTHER", peer: "BOB", sender: "BOB", content: "secret", created_at: 30 });
+  const mine = await S.loadDms("ME");
+  ok("thread has both halves", (mine.get("BOB") || []).length === 2, `${(mine.get("BOB")||[]).length}`);
+  ok("mine flag survives", (mine.get("BOB") || [])[1]?.mine === true);
+  ok("other identity is invisible", !JSON.stringify([...mine]).includes("secret"));
+  ok("other identity loads its own", (await S.loadDms("OTHER")).get("BOB")?.length === 1);
+
+  // forgetting
+  await S.forgetDmsFor("ME");
+  ok("forgetDmsFor drops one identity", (await S.loadDms("ME")).size === 0 && (await S.loadDms("OTHER")).size === 1);
+  ok("rooms survive a DM wipe", (await S.loadRoom("global")).length === 3);
+  await S.forgetAllChat();
+  ok("forgetAllChat clears rooms", (await S.loadRoom("global")).length === 0);
+  ok("forgetAllChat clears DMs", (await S.loadDms("OTHER")).size === 0);
+  ok("forgetAllChat clears cursors", (await S.cursor("room:global")) === 0);
+} catch (e) { log.push("THREW  " + e); }
+document.getElementById("out").textContent = log.join("\n");
+</script></body>

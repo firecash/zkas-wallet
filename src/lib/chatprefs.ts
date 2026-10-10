@@ -1,3 +1,4 @@
+import { forgetAllChat } from "./chatstore";
 // Chat preferences: the consent flag and the local state around it.
 //
 // Split out from `chatclient.ts` deliberately. The wallet's main screen needs to
@@ -291,4 +292,7 @@ export function forgetChat(): void {
   } catch {
     /* ignore */
   }
+  // The message history too. Leaving chat used to clear the preferences and
+  // leave every message on the device, which is not what "leave chat" says.
+  void forgetAllChat();
 }

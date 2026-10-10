@@ -25,6 +25,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "./i18n";
 import { getDeviceSeed } from "./lib/deviceseed";
 import { loadSentDms, recordSentDm } from "./lib/dmlog";
+import { cursor, loadDms, loadRoom, saveDm, saveNotes, setCursor } from "./lib/chatstore";
 import { activeToken } from "./wallets";
 import { useBackClose } from "./lib/backclose";
 import { useToast } from "./toast";
@@ -708,6 +709,21 @@ export function ChatScreen({
             if (!thread.some((m) => m.id === open.id)) {
               thread.push({ id: open.id, sender: open.sender, content: open.content, created_at: open.created_at });
               thread.sort((a, b) => a.created_at - b.created_at);
+              // Decrypted once, kept decrypted. Unwrapping a gift wrap is the
+              // expensive part of starting chat — every wrap must be attempted
+              // before we can even tell it is ours — and re-doing 500 of them
+              // on each launch was the bulk of that cost.
+              void saveDm({
+                id: open.id,
+                me: id.pubkey_hex,
+                peer,
+                sender: open.sender,
+                content: open.content,
+                created_at: open.created_at,
+              });
+              // The WRAP's own time, not the rumor's: the subscription filters
+              // on wrap timestamps, so that is what the cursor must track.
+              void setCursor(`dms:${id.pubkey_hex}`, ev.created_at);
             }
             next.set(peer, thread);
             return next;
@@ -752,6 +768,11 @@ export function ChatScreen({
       if (!s.notes.has(ev.id)) {
         s.notes.set(ev.id, ev);
         bump();
+        // Keep it, so the next open of this room starts from the device and the
+        // subscription asks only for what came after. Fire-and-forget: a write
+        // that fails costs a re-download, never a missing message.
+        void saveNotes(roomRef.current, [ev as unknown as { id: string; created_at: number }]);
+        void setCursor(`room:${roomRef.current}`, ev.created_at);
       }
     }
   }, [bump]);
@@ -805,8 +826,28 @@ export function ChatScreen({
     };
   }, [room]);
 
+  // Paint the room from the device, then ask the relay only for what is new.
+  //
+  // The cache is loaded BEFORE setRoom, because setRoom subscribes and the
+  // subscription's `since` comes from what we hold. Seeding also means the
+  // first frame of a room you have opened before is its real content rather
+  // than an empty list waiting on a socket.
   useEffect(() => {
-    client.current?.setRoom(room);
+    let alive = true;
+    void (async () => {
+      const [cached, since] = await Promise.all([loadRoom(room), cursor(`room:${room}`)]);
+      if (!alive || roomRef.current !== room) return;
+      for (const ev of cached as ChatEvent[]) {
+        if (ev?.id && !store.current.notes.has(ev.id)) store.current.notes.set(ev.id, ev);
+      }
+      if (cached.length) bump();
+      client.current?.setRoomSince(since);
+      client.current?.setRoom(room);
+    })();
+    return () => { alive = false; };
+  }, [room, bump]);
+
+  useEffect(() => {
     setSinceOpen(lastSeen(room));
     setSeenUpTo(lastSeen(room));
     landedOnUnread.current = false;
@@ -921,7 +962,28 @@ export function ChatScreen({
     if (me && client.current?.live) {
       // No mute-list subscription: mutes are local now, so asking the relay for
       // one only tells it which pubkey is yours and invites a frame we ignore.
-      client.current.subscribeDms(me);
+      void (async () => {
+        const [stored, since] = await Promise.all([loadDms(me), cursor(`dms:${me}`)]);
+        if (meRef.current !== me) return;
+        if (stored.size) {
+          setDms((prev) => {
+            const next = new Map(prev);
+            for (const [peer, rows] of stored) {
+              const have = next.get(peer) ?? [];
+              const seen = new Set(have.map((m) => m.id));
+              const merged = [...have];
+              for (const r of rows) {
+                if (seen.has(r.id)) continue;
+                merged.push({ id: r.id, sender: r.sender, content: r.content, created_at: r.created_at, mine: r.mine });
+              }
+              merged.sort((a, b) => a.created_at - b.created_at);
+              next.set(peer, merged);
+            }
+            return next;
+          });
+        }
+        client.current?.subscribeDms(me, since);
+      })();
     }
   }, [me, state]);
 
@@ -948,6 +1010,19 @@ export function ChatScreen({
       created_at: Math.floor(Date.now() / 1000),
     };
     recordSentDm(activeToken() ?? "", sent);
+    // Also into the chat store, so a thread loads from ONE place: the
+    // localStorage log stays as the path that already-installed wallets
+    // restore from, and everything written from here on lives beside the
+    // received half.
+    void saveDm({
+      id: sent.id,
+      me: id.pubkey_hex,
+      peer,
+      sender: id.pubkey_hex,
+      content: body,
+      created_at: sent.created_at,
+      mine: true,
+    });
     setDms((prev) => {
       const next = new Map(prev);
       const thread = [...(next.get(peer) ?? [])];

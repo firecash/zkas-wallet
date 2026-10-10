@@ -172,6 +172,8 @@ export function relayReachable(): boolean {
 export class ChatClient {
   private ws: WebSocket | null = null;
   private onEvent: Handler;
+  /** Newest cached note time for the current room; 0 when nothing is cached. */
+  private roomSince = 0;
   private onState: StateHandler;
   private onAck: AckHandler;
   /** Events published and not yet answered, so a silent relay can time out. */
@@ -278,11 +280,31 @@ export class ChatClient {
   }
 
   private subscribeRoom(): void {
-    // A week of history is plenty to open on; a phone should not pull a year of
-    // a global room to show the last screenful.
-    const since = Math.floor(Date.now() / 1000) - 7 * 24 * 3600;
+    // Ask for the DELTA, not the week.
+    //
+    // This used to request the last seven days every time — 200 notes and 500
+    // reactions — for a room the device had very likely already stored. On a
+    // phone that is the slowest part of opening chat, it is paid again on every
+    // room switch, and it makes the relay the only copy of data we already
+    // hold. `roomSince` is the newest `created_at` in the local store, less a
+    // few minutes of overlap; a first visit has none and falls back to the week.
+    const week = Math.floor(Date.now() / 1000) - 7 * 24 * 3600;
+    const since = this.roomSince > 0 ? Math.max(this.roomSince, week) : week;
     this.send(["REQ", "room", { kinds: [KIND_NOTE], "#t": [this.room], since, limit: 200 }]);
-    this.send(["REQ", "reactions", { kinds: [KIND_REACTION], "#t": [this.room], since, limit: 500 }]);
+    // Reactions are small and arrive against notes we may have cached from any
+    // time, so they keep the week-wide window rather than the note cursor.
+    this.send(["REQ", "reactions", { kinds: [KIND_REACTION], "#t": [this.room], since: week, limit: 500 }]);
+  }
+
+  /**
+   * How far the local store already covers this room, in seconds.
+   *
+   * Set before connecting (and on every room switch) so the subscription can
+   * ask only for what is missing. Zero means "no cache", which asks for the
+   * usual week.
+   */
+  setRoomSince(since: number): void {
+    this.roomSince = since > 0 ? since : 0;
   }
 
   /** Fetch display names and published addresses for authors we have seen.
@@ -311,9 +333,21 @@ export class ChatClient {
    *
    *  Every wrap is signed by a one-time key, so this filter reveals only that
    *  *someone* is addressing us — which is the point of the wrap. */
-  subscribeDms(pubkey: string): void {
+  subscribeDms(pubkey: string, since = 0): void {
     if (!this.live) return;
-    this.send(["REQ", "dms", { kinds: [KIND_GIFT_WRAP], "#p": [pubkey], limit: 500 }]);
+    // Every wrap costs a decrypt attempt before we can even tell it is ours, so
+    // re-fetching 500 of them on each connect was the most expensive thing chat
+    // did at startup. With a cursor we unwrap only what arrived since last time.
+    //
+    // NOTE on the timestamps: a NIP-17 wrap carries a RANDOMISED `created_at`,
+    // up to two days in the past, precisely so it cannot be correlated. So the
+    // cursor here is deliberately generous — two days plus the usual overlap —
+    // or a wrap dated before its own arrival would be filtered out and the
+    // message lost.
+    const WRAP_BACKDATE_SEC = 2 * 24 * 3600;
+    const filter: Record<string, unknown> = { kinds: [KIND_GIFT_WRAP], "#p": [pubkey], limit: 500 };
+    if (since > 0) filter.since = Math.max(0, since - WRAP_BACKDATE_SEC);
+    this.send(["REQ", "dms", filter]);
   }
 
   /** Our own mute list, so a block set on another device applies here. */
