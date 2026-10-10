@@ -25,7 +25,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "./i18n";
 import { getDeviceSeed } from "./lib/deviceseed";
 import { loadSentDms, recordSentDm } from "./lib/dmlog";
-import { cursor, loadDms, loadRoom, saveDm, saveNotes, setCursor } from "./lib/chatstore";
+import { cursor, loadDms, loadRoom, migrateSentDmLog, oldestHeld, roomCount, saveDm, saveNotes, setCursor } from "./lib/chatstore";
 import { activeToken } from "./wallets";
 import { useBackClose } from "./lib/backclose";
 import { useToast } from "./toast";
@@ -963,6 +963,10 @@ export function ChatScreen({
       // No mute-list subscription: mutes are local now, so asking the relay for
       // one only tells it which pubkey is yours and invites a frame we ignore.
       void (async () => {
+        // Fold the old localStorage log in before reading, so a thread comes
+        // from one place. Runs once per identity and then costs a single read.
+        const legacy = Object.values(loadSentDms(activeToken() ?? "")).flat();
+        if (legacy.length) await migrateSentDmLog(me, legacy);
         const [stored, since] = await Promise.all([loadDms(me), cursor(`dms:${me}`)]);
         if (meRef.current !== me) return;
         if (stored.size) {
@@ -1196,11 +1200,45 @@ export function ChatScreen({
 
   /** Pull in the previous page, keeping the reading position still. */
   const growFrom = useRef<number | null>(null);
+  /// True while a page is being fetched from the relay, so scrolling does not
+  /// fire the same request over and over while it is in flight.
+  const fetchingOlder = useRef(false);
   const loadEarlier = useCallback(() => {
     const el = listRef.current;
     growFrom.current = el ? el.scrollHeight - el.scrollTop : null;
     setLimit((n) => n + PAGE);
-  }, []);
+    // Reveal another page from the device first; only when the device has
+    // nothing older left does this cost a round trip. Without it, scrolling
+    // back past the cached window simply stopped — the store held 600 notes and
+    // the relay was never asked for the 601st.
+    void (async () => {
+      if (fetchingOlder.current) return;
+      const room = roomRef.current;
+      const held = store.current.notes.size;
+      const onDisk = await roomCount(room);
+      if (onDisk > held) {
+        const more = (await loadRoom(room, held + PAGE * 2)) as ChatEvent[];
+        if (roomRef.current !== room) return;
+        let added = 0;
+        for (const ev of more) {
+          if (ev?.id && !store.current.notes.has(ev.id)) { store.current.notes.set(ev.id, ev); added += 1; }
+        }
+        if (added) { bump(); return; }
+      }
+      // The device is spent: ask the relay for the page behind the oldest note
+      // we have. `until` is exclusive of nothing, so the oldest is re-sent and
+      // de-duplicated by id, which is cheaper than risking a gap.
+      const oldest = await oldestHeld(room);
+      if (!oldest || roomRef.current !== room) return;
+      fetchingOlder.current = true;
+      client.current?.requestOlder(oldest);
+      // Released on a timer rather than on an event: a relay with nothing older
+      // answers with EOSE and no events, which is indistinguishable from a slow
+      // one. Five seconds is long enough not to hammer and short enough that a
+      // second scroll works.
+      setTimeout(() => { fetchingOlder.current = false; }, 5_000);
+    })();
+  }, [bump]);
   useLayoutEffect(() => {
     const el = listRef.current;
     if (!el || growFrom.current === null) return;

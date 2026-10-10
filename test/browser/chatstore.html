@@ -49,6 +49,26 @@ try {
   ok("forgetAllChat clears rooms", (await S.loadRoom("global")).length === 0);
   ok("forgetAllChat clears DMs", (await S.loadDms("OTHER")).size === 0);
   ok("forgetAllChat clears cursors", (await S.cursor("room:global")) === 0);
+  // paging support: oldest + count
+  await S.saveNotes("page", [note("o1", 10), note("o2", 20), note("o3", 30)]);
+  ok("oldestHeld finds the oldest", (await S.oldestHeld("page")) === 10, String(await S.oldestHeld("page")));
+  ok("roomCount counts the room", (await S.roomCount("page")) === 3);
+  ok("oldestHeld is 0 for an unknown room", (await S.oldestHeld("none")) === 0);
+
+  // the one-time migration of the old localStorage sent-DM log
+  const legacy = [
+    { id: "L1", peer: "CARL", content: "from the old log", created_at: 5 },
+    { id: "L2", peer: "CARL", content: "second", created_at: 6 },
+  ];
+  const first = await S.migrateSentDmLog("ME2", legacy);
+  ok("migration runs the first time", first === true);
+  const after = await S.loadDms("ME2");
+  ok("migrated rows land in the thread", (after.get("CARL") || []).length === 2);
+  ok("migrated rows are marked mine", (after.get("CARL") || []).every(r => r.mine === true));
+  const second = await S.migrateSentDmLog("ME2", legacy);
+  ok("migration does not run twice", second === false);
+  ok("no duplicates after a re-run", ((await S.loadDms("ME2")).get("CARL") || []).length === 2);
+  await S.forgetAllChat();
 } catch (e) { log.push("THREW  " + e); }
 document.getElementById("out").textContent = log.join("\n");
 </script></body>

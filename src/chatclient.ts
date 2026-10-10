@@ -297,6 +297,19 @@ export class ChatClient {
   }
 
   /**
+   * Ask for notes OLDER than `until` — the page behind what we hold.
+   *
+   * Its own subscription id so it replaces itself rather than stacking: a
+   * relay keeps a small number of subscriptions per connection, and scrolling
+   * back repeatedly would otherwise exhaust them and silently kill the live
+   * room feed.
+   */
+  requestOlder(until: number, limit = 100): void {
+    if (!this.live || !(until > 0)) return;
+    this.send(["REQ", "older", { kinds: [KIND_NOTE], "#t": [this.room], until, limit }]);
+  }
+
+  /**
    * How far the local store already covers this room, in seconds.
    *
    * Set before connecting (and on every room switch) so the subscription can

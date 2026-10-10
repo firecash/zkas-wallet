@@ -182,6 +182,38 @@ async function pruneRoom(room: string): Promise<void> {
   });
 }
 
+/** The oldest `created_at` held for a room, or 0 when nothing is cached. */
+export async function oldestHeld(room: string): Promise<number> {
+  const db = await open();
+  if (!db) return 0;
+  return new Promise((resolve) => {
+    try {
+      const idx = db.transaction(NOTES, "readonly").objectStore(NOTES).index("room_time");
+      const cur = idx.openCursor(IDBKeyRange.bound([room, -Infinity], [room, Infinity]), "next");
+      cur.onsuccess = () => resolve((cur.result?.value as StoredNote | undefined)?.created_at ?? 0);
+      cur.onerror = () => resolve(0);
+    } catch {
+      resolve(0);
+    }
+  });
+}
+
+/** How many notes are held for a room — tells paging when the cache is spent. */
+export async function roomCount(room: string): Promise<number> {
+  const db = await open();
+  if (!db) return 0;
+  return new Promise((resolve) => {
+    try {
+      const idx = db.transaction(NOTES, "readonly").objectStore(NOTES).index("room_time");
+      const req = idx.count(IDBKeyRange.bound([room, -Infinity], [room, Infinity]));
+      req.onsuccess = () => resolve(req.result ?? 0);
+      req.onerror = () => resolve(0);
+    } catch {
+      resolve(0);
+    }
+  });
+}
+
 // --- private messages -----------------------------------------------------
 
 /** Every conversation this identity holds, oldest-first within each. */
@@ -224,6 +256,30 @@ export async function saveDm(row: StoredDm): Promise<void> {
       resolve();
     }
   });
+}
+
+/**
+ * Move the old localStorage sent-DM log into this store, once.
+ *
+ * `dmlog` was added hours before this store existed and holds only the SENT
+ * half, in localStorage, keyed by wallet token. Two sources for one thread is
+ * how halves go missing, so it is copied in and cleared. Idempotent: the rows
+ * carry their own ids, so a re-run overwrites rather than duplicates, and the
+ * marker makes the common case a single read.
+ */
+export async function migrateSentDmLog(
+  me: string,
+  rows: { id: string; peer: string; content: string; created_at: number }[],
+): Promise<boolean> {
+  if (!me || !rows.length) return false;
+  const marker = `dmlog-migrated:${me}`;
+  const done = await tx<{ key: string; at: number }>(META, "readonly", (s2) => s2.get(marker) as IDBRequest<{ key: string; at: number }>);
+  if (done) return false;
+  for (const r of rows) {
+    await saveDm({ id: r.id, me, peer: r.peer, sender: me, content: r.content, created_at: r.created_at, mine: true });
+  }
+  await tx(META, "readwrite", (s2) => s2.put({ key: marker, at: Date.now() }) as IDBRequest<IDBValidKey>);
+  return true;
 }
 
 // --- cursors --------------------------------------------------------------
