@@ -792,6 +792,10 @@ export function ChatScreen({
       // Refused, or answered by silence: the message did not go.
       if (!accepted) setFailed((prev) => new Set(prev).add(id));
     });
+    // How far the device already covers a room. The client asks for this at
+    // subscribe time, which is the only moment it is reliably known — pushing
+    // it in from an effect always lost the race with `ws.onopen`.
+    c.setSinceProvider((room) => cursor(`room:${room}`));
     client.current = c;
     c.connect();
     return () => c.close();
@@ -841,7 +845,6 @@ export function ChatScreen({
         if (ev?.id && !store.current.notes.has(ev.id)) store.current.notes.set(ev.id, ev);
       }
       if (cached.length) bump();
-      client.current?.setRoomSince(since);
       client.current?.setRoom(room);
     })();
     return () => { alive = false; };

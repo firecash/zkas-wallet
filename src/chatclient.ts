@@ -172,8 +172,6 @@ export function relayReachable(): boolean {
 export class ChatClient {
   private ws: WebSocket | null = null;
   private onEvent: Handler;
-  /** Newest cached note time for the current room; 0 when nothing is cached. */
-  private roomSince = 0;
   private onState: StateHandler;
   private onAck: AckHandler;
   /** Events published and not yet answered, so a silent relay can time out. */
@@ -288,12 +286,22 @@ export class ChatClient {
     // room switch, and it makes the relay the only copy of data we already
     // hold. `roomSince` is the newest `created_at` in the local store, less a
     // few minutes of overlap; a first visit has none and falls back to the week.
-    const week = Math.floor(Date.now() / 1000) - 7 * 24 * 3600;
-    const since = this.roomSince > 0 ? Math.max(this.roomSince, week) : week;
-    this.send(["REQ", "room", { kinds: [KIND_NOTE], "#t": [this.room], since, limit: 200 }]);
-    // Reactions are small and arrive against notes we may have cached from any
-    // time, so they keep the week-wide window rather than the note cursor.
-    this.send(["REQ", "reactions", { kinds: [KIND_REACTION], "#t": [this.room], since: week, limit: 500 }]);
+    // Resolved HERE rather than pushed in. subscribeRoom runs from ws.onopen,
+    // which fires before any UI effect can hand a value over — so the setter
+    // version always read 0 and asked for the whole week on every visit with a
+    // full cache on disk. Measured against a recording relay: byte-identical
+    // `since` on the first and second visit. `room` is captured so a switch
+    // landing mid-await cannot publish a subscription for the room just left.
+    const room = this.room;
+    void this.sinceFor(room).then((roomSince) => {
+      if (this.room !== room || !this.live) return;
+      const week = Math.floor(Date.now() / 1000) - 7 * 24 * 3600;
+      const since = roomSince > 0 ? Math.max(roomSince, week) : week;
+      this.send(["REQ", "room", { kinds: [KIND_NOTE], "#t": [room], since, limit: 200 }]);
+      // Reactions are small and arrive against notes cached from any time, so
+      // they keep the week-wide window rather than the note cursor.
+      this.send(["REQ", "reactions", { kinds: [KIND_REACTION], "#t": [room], since: week, limit: 500 }]);
+    });
   }
 
   /**
@@ -316,8 +324,12 @@ export class ChatClient {
    * ask only for what is missing. Zero means "no cache", which asks for the
    * usual week.
    */
-  setRoomSince(since: number): void {
-    this.roomSince = since > 0 ? since : 0;
+/** How far the device covers a room. Injected, so this file keeps no
+   *  dependency on the storage layer and a test can supply its own. */
+  private sinceFor: (room: string) => Promise<number> = async () => 0;
+
+  setSinceProvider(fn: (room: string) => Promise<number>): void {
+    this.sinceFor = fn;
   }
 
   /** Fetch display names and published addresses for authors we have seen.
@@ -571,7 +583,12 @@ export function countUnread(opts: {
     ws.onopen = () => {
       // One filter covers every followed room; `since` is the OLDEST cursor and
       // each event is then checked against its own room's cursor below.
-      const oldest = Math.min(...rooms.map((r) => since(r)));
+      // Floored at a week. `since(r)` is the READ cursor, which is 0 for a room
+      // the user has never opened — and one such room among six dragged the
+      // whole filter back to the beginning of time, pulling every note the
+      // relay holds just to put a number on a chip.
+      const week = Math.floor(Date.now() / 1000) - 7 * 24 * 3600;
+      const oldest = Math.max(week, Math.min(...rooms.map((r) => since(r))));
       ws.send(JSON.stringify(["REQ", "unread", { kinds: [KIND_NOTE], "#t": rooms, since: oldest, limit: 300 }]));
       if (mine) ws.send(JSON.stringify(["REQ", "unread-dm", { kinds: [KIND_GIFT_WRAP], "#p": [mine], limit: 300 }]));
     };
