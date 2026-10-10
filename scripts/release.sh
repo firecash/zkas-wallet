@@ -169,8 +169,31 @@ fi
 # unsigned (Windows, Linux), so every OS warns on first launch; the notes say
 # exactly what to click, because the README is not what a downloader is looking
 # at when the warning appears. Keep in step with README "First launch".
+# What actually changed, lifted from CHANGELOG.md for the version being shipped
+# (an -rcN carries its base version's section). Without this the release page
+# said only how to get past the first-launch warning — true, and nothing about
+# the release.
+CHANGELOG_SECTION="$(python3 - "$VERSION" <<'PYEOF'
+import re, sys, pathlib
+version = sys.argv[1].split("-rc")[0]
+try:
+    text = pathlib.Path("CHANGELOG.md").read_text()
+except OSError:
+    sys.exit(0)
+m = re.search(rf"^## {re.escape(version)}\s*$(.*?)(?=^## |\Z)", text, re.S | re.M)
+if m:
+    body = m.group(1).strip()
+    if body:
+        print(body)
+PYEOF
+)"
+
 RELEASE_NOTES="$(cat <<EOF
 zkas-wallet $VERSION
+
+$CHANGELOG_SECTION
+
+---
 
 **Desktop first launch.** These builds are ad-hoc signed on macOS (not notarized) and unsigned on Windows and Linux, so each OS warns once:
 

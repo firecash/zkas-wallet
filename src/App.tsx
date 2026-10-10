@@ -60,6 +60,8 @@ import { listWallets as listAllWallets } from "./wallets";
 import { MANAGED_ZKAS_RPC, STANDALONE_ZKAS_RPC_EXAMPLE } from "./ports";
 import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
 import { failureText } from "./lib/failure";
+import { ensureChatEngine } from "./chatclient";
+import { forgetDmsFor } from "./lib/chatstore";
 import { NothingToLock } from "./applock";
 import { loadSendDraft, saveSendDraft, clearSendDraft } from "./lib/senddraft";
 import { wipeWalletState } from "./walletstate";
@@ -8420,6 +8422,22 @@ function SwitchWallet() {
               // Hosted: dropping the token is what makes this device forget it —
               // we must not delete server state on a shared daemon.
               if (isDesktop()) await forgetWallet(w.token);
+              // The private messages this wallet's chat identity holds, BEFORE
+              // the seed goes — the identity is derived from it, so once
+              // wipeWalletState removes the seed there is no way to name the
+              // rows to delete. Chat history in IndexedDB was the one store
+              // removal did not reach: the localStorage log was swept and the
+              // conversations themselves stayed on the device.
+              try {
+                const seed = localStorage.getItem(`device_seed_${w.token}`);
+                if (seed) {
+                  const engine = await ensureChatEngine();
+                  const id = await engine.chatIdentity(seed, 0);
+                  await forgetDmsFor(id.pubkey_hex);
+                }
+              } catch {
+                /* no seed, no engine, or a watch-only wallet: nothing keyed to drop */
+              }
               wipeWalletState(w.token);
               forgetWalletLock(w.token);
               // Its balance baseline and arrival records go too: a new wallet under a
