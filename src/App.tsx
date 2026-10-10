@@ -34,7 +34,7 @@ import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText, sanitizeAmountInput } from "./lib/utils";
 import { SEED_REQUIRED, resolveDeviceSeed, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
-import { masterMnemonic, setMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
+import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -4176,6 +4176,9 @@ function Onboard({
   const create = async () => {
     setBusy(true);
     setError("");
+    // True only when THIS creation adopts the phrase as the device master, so the
+    // rollback below clears exactly what it wrote and never an existing master.
+    let adoptedMaster = false;
     try {
       // Never create over a key this device still holds: creating registers a NEW
       // wallet under the SAME token and would replace the old seed in storage.
@@ -4205,6 +4208,7 @@ function Onboard({
         // Cache the derived key in the per-token slot so every existing
         // (synchronous) path keeps working; the phrase is the backup, not the cache.
         setMasterMnemonic(w.mnemonic);
+        adoptedMaster = true;
         secret = await accountSeedHex(w.mnemonic, 0);
         if (token) setAccountOf(token, 0);
       }
@@ -4217,12 +4221,40 @@ function Onboard({
       if (!(await persistDeviceSeed(secret))) {
         throw new Error(t("onboard.errStore"));
       }
-      const { address } = await api.watch(await fvkHex(secret), birthday);
+      let address: string;
+      try {
+        ({ address } = await api.watch(await fvkHex(secret), birthday));
+      } catch (e) {
+        // ROLL THE WHOLE THING BACK. The key is written before registration on
+        // purpose — a registered wallet whose key never landed can receive
+        // coins it cannot spend — but when registration then fails, keeping it
+        // was worse: `onCreated` never ran, so the phrase was NEVER SHOWN and
+        // no backup reminder was recorded, while `device_mnemonic` stayed on
+        // the device as this device's MASTER. The next "Add account" derived a
+        // real, fundable wallet from a phrase the user had never seen and was
+        // never reminded about — one cleared browser from permanent loss. And
+        // "Create new wallet" refused from then on ("this device already holds
+        // a wallet key"), with no path forward on the welcome screen.
+        //
+        // Nothing was registered, so nothing is lost by undoing it.
+        const token = activeToken();
+        try {
+          if (token) {
+            clearAccountOf(token);
+            wipeWalletState(token);
+            forgetWalletLock(token);
+          }
+          if (adoptedMaster) clearMasterMnemonic();
+        } catch {
+          /* best effort: the error below is what the user acts on */
+        }
+        throw e;
+      }
       rememberBirthday(birthday, address);
       // The backup screen shows the PHRASE — that is what restores everything.
       onCreated(w.mnemonic, w.address);
     } catch (e) {
-      setError((e as Error).message);
+      setError(failureText(e));
     } finally {
       setBusy(false);
     }
@@ -6162,6 +6194,12 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
 /// fee. It also carries PartialSendError, which reports money ALREADY in flight.
 /// The daemon's own HTTP errors displayed correctly throughout, because those are
 /// real Errors — which is precisely why this stayed invisible.
+/// Thrown when the active wallet changes while a payment is being made. The
+/// payment is abandoned: everything downstream resolves the wallet at the
+/// moment it runs, so continuing would spend from an account the user did not
+/// choose on a Confirm screen still showing the first one's figures.
+const WALLET_CHANGED = "wallet-changed-mid-send";
+
 function Send({
   status,
   onSent,
@@ -6429,12 +6467,28 @@ function Send({
     setBusy(true);
     setEngineBusy(true); // on-device engine is now busy proving/broadcasting — keep the status poll from crying "unreachable"
     setError("");
+    // WHICH WALLET THIS PAYMENT IS FROM. Captured before anything is signed,
+    // and checked again at every step below.
+    //
+    // Everything downstream re-reads the active wallet at the moment it runs —
+    // `getToken()` per request, `resolveDeviceSeed` from current state — so a
+    // switch in ANOTHER TAB while this Confirm sheet sat open silently
+    // re-targeted the payment. The sheet kept showing the first wallet's amount
+    // and recipient, the key check then passed against the SECOND wallet, and
+    // prepare/sign/broadcast ran on an account the user never chose. Two tabs
+    // on a desktop, or a phone and a desktop sharing one daemon, is enough.
+    //
+    // The status poll already captures its token for exactly this reason; the
+    // money path did not.
+    const payingFrom = activeToken();
+    const stillSameWallet = () => activeToken() === payingFrom;
     try {
       // Signed on-device; the seed resolves silently from this device's storage.
       // Only a wallet restored on a NEW device has to be unlocked once.
       let seed: string;
       try {
         seed = await resolveDeviceSeed(status?.address ?? undefined);
+        if (!stillSameWallet()) throw new Error(WALLET_CHANGED);
       } catch (e) {
         if ((e as Error).message === SEED_REQUIRED) {
           if (!isSecretShaped(unlock.trim())) {
@@ -6489,6 +6543,11 @@ function Send({
       // fails after submitting must not hand the same prepare to the retry.
       const early = ahead.current;
       ahead.current = null;
+      // The last gate before anything leaves the device. `sendNonCustodial`
+      // prepares, signs and broadcasts, and each of its requests re-reads the
+      // active wallet — so the check belongs immediately before it, not only at
+      // the top of this function.
+      if (!stillSameWallet()) throw new Error(WALLET_CHANGED);
       const r = await sendNonCustodial(
         seed.trim(),
         networkOf(status),
@@ -6563,7 +6622,11 @@ function Send({
         }));
         setConfirming(false);
       } else {
-        setError(failureText(e));
+        setError(
+        (e as Error)?.message === WALLET_CHANGED
+          ? t("send.walletChanged")
+          : failureText(e),
+      );
         setConfirming(false);
       }
     } finally {
@@ -7187,7 +7250,7 @@ const History = memo(function History({
     // Finished when rows actually arrived, or when a scan that we WATCHED START has
     // completed. A wallet that never transacted legitimately produces zero rows, so
     // rows alone cannot be the only exit.
-    if ((chain?.rows.length ?? 0) > 0 || (synced && sawUnsynced.current)) setRecovering(false);
+    if ((chain?.rows?.length ?? 0) > 0 || (synced && sawUnsynced.current)) setRecovering(false);
   }, [recovering, chain, synced]);
   useEffect(() => {
     let live = true;

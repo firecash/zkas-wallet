@@ -1,3 +1,4 @@
+import { readLocal } from "./lib/safestore";
 // Thin client for the zkas-walletd daemon.
 //
 // Default: the HOSTED daemon, reached same-origin at `<origin>/daemon` (nginx
@@ -354,7 +355,7 @@ export function setToken(token: string) {
 // A random per-browser wallet token. On the hosted daemon this selects THIS
 // browser's wallet; losing it (clearing storage) means restoring from seed.
 export function getToken(): string {
-  let t = localStorage.getItem("wallet_token");
+  let t = readLocal("wallet_token");
   if (!t) {
     const b = new Uint8Array(16);
     crypto.getRandomValues(b);
@@ -705,6 +706,31 @@ export async function touchWallet(token: string, timeoutMs = 20_000): Promise<bo
   }
 }
 
+/**
+ * Make a history response safe to render.
+ *
+ * A row whose `amountZkas` was missing took down the WHOLE wallet — balance,
+ * Send, Receive, everything — because `r.amountZkas.toFixed(8)` throws and the
+ * nearest error boundary wraps the entire app, not the History tab. The same
+ * response shape is handled defensively everywhere else in this file ("older
+ * daemons omit X"), and a history row is exactly the kind of thing an older or
+ * partially-upgraded daemon gets wrong.
+ *
+ * A row that cannot be understood is dropped rather than repaired: inventing an
+ * amount would put a wrong number in a list of payments, which is worse than a
+ * missing line. `rows` itself is coerced to an array because a 200 with an
+ * empty body parses to `{}`, and `chain.rows.length` then threw.
+ */
+function saneHistory(h: ChainHistory | null | undefined): ChainHistory {
+  const src = (h ?? {}) as Partial<ChainHistory>;
+  const rows = Array.isArray(src.rows) ? src.rows : [];
+  return {
+    ...(src as ChainHistory),
+    rows: rows.filter((r) => r && typeof r === "object" && Number.isFinite((r as { amountZkas?: unknown }).amountZkas)),
+    pendingOutgoing: Array.isArray(src.pendingOutgoing) ? src.pendingOutgoing : [],
+  };
+}
+
 export const api = {
   // 4s, not the 10s default. This is the 1 Hz poll and the daemon answers it
   // from memory in milliseconds, so a reply that takes longer than four seconds
@@ -804,7 +830,7 @@ export const api = {
   // `limit` caps the page the daemon serialises under the wallet lock: the tab shows
   // HISTORY_PAGE rows unless "show all" is pressed, so it asks for only that many.
   history: (limit?: number) =>
-    req<ChainHistory>("GET", `/api/wallet/history${limit ? `?limit=${limit}` : ""}`, undefined, 30_000),
+    req<ChainHistory>("GET", `/api/wallet/history${limit ? `?limit=${limit}` : ""}`, undefined, 30_000).then(saneHistory),
   // Proof of payment. The daemon re-reads the transaction from the chain and discloses
   // what OUR OWN send paid and to whom — the note's recipient, amount, memo and the one
   // random seed that lets anybody recompute the on-chain commitment. Nothing about the

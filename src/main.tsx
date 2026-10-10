@@ -1,3 +1,7 @@
+// FIRST, before anything reads storage: a browser that blocks site data throws
+// from the accessor itself, and one unguarded read anywhere took the whole
+// wallet down with an unrecoverable error screen.
+import "./lib/storage-shim";
 import { Component, lazy, StrictMode, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";

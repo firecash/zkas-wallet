@@ -76,6 +76,23 @@ export function setMasterMnemonic(phrase: string): void {
   }
 }
 
+/**
+ * Forget the device master phrase.
+ *
+ * Only for undoing a wallet creation that failed before the phrase was ever
+ * shown. A phrase that has been displayed, or that any wallet is derived from,
+ * must never be cleared this way — that is fund loss, which is why there is no
+ * general "forget the master" anywhere else.
+ */
+export function clearMasterMnemonic(): void {
+  try {
+    localStorage.removeItem(MASTER_KEY);
+    localStorage.removeItem("mnemonic_unsealed");
+  } catch {
+    /* best effort */
+  }
+}
+
 export function hasMaster(): boolean {
   return masterMnemonic().length > 0;
 }

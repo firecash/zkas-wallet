@@ -1,3 +1,4 @@
+import { readLocal } from "./safestore";
 import { getDeviceSeed } from "./deviceseed";
 import i18n from "../i18n";
 
@@ -21,7 +22,7 @@ export function isViewKey(value: string): boolean {
 }
 
 function watchKeyName(): string {
-  return `watch_fvk_${localStorage.getItem("wallet_token") || "default"}`;
+  return `watch_fvk_${readLocal("wallet_token") || "default"}`;
 }
 
 export function watchKey(): string {

@@ -1,3 +1,4 @@
+import { readLocal } from "./safestore";
 import { loadStatusCache, type Status } from "../api";
 import { addressFromSeed, accountAddress, accountSeedHex, type Network } from "../signer";
 import { unlockedDeviceSeed, isLockEnabled, sealNewSeed, allUnlockedSeeds } from "../applock";
@@ -15,7 +16,7 @@ export function isSecretShaped(v: string): boolean {
 }
 
 function deviceSeedKey(): string {
-  return `device_seed_${localStorage.getItem("wallet_token") || "default"}`;
+  return `device_seed_${readLocal("wallet_token") || "default"}`;
 }
 
 export function getDeviceSeed(): string {

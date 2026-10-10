@@ -345,6 +345,21 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     };
   }
 
+  // A cursor of ZERO is not a finished count, whatever `synced` says.
+  //
+  // A daemon that is simply WRONG about `synced` — restarting, or answering
+  // with a chain length of 0 — reached this branch and the screen said
+  // "0 ZKAS · Ready" with Send enabled, for a funded wallet whose own History
+  // still listed its payments. The zero was then written through to
+  // `last_final_balance_` and the status cache, so it outlived the daemon and
+  // came back after a reload as "Last confirmed balance 0 ZKAS".
+  //
+  // Rule 1 of this file is never to present an unfinished count as a balance;
+  // one bad boolean should not bypass it. Only `balanceIsFinal` changes here —
+  // the phase stays "ready", because the opening bar is driven by a genuinely
+  // unknown cursor and a wallet mid-reload with real history behind it should
+  // not be thrown back to the opening screen.
+  const cursorKnown = s.scannedBlocks > 0;
   return {
     phase: "ready",
     label: i18n.t("status.readyLabel"),
@@ -354,7 +369,7 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     progress: null,
     eta: null,
     tone: "ok",
-    balanceIsFinal: true,
+    balanceIsFinal: cursorKnown,
     canSpend: walletCanSpend(s),
   };
 }

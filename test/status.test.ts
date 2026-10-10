@@ -333,3 +333,25 @@ describe("a wallet that is behind but can still pay", () => {
     expect(v.label).not.toBe("Ready to pay · still catching up");
   });
 });
+
+describe("a daemon that is wrong about being synced", () => {
+  // Reported from a failure-mode audit: flipping a healthy wallet to
+  // `synced:true, scanned_blocks:0, balance 0` produced "0 ZKAS · Ready" with
+  // Send enabled, for a wallet whose own History still listed its payments —
+  // and that zero was written through to the last-confirmed figure, so it
+  // survived the daemon dying and a reload.
+  // StatusInput is the NORMALISED shape (scannedBlocks, not scanned_blocks) —
+  // using the wire names made the first case pass for the wrong reason.
+  const base: StatusInput = {
+    online: true, synced: true, scannedBlocks: 0, chainLen: 0,
+    warming: false, loading: false, hasWallet: true,
+  } as StatusInput;
+
+  it("does not call a zero-cursor balance final", () => {
+    expect(walletStatus(base).balanceIsFinal).toBe(false);
+  });
+
+  it("does call it final once the cursor is real", () => {
+    expect(walletStatus({ ...base, scannedBlocks: 1000, chainLen: 1000 }).balanceIsFinal).toBe(true);
+  });
+});

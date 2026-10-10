@@ -1,3 +1,4 @@
+import { readLocal } from "./lib/safestore";
 // On-device record of sends performed from THIS device, scoped to the wallet
 // token. The daemon exposes no per-wallet transaction history, so this powers two
 // things purely client-side (nothing here ever leaves the device):
@@ -47,7 +48,7 @@ const PENDING_MAX_AGE_MS = 20 * 60 * 1000;
 const EPS = 1e-6;
 
 function key(): string {
-  return `local_txs_${localStorage.getItem("wallet_token") || "default"}`;
+  return `local_txs_${readLocal("wallet_token") || "default"}`;
 }
 
 export function loadTxs(): LocalTx[] {

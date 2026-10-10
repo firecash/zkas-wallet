@@ -1,3 +1,4 @@
+import { readLocal } from "./lib/safestore";
 // Several wallets on one device.
 //
 // The daemon has always been multi-wallet: every wallet is identified by a token
@@ -40,7 +41,7 @@ function save(list: WalletRef[]): void {
 }
 
 export function activeToken(): string | null {
-  return localStorage.getItem("wallet_token");
+  return readLocal("wallet_token");
 }
 
 /**

@@ -1,3 +1,4 @@
+import { readLocal } from "./lib/safestore";
 import { forgetSentDms } from "./lib/dmlog";
 // Removing a wallet, completely.
 //
@@ -109,7 +110,7 @@ function registry(): { token: string; address?: string }[] {
  * reloading afterwards.
  */
 export function wipeWalletState(token: string | null): void {
-  const t = token || localStorage.getItem("wallet_token") || "default";
+  const t = token || readLocal("wallet_token") || "default";
   // The birthday is also kept per ADDRESS (`birthday_addr_<address>`, see
   // rememberBirthday in lib/deviceseed). Find the address before the status cache
   // that names it is gone, and leave the copy alone when another registered wallet
