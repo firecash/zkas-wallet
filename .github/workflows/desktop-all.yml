@@ -94,6 +94,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: firecash/zkas-rusty
+          # Pinned to the security fork (mainnet DAA 6,983,500). Tracking the
+          # default branch built whatever main happened to be: v1.0.45's desktop
+          # binaries were built against the superseded F=8,700,500 and sign
+          # spends that post-fork nodes refuse. Pinning makes which consensus
+          # rules a desktop build carries a reviewable part of this repo.
+          ref: 01ac1865
           path: rusty-kaspa
 
       - uses: actions/setup-node@v4

@@ -579,11 +579,20 @@ export function abortInFlight(): void {
   inFlight.clear();
 }
 
-async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 10_000): Promise<T> {
+/**
+ * `asToken` addresses a request at a SPECIFIC wallet rather than the active one.
+ *
+ * Needed because registering a new wallet used to require making it active
+ * first — every call reads `getToken()` — so for as long as registration took
+ * (up to the 180s `watch` timeout) the app was pointed at a wallet the daemon
+ * had never heard of. Naming the wallet explicitly lets it be created while the
+ * user stays where they are.
+ */
+async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 10_000, asToken?: string): Promise<T> {
   let status: number;
   let statusText = "";
   let text: string;
-  const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
+  const headers: Record<string, string> = { "X-Wallet-Token": asToken || getToken() };
   const bearer = getWalletdBearer();
   if (bearer) headers.Authorization = `Bearer ${bearer}`;
   if (body) headers["Content-Type"] = "application/json";
@@ -755,8 +764,12 @@ export const api = {
   // `create`/`import` (which put the seed on the server) remain only for a
   // self-hosted daemon you run yourself. The daemon always records chain history
   // (own sends' recipient/amount/memo via the OVK) from the very first scan.
-  watch: (fvk_hex: string, birthday?: number) =>
-    req<{ address: string }>("POST", "/api/wallet/watch", { fvk_hex, birthday: birthday ?? 0 }, 180_000),
+  // `asToken` registers the key against a wallet that is NOT the active one, so
+  // a new account can be created without switching to it first. The timeout is
+  // long because a watch on a busy daemon genuinely can take minutes; callers
+  // that are blocking a button on it should pass something shorter.
+  watch: (fvk_hex: string, birthday?: number, asToken?: string, timeoutMs = 180_000) =>
+    req<{ address: string }>("POST", "/api/wallet/watch", { fvk_hex, birthday: birthday ?? 0 }, timeoutMs, asToken),
   // `memo` rides inside the recipient's encrypted note — readable by them, and by
   // this wallet through its OVK-recovered history. The daemon has always accepted
   // it; the UI simply never offered it. Custodial send proves in-daemon — allow

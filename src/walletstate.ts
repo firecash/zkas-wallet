@@ -128,9 +128,23 @@ export function wipeWalletState(token: string | null): void {
     if (k?.startsWith("qr_")) localStorage.removeItem(k);
   }
 
-  // The token itself last: on desktop the shell rotates it and hands back a new
-  // one, and in the browser a fresh one is minted on demand. Either way the next
-  // wallet must not answer to the removed wallet's name.
-  localStorage.removeItem("wallet_token");
-  sessionStorage.clear();
+  // The token itself last, and ONLY if the wallet being wiped is the active one.
+  //
+  // This removed it unconditionally, so wiping any OTHER wallet signed the user
+  // out of the one they were using: `getToken()` mints a fresh token on demand,
+  // which then registers itself as a new empty wallet and becomes active. A
+  // failed "Add account" rolling back its half-made wallet ejected the user into
+  // a brand-new "Wallet 2" — strictly worse than the failure it was cleaning up.
+  //
+  // When it IS the active wallet, removal stands: on desktop the shell rotates
+  // the token and hands back a new one, and in the browser a fresh one is minted
+  // on demand. Either way the next wallet must not answer to the removed one's
+  // name.
+  const wipingActive = t === (readLocal("wallet_token") || "default");
+  if (wipingActive) {
+    localStorage.removeItem("wallet_token");
+    // Session state belongs to the wallet that was on screen, so it only goes
+    // when that is the wallet being wiped.
+    sessionStorage.clear();
+  }
 }

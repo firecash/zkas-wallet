@@ -98,14 +98,25 @@ function nextLabelNumber(list: WalletRef[]): number {
   return Math.max(highest + 1, list.length + 1);
 }
 
-export function addWallet(): string {
+/**
+ * Mint a wallet. `activate` switches to it; pass false to create one in the
+ * background.
+ *
+ * It always activated, which forced "Add account" to switch to the new wallet
+ * BEFORE the daemon had registered it — so for as long as registration took,
+ * the app was pointed at a wallet that did not exist. The bar showed the new
+ * name and account number while the address and balance still came from the
+ * previous wallet's state, and a registration that hung left the user there
+ * for minutes.
+ */
+export function addWallet(activate = true): string {
   const b = new Uint8Array(16);
   crypto.getRandomValues(b);
   const token = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
   const list = listWallets();
   list.push({ token, label: i18n.t("wallets.defaultLabel", { n: nextLabelNumber(list) }) });
   save(list);
-  localStorage.setItem("wallet_token", token);
+  if (activate) localStorage.setItem("wallet_token", token);
   return token;
 }
 
