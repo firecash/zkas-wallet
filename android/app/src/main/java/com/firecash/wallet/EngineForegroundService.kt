@@ -26,14 +26,48 @@ import androidx.core.app.NotificationCompat
 class EngineForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onDestroy() {
+        // Clear the armed flag however this service ended — including a system kill.
+        // Without this, `start()`'s idempotence check would believe a dead service is
+        // still holding the process and never arm a replacement.
+        running = false
+        super.onDestroy()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val text = intent?.getStringExtra(EXTRA_TEXT) ?: DEFAULT_TEXT
         ensureChannel()
         val notification = build(text)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        // `startForeground` CAN THROW, and an uncaught throw in a Service kills the app.
+        //
+        // `start()` below guards `startForegroundService`, but that is a different call
+        // at a different time: the system accepts it and then runs this method later. By
+        // then the process may no longer be eligible to hold a foreground service — on
+        // Android 12+ a background start raises ForegroundServiceStartNotAllowedException,
+        // and on 14 the dataSync type is additionally budgeted (~6 h/day) and refuses once
+        // spent. The app re-armed this from its status poll every 30 s while hidden, so a
+        // wallet still syncing when the user switched apps had a refusal arriving on the
+        // main thread with nothing to catch it.
+        //
+        // Reported as: the app crashes when opened during the daily sync, once per wallet,
+        // and the sync appears to start over afterwards — the crash skips
+        // `flush_checkpoints_on_exit`, so the scan progress since the last periodic save
+        // goes with it.
+        //
+        // A refusal is not an error worth dying for: the engine keeps syncing for as long
+        // as the app is open, exactly as it does on a device that never granted the
+        // permission. Stand down and let the next arm (or the WorkManager path) try again.
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            running = true
+        } catch (_: Throwable) {
+            running = false
+            stopSelf()
+            return START_NOT_STICKY
         }
         // Not sticky: if the OS still kills us, the app re-arms this on its next status poll.
         return START_NOT_STICKY
@@ -71,17 +105,36 @@ class EngineForegroundService : Service() {
         const val EXTRA_TEXT = "text"
         const val DEFAULT_TEXT = "Syncing your wallet on this phone…"
 
+        /** True while this service holds a foreground notification. */
+        @Volatile
+        private var running = false
+
+        /**
+         * Arm the service, unless it is already armed.
+         *
+         * The idempotence matters: the app arms this from its status poll, which runs
+         * every second in the foreground and every 30 s hidden, and each arm was a fresh
+         * `startForegroundService` + `onStartCommand` + `startForeground` for a service
+         * that was already running.
+         */
         fun start(ctx: Context, text: String = DEFAULT_TEXT) {
+            if (running) return
             val i = Intent(ctx, EngineForegroundService::class.java).putExtra(EXTRA_TEXT, text)
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i) else ctx.startService(i)
             } catch (_: Throwable) {
                 // Background-start restrictions or a missing permission: the sync still runs
                 // while the app is open; we just cannot promise it survives the screen going off.
+                running = false
             }
         }
 
+        /** True while this app is holding the process open to finish a sync. */
+        @JvmStatic
+        fun isRunning(): Boolean = running
+
         fun stop(ctx: Context) {
+            running = false
             try { ctx.stopService(Intent(ctx, EngineForegroundService::class.java)) } catch (_: Throwable) {}
         }
     }

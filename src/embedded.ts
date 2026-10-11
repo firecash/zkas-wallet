@@ -353,11 +353,32 @@ export async function setEngineDebugLogs(on: boolean): Promise<void> {
 }
 
 let keptAlive: boolean | null = null;
-/** Hold the engine's foreground service while a sync is in progress, release it once
- * synced. Idempotent and cheap: only crosses the bridge when the state changes. */
+let keptAliveAt = 0;
+/** How often to re-assert "still syncing" even when nothing has changed. */
+const KEEPALIVE_REASSERT_MS = 60_000;
+/**
+ * Hold the engine's foreground service while a sync is in progress, release it once
+ * synced.
+ *
+ * Re-asserted on a timer rather than latched. The service is declared
+ * START_NOT_STICKY on the promise that "the app re-arms this on its next status
+ * poll" — but latching on the last value sent meant that never happened: the state
+ * only changes when `synced` flips, so after Android killed the service (its own
+ * decision, or the dataSync budget running out) the app went on believing the
+ * process was protected. The engine was then frozen on the next background, losing
+ * everything since the last periodic checkpoint, which is what "the sync starts
+ * again from the beginning when I switch apps" looks like from outside.
+ *
+ * Re-asserting is cheap: the native side no-ops when the service is already armed,
+ * so this costs one bridge call a minute during a sync and nothing at all once
+ * synced.
+ */
 export async function engineKeepAlive(on: boolean): Promise<void> {
   if (!embeddedAvailable() || !embeddedChosen()) return;
-  if (keptAlive === on) return;
+  const stale = Date.now() - keptAliveAt >= KEEPALIVE_REASSERT_MS;
+  // Releasing is a one-shot: there is nothing to keep re-asserting once synced.
+  if (keptAlive === on && (!on || !stale)) return;
   keptAlive = on;
-  await Native.keepAlive({ on }).catch(() => { keptAlive = null; });
+  keptAliveAt = Date.now();
+  await Native.keepAlive({ on }).catch(() => { keptAlive = null; keptAliveAt = 0; });
 }

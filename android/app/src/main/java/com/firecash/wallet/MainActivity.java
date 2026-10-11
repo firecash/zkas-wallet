@@ -27,16 +27,58 @@ public class MainActivity extends BridgeActivity {
    * scan progress and makes the next open pay a full cold restore.
    *
    * So give back the part that is pure cache. It is rebuilt lazily the next time a spend
-   * needs a witness; nothing persisted is lost. Only from TRIM_MEMORY_RUNNING_LOW upward —
-   * the lighter levels fire routinely when the app is simply backgrounded, and dropping
-   * the cache on every tab-out would just make the next send slow for no reason.
+   * needs a witness; nothing persisted is lost.
+   *
+   * WHICH levels is the whole fix here. These constants are not ordered by severity, so
+   * `level >= TRIM_MEMORY_RUNNING_LOW` did the opposite of what the rule above intended:
+   *
+   *   RUNNING_MODERATE  5   real pressure, app in use
+   *   RUNNING_LOW      10   real pressure
+   *   RUNNING_CRITICAL 15   real pressure
+   *   UI_HIDDEN        20   the user tabbed out. NOT a memory signal at all
+   *   BACKGROUND       40   in the background LRU, system reclaiming
+   *   MODERATE         60   further down that list
+   *   COMPLETE         80   next to be killed
+   *
+   * UI_HIDDEN is 20, so it passed the test, and the cache was thrown away every single
+   * time the user left the app — the one case the comment set out to avoid. On a phone
+   * the next pass then re-decodes everything it had already decoded, which is why a sync
+   * "starts again from the beginning when I go to another app" and why it never seems to
+   * finish. Android documents UI_HIDDEN as a cue to release UI resources, not caches.
+   *
+   * So: real pressure while running, always. Merely hidden, never. In the background LRU,
+   * only when we are NOT holding the sync foreground service — that service is this app's
+   * bid to stay alive and finish the sync, and gutting the cache underneath it defeats
+   * the point. COMPLETE is the exception: that is the last warning before a kill, and a
+   * kill costs more than a re-decode.
    */
   @Override
   public void onTrimMemory(int level) {
     super.onTrimMemory(level);
-    if (level >= TRIM_MEMORY_RUNNING_LOW) {
+    if (shouldReleaseCache(level, EngineForegroundService.isRunning())) {
       EngineControl.releaseMemory();
     }
+  }
+
+  /**
+   * Whether a trim at `level` should cost the engine its decoded-leaf cache.
+   *
+   * Static and pure so it can be unit-tested on the JVM: the bug this replaces was
+   * nothing but a misreading of these constants' ordering, which compiles, lints and
+   * runs perfectly while doing the opposite of what it says.
+   */
+  static boolean shouldReleaseCache(int level, boolean holdingSyncService) {
+    // Not a memory signal — just "your UI is no longer visible".
+    if (level == TRIM_MEMORY_UI_HIDDEN) return false;
+    // Last warning before the process is killed; a kill costs more than a re-decode.
+    if (level >= TRIM_MEMORY_COMPLETE) return true;
+    // Genuine pressure while the app is running and in use.
+    if (level == TRIM_MEMORY_RUNNING_LOW || level == TRIM_MEMORY_RUNNING_CRITICAL) return true;
+    // Background LRU reclaim: help the system, unless the foreground service is this
+    // app's open bid to stay alive and finish a sync.
+    if (level >= TRIM_MEMORY_BACKGROUND) return !holdingSyncService;
+    // RUNNING_MODERATE and anything lower: too routine to pay a re-decode for.
+    return false;
   }
 
   @Override
