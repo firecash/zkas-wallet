@@ -4,6 +4,45 @@ Entries describe what changed for the person using the wallet. Where a fix was
 caused by an earlier change in this same list, it says so — the sequence is
 more useful than the tidy version.
 
+## 1.0.47
+
+Two things people reported on Android: the app crashing when opened while a wallet
+was still syncing, and a sync that appears to start over every time you leave the
+app. Same area, different bugs.
+
+### Highlights
+
+- **The app no longer crashes while a wallet is syncing.** The service that keeps
+  the engine alive during a sync asked Android for foreground status without
+  handling a refusal — and Android refuses when the request lands while the app is
+  in the background, or when the daily budget for this kind of background work is
+  spent. A refusal arriving with nothing to catch it closes the app. Reported as a
+  crash on the first open of the day, once per wallet, with the sync completing
+  normally on the second attempt — and that crash also skipped the orderly save, so
+  scan progress since the last checkpoint went with it.
+- **Leaving the app no longer throws away sync progress.** Android sends a signal
+  when the app's screen is no longer visible, and the wallet was treating it as a
+  low-memory emergency: it handed back the engine's decoded-leaf cache every single
+  time you switched apps. The block scan itself kept its place, but the expensive
+  part — building the spend witnesses, which is what the percentage near the end of
+  a sync is showing — had to start again. Check your phone a few times during a long
+  sync and it could never finish. Real memory pressure still releases that cache, and
+  being about to be killed still does; being tabbed out does not.
+- **A sync that outlives the app being killed resumes properly.** The app asked to
+  hold the engine open once per sync and then assumed it had it, so when Android
+  stopped that service — its own decision, or the background budget running out —
+  nothing ever asked again, and the engine was frozen at the next switch away. It is
+  re-asserted once a minute while syncing now, and not at all once synced.
+
+### Also
+
+- Asking to hold the engine open is idempotent, so a sync costs one request a minute
+  instead of one per status poll.
+- The memory-level decision is now a plain function with tests. The bug it replaces
+  compiled, linted and ran correctly while doing the opposite of what it said, because
+  Android's memory levels are not ordered by severity — "your UI is hidden" sorts
+  above "memory is critical".
+
 ## 1.0.46
 
 **The security fork. Upgrade before 14 October 2026, about 13:40 UTC.**
