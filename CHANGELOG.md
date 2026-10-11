@@ -4,6 +4,67 @@ Entries describe what changed for the person using the wallet. Where a fix was
 caused by an earlier change in this same list, it says so — the sequence is
 more useful than the tidy version.
 
+## 1.0.46
+
+**The security fork. Upgrade before 14 October 2026, about 13:40 UTC.**
+
+The ZKas network forks at mainnet DAA score 6,983,500 (about 15 October 2026,
+15:00 UTC). From that point a shielded spend must name the post-fork anchor
+block it was built against, and a node judges it by that block's anchor-log
+entry. Every build before this one signs unnamed spends, which post-fork nodes
+refuse — so an older wallet cannot pay after the fork. It is refused cleanly
+rather than sent wrong, but it cannot pay.
+
+This release rebuilds the parts that sign: the on-device engine in the Android
+app, the WebAssembly signer the web and desktop wallets use, and the desktop
+binaries. All three now come from the fork code (zkas-rusty 01ac1865).
+
+### Highlights
+
+- **Spends name their anchor block**, so they are accepted after the fork.
+  Nothing changes in how you send; a wallet that is not upgraded simply stops
+  being able to pay once the fork activates.
+- **Sends pause around the fork.** The daemon holds them from about 600 DAA
+  before activation to about 1,260 DAA after — roughly 32 minutes — because a
+  spend built against a pre-fork anchor cannot be judged by the post-fork
+  rules. Balances, receiving and history are unaffected.
+- **Desktop builds are pinned to the fork commit.** Desktop CI used to build
+  against whatever the node repo's default branch happened to be, so the 1.0.45
+  desktop binaries carry a superseded activation score and must be replaced.
+  Which consensus rules a desktop build carries is now recorded in this repo.
+- **"Add account" no longer leaves you waiting, or renumbered.** It used to
+  make the new wallet active and then register it, with up to three minutes
+  allowed for the registration — so the wallet bar showed a new name and
+  account number while the address and balance still came from the previous
+  wallet, and a registration that hung or timed out left you on a wallet that
+  did not exist. A new account is now built in the background and switched to
+  only once it exists, with a 45-second limit and a plain message if the
+  service does not answer. Reported as "Wallet 5 / Account 8", stuck loading,
+  and as a new account showing the previous one's address.
+- **An account number is no longer consumed by an attempt that failed.** It was
+  spent the moment the number was handed out, so a creation that never finished
+  burned it for good — which is why the numbering ran ahead of the wallets ("4
+  Wallet 4 / Account 7"). A number that has belonged to a real wallet is still
+  never reissued.
+- **Cleaning up after a failed account no longer signs you out.** The first
+  version of that rollback cleared the active-wallet key for any wallet it tidied
+  up, so a failed "Add account" ejected you into a brand-new empty wallet.
+
+### If you run a node, pool or miner
+
+The wallet is only one side of this. Both of these must be upgraded on the same
+deadline:
+
+- **Node `zkas-v1.0.11`** — mandatory. At the fork the 5% dev fee ends and
+  miners keep the whole subsidy, merge mining moves to the bound `ZKM1` form
+  (the legacy `ZKMM` form is refused), and miner rewards accrue in one carried
+  slot. A node that has not upgraded splits from the network.
+- **Stratum bridge `solo-dual-mode v1.0.12`** — required for the `ZKM1` merge
+  mining form.
+
+Do not run node builds of `23767efa` or `1e684932`: they carry other activation
+scores and will split.
+
 ## 1.0.45
 
 Everything here came from deliberately breaking the wallet: a daemon made to
