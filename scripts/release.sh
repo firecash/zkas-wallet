@@ -187,7 +187,16 @@ if m:
     # is read by somebody deciding whether to download; 175 lines of detail is
     # a changelog, not release notes, and that is what the link is for.
     h = re.search(r"^### Highlights\s*$(.*?)(?=^### |\Z)", section, re.S | re.M)
-    body = h.group(1).strip() if h else section
+    if h:
+        # Keep whatever the entry says BEFORE the highlights. That lead is where
+        # a release states what it is and any deadline attached to it — 1.0.46
+        # opened with "upgrade before 14 October, about 13:40 UTC", and taking
+        # only the bullets published a mandatory security upgrade with no sign
+        # that it was either.
+        lead = section[: h.start()].strip()
+        body = (lead + "\n\n" + h.group(1).strip()) if lead else h.group(1).strip()
+    else:
+        body = section
     if body:
         print(body)
 PYEOF
