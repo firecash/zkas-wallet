@@ -109,6 +109,17 @@ export function accountOf(token: string): number | null {
   }
 }
 
+/**
+ * Label a wallet as account N, and spend the index.
+ *
+ * Labelling and reserving stay together: every caller that labels a wallet is
+ * asserting the wallet exists, and a removed wallet's index must never be
+ * reissued — reissuing would re-derive its keys and its balance would reappear
+ * under a new name. Two tests pin that, and separating the two broke both.
+ *
+ * The fix for indices burned by attempts that never finished is NOT here: it
+ * is that callers no longer label a wallet until the daemon has registered it.
+ */
 export function setAccountOf(token: string, account: number): void {
   try {
     localStorage.setItem(ACCOUNT_KEY + token, String(account));

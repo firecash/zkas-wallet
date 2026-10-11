@@ -34,7 +34,7 @@ import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText, sanitizeAmountInput } from "./lib/utils";
 import { SEED_REQUIRED, resolveDeviceSeed, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
-import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
+import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, reserveAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
 import { exportFile, exportMessage } from "./exportfile";
@@ -3546,10 +3546,12 @@ function addSeparateWallet(): void {
 /// immediately, which is fine mid-session but fatal just before a reload: the
 /// page can tear down before the seal completes and the new wallet comes back
 /// with no key at all. Anything that reloads must await this instead.
-async function persistDeviceSeed(seed: string): Promise<boolean> {
+/** `forToken` stores the key against a wallet that is not the active one — used
+ *  when a new account is created in the background. */
+async function persistDeviceSeed(seed: string, forToken?: string): Promise<boolean> {
   try {
     if (isLockEnabled()) {
-      const token = localStorage.getItem("wallet_token") || "default";
+      const token = forToken || localStorage.getItem("wallet_token") || "default";
       const ok = await sealNewSeed(token, seed);
       if (!ok) {
         // Same principle as setDeviceSeed: never drop a key silently.
@@ -3594,14 +3596,16 @@ async function recreatePhraseAccounts(phrase: string, wanted: number[], birthday
     try {
       const secret = await accountSeedHex(phrase, account);
       const fvk = await fvkHex(secret);
-      const token = addWallet(); // mints AND activates, so persistDeviceSeed lands on it
-      setAccountOf(token, account);
-      if (!(await persistDeviceSeed(secret))) {
-        clearAccountOf(token);
+      // Inactive: this loop used to switch the app to each account as it went,
+      // so a restore walked the user through every wallet it created.
+      const token = addWallet(false);
+      if (!(await persistDeviceSeed(secret, token))) {
         unregisterWallet(token);
         continue;
       }
-      const { address } = await api.watch(fvk, birthday);
+      const { address } = await api.watch(fvk, birthday, token);
+      // Labelled once it exists, which is also what spends the index.
+      setAccountOf(token, account);
       rememberBirthday(birthday, address);
       // Record THIS account's own address against its own token, here, where
       // both are known for certain. Without it the row sat in "Your wallets"
@@ -3615,6 +3619,11 @@ async function recreatePhraseAccounts(phrase: string, wanted: number[], birthday
   }
   if (home) switchWallet(home);
 }
+
+/// How long "Add account" waits for the daemon before giving up. The watch
+/// endpoint allows 180s, which is right for a background registration and
+/// wrong for a button somebody is watching.
+const ADD_ACCOUNT_TIMEOUT_MS = 45_000;
 
 async function addAccountWallet(): Promise<void> {
   const phrase = masterMnemonic();
@@ -3646,20 +3655,35 @@ async function addAccountWallet(): Promise<void> {
     throw new Error(failureText(e));
   }
 
-  const previous = activeToken();
-  const token = addWallet(); // mints the token AND makes it active
+  // Built in the BACKGROUND, and only switched to once it exists.
+  //
+  // This used to mint the token and make it active immediately, then register
+  // it with the daemon — and `watch` is allowed 180 seconds. For that whole
+  // window the app was pointed at a wallet the daemon had never heard of: the
+  // bar showed the new name and account number while the address and balance
+  // still came from the PREVIOUS wallet, which is why a new account appeared
+  // to share the old one's address. If the registration then timed out, or the
+  // user reloaded while it hung, they were left on a wallet that did not
+  // exist. Reported as "Wallet 5 · Account 8" stuck loading for over a minute,
+  // and as the same address showing before and after.
+  //
+  // Nothing below touches the active wallet until the daemon has answered.
+  const token = addWallet(false);
   try {
-    setAccountOf(token, account);
+    // NOT labelled yet: `setAccountOf` spends the index, and an attempt that
+    // never completes must not consume one. The label goes on below, once the
+    // daemon has registered the wallet.
     // Key FIRST, and only continue if it verifiably landed. Registering a wallet
     // the device cannot sign for would leave the user able to receive coins they
     // could never spend.
-    if (!(await persistDeviceSeed(secret))) throw new Error(i18n.t("addAccountWallet.errStore"));
-    // THE STEP THAT WAS MISSING. Without registering the viewing key, the daemon
-    // has no wallet under this token, `has_wallet` comes back false, and the app
-    // greets the user with onboarding asking them to import a phrase — for an
-    // account it just created. Register first, then reload into a ready wallet.
-    const { address } = await api.watch(fvk, birthday);
+    if (!(await persistDeviceSeed(secret, token))) throw new Error(i18n.t("addAccountWallet.errStore"));
+    // Registered against THIS token explicitly, so it needs no switch. Bounded
+    // well below the 180s default: this is blocking a button the user is
+    // watching, and three minutes of spinner is indistinguishable from a hang.
+    const { address } = await api.watch(fvk, birthday, token, ADD_ACCOUNT_TIMEOUT_MS);
     rememberBirthday(birthday, address);
+    // The wallet exists: label it, which also spends the index.
+    setAccountOf(token, account);
     // Record the address on THIS token now. `api.watch` just returned the
     // authoritative address for the key we registered, and this is the only
     // moment both are known together. Leaving the row blank for a later poll to
@@ -3671,14 +3695,18 @@ async function addAccountWallet(): Promise<void> {
     // Roll the half-made account back rather than stranding the user on an
     // onboarding screen for a wallet they did not ask to create.
     clearAccountOf(token);
-    // ...and give the index back. `setAccountOf` reserved it and the mark only
-    // ever rises, so every failed attempt used to burn one permanently: after a
-    // few, "Wallet 4" was labelled "Account 6".
+    // Belt and braces: the index is no longer reserved until success, so there
+    // is usually nothing to give back — but a partially-completed attempt that
+    // got as far as reserving must not keep it.
     releaseAccount(account);
+    wipeWalletState(token);
+    forgetWalletLock(token);
     unregisterWallet(token);
-    if (previous) switchWallet(previous);
+    // No switchWallet: the active wallet was never changed.
     throw new Error(failureText(e));
   }
+  // Now, and only now, move the user to it.
+  switchWallet(token);
   location.reload();
 }
 
