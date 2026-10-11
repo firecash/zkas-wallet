@@ -99,7 +99,10 @@ jobs:
           # binaries were built against the superseded F=8,700,500 and sign
           # spends that post-fork nodes refuse. Pinning makes which consensus
           # rules a desktop build carries a reviewable part of this repo.
-          ref: 01ac1865
+          # Full 40-character SHA: actions/checkout refuses a short one, which
+          # is how the first attempt at this pin failed CI on both desktop
+          # workflows.
+          ref: 01ac1865181613073d3b4dda00534f2aeb9471be
           path: rusty-kaspa
 
       - uses: actions/setup-node@v4
