@@ -180,25 +180,41 @@ try:
     text = pathlib.Path("CHANGELOG.md").read_text()
 except OSError:
     sys.exit(0)
-m = re.search(rf"^## {re.escape(version)}\s*$(.*?)(?=^## |\Z)", text, re.S | re.M)
-if m:
-    section = m.group(1).strip()
-    # Prefer a "### Highlights" block when the version has one. A release page
-    # is read by somebody deciding whether to download; 175 lines of detail is
-    # a changelog, not release notes, and that is what the link is for.
-    h = re.search(r"^### Highlights\s*$(.*?)(?=^### |\Z)", section, re.S | re.M)
-    if h:
-        # Keep whatever the entry says BEFORE the highlights. That lead is where
-        # a release states what it is and any deadline attached to it — 1.0.46
-        # opened with "upgrade before 14 October, about 13:40 UTC", and taking
-        # only the bullets published a mandatory security upgrade with no sign
-        # that it was either.
-        lead = section[: h.start()].strip()
-        body = (lead + "\n\n" + h.group(1).strip()) if lead else h.group(1).strip()
-    else:
-        body = section
-    if body:
-        print(body)
+# Every version in the file, newest first, as (version, lead, highlights).
+entries = []
+for mm in re.finditer(r"^## (\d+\.\d+\.\d+)\s*$(.*?)(?=^## |\Z)", text, re.S | re.M):
+    sec = mm.group(2).strip()
+    hh = re.search(r"^### Highlights\s*$(.*?)(?=^### |\Z)", sec, re.S | re.M)
+    # Prefer a "### Highlights" block when the version has one. A release page is read
+    # by somebody deciding whether to download; 175 lines of detail is a changelog, not
+    # release notes, and that is what the link at the end is for. The lead ABOVE the
+    # highlights is kept: that is where a release says what it is and any deadline
+    # attached to it — 1.0.46 opened with "upgrade before 14 October, about 13:40 UTC",
+    # and taking only the bullets published a mandatory security upgrade with no sign
+    # that it was either.
+    entries.append((mm.group(1), sec[: hh.start()].strip() if hh else "", hh.group(1).strip() if hh else sec))
+
+idx = next((i for i, e in enumerate(entries) if e[0] == version), None)
+if idx is not None:
+    _, lead, highlights = entries[idx]
+    out = [p for p in (lead, highlights) if p]
+    # Carry the two PREVIOUS versions' highlights as well.
+    #
+    # The latest release is where someone upgrading arrives, whatever version they are
+    # coming from — and most are not coming from the one before. 1.0.47 shipped with a
+    # page describing only its own Android fixes, so the mandatory fork deadline that
+    # 1.0.46 led with was nowhere on the page a user would actually open.
+    prior = [e for e in entries[idx + 1 : idx + 3] if e[2]]
+    for v, plead, phl in prior:
+        out.append(f"## Also in {v}")
+        # A prior version's lead is dropped unless it carries a deadline: it is written
+        # as "this release", which reads wrong under someone else's heading.
+        if plead and re.search(r"\bbefore \d|UTC\b", plead):
+            out.append(plead)
+        out.append(phl)
+    if prior:
+        out.append("Full history: [CHANGELOG.md](https://github.com/firecash/zkas-wallet/blob/main/CHANGELOG.md)")
+    print("\n\n".join(out))
 PYEOF
 )"
 
