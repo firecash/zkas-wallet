@@ -1,9 +1,72 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * The wallet's full viewing key (`ak ‖ nk ‖ rivk`, 96 bytes) as hex, derived from
+ * the seed on-device. Send this to the daemon's non-custodial `/prepare` endpoint so
+ * it can scan watch-only and build the payment proof. Grants viewing, not spend.
+ */
+export function fvk_hex(seed_hex: string): string;
+/**
+ * Generate a new wallet as a **12-word recovery phrase** (128 bits of entropy).
+ *
+ * Twelve words is not a shortcut: an Orchard key lives on the Pallas curve, whose
+ * ~128-bit security caps what any seed can buy. A longer phrase would be more to
+ * write down for no additional strength — and a phrase people actually finish
+ * writing down is the one that saves their funds.
+ */
+export function new_wallet_mnemonic(network: string): MnemonicWallet;
+/**
+ * Derive the spending key of ONE ACCOUNT from a recovery phrase, as 64-hex.
+ *
+ * This is what makes one phrase back up many wallets. ZIP-32 gives every account
+ * index its own independent key under `m/32'/coin'/account'`, so account 0, 1, 2…
+ * are unlinkable on-chain yet all restore from the same twelve words. The result
+ * is a plain 32-byte secret, so every existing path — address, viewing key,
+ * signing, spending — consumes it unchanged.
+ *
+ * Account 0 is the wallet the phrase creates by default; `add account` simply
+ * asks for the next index, and needs no new backup.
+ */
+export function account_seed_hex(mnemonic: string, account: number): string;
+/**
  * Derive the `zkas:` address for an existing seed on a network.
  */
 export function address_from_seed(seed_hex: string, network: string): string;
+/**
+ * The `zkas:` address of one account of a recovery phrase, without going through
+ * the raw key — so a caller can preview or discover accounts cheaply.
+ */
+export function account_address(mnemonic: string, network: string, account: number): string;
+/**
+ * Sign `message`, proving control of the seed's address on `network`. The
+ * returned `signature_hex` is `fvk ‖ sig`, interoperable with `shielded-pay` and
+ * the mining-pool claim verifier.
+ */
+export function sign(seed_hex: string, network: string, message: string): Signature;
+/**
+ * Verify that `signature_hex` (`fvk ‖ sig`) proves control of `address` over
+ * `message`. Returns `true` iff valid. The network is taken from the address
+ * prefix, matching how the signature was produced.
+ */
+export function verify(address: string, message: string, signature_hex: string): boolean;
+/**
+ * Generate a brand-new wallet: a random 32-byte seed (browser CSPRNG) and its
+ * `zkas:` address. Retries the negligibly-rare case where a random seed is
+ * not a valid Orchard spending key.
+ */
+export function new_wallet(network: string): Wallet;
+/**
+ * Device half of a **non-custodial payment**. Given the wallet seed and, from the
+ * server's `prepare` response, a spend's `alpha` randomizer and the payment `sighash`,
+ * returns the 64-byte RedPallas spend-auth signature (hex). The seed never leaves the
+ * device; the server applies this signature and broadcasts. No proving circuit.
+ */
+export function sign_spend_auth(seed_hex: string, alpha_hex: string, sighash_hex: string): string;
+/**
+ * True if `secret` is a well-formed recovery phrase (right words, right checksum).
+ * Lets the UI validate what was typed before trying to open a wallet with it.
+ */
+export function is_valid_mnemonic(secret: string): boolean;
 /**
  * **The anti-blind-signing entry point** for the non-custodial send.
  *
@@ -26,69 +89,6 @@ export function address_from_seed(seed_hex: string, network: string): string;
  */
 export function verify_and_sign_payment(seed_hex: string, network: string, to_address: string, amount_sompi: bigint, max_fee_sompi: bigint, bundle_hex: string, disclosure_json: string, alphas_json: string): string;
 /**
- * Sign `message`, proving control of the seed's address on `network`. The
- * returned `signature_hex` is `fvk ‖ sig`, interoperable with `shielded-pay` and
- * the mining-pool claim verifier.
- */
-export function sign(seed_hex: string, network: string, message: string): Signature;
-/**
- * The wallet's full viewing key (`ak ‖ nk ‖ rivk`, 96 bytes) as hex, derived from
- * the seed on-device. Send this to the daemon's non-custodial `/prepare` endpoint so
- * it can scan watch-only and build the payment proof. Grants viewing, not spend.
- */
-export function fvk_hex(seed_hex: string): string;
-/**
- * Derive the spending key of ONE ACCOUNT from a recovery phrase, as 64-hex.
- *
- * This is what makes one phrase back up many wallets. ZIP-32 gives every account
- * index its own independent key under `m/32'/coin'/account'`, so account 0, 1, 2…
- * are unlinkable on-chain yet all restore from the same twelve words. The result
- * is a plain 32-byte secret, so every existing path — address, viewing key,
- * signing, spending — consumes it unchanged.
- *
- * Account 0 is the wallet the phrase creates by default; `add account` simply
- * asks for the next index, and needs no new backup.
- */
-export function account_seed_hex(mnemonic: string, account: number): string;
-/**
- * True if `secret` is a well-formed recovery phrase (right words, right checksum).
- * Lets the UI validate what was typed before trying to open a wallet with it.
- */
-export function is_valid_mnemonic(secret: string): boolean;
-/**
- * Generate a new wallet as a **12-word recovery phrase** (128 bits of entropy).
- *
- * Twelve words is not a shortcut: an Orchard key lives on the Pallas curve, whose
- * ~128-bit security caps what any seed can buy. A longer phrase would be more to
- * write down for no additional strength — and a phrase people actually finish
- * writing down is the one that saves their funds.
- */
-export function new_wallet_mnemonic(network: string): MnemonicWallet;
-/**
- * Device half of a **non-custodial payment**. Given the wallet seed and, from the
- * server's `prepare` response, a spend's `alpha` randomizer and the payment `sighash`,
- * returns the 64-byte RedPallas spend-auth signature (hex). The seed never leaves the
- * device; the server applies this signature and broadcasts. No proving circuit.
- */
-export function sign_spend_auth(seed_hex: string, alpha_hex: string, sighash_hex: string): string;
-/**
- * Generate a brand-new wallet: a random 32-byte seed (browser CSPRNG) and its
- * `zkas:` address. Retries the negligibly-rare case where a random seed is
- * not a valid Orchard spending key.
- */
-export function new_wallet(network: string): Wallet;
-/**
- * Verify that `signature_hex` (`fvk ‖ sig`) proves control of `address` over
- * `message`. Returns `true` iff valid. The network is taken from the address
- * prefix, matching how the signature was produced.
- */
-export function verify(address: string, message: string, signature_hex: string): boolean;
-/**
- * The `zkas:` address of one account of a recovery phrase, without going through
- * the raw key — so a caller can preview or discover accounts cheaply.
- */
-export function account_address(mnemonic: string, network: string, account: number): string;
-/**
  * r" Deferred promise - an object that has `resolve()` and `reject()`
  * r" functions that can be called outside of the promise body.
  * r" WARNING: This function uses `eval` and can not be used in environments
@@ -97,6 +97,16 @@ export function account_address(mnemonic: string, network: string, account: numb
  * r" @category General
  */
 export function defer(): Promise<any>;
+/**
+ * Present panic logs to the user in the browser.
+ *
+ * This function should be called after a panic has occurred and the
+ * browser-based panic hook has been activated. It will present the
+ * collected panic logs in a full-screen `DIV` in the browser.
+ * @see {@link initBrowserPanicHook}
+ * @category General
+ */
+export function presentPanicHookLogs(): void;
 /**
  * Initialize Rust panic handler in browser mode.
  *
@@ -109,16 +119,6 @@ export function defer(): Promise<any>;
  * @category General
  */
 export function initBrowserPanicHook(): void;
-/**
- * Present panic logs to the user in the browser.
- *
- * This function should be called after a panic has occurred and the
- * browser-based panic hook has been activated. It will present the
- * collected panic logs in a full-screen `DIV` in the browser.
- * @see {@link initBrowserPanicHook}
- * @category General
- */
-export function presentPanicHookLogs(): void;
 /**
  * Initialize Rust panic handler in console mode.
  *
