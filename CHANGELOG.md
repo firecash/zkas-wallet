@@ -4,6 +4,38 @@ Entries describe what changed for the person using the wallet. Where a fix was
 caused by an earlier change in this same list, it says so — the sequence is
 more useful than the tidy version.
 
+## 1.0.48
+
+A reported failure that was never the wallet's fault, and a correction to one of
+1.0.47's own fixes.
+
+### Highlights
+
+- **A payment that fails because of the node you are using now says so.** A user
+  could not send coins about three months old while running the wallet on their
+  own computer, and the same payment went through after switching the chain
+  source to a public node. A node that does not keep the full shielded history
+  cannot show a spend the notes that were created before its retention point, so
+  the wallet reported a shortfall against a balance the user could see — and
+  nothing on screen connected that to the node. The error now names the node's
+  history limit and the two ways out: switch the chain source to a public node,
+  or run your own node with `--archival`. Nothing is lost either way; through a
+  node with the full history those coins spend normally.
+- **Leaving the app mid-sync is less likely to get the app killed.** 1.0.47
+  stopped the wallet from throwing away sync progress whenever you switched
+  away, but it held on to that memory too stubbornly: it also ignored the
+  system's later, more serious warnings while a sync was running. Those are the
+  ones that come just before Android kills the app, and being killed costs more
+  than the work it was protecting. It now yields at that point and keeps the
+  memory only through the routine "you are in the background" signal.
+
+### If you are running your own node
+
+A node without the full shielded history can only show your wallet the coins
+created after its retention point. Spending older coins through it is not
+possible — not a wallet limitation, and nothing is at risk — so either point the
+wallet at a public node for those payments, or run yours with `--archival`.
+
 ## 1.0.47
 
 Two things people reported on Android: the app crashing when opened while a wallet

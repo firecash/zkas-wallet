@@ -46,10 +46,19 @@ public class TrimMemoryPolicyTest {
   public void backgroundReclaimYieldsUnlessWeAreSyncing() {
     // Nothing in flight: help the system keep other apps alive.
     assertTrue(MainActivity.shouldReleaseCache(TRIM_MEMORY_BACKGROUND, false));
-    assertTrue(MainActivity.shouldReleaseCache(TRIM_MEMORY_MODERATE, false));
     // Mid-sync under the foreground service: gutting the cache defeats the service.
+    // BACKGROUND arrives moments after any tab-out on a loaded phone, so it is the one
+    // level a sync in flight is exempt from.
     assertFalse(MainActivity.shouldReleaseCache(TRIM_MEMORY_BACKGROUND, true));
-    assertFalse(MainActivity.shouldReleaseCache(TRIM_MEMORY_MODERATE, true));
+  }
+
+  @Test
+  public void aSyncInFlightDoesNotOutrankBeingNextToDie() {
+    // Past BACKGROUND the system is well into reclaiming and we are next. Holding the
+    // cache to protect the warm risks the kill, which costs the warm AND the scan
+    // progress since the last checkpoint — so the exemption stops here.
+    assertTrue(MainActivity.shouldReleaseCache(TRIM_MEMORY_MODERATE, true));
+    assertTrue(MainActivity.shouldReleaseCache(TRIM_MEMORY_MODERATE, false));
   }
 
   @Test

@@ -33,7 +33,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: firecash/zkas-rusty
-          # Pinned to the security fork (mainnet DAA 6,983,500). Tracking the
+          # Pinned to the security fork (mainnet DAA 6,983,500) plus the walletd
+          # fix that tells a user when their NODE is the reason a spend of older
+          # coins comes up short. Tracking the
           # default branch built whatever main happened to be: v1.0.45's desktop
           # binaries were built against the superseded F=8,700,500 and sign
           # spends that post-fork nodes refuse. Pinning makes which consensus
@@ -41,7 +43,7 @@ jobs:
           # Full 40-character SHA: actions/checkout refuses a short one, which
           # is how the first attempt at this pin failed CI on both desktop
           # workflows.
-          ref: 01ac1865181613073d3b4dda00534f2aeb9471be
+          ref: 39b80969fb4c4d94af029b631968c9b1edeaf76d
           path: rusty-kaspa
       - uses: actions/setup-node@v4
         with:
