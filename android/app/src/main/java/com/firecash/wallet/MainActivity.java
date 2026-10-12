@@ -74,8 +74,15 @@ public class MainActivity extends BridgeActivity {
     if (level >= TRIM_MEMORY_COMPLETE) return true;
     // Genuine pressure while the app is running and in use.
     if (level == TRIM_MEMORY_RUNNING_LOW || level == TRIM_MEMORY_RUNNING_CRITICAL) return true;
-    // Background LRU reclaim: help the system, unless the foreground service is this
-    // app's open bid to stay alive and finish a sync.
+    // MODERATE means the system is well into reclaiming, and the next step is us. Keeping
+    // the cache here is the trade that loses: being killed costs the scan progress since
+    // the last checkpoint AND the warm, while dropping the cache costs only the warm. So
+    // a sync in flight does not buy an exemption this far down.
+    if (level >= TRIM_MEMORY_MODERATE) return true;
+    // BACKGROUND is the routine "you are in the LRU" signal, which arrives moments after
+    // any tab-out on a loaded phone. Yield it — unless the foreground service is this
+    // app's open bid to stay alive and finish a sync, in which case gutting the cache
+    // underneath it defeats the point of holding the process at all.
     if (level >= TRIM_MEMORY_BACKGROUND) return !holdingSyncService;
     // RUNNING_MODERATE and anything lower: too routine to pay a re-decode for.
     return false;
