@@ -1,5 +1,6 @@
 package com.firecash.wallet
 
+import android.app.ActivityManager
 import android.content.Context
 
 /**
@@ -24,6 +25,28 @@ object EngineControl {
         uniffi.zkas_walletd_mobile.start(node, walletDir, null, socks).toInt()
     } catch (e: Throwable) {
         0
+    }
+
+    /**
+     * Tell the engine how much memory this app is allowed.
+     *
+     * It sized its resident-wallet cache from /proc/meminfo MemAvailable, which on Android
+     * describes the DEVICE, not this app. The limit that actually gets a process killed is
+     * the per-app heap class, often a few hundred MB on a phone with gigabytes free — so
+     * the engine was budgeting against memory it was never allowed to use. Only the
+     * framework knows the real number, so it has to come from here.
+     */
+    @JvmStatic
+    fun reportMemoryBudget(ctx: Context) {
+        try {
+            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            // largeHeap is declared in the manifest for the engine, so the large class is
+            // the ceiling that applies; fall back to the standard one if it reads 0.
+            val mb = if (am.largeMemoryClass > 0) am.largeMemoryClass else am.memoryClass
+            if (mb > 0) uniffi.zkas_walletd_mobile.setMemoryBudgetMb(mb.toUInt())
+        } catch (_: Throwable) {
+            // Unknown budget: the engine keeps its own conservative phone default.
+        }
     }
 
     /**

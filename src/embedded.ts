@@ -18,6 +18,20 @@ interface EmbeddedEnginePlugin {
   stop(): Promise<void>;
   status(): Promise<{ port: number; running: boolean }>;
   logs(): Promise<{ text: string }>;
+  lastExit(): Promise<{
+    available: boolean;
+    count?: number;
+    error?: string;
+    exits?: Array<{
+      reason: number;
+      reasonName: string;
+      status: number;
+      importance: number;
+      rssKb: number;
+      timestamp: number;
+      description: string;
+    }>;
+  }>;
   setDebugLogs(opts: { on: boolean }): Promise<void>;
   keepAlive(opts: { on: boolean }): Promise<void>;
 }
@@ -340,10 +354,38 @@ export async function embeddedBase(): Promise<string | null> {
 }
 
 /** Recent on-device engine log lines (for the debug view in Settings). */
+/**
+ * How this app's process ended the last few times, as Android recorded it.
+ *
+ * Prepended to the engine log the user sends, because "the app closes during the sync"
+ * is the same sentence for a native abort, an out-of-memory kill and an ANR, and those
+ * have nothing in common to fix. LOW_MEMORY with a large RSS says cap residency;
+ * CRASH_NATIVE says a panic or abort in the engine; ANR says the main thread blocked;
+ * USER_REQUESTED says the user swiped the app away and nothing is wrong.
+ */
+export async function engineExitHistory(): Promise<string> {
+  if (!embeddedAvailable()) return "";
+  const r = await Native.lastExit().catch(() => null);
+  if (!r) return "";
+  if (!r.available) return `last-exit history unavailable${r.error ? `: ${r.error}` : " (needs Android 11+)"}\n`;
+  if (!r.exits?.length) return "last-exit history: none recorded\n";
+  const rows = r.exits.map((e) => {
+    const when = new Date(e.timestamp).toISOString().replace("T", " ").slice(0, 19);
+    const mb = e.rssKb > 0 ? `${(e.rssKb / 1024).toFixed(0)}MB` : "?";
+    const why = e.description ? ` — ${e.description}` : "";
+    return `  ${when}  ${e.reasonName}  rss ${mb}  status ${e.status}${why}`;
+  });
+  return `how this app ended, most recent first:\n${rows.join("\n")}\n\n`;
+}
+
 export async function engineLogs(): Promise<string> {
   if (!embeddedAvailable()) return "";
   const r = await Native.logs().catch(() => ({ text: "" }));
-  return r.text || "";
+  // The exit history leads, because it is the part that survives a crash: the ring
+  // buffer below it only holds the run that is still going, so when the app died
+  // mid-sync the log the user sends is from AFTER the event they are reporting.
+  const history = await engineExitHistory();
+  return history + (r.text || "");
 }
 
 /** Turn engine debug-level logging on or off. */

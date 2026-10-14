@@ -87,6 +87,8 @@ public class SyncWorker extends Worker {
                 String node = p.getString("node", "seed.zkas.info:16110");
                 String socks = p.getString("socks", "");
                 String dir = new File(getApplicationContext().getFilesDir(), "wallets").getAbsolutePath();
+                // Same ceiling the UI path reports: the worker starts the same engine.
+                EngineControl.reportMemoryBudget(getApplicationContext());
                 port = EngineControl.startEngine(node, dir, socks.isEmpty() ? null : socks);
                 startedHere = true;
             }
