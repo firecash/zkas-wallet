@@ -4,6 +4,21 @@ Entries describe what changed for the person using the wallet. Where a fix was
 caused by an earlier change in this same list, it says so — the sequence is
 more useful than the tidy version.
 
+## 1.0.50
+
+A staging build for the fork window. The app itself is unchanged from 1.0.49 —
+same engine, same signer, same fixes; only how release pages are written changed.
+
+### Highlights
+
+- **The upgrade deadline no longer falls off the download page.** Each release
+  page carries the previous two versions' notes, which is right for ordinary
+  changes and wrong for a deadline: the security fork was announced in 1.0.46, so
+  by 1.0.49 — published on the morning of the cutover, with activation a day
+  away — the warning had aged off the one page someone upgrading actually opens.
+  A dated notice now stays on the latest release for as long as that date is
+  still ahead, and sits above everything else.
+
 ## 1.0.49
 
 The Android crash at the end of a sync, found from a screen recording: the
