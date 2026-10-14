@@ -132,14 +132,19 @@ app. Same area, different bugs.
 
 ## 1.0.46
 
-**The security fork. Upgrade before 14 October 2026, about 13:40 UTC.**
+**The security fork. Any build older than 1.0.46 stops being able to pay at
+mainnet DAA 6,983,500 — about 15 October 2026, 15:00 UTC.**
 
-The ZKas network forks at mainnet DAA score 6,983,500 (about 15 October 2026,
-15:00 UTC). From that point a shielded spend must name the post-fork anchor
-block it was built against, and a node judges it by that block's anchor-log
-entry. Every build before this one signs unnamed spends, which post-fork nodes
-refuse — so an older wallet cannot pay after the fork. It is refused cleanly
-rather than sent wrong, but it cannot pay.
+The trigger is the DAA score, not the clock: the dates here are estimates from
+the block rate and the chain can reach a score earlier than the estimate says.
+The separate cutover at DAA 6,897,100, after which a ZKas coinbase may carry no
+merge-mining tag, was reached on 14 October — ahead of its own estimate.
+
+From activation a shielded spend must name the post-fork anchor block it was
+built against, and a node judges it by that block's anchor-log entry. Builds
+before 1.0.46 sign unnamed spends, which post-fork nodes refuse — so an older
+wallet cannot pay after the fork. It is refused cleanly rather than sent wrong,
+but it cannot pay.
 
 This release rebuilds the parts that sign: the on-device engine in the Android
 app, the WebAssembly signer the web and desktop wallets use, and the desktop
