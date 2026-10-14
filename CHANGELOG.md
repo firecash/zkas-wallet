@@ -4,6 +4,46 @@ Entries describe what changed for the person using the wallet. Where a fix was
 caused by an earlier change in this same list, it says so — the sequence is
 more useful than the tidy version.
 
+## 1.0.49
+
+The Android crash at the end of a sync, found from a screen recording: the
+progress climbs 99.3, 99.5, then the app dies at 99.8 — every time, and the sync
+finishes on the next open.
+
+### Highlights
+
+- **The wallet no longer dies at the end of a long sync.** The last step of a
+  sync is the heaviest one in the whole app, and it was asking for about twice
+  the memory it needed. Until a wallet has caught up it keeps every record since
+  the day the wallet was created, and the moment it catches up it saves all of
+  that to disk — building the whole thing in memory twice over to do it. On a
+  phone, which is allowed only a few hundred MB no matter how much the device
+  has free, the system killed the app right there. It now builds it once. The
+  saved file is byte-for-byte what it was, so nothing needs re-syncing.
+- **A sync that is interrupted keeps what it had.** The saved file is now
+  committed to storage before it replaces the previous one. It was being swapped
+  in while the system still had the contents in a write buffer, so a crash or a
+  flat battery at that moment could leave a file that looked valid and contained
+  nothing — and the next open would start the whole scan again.
+- **The app can now say why it closed.** Nothing was recording it, so three
+  releases were spent reasoning about which part of the app the crash came from.
+  Android has kept that answer since version 11, and the engine log you can send
+  from Settings now starts with it: out of memory, a crash inside the wallet
+  engine, a freeze, or simply "you swiped the app away". Those have nothing in
+  common to fix, and the log also now carries a line for any internal fault
+  inside the engine, which previously left no trace at all.
+- **Memory is budgeted against what this app is allowed, not what the phone
+  has.** The engine kept several wallets fully loaded based on the device's free
+  memory, which is not the limit that gets an app killed — the per-app limit is,
+  and it is far smaller. It now asks Android for the real figure, and keeps
+  fewer wallets loaded on a phone. Switching between wallets may take a moment
+  longer; it was buying that speed with the headroom the sync needed.
+- **One internal fault no longer disables the engine permanently.** A fault
+  while the engine was starting or stopping left a lock that every later call
+  tripped over, including the once-a-second check the app makes — so a single
+  problem became a wallet that could never run again until the app was
+  reinstalled.
+
 ## 1.0.48
 
 A reported failure that was never the wallet's fault, and a correction to one of
