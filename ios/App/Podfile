@@ -17,9 +17,17 @@ def capacitor_pods
   pod 'CapacitorNativeBiometric', :path => '../../node_modules/capacitor-native-biometric'
 end
 
+# The on-device wallet engine. Kept out of capacitor_pods because it is not a Capacitor
+# plugin: it is the Rust daemon the plugin drives. CI fetches the XCFramework and the
+# generated Swift into ../ZkasEngine before pod install (see ios.yml); neither is
+# committed, since the framework alone is ~300 MB.
+def zkas_engine
+  pod 'ZkasEngine', :path => '../ZkasEngine'
+end
+
 target 'App' do
   capacitor_pods
-  # Add your Pods here
+  zkas_engine
 end
 
 post_install do |installer|

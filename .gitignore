@@ -44,3 +44,7 @@ android/app/src/main/jniLibs/
 # build that skipped build-engine.sh silently used the old one.
 android/app/src/main/java/uniffi/
 .engine-bindings/
+
+# Fetched by CI before pod install; the framework alone is ~300 MB.
+/ios/ZkasEngine/ZkasEngine.xcframework/
+/ios/ZkasEngine/Sources/*.swift

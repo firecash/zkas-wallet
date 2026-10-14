@@ -1,49 +1,129 @@
-# iOS build on GitHub's macOS runners — no local Mac needed.
+# Build the iOS wallet WITH the on-device engine, run it in a simulator, and prove it
+# came up.
 #
-# Today this produces an UNSIGNED .ipa artifact: proof the app builds, usable
-# for local simulator runs and for signing later. Real distribution needs an
-# Apple Developer account ($99/yr):
-#   1. Enroll at developer.apple.com, create an App ID + certificates.
-#   2. Add repo secrets: IOS_CERT_P12_BASE64, IOS_CERT_PASSWORD,
-#      IOS_PROVISIONING_PROFILE_BASE64, APPSTORE_API_KEY (for TestFlight upload).
-#   3. Swap the CODE_SIGNING_ALLOWED=NO build below for a signed archive +
-#      `xcrun altool`/`xcrun notarytool` upload step.
-# TestFlight then gives installs to up to 10,000 testers via a simple link.
-
+# No Apple Developer account is involved: a simulator build needs no signing, and the
+# engine XCFramework carries a simulator slice. That makes this the only way to actually
+# exercise "Run on this phone" on iOS before anyone has certificates — and it catches the
+# failures that matter (the engine not linking, the plugin not being discovered, ATS
+# blocking loopback) rather than just proving the project compiles.
+#
+# The engine is built here rather than downloaded so the job is self-contained. macos
+# runners are arm64, so only the arm64 simulator slice is built; the device slice and the
+# x86_64 one are the signer repo's ios-engine job's business.
 name: ios
-# Manual only: iOS is not a shipping platform, so a release tag must not drag a
-# failing iOS job along with it. Dispatch this by hand if you want to check the
-# app still builds for iOS.
 on:
   workflow_dispatch:
-
+    inputs:
+      device:
+        description: "Simulator to boot"
+        default: "iPhone 15"
 jobs:
-  build:
+  simulator:
     runs-on: macos-14
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - name: Sources the engine needs
+        env:
+          RK_SHA: baa9f4c4429a22808abdf0e076a635777cb8bbad
+        run: |
+          # The engine crate lives in zkas-signer and builds against the node workspace.
+          git clone -q --depth 1 https://github.com/firecash/zkas-signer.git ../zkas-signer
+          mkdir -p ../rusty-kaspa && cd ../rusty-kaspa
+          git init -q
+          git remote add origin https://github.com/firecash/zkas-rusty.git
+          git fetch -q --depth 1 origin "$RK_SHA"
+          git checkout -q FETCH_HEAD
+          echo "engine crate: $(git -C ../zkas-signer rev-parse --short HEAD)"
+          echo "node workspace: $(git rev-parse --short HEAD)"
+
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          node-version: 20
-          cache: npm
+          targets: aarch64-apple-ios-sim
+      - name: protoc
+        run: brew install protobuf
+
+      - name: Build the engine for the simulator
+        working-directory: ../zkas-signer/walletd-mobile
+        run: |
+          cargo build --release --target aarch64-apple-ios-sim
+          cargo build --release
+          cargo run --bin uniffi-bindgen -- generate \
+            --library target/release/libzkas_walletd_mobile.dylib \
+            --language swift --out-dir ./swift
+          mkdir -p headers
+          cp swift/zkas_walletd_mobileFFI.h headers/
+          cp swift/zkas_walletd_mobileFFI.modulemap headers/module.modulemap
+          xcodebuild -create-xcframework \
+            -library target/aarch64-apple-ios-sim/release/libzkas_walletd_mobile.a -headers headers \
+            -output ZkasEngine.xcframework
+
+      - name: Put the engine where the pod expects it
+        run: |
+          cp -R ../zkas-signer/walletd-mobile/ZkasEngine.xcframework ios/ZkasEngine/
+          cp ../zkas-signer/walletd-mobile/swift/zkas_walletd_mobile.swift ios/ZkasEngine/Sources/
+          # The generated Swift must be there, or the pod compiles to an empty module and
+          # `import ZkasEngine` resolves to nothing useful.
+          test -s ios/ZkasEngine/Sources/zkas_walletd_mobile.swift
+          echo "engine surface:"
+          grep -oE "public func (start|stop|port|logs|setDebugLogs|releaseMemory|setMemoryBudgetMb)" \
+            ios/ZkasEngine/Sources/zkas_walletd_mobile.swift | sort -u | sed 's/^/  /'
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
       - name: Web bundle
         run: |
           npm ci
           npm run build
+
       - name: Capacitor sync (pod install)
         run: npx cap sync ios
-      - name: Build (unsigned)
+
+      - name: Build for the simulator
         run: |
-          xcodebuild -workspace ios/App/App.xcworkspace \
-            -scheme App -configuration Release -sdk iphoneos \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
-      - name: Package unsigned IPA
+          xcodebuild -workspace ios/App/App.xcworkspace -scheme App \
+            -configuration Debug -sdk iphonesimulator -derivedDataPath build \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build | tail -30
+          ls -la build/Build/Products/Debug-iphonesimulator/
+
+      - name: Boot a simulator and launch the app
+        id: run
         run: |
-          mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
-          zip -qry zkas-wallet-unsigned.ipa Payload
+          APP=build/Build/Products/Debug-iphonesimulator/App.app
+          # The privacy manifest has to be IN the bundle; App Store Connect reads it from
+          # there, so its absence here would mean a rejected upload later.
+          test -f "$APP/PrivacyInfo.xcprivacy" && echo "privacy manifest present in the bundle"
+          UD=$(xcrun simctl create zkas-test "com.apple.CoreSimulator.SimDeviceType.iPhone-15" || xcrun simctl list devices available | grep -oE '[0-9A-F-]{36}' | head -1)
+          echo "udid=$UD" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UD" || true
+          xcrun simctl bootstatus "$UD" -b
+          xcrun simctl install "$UD" "$APP"
+          # Capture the app's own log while it starts.
+          xcrun simctl spawn "$UD" log stream --level debug --predicate 'processImagePath CONTAINS "App"' > sim.log 2>&1 &
+          sleep 2
+          xcrun simctl launch "$UD" com.firecash.wallet
+          # Give the web bundle and the engine time to come up.
+          sleep 45
+          xcrun simctl io "$UD" screenshot launch.png
+          echo "--- is the process alive? ---"
+          xcrun simctl spawn "$UD" launchctl list 2>/dev/null | grep -i firecash || echo "(not in launchctl list)"
+
+      - name: What the app reported
+        if: always()
+        run: |
+          echo "=== engine / wallet lines from the simulator log ==="
+          grep -iE "zkas|engine|walletd|loopback|127\.0\.0\.1|panic|fatal|ATS|cleartext" sim.log 2>/dev/null | head -40 || echo "(no matching lines)"
+          echo "=== crash reports, if any ==="
+          find ~/Library/Logs/DiagnosticReports -name "App*" -newermt "-10 minutes" 2>/dev/null | head -3 | while read f; do echo "--- $f"; head -40 "$f"; done
+
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: zkas-wallet-ios-unsigned
-          path: zkas-wallet-unsigned.ipa
+          name: ios-simulator-run
+          path: |
+            launch.png
+            sim.log
+            build/Build/Products/Debug-iphonesimulator/App.app/PrivacyInfo.xcprivacy
+            build/Build/Products/Debug-iphonesimulator/App.app/Info.plist
