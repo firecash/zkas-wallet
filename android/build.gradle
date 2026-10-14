@@ -7,7 +7,10 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.1'
+        // 8.6.1, not 8.2.1: compileSdk 35 is required by Google Play and AGP 8.2
+        // refuses it. Needs Gradle 8.7+ (the wrapper is on 8.9) and JDK 17, which the
+        // build box already uses. Kotlin stays at 1.9.24, which 8.6 supports.
+        classpath 'com.android.tools.build:gradle:8.6.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24"
         classpath 'com.google.gms:google-services:4.4.0'
 

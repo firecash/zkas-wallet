@@ -26,6 +26,34 @@ import androidx.core.app.NotificationCompat
 class EngineForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /**
+     * Android 15 (API 35) budgets a `dataSync` foreground service at roughly six hours a
+     * day and calls this when that runs out. It is not advisory: a service that does not
+     * stop itself here is killed, and repeated offences get the app's ability to start
+     * these services revoked entirely.
+     *
+     * Required the moment this app targets 35, which Google Play now requires — so
+     * shipping to the Play Store without it would turn a long sync into a system kill.
+     *
+     * Stopping is the easy half. The engine is holding a scan in memory that is only
+     * written to disk periodically, so tearing the process down without asking it to
+     * flush discards everything since the last checkpoint — the same loss that made a
+     * sync look like it restarted. `stopEngine` goes through the graceful path, which
+     * drains and then flushes, so the next open resumes where this left off.
+     */
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        android.util.Log.w("ZKas", "sync foreground service hit its daily budget; flushing and standing down")
+        EngineControl.stopEngine(applicationContext)
+        running = false
+        stopSelf(startId)
+    }
+
+    /** Pre-35 signature; the framework calls whichever it has. */
+    @Deprecated("Superseded by onTimeout(startId, fgsType) on API 35+")
+    override fun onTimeout(startId: Int) {
+        onTimeout(startId, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+    }
+
     override fun onDestroy() {
         // Clear the armed flag however this service ended — including a system kill.
         // Without this, `start()`'s idempotence check would believe a dead service is

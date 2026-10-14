@@ -17,6 +17,11 @@
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
         <item name="android:windowBackground">#08080c</item>
+        <!-- Ignored from targetSdk 35: Android 15 enforces edge-to-edge and the app
+             draws behind both bars. Kept for Android 14 and below, where they still
+             apply. What keeps content clear of the bars on 15+ is the web layer's
+             env(safe-area-inset-*) padding, which needs viewport-fit=cover in
+             index.html — both are in place. -->
         <item name="android:statusBarColor">#08080c</item>
         <item name="android:navigationBarColor">#08080c</item>
         <item name="android:windowLightStatusBar">false</item>
