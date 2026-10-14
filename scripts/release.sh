@@ -212,6 +212,36 @@ if idx is not None:
         if plead and re.search(r"\bbefore \d|UTC\b", plead):
             out.append(plead)
         out.append(phl)
+
+    # A deadline that has NOT passed stays on the page however many versions back it was
+    # announced, because the latest release is the page people open.
+    #
+    # The window above is two versions, and that is right for ordinary notes. It is wrong
+    # for a deadline: 1.0.46 announced the security fork, and by 1.0.49 — published the
+    # morning of the cutover, with activation a day away — the warning had aged off the
+    # one page a user upgrading would see. Carrying it is not about being tidy; a user who
+    # installs the latest build and never learns a deadline exists is the failure.
+    cutoff = idx + 3
+    carried = []
+    for v, plead, _ in entries[cutoff:]:
+        if not plead:
+            continue
+        for dline in re.findall(r"^.*\b(?:20\d\d)\b.*UTC.*$", plead, re.M):
+            # Only future dates: a passed deadline is history, not a warning.
+            dt = re.search(r"(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(20\d\d)", dline)
+            if not dt:
+                continue
+            import datetime
+            months = {m: i + 1 for i, m in enumerate(
+                ["January","February","March","April","May","June","July","August","September","October","November","December"])}
+            when = datetime.date(int(dt.group(3)), months[dt.group(2)], int(dt.group(1)))
+            if when >= datetime.date.today():
+                carried.append((v, plead.strip()))
+            break
+    if carried:
+        v, plead = carried[0]
+        # Ahead of everything else on the page, including this version's own notes.
+        out.insert(0, f"> **Still ahead, announced in {v}:**\n>\n> " + plead.replace("\n", "\n> "))
     if prior:
         out.append("Full history: [CHANGELOG.md](https://github.com/firecash/zkas-wallet/blob/main/CHANGELOG.md)")
     print("\n\n".join(out))
