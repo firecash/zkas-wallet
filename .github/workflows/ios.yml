@@ -26,7 +26,7 @@ jobs:
 
       - name: Sources the engine needs
         env:
-          RK_SHA: baa9f4c4429a22808abdf0e076a635777cb8bbad
+          RK_SHA: 974c75cca916fa77f071177d4414bc535e12056a
         run: |
           # The engine crate lives in zkas-signer and builds against the node workspace.
           git clone -q --depth 1 https://github.com/firecash/zkas-signer.git ../zkas-signer

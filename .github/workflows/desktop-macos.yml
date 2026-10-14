@@ -43,7 +43,7 @@ jobs:
           # Full 40-character SHA: actions/checkout refuses a short one, which
           # is how the first attempt at this pin failed CI on both desktop
           # workflows.
-          ref: baa9f4c4429a22808abdf0e076a635777cb8bbad
+          ref: 974c75cca916fa77f071177d4414bc535e12056a
           path: rusty-kaspa
       - uses: actions/setup-node@v4
         with:
