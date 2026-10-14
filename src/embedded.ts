@@ -213,12 +213,25 @@ export function setEmbeddedDebug(on: boolean): void {
   try { if (on) localStorage.setItem(DEBUG_KEY, "1"); else localStorage.removeItem(DEBUG_KEY); } catch { /* ignore */ }
 }
 
-/** Only the native Android shell carries the engine plugin. `isPluginAvailable`
- * returns FALSE for plugins registered in MainActivity (which is how this one and
- * BackgroundSync are wired), so gate on the platform exactly as bgSyncAvailable does. */
+/** Both native shells carry the engine now. `isPluginAvailable` returns FALSE for
+ * plugins registered the way these are, so gate on the platform rather than on the
+ * plugin — exactly as bgSyncAvailable does.
+ *
+ * iOS was excluded because only Android shipped the engine; it now builds as an
+ * XCFramework with the same UniFFI surface, driven by EmbeddedEnginePlugin.swift. Note
+ * what iOS cannot do: nothing keeps the process alive once the app leaves the
+ * foreground, so a sync advances while the wallet is open and resumes from its
+ * checkpoint afterwards. See `engineKeepAlive`. */
 export function embeddedAvailable(): boolean {
   const cap = (globalThis as { Capacitor?: { getPlatform?: () => string } }).Capacitor;
-  return isNative() && cap?.getPlatform?.() === "android";
+  const platform = cap?.getPlatform?.();
+  return isNative() && (platform === "android" || platform === "ios");
+}
+
+/** iOS routes Tor at the system level, so there is no SOCKS endpoint to point at. */
+function isIosPlatform(): boolean {
+  const cap = (globalThis as { Capacitor?: { getPlatform?: () => string } }).Capacitor;
+  return cap?.getPlatform?.() === "ios";
 }
 
 /** Has the user chosen to run the wallet on this phone? */
@@ -323,7 +336,13 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = tru
   // phone-mode start or onion connect ever rewrote the flag. The wallet could
   // not be recovered from inside the app.
   if (!startPromise) {
-    startPromise = Native.start({ nodeAddr: node, socks: useTor ? ORBOT_SOCKS : undefined }).then((r) => r.port);
+    // Orbot on ANDROID exposes a SOCKS proxy the engine dials. Orbot on iOS is a system
+    // VPN and nothing else — it has no SOCKS port, which the app's own Tor help screen
+    // says. Handing the engine 127.0.0.1:9050 there would point it at a proxy that does
+    // not exist and it would never reach a node; with the VPN up, plain connections are
+    // already carried over Tor.
+    const socks = useTor && !isIosPlatform() ? ORBOT_SOCKS : undefined;
+    startPromise = Native.start({ nodeAddr: node, socks }).then((r) => r.port);
   }
   try {
     const port = await startPromise;

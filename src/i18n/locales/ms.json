@@ -2011,5 +2011,9 @@
     "generic": "Perkhidmatan dompet menghadapi masalah semasa membaca rantaian. Syiling anda selamat di rantaian.",
     "details": "Butiran teknikal",
     "nodeBusy": "Nod awam penuh dan menolak dompet ini. Syiling anda selamat. Ia akan cuba semula sendiri, atau anda boleh tukar ke nod lain di Tetapan → Privasi rangkaian."
+  },
+  "iosPermission": {
+    "camera": "ZKas Wallet menggunakan kamera hanya untuk mengimbas kod QR pembayaran. Bingkai dinyahkod pada peranti ini dan tidak pernah dihantar ke mana-mana.",
+    "faceId": "ZKas Wallet menggunakan Face ID untuk membuka kunci aplikasi dan melindungi frasa pemulihan anda pada peranti ini."
   }
 }

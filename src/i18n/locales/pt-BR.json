@@ -2011,5 +2011,9 @@
     "generic": "O serviço de carteira encontrou um problema ao ler a cadeia. Suas moedas estão seguras na cadeia.",
     "details": "Detalhes técnicos",
     "nodeBusy": "O nó público está lotado e recusou esta carteira. Suas moedas estão seguras. Ela tenta novamente sozinha, ou você pode trocar para o outro nó em Configurações → Privacidade de rede."
+  },
+  "iosPermission": {
+    "camera": "A ZKas Wallet usa a câmera apenas para escanear QR codes de pagamento. Os quadros são decodificados neste dispositivo e nunca enviados.",
+    "faceId": "A ZKas Wallet usa o Face ID para desbloquear o app e proteger sua frase de recuperação neste dispositivo."
   }
 }

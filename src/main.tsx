@@ -2,6 +2,10 @@
 // from the accessor itself, and one unguarded read anywhere took the whole
 // wallet down with an unrecoverable error screen.
 import "./lib/storage-shim";
+// Installs a write-through copy of the few values whose loss costs money, and restores
+// any the system has evicted. iOS only; see securestore.ts for why localStorage alone is
+// not a safe home for a seed there.
+import { installMirror, mirrorRestore, mirrorBackfill, mirrorAvailable } from "./securestore";
 import { Component, lazy, StrictMode, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -441,6 +445,25 @@ async function boot() {
     void navigator.storage?.persist?.();
   } catch {
     /* older engines have no storage manager */
+  }
+
+  // On iOS the call above does nothing — WKWebView does not implement persistent
+  // storage — and its own comment is right that the seed is what is at stake. So before
+  // anything reads wallet state, put back whatever the system evicted, then make sure
+  // the mirror holds what this device has. Restoring BEFORE the first read is the whole
+  // point: a wallet list read from an emptied localStorage looks like a fresh install,
+  // and the user is offered onboarding for a wallet that still holds coins.
+  if (mirrorAvailable()) {
+    try {
+      const restored = await mirrorRestore();
+      if (restored.length) {
+        console.warn(`[securestore] restored ${restored.length} evicted key(s) from the keychain:`, restored.join(", "));
+      }
+      installMirror();
+      await mirrorBackfill();
+    } catch {
+      /* the app continues on localStorage alone, exactly as before */
+    }
   }
 
   createRoot(document.getElementById("root")!).render(

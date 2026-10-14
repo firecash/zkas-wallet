@@ -48,3 +48,4 @@ android/app/src/main/java/uniffi/
 # Fetched by CI before pod install; the framework alone is ~300 MB.
 /ios/ZkasEngine/ZkasEngine.xcframework/
 /ios/ZkasEngine/Sources/*.swift
+!/ios/ZkasEngine/Sources/.gitkeep

@@ -2011,5 +2011,9 @@
     "generic": "Der Wallet-Dienst hatte ein Problem beim Lesen der Chain. Deine Münzen sind sicher auf der Chain.",
     "details": "Technische Details",
     "nodeBusy": "Der öffentliche Node ist ausgelastet und hat dieses Wallet abgewiesen. Deine Coins sind sicher. Es versucht es selbstständig erneut, oder du kannst in den Einstellungen → Netzwerk-Privatsphäre zum anderen Node wechseln."
+  },
+  "iosPermission": {
+    "camera": "ZKas Wallet nutzt die Kamera nur zum Scannen von Zahlungs-QR-Codes. Die Bilddaten werden auf dem Gerät dekodiert und nirgendwohin gesendet.",
+    "faceId": "ZKas Wallet nutzt Face ID, um die App zu entsperren und deine Wiederherstellungsphrase auf dem Gerät zu schützen."
   }
 }

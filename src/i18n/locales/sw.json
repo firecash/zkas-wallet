@@ -2011,5 +2011,9 @@
     "generic": "Huduma ya pochi ilikumbana na tatizo wakati wa kusoma mnyororo. Sarafu zako ziko salama kwenye mnyororo.",
     "details": "Maelezo ya kiufundi",
     "nodeBusy": "Nodi ya umma imejaa na imekataa pochi hii. Sarafu zako ziko salama. Inajaribu yenyewe, au unaweza kubadilisha nodi nyingine katika Mipangilio → Usiri wa mtandao."
+  },
+  "iosPermission": {
+    "camera": "Pochi ya ZKas hutumia kamera kuchanganua misimbo ya QR ya malipo pekee. Fremu huchanganuliwa kwenye kifaa hiki na hazitumwi popote.",
+    "faceId": "Pochi ya ZKas hutumia Face ID kufungua programu na kulinda maneno yako ya kurejesha kwenye kifaa hiki."
   }
 }

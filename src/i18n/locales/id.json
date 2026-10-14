@@ -2011,5 +2011,9 @@
     "generic": "Layanan dompet mengalami masalah saat membaca rantai. Koin Anda aman di rantai.",
     "details": "Detail teknis",
     "nodeBusy": "Node publik penuh dan menolak dompet ini. Koin Anda aman. Akan mencoba ulang sendiri, atau ganti node lain di Pengaturan → Privasi jaringan."
+  },
+  "iosPermission": {
+    "camera": "Dompet ZKas menggunakan kamera hanya untuk memindai kode QR pembayaran. Bingkai didekode di perangkat ini dan tidak pernah dikirim ke mana pun.",
+    "faceId": "Dompet ZKas menggunakan Face ID untuk membuka kunci aplikasi dan melindungi frasa pemulihan Anda di perangkat ini."
   }
 }

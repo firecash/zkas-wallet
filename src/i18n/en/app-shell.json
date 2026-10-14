@@ -103,5 +103,9 @@
     "notPairingCode": "That code is not a wallet-service pairing code. On the computer serving the wallet, open Host → Network access → Pair a phone.",
     "nodeNotInstalled": "Managed local node is not installed yet. The Mine and Node screens can install the verified release automatically.",
     "close": "Close"
+  },
+  "iosPermission": {
+    "camera": "ZKas Wallet uses the camera only to scan payment QR codes. Frames are decoded on this device and never sent anywhere.",
+    "faceId": "ZKas Wallet uses Face ID to unlock the app and to protect your recovery phrase on this device."
   }
 }

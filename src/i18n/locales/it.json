@@ -2011,5 +2011,9 @@
     "generic": "Il servizio portafoglio ha avuto un problema leggendo la catena. Le tue monete sono al sicuro sulla catena.",
     "details": "Dettagli tecnici",
     "nodeBusy": "Il nodo pubblico è al completo e ha rifiutato questo portafoglio. I tuoi fondi sono al sicuro. Riprova automaticamente, oppure passa all'altro nodo in Impostazioni → Privacy di rete."
+  },
+  "iosPermission": {
+    "camera": "ZKas Wallet usa la fotocamera solo per scansionare codici QR di pagamento. I fotogrammi vengono decodificati su questo dispositivo e mai inviati altrove.",
+    "faceId": "ZKas Wallet usa Face ID per sbloccare l'app e proteggere la tua frase di recupero su questo dispositivo."
   }
 }

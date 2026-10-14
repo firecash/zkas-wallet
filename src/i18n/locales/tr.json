@@ -2011,5 +2011,9 @@
     "generic": "Cüzdan hizmeti zinciri okurken bir sorunla karşılaştı. Paralarınız zincirde güvende.",
     "details": "Teknik ayrıntılar",
     "nodeBusy": "Genel düğüm kapasiteye ulaştı ve bu cüzdanı reddetti. Paralarınız güvende. Kendiliğinden yeniden dener veya Ayarlar → Ağ gizliliği'nden diğer düğüme geçebilirsiniz."
+  },
+  "iosPermission": {
+    "camera": "ZKas Cüzdan, kamerayı yalnızca ödeme QR kodlarını taramak için kullanır. Kareler bu cihazda çözülür ve asla bir yere gönderilmez.",
+    "faceId": "ZKas Cüzdan, uygulamanın kilidini açmak ve kurtarma ifadenizi bu cihazda korumak için Face ID kullanır."
   }
 }

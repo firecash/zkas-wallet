@@ -2011,5 +2011,9 @@
     "generic": "Le service de portefeuille a rencontré un problème en lisant la chaîne. Vos pièces sont en sécurité sur la chaîne.",
     "details": "Détails techniques",
     "nodeBusy": "Le nœud public est saturé et a refusé ce portefeuille. Vos pièces sont en sécurité. Il réessaie automatiquement, ou vous pouvez passer à l’autre nœud dans Paramètres → Confidentialité réseau."
+  },
+  "iosPermission": {
+    "camera": "ZKas Wallet utilise l’appareil photo uniquement pour scanner les codes QR de paiement. Les images sont décodées sur cet appareil et ne sont jamais envoyées.",
+    "faceId": "ZKas Wallet utilise Face ID pour déverrouiller l’application et protéger votre phrase de récupération sur cet appareil."
   }
 }

@@ -2011,5 +2011,9 @@
     "generic": "De walletservice kreeg een probleem bij het lezen van de keten. Je munten zijn veilig op de keten.",
     "details": "Technische details",
     "nodeBusy": "De openbare node zit vol en heeft deze wallet geweigerd. Je munten zijn veilig. Het probeert het zelf opnieuw, of je kunt in Instellingen → Netwerkprivacy naar de andere node overschakelen."
+  },
+  "iosPermission": {
+    "camera": "ZKas Wallet gebruikt de camera alleen om QR-codes voor betalingen te scannen. Beelden worden op dit apparaat verwerkt en nooit verzonden.",
+    "faceId": "ZKas Wallet gebruikt Face ID om de app te ontgrendelen en je herstelzin op dit apparaat te beschermen."
   }
 }

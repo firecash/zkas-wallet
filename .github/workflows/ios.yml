@@ -61,6 +61,9 @@ jobs:
 
       - name: Put the engine where the pod expects it
         run: |
+          # git does not track empty directories, so create the target rather than
+          # assuming the checkout has it — that is what failed the first run.
+          mkdir -p ios/ZkasEngine/Sources
           cp -R ../zkas-signer/walletd-mobile/ZkasEngine.xcframework ios/ZkasEngine/
           cp ../zkas-signer/walletd-mobile/swift/zkas_walletd_mobile.swift ios/ZkasEngine/Sources/
           # The generated Swift must be there, or the pod compiles to an empty module and

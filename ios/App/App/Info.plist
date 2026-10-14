@@ -62,5 +62,43 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<!-- REQUIRED, and not merely for politeness: iOS terminates the process when an app
+	     touches privacy-sensitive hardware without a usage string. The QR scanner calls
+	     getUserMedia inside the WebView and the app lock evaluates Face ID, so without
+	     these two the app crashes the first time a user scans a code or unlocks — and
+	     the submission is rejected. Android declares the matching CAMERA and
+	     USE_BIOMETRIC permissions.
+
+	     Written to say what the access is FOR. These strings are what the user reads in
+	     the system prompt, and "needs camera access" tells them nothing about whether to
+	     trust it with a wallet. -->
+	<key>NSCameraUsageDescription</key>
+	<string>ZKas Wallet uses the camera only to scan payment QR codes. Frames are decoded on this device and never sent anywhere.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>ZKas Wallet uses Face ID to unlock the app and to protect your recovery phrase on this device.</string>
+	<!-- Payment links and the share sheet. Android registers the same two schemes plus a
+	     text/plain share target; without this iOS does nothing when a zkas: link is
+	     tapped. The AppDelegate already forwards openURL and universal links to
+	     Capacitor, so only the declaration was missing. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>info.zkas.wallet</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>zkas</string>
+				<string>zkas-wallet</string>
+			</array>
+		</dict>
+	</array>
+	<!-- The app is dark-only: boot() clears any stored theme preference and the light
+	     palette was dropped. Declaring it here is what makes iOS draw light status-bar
+	     content; left unset, iOS follows the SYSTEM appearance while the app stays dark,
+	     so a phone in light mode got dark text on the app's near-black background. -->
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
 </dict>
 </plist>

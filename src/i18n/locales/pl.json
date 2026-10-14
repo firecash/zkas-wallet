@@ -2011,5 +2011,9 @@
     "generic": "Usługa portfela napotkała problem podczas czytania łańcucha. Twoje monety są bezpieczne w łańcuchu.",
     "details": "Szczegóły techniczne",
     "nodeBusy": "Publiczny węzeł jest przeciążony i odrzucił ten portfel. Twoje monety są bezpieczne. Portfel ponawia próbę automatycznie lub możesz przełączyć się na inny węzeł w Ustawienia → Prywatność sieci."
+  },
+  "iosPermission": {
+    "camera": "ZKas Wallet używa aparatu tylko do skanowania kodów QR płatności. Klatki są dekodowane na tym urządzeniu i nigdzie nie wysyłane.",
+    "faceId": "ZKas Wallet używa Face ID do odblokowania aplikacji i ochrony frazy odzyskiwania na tym urządzeniu."
   }
 }

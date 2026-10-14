@@ -97,7 +97,19 @@ for (const file of files) {
 }
 
 const missing = [...used].filter((k) => !keys.has(k) && !keys.has(`${k}_one`) && !keys.has(`${k}_other`)).sort();
-const unused = [...keys].filter((k) => !used.has(k) && !used.has(k.replace(/_(one|other)$/, ""))).sort();
+// Keys consumed by BUILD TOOLING rather than by the app, so grepping the TypeScript will
+// never find them. Listed explicitly: otherwise they show up as dead and the next person
+// tidying this list deletes them, which silently reverts the camera and Face ID prompts
+// to English on every non-English device — a change nobody would notice until a review.
+const USED_BY_TOOLING = new Set([
+  // scripts/ios-infoplist-strings.mjs turns these into ios/App/App/<lang>.lproj/InfoPlist.strings
+  "iosPermission.camera",
+  "iosPermission.faceId",
+]);
+
+const unused = [...keys]
+  .filter((k) => !used.has(k) && !used.has(k.replace(/_(one|other)$/, "")) && !USED_BY_TOOLING.has(k))
+  .sort();
 
 // ---------------------------------------------------------------------------
 // The SHIPPED locales, which this audit never looked at.

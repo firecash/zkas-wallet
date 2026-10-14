@@ -1,6 +1,7 @@
 import Capacitor
 import Foundation
 import UIKit
+import os
 import ZkasEngine
 
 /**
@@ -41,6 +42,75 @@ public class EmbeddedEnginePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "keepAlive", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "lastExit", returnType: CAPPluginReturnPromise),
     ]
+
+    /// Hook the two system signals Android already acts on.
+    ///
+    /// Android drives `releaseMemory()` from onTrimMemory/onLowMemory and flushes a
+    /// checkpoint when the app is backgrounded. Neither existed here, and iOS is the
+    /// platform that punishes both omissions hardest: it kills for memory sooner than
+    /// Android does, and it suspends an app within seconds of it leaving the foreground
+    /// with no foreground service to hold it open.
+    ///
+    /// Registered in `load()` so it happens once when Capacitor instantiates the plugin,
+    /// whether or not the engine is running — the handlers no-op when it is not.
+    override public func load() {
+        let nc = NotificationCenter.default
+        nc.addObserver(self, selector: #selector(onMemoryWarning),
+                       name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
+        nc.addObserver(self, selector: #selector(onBackground),
+                       name: UIApplication.didEnterBackgroundNotification, object: nil)
+        // Termination is not guaranteed to be delivered, but when it is it is the last
+        // chance to persist, so it costs nothing to take it.
+        nc.addObserver(self, selector: #selector(onBackground),
+                       name: UIApplication.willTerminateNotification, object: nil)
+    }
+
+    /// Give back the decoded-leaf cache, which is pure cache and rebuilt on demand.
+    ///
+    /// The alternative is being killed: that loses the scan progress since the last
+    /// checkpoint AND the witness warm, where this loses only the warm. Exactly the trade
+    /// the Android side settled after the same crash reports.
+    @objc private func onMemoryWarning() {
+        guard ZkasEngine.port() != 0 else { return }
+        let freed = ZkasEngine.releaseMemory()
+        if freed > 0 {
+            os_log("memory warning: dropped %{public}llu decoded leaves", freed)
+        }
+    }
+
+    /// Persist the scan before iOS suspends us.
+    ///
+    /// The web layer also posts /api/checkpoint on visibilitychange, but that is a
+    /// keepalive fetch racing suspension with nothing holding the process open — on
+    /// Android a foreground service covers that gap and on iOS nothing does. Calling the
+    /// engine directly from the lifecycle notification does not depend on the WebView
+    /// still being scheduled.
+    ///
+    /// `stop()` is the graceful path: it drains, then flushes checkpoints. It is NOT used
+    /// here, because the app is usually coming straight back and a stopped engine costs a
+    /// restart and a re-warm. The flush endpoint is the engine's own, reached over
+    /// loopback, and a background task assertion keeps us alive just long enough for it.
+    @objc private func onBackground() {
+        let port = ZkasEngine.port()
+        guard port != 0 else { return }
+        var task: UIBackgroundTaskIdentifier = .invalid
+        task = UIApplication.shared.beginBackgroundTask(withName: "zkas-checkpoint") {
+            if task != .invalid { UIApplication.shared.endBackgroundTask(task) }
+        }
+        guard var req = URLComponents(string: "http://127.0.0.1:\(port)/api/checkpoint")?.url
+            .map({ URLRequest(url: $0) }) else {
+            if task != .invalid { UIApplication.shared.endBackgroundTask(task) }
+            return
+        }
+        req.httpMethod = "POST"
+        req.timeoutInterval = 8
+        // The engine requires the wallet token on every call; the WebView holds it, so the
+        // tokenless form is used and the engine flushes every loaded wallet. That is what
+        // this wants anyway — the app is leaving, not switching wallets.
+        URLSession.shared.dataTask(with: req) { _, _, _ in
+            if task != .invalid { UIApplication.shared.endBackgroundTask(task) }
+        }.resume()
+    }
 
     /// The public node's gRPC — the same default the Android and desktop shells use.
     private static let defaultNode = "seed.zkas.info:16110"
@@ -143,10 +213,10 @@ public class EmbeddedEnginePlugin: CAPPlugin, CAPBridgedPlugin {
     /// kills it, which is the figure that actually matters.
     private func reportMemoryBudget() {
         var mb: UInt32 = 0
-        if #available(iOS 13.0, *) {
-            let avail = os_proc_available_memory()
-            if avail > 0 { mb = UInt32(min(avail / (1024 * 1024), Int(UInt32.max))) }
-        }
+        // Deployment target is 13.0, which is where this API arrives, so no availability
+        // check is needed.
+        let avail = os_proc_available_memory()
+        if avail > 0 { mb = UInt32(min(avail / (1024 * 1024), Int(UInt32.max))) }
         if mb == 0 {
             // Fall back to total physical memory, which over-states what we may use, so
             // take a conservative slice of it rather than the whole figure.
