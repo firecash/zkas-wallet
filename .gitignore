@@ -9,7 +9,19 @@ build/
 # The Android project IS committed: it carries the app icons, versioning and the
 # release signing wiring, which `npx cap add` would not regenerate. Only its build
 # output and machine-local paths are ignored. iOS is still generated on a Mac.
-/ios/
+# The iOS project is TRACKED, like android/ is — ios.yml only runs `cap sync ios`,
+# which syncs an existing platform rather than creating one, so ignoring the whole
+# directory meant CI checked out a tree with no iOS project to build. That is why the
+# workflow never produced anything. Only the generated and per-developer parts are
+# ignored below.
+/ios/App/Pods/
+/ios/App/build/
+/ios/App/App/public/
+/ios/capacitor-cordova-ios-plugins/
+/ios/App/App.xcodeproj/xcuserdata/
+/ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+/ios/App/App.xcworkspace/xcuserdata/
+/ios/DerivedData/
 /android/build/
 /android/app/build/
 /android/.gradle/

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Apple requires this manifest, and requires the "required reason" API declarations
+  below to match what the binary actually calls. The entries here were derived from the
+  code, not copied from a template:
+
+    * File timestamps — the engine reads modification times of its own checkpoint files
+      in the app container (six call sites in zkas-walletd: choosing between a wallet's
+      own checkpoint and a twin's, and ageing out quarantined ones). Reason C617.1 covers
+      exactly that: timestamps of files inside the app's container.
+    * User defaults — Capacitor's own iOS runtime stores its configuration there. Reason
+      CA92.1 covers reading and writing only this app's defaults.
+
+  Deliberately NOT declared, because the code does not use them: disk space (no call
+  sites), active keyboard, and system boot time. Rust's `Instant` uses the monotonic
+  clock, which is not a required-reason API.
+
+  Data collection is empty because the app collects nothing. The wallet is
+  non-custodial: the seed and viewing key stay on the device, the engine talks only to a
+  ZKas node to fetch public block data, and there is no analytics, no advertising
+  identifier and no account. Nothing is sent to us, so there is nothing to declare —
+  which is the whole point of the product, not an oversight.
+-->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>C617.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>
