@@ -4,6 +4,35 @@ Entries describe what changed for the person using the wallet. Where a fix was
 caused by an earlier change in this same list, it says so — the sequence is
 more useful than the tidy version.
 
+## 1.0.51
+
+Fixes the light wallet calling a working daemon unreachable — reported as the
+newest build showing "Can't reach the wallet service" against the public daemon
+where older builds worked.
+
+### Highlights
+
+- **"Can't reach the wallet service" no longer appears on a daemon that is
+  answering.** The wallet gave its own status check a 4-second deadline while
+  every other request gets 10. That was chosen for a local engine, which holds
+  its one wallet in memory and replies instantly — but the public daemon serves
+  thousands of wallets, keeps a few in memory, and reads one from disk before it
+  can answer, which routinely takes longer than four seconds. Five checks in a
+  row missing the deadline raises that screen, so the short deadline made it
+  appear roughly four times as often: about a 30% chance of being told the
+  service was unreachable while it was working normally, against about 7% before.
+  The deadline now matches what it is talking to.
+- **A slow answer is no longer treated as no answer.** A check that times out
+  means something accepted the connection and is still working on the reply; a
+  refused connection means nothing is there. The wallet now waits considerably
+  longer before giving up on the first, and still gives up quickly on the second.
+- **A momentary hiccup between the daemon and the chain no longer blanks the
+  wallet.** One status reply arriving while that link was reconnecting replaced
+  everything with "Can't reach the network", even though the balance, the address
+  and receiving were all unaffected — the only thing genuinely unavailable in
+  that state is sending a new payment. It now has to persist for six seconds
+  before it is shown, the same hold already used for the sync indicator.
+
 ## 1.0.50
 
 A staging build for the fork window. The app itself is unchanged from 1.0.49 —

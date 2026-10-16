@@ -823,6 +823,9 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // A state change is only shown once it has held for a few seconds; brief dips
   // keep displaying the previous steady state.
   const unsyncedSince = useRef<number | null>(null);
+  /// First poll in the current run of "the daemon's node link is down", so a blip does
+  /// not replace the wallet with an alarm. See where it is read.
+  const nodeDownSince = useRef<number | null>(null);
   const warmingSince = useRef<number | null>(null);
   /// When the last poll ran while the page was hidden (see HIDDEN_POLL_MS).
   const lastHiddenPoll = useRef(0);
@@ -877,7 +880,29 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         if (!s.warming) warmingSince.current = null;
         else if (warmingSince.current == null) warmingSince.current = now;
         const warmingStable = !!s.warming && now - (warmingSince.current ?? now) >= 8000;
-        const stable = { ...s, synced: syncedStable, warming: warmingStable };
+        // node_connected: the SAME treatment, and for the same reason.
+        //
+        // `walletStatus` returns a whole "Can't reach the network" phase the instant this
+        // reads false, so one poll landing while the daemon's RPC link to its node blips
+        // — a node restart, an overloaded node, a reconnect — replaced the wallet with an
+        // alarm. The daemon is answering; the balance and the address are known;
+        // receiving is unaffected. The only thing genuinely unavailable in that state is
+        // broadcasting a new payment, which is not what "can't reach the network" says.
+        //
+        // Held for the same 6s as `synced`, so a real outage still surfaces and a blip
+        // does not. Reported as the wallet flipping to an error on a daemon that was fine.
+        if (s.node_connected !== false) nodeDownSince.current = null;
+        else if (nodeDownSince.current == null) nodeDownSince.current = now;
+        const nodeDownStable = s.node_connected === false && now - (nodeDownSince.current ?? now) >= 6000;
+        const stable = {
+          ...s,
+          synced: syncedStable,
+          warming: warmingStable,
+          // Undefined rather than true while unconfirmed: `walletStatus` only acts on an
+          // explicit false, and claiming a connection we have not confirmed would be the
+          // opposite error.
+          node_connected: s.node_connected === false && !nodeDownStable ? undefined : s.node_connected,
+        };
         // Hold a known wallet through a TRANSIENT "no wallet" answer (the daemon
         // reloading, or a status racing a sync pass) — but only transiently. This
         // guard used to be unconditional, so a wallet the user had deliberately
@@ -1272,7 +1297,20 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             .catch(() => {})
             .finally(() => { engineHealing.current = false; });
         }
-        const flipAt = busy ? 120 : starting ? 60 : 5;
+        // A TIMEOUT is not the same fact as a refused connection. Something accepted the
+        // socket and is still working on the answer, which on the hosted daemon means it
+        // is loading this wallet from its checkpoint — measured median 13s there, because
+        // it serves thousands of wallets and only keeps a few resident. A refusal means
+        // nothing is listening.
+        //
+        // Both used to flip the "can't reach the wallet service" screen after five
+        // failures, so a slow-but-healthy daemon read as offline. Each timeout already
+        // costs a full 10s before it counts, so twelve of them is two minutes of a daemon
+        // genuinely not finishing a request — a fair point to stop claiming it is fine —
+        // while a refusal still flips in five, because five refusals in five seconds does
+        // mean nothing is there.
+        const timedOut = !!(error as { timedOut?: boolean })?.timedOut;
+        const flipAt = busy ? 120 : starting ? 60 : timedOut ? 12 : 5;
         if (failedPolls.current >= flipAt) {
           setReachError((error as Error)?.message || String(error));
           setReachable(false);

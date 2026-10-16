@@ -374,7 +374,12 @@ export interface Status {
   // never ingests the newest blocks. Older daemons omit it.
   blocks_behind?: number;
   network: string;
-  node_connected: boolean;
+  /// The daemon's own RPC link to a node. Optional in fact as well as in type: daemons
+  /// that predate the field omit it, and the app deliberately reports it as absent while
+  /// a brief disconnect is still unconfirmed (see the hold where status is merged) —
+  /// because `walletStatus` turns an explicit false into a whole "Can't reach the
+  /// network" screen, and a blip is not that.
+  node_connected?: boolean;
   daa_score: number;
   synced: boolean;
   // Synced, but still doing the one-time witness warm-up that makes sends fast.
@@ -661,8 +666,13 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
         signal: ctl.signal,
       });
     } catch (e) {
-      if (ctl.signal.aborted) throw new Error(i18n.t("api.notResponding"));
-      throw new Error(i18n.t("api.cannotReachDaemon", { detail: (e as Error).message }));
+      if (ctl.signal.aborted) {
+        // Mark it structurally. A timeout means something accepted the connection and is
+        // still working — a busy daemon, not a missing one — and the caller needs to be
+        // able to tell those apart without matching on a localised string.
+        throw Object.assign(new Error(i18n.t("api.notResponding")), { timedOut: true });
+      }
+      throw Object.assign(new Error(i18n.t("api.cannotReachDaemon", { detail: (e as Error).message })), { unreachable: true });
     } finally {
       inFlight.delete(ctl);
       clearTimeout(timer);
@@ -748,7 +758,25 @@ export const api = {
   // seconds measured, before the wallet admitted anything was wrong, and it
   // looked frozen the whole time. One slow poll still changes nothing: the
   // screen only flips after five consecutive failures.
-  status: () => req<Status>("GET", "/api/status", undefined, 4_000),
+  // The deadline depends on WHICH daemon is answering, because the two are not
+  // comparable.
+  //
+  // A local engine holds its one wallet in memory and answers a status call immediately,
+  // so 4s is generous and a longer wait only delays noticing a dead engine — that is why
+  // the short bound was introduced, and for the desktop and on-phone cases it was right.
+  //
+  // The HOSTED daemon is a different machine entirely: thousands of wallets, only a few
+  // resident, and it loads one from its checkpoint before it can answer. Measured on the
+  // live daemon, the median load is ~11-13s, 78% exceed 4s and 52% exceed 10s. Five
+  // consecutive failures raise the "can't reach the wallet service" screen, so applying
+  // the local bound to it took the chance of that from roughly 7% to roughly 30% — a
+  // working daemon called offline about four times as often. Reported as the newest build
+  // showing offline where older builds worked.
+  //
+  // Recovery after a network change does not depend on this either way: what fixes that
+  // is `abortInFlight()` on the `online` event, which cuts dead sockets loose instead of
+  // waiting out their timeout.
+  status: () => req<Status>("GET", "/api/status", undefined, localEngine() ? 4_000 : undefined),
   balance: () => req<Balance>("GET", "/api/wallet/balance"),
   // Ask the daemon to build this wallet's spend index NOW, in the background, rather
   // than at the end of a caught-up sync pass — or, worst, on the first payment. The
