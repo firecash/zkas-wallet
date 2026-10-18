@@ -6,6 +6,7 @@
 // explorer website's React Query internals) gives every platform identical data.
 
 import { clearnetAllowed, onionBase } from "../lib/privacy";
+import { readLocal, removeLocal, writeLocal } from "../lib/safestore";
 
 const DEFAULT_EXPLORER_BASE = "https://wallet.zkas.info/chain";
 
@@ -36,7 +37,9 @@ function getExplorerBase(): string | null {
   // A base the user configured themselves is theirs: a local explorer is on this
   // machine and an onion is already private, so neither is gated. Anything else
   // they typed is a public host and goes through the same gate as the default.
-  const configured = localStorage.getItem("explorer_base");
+  // readLocal: a bare accessor here threw on a storage-blocked browser and took the
+  // explorer views with it, over a setting almost nobody sets.
+  const configured = readLocal("explorer_base");
   if (configured) return isLocalBase(configured) || isOnionUrl(configured) ? configured : publicExplorerOr(configured);
   // The hosted web wallet already exposes the explorer through /chain. Using
   // that same-origin route keeps the strict wallet CSP intact and avoids a
@@ -63,8 +66,8 @@ function isOnionUrl(url: string): boolean {
 
 export function setExplorerBase(url: string): void {
   const normalized = url.trim().replace(/\/+$/, "");
-  if (normalized) localStorage.setItem("explorer_base", normalized);
-  else localStorage.removeItem("explorer_base");
+  if (normalized) writeLocal("explorer_base", normalized);
+  else removeLocal("explorer_base");
 }
 
 export function explorerBase(): string {

@@ -43,3 +43,49 @@ describe("helpers that exist in two places", () => {
     }
   });
 });
+
+describe("storage rules that must not be tidied away", () => {
+  const deviceseed = readFileSync("src/lib/deviceseed.ts", "utf8");
+
+  it("seed keys are NOT read through safestore", () => {
+    // safestore's reader falls back to a session map holding what a blocked store refused.
+    // A spending key must never live there: it would vanish on reload while the owner
+    // believed the wallet had saved it — the key-loss shape setDeviceSeed warns about after
+    // a real user lost funds to the earlier version. `readSeed` catches the throw and
+    // nothing more. If someone "unifies" these onto readLocal, this fails.
+    // Precisely: the SEED keys go through readSeed. `wallet_token` in the same function
+    // legitimately uses safestore — losing a token is not losing a key — so the rule is
+    // about which KEY, not which function.
+    expect(deviceseed).toContain("readSeed(deviceSeedKey())");
+    expect(deviceseed).not.toContain("readLocal(deviceSeedKey())");
+    expect(deviceseed).toContain("readSeed(`seed_unsealed_${token}`)");
+    expect(deviceseed).not.toContain("readLocal(`seed_unsealed_${token}`)");
+  });
+
+  it("seed WRITES stay loud", () => {
+    // The opposite half of the same rule: a seed that could not be stored has to fail where
+    // somebody sees it, so these must not be routed through writeLocal, which swallows.
+    const app = readFileSync("src/App.tsx", "utf8");
+    const set = app.slice(app.indexOf("export function setDeviceSeed"));
+    const body = set.slice(0, set.indexOf("\n}") + 2);
+    expect(body).toContain("localStorage.setItem");
+    expect(body).not.toContain("writeLocal(");
+  });
+
+  it("storage enumerations are guarded, since .length throws too", () => {
+    // `localStorage.length` and `.key(i)` throw on a blocked store exactly as getItem does,
+    // so guarding the read inside a loop protects nothing. This is what kept the app from
+    // STARTING: isLockEnabled -> legacyRecords -> an unguarded length, read during render.
+    for (const f of ["src/applock.ts", "src/walletstate.ts", "src/lib/deviceseed.ts", "src/main.tsx"]) {
+      const src = readFileSync(f, "utf8");
+      const lines = src.split("\n");
+      lines.forEach((line, i) => {
+        if (!/localStorage\.(length|key\()/.test(line)) return;
+        if (line.trim().startsWith("*") || line.trim().startsWith("//")) return;
+        // Some enclosing try must exist above it inside the same function.
+        const before = lines.slice(Math.max(0, i - 40), i).join("\n");
+        expect(before, `${f}:${i + 1} enumerates storage with no enclosing try`).toMatch(/\btry\s*\{/);
+      });
+    }
+  });
+});

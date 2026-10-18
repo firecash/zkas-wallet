@@ -11,6 +11,7 @@ import { lockKind, unlock } from "./applock";
 import { disableBiometricUnlock, enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured, unlockWithBiometric } from "./biometric";
 import { listWallets } from "./wallets";
 import { wipeWalletState } from "./walletstate";
+import { readLocal, writeLocal } from "./lib/safestore";
 
 /** The status line under the mark, which actually decrypts.
  *
@@ -111,7 +112,7 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
           autoPrompted.current = true;
           void tryBiometric();
         }
-      } else if (localStorage.getItem("bio_offer_dismissed") !== "1") {
+      } else if (readLocal("bio_offer_dismissed") !== "1") {
         setBioOfferable(true);
       }
     })();
@@ -175,7 +176,7 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
 
   const declineOffer = () => {
     // Respect "not now" — don't nag on every open. Settings can still enable it later.
-    localStorage.setItem("bio_offer_dismissed", "1");
+    writeLocal("bio_offer_dismissed", "1");
     verifiedSecret.current = null;
     onUnlocked();
   };

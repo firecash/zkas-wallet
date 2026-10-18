@@ -24,6 +24,7 @@ import { accountSeedHex, accountAddress, isValidMnemonic } from "./signer";
 import type { Network } from "./signer";
 import { listWallets, type WalletRef } from "./wallets";
 import { unlockedMnemonic, isLockEnabled, sealNewMnemonic } from "./applock";
+import { readLocal, writeLocal } from "./lib/safestore";
 
 /// The device's master recovery phrase. Stored once, NOT per wallet — that is the
 /// whole point. Per-wallet legacy seeds continue to live under `device_seed_<token>`.
@@ -141,7 +142,12 @@ export function clearAccountOf(token: string): void {
 const HWM_KEY = "account_high_water";
 
 function highWater(): number {
-  const n = Number(localStorage.getItem(HWM_KEY) ?? "-1");
+  // Through safestore, read and written. This is what stops an account index being handed
+  // out twice, and the bare accessor threw on a browser with site data blocked — failing
+  // "Add account" outright. The session fallback matters here beyond not crashing: it keeps
+  // the mark rising within a session, so two accounts created on such a browser cannot
+  // collide on the same index even though nothing can be persisted for the next one.
+  const n = Number(readLocal(HWM_KEY) ?? "-1");
   return Number.isInteger(n) ? n : -1;
 }
 
@@ -169,7 +175,7 @@ export function nextFreeAccount(): number {
 /// Record that an index has been handed out, so it is never issued again.
 export function reserveAccount(account: number): void {
   try {
-    if (account > highWater()) localStorage.setItem(HWM_KEY, String(account));
+    if (account > highWater()) writeLocal(HWM_KEY, String(account));
   } catch {
     /* best effort */
   }
@@ -192,7 +198,7 @@ export function releaseAccount(account: number): void {
   try {
     if (account !== highWater()) return;
     for (const w of listWallets()) if (accountOf(w.token) === account) return;
-    localStorage.setItem(HWM_KEY, String(account - 1));
+    writeLocal(HWM_KEY, String(account - 1));
   } catch {
     /* best effort */
   }
