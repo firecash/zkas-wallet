@@ -37,6 +37,10 @@ const PER_WALLET_PREFIXES = [
   "local_receipts_", // what this device has announced as arriving
   "last_final_balance_", // arrival baseline; revives a removed wallet's figure
   "maintenance_last_run_", // unattended-consolidation clock
+  // The user's own note about what each payment WAS. This was a GLOBAL key, so it was not
+  // swept at all and survived the removal of the wallet it described — and on a shielded
+  // chain a label is often the entire disclosure, since the chain itself says nothing.
+  "zkas_tx_labels_v1_",
 ];
 
 /**
