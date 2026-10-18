@@ -6440,9 +6440,15 @@ function Send({
         "prepare",
         activeToken() ?? "default",
         Math.max(1, Math.min(status?.note_count ?? 1, MAX_NOTES_PER_TX)),
-        !!status?.spend_ready && !status?.warming,
+        // `?? synced`, the same fallback walletCanSpend uses and for the same stated
+        // reason: daemons predating `spend_ready` never send it. Reading it as a bare
+        // boolean put every such daemon in the COLD bucket permanently, which reproduces
+        // the mismatch described above — a warm wallet quoted a cold wallet's time.
+        // Measured against a real older walletd (devnet, kaspad 2.0.1), which omits the
+        // field entirely along with eleven others.
+        (status?.spend_ready ?? status?.synced ?? false) && !status?.warming,
       ),
-    [status?.note_count, status?.spend_ready, status?.warming],
+    [status?.note_count, status?.spend_ready, status?.synced, status?.warming],
   );
   const [scanning, setScanning] = useState(false);
   // Advanced: a manual fee (ZKAS). Empty = automatic. The daemon treats it as a
