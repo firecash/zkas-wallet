@@ -470,6 +470,19 @@ function confBadge(t: LocalTx): string {
 /// History renders windowed: a miner wallet accrues thousands of chain rows and
 /// a multi-thousand-button list makes the tab unusable (and the phone hot).
 const HISTORY_PAGE = 50;
+/// What "show all" actually asks for.
+///
+/// It used to ask for NOTHING, and `/api/wallet/history` reads
+/// `query.limit.unwrap_or(500).clamp(1, 5_000)` — so omitting the limit did not mean "all",
+/// it meant 500, a tenth of what the daemon was willing to serve. A wallet with more than
+/// 500 rows showed 500 of them, the button disappeared because `showAll` was now set, and
+/// nothing on screen said the rest existed.
+///
+/// 5000 is the daemon's own ceiling, so this asks for the most it can give. Past that, the
+/// view is honestly labelled as truncated (see `history.truncated`) rather than pretending:
+/// the daemon also supports `offset`, which this client does not use yet, so real paging is
+/// the fix if anyone needs beyond 5000 rows.
+const HISTORY_MAX = 5_000;
 
 /// Last snapshot written, so an unchanged balance does not rewrite localStorage
 /// once a second for the lifetime of the app.
@@ -7437,7 +7450,7 @@ const History = memo(function History({
       // Nobody is reading a hidden tab; the daemon serialises the whole page under
       // the wallet lock for each of these, so don't ask for it until it is visible.
       if (typeof document !== "undefined" && document.hidden) return;
-      void api.history(showAll ? undefined : HISTORY_PAGE).then((h) => live && setChain(h)).catch(() => {});
+      void api.history(showAll ? HISTORY_MAX : HISTORY_PAGE).then((h) => live && setChain(h)).catch(() => {});
     };
     pull();
     // 15s is fine for a settled wallet, but a recovery scan writes rows continuously
@@ -7478,7 +7491,7 @@ const History = memo(function History({
       // hosted daemon). The 2s poll above fills rows in meanwhile, so the wait is visible
       // progress rather than a frozen screen — and the alternative is an error on a daemon
       // that is working.
-      setChain(await api.history(showAll ? undefined : HISTORY_PAGE, 180_000));
+      setChain(await api.history(showAll ? HISTORY_MAX : HISTORY_PAGE, 180_000));
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -7733,6 +7746,14 @@ const History = memo(function History({
         <button className="btn ghost small" onClick={() => setShowAll(true)}>
           {(chain?.total ?? 0) > allRows.length ? t("history.showAllRows") : t("history.showAllN", { n: merged.length })}
         </button>
+      )}
+      {/* Showing everything the daemon will serve, and it still is not everything. Saying
+          so beats a view that quietly stops: the button is gone by now, so without this
+          line the missing rows are invisible. */}
+      {showAll && (chain?.total ?? 0) > allRows.length && (
+        <p className="muted small" style={{ marginTop: 14 }}>
+          {t("history.truncated", { shown: allRows.length, total: chain?.total ?? 0 })}
+        </p>
       )}
       {heldTxids > 0 && (
         <p className="muted small" style={{ marginTop: 14 }}>

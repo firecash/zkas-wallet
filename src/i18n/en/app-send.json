@@ -129,7 +129,8 @@
     "rescanHint": "Re-read the chain to rebuild this history and recover any funds the local view lost.",
     "recoveredNote": "Recovered from the chain by your viewing key. Tap a payment for details.",
     "exportFailed": "Could not export the CSV on this device.",
-    "exportCsv": "Export CSV"
+    "exportCsv": "Export CSV",
+    "truncated": "Showing the most recent {{shown}} of {{total}} transactions."
   },
   "vaultSetting": {
     "title": "Security & backup",

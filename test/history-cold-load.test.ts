@@ -25,7 +25,11 @@ describe("history tolerates a cold wallet load where it matters", () => {
   });
 
   it("the user-initiated fetch waits long enough for a checkpoint read", () => {
-    expect(app).toContain("api.history(showAll ? undefined : HISTORY_PAGE, 180_000)");
+    // The property, not the literal: this call carries the long bound. (It also now asks
+    // for HISTORY_MAX rather than omitting the limit — see the show-all tests.)
+    const i = app.indexOf("setChain(await api.history(");
+    expect(i).toBeGreaterThan(0);
+    expect(app.slice(i, i + 140)).toContain("180_000");
   });
 
   it("but the 2s poll keeps a short timeout so requests cannot pile up", () => {
@@ -72,5 +76,31 @@ describe("every wallet-touching call survives a cold load, and only those", () =
     expect(api.slice(warm, warm + 160)).toContain("15_000");
 
     expect(api).toMatch(/\/api\/status", undefined, localEngine\(\) \? 4_000/);
+  });
+});
+
+describe("show all asks for everything the daemon will give, and admits what it cannot", () => {
+  const app = readFileSync("src/App.tsx", "utf8");
+
+  /**
+   * `/api/wallet/history` reads `query.limit.unwrap_or(500).clamp(1, 5_000)`, so omitting the
+   * limit did NOT mean "all" — it meant 500, a tenth of what the daemon would serve. A wallet
+   * with more rows showed 500 of them, the button then vanished because `showAll` was set, and
+   * nothing on screen said the rest existed.
+   */
+  it("requests the daemon's own ceiling instead of omitting the limit", () => {
+    expect(app).toMatch(/const HISTORY_MAX = 5_000/);
+    expect(app).not.toContain("api.history(showAll ? undefined");
+    const calls = app.match(/api\.history\(showAll \? HISTORY_MAX : HISTORY_PAGE/g) ?? [];
+    expect(calls.length, "both the poll and the user-initiated call").toBe(2);
+  });
+
+  it("says so when even that is truncated", () => {
+    // The daemon reports the true `total`, so silence here would be a choice to hide it.
+    const i = app.indexOf('t("history.truncated"');
+    expect(i).toBeGreaterThan(0);
+    const around = app.slice(i - 260, i + 160);
+    expect(around).toContain("showAll");
+    expect(around).toContain("chain?.total");
   });
 });
