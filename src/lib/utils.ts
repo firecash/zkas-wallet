@@ -2,6 +2,7 @@ import { api, type ChainHistoryRow } from "../api";
 import { displayName } from "../contacts";
 import type { Network } from "../signer";
 import type { Status } from "../api";
+import { safeText } from "./safetext";
 
 // navigator.clipboard is absent or throws in some native WebViews; fall back to a
 // hidden textarea so "copy" never dies with an unhandled rejection on a phone.
@@ -48,8 +49,10 @@ export function parsePaymentUri(text: string): { address: string; amount?: strin
   return {
     address,
     amount: amount && /^\d*\.?\d+$/.test(amount) ? amount : undefined,
-    memo: p.get("memo") || undefined,
-    label: p.get("label") || undefined,
+    // Both come off a QR or a link a stranger supplied and are shown next to the amount
+    // and the address, so they get the same treatment as a contact name.
+    memo: safeText(p.get("memo") ?? "") || undefined,
+    label: safeText(p.get("label") ?? "") || undefined,
   };
 }
 

@@ -12,6 +12,7 @@
 // live beside the wallet's other device state and leave with it.
 
 import { readLocal, writeLocal } from "./lib/safestore";
+import { safeText } from "./lib/safetext";
 export interface Contact {
   /// Stable id so a rename cannot orphan history references.
   id: string;
@@ -119,16 +120,19 @@ export function addContact(name: string, address: string, note?: string): Contac
     if (existing) {
       // Re-saving a known address renames it rather than creating a duplicate that
       // would make "who is this?" ambiguous later.
-      existing.name = name.trim();
-      if (note !== undefined) existing.note = note.trim() || undefined;
+      existing.name = safeText(name);
+      if (note !== undefined) existing.note = safeText(note) || undefined;
       result = existing;
       return list;
     }
     const c: Contact = {
       id: crypto.randomUUID(),
-      name: name.trim(),
+      // safeText, not trim: a name is rendered BESIDE an address, and displayName() puts
+      // it where the address would otherwise be, so a bidi override in it can reorder that
+      // address on screen. See lib/safetext.
+      name: safeText(name),
       address: address.trim(),
-      note: note?.trim() || undefined,
+      note: note ? safeText(note) || undefined : undefined,
       createdUnix: Math.floor(Date.now() / 1000),
     };
     result = c;
@@ -142,9 +146,9 @@ export function updateContact(id: string, patch: Partial<Pick<Contact, "name" | 
   mutate((list) => {
     const c = list.find((x) => x.id === id);
     if (!c) return list;
-    if (patch.name !== undefined) c.name = patch.name.trim();
+    if (patch.name !== undefined) c.name = safeText(patch.name);
     if (patch.address !== undefined) c.address = patch.address.trim();
-    if (patch.note !== undefined) c.note = patch.note.trim() || undefined;
+    if (patch.note !== undefined) c.note = safeText(patch.note) || undefined;
     return list;
   });
 }

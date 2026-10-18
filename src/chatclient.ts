@@ -30,6 +30,7 @@ export {
 } from "./lib/chatprefs";
 import { GLOBAL_ROOM, relayUrl, mutedKeys } from "./lib/chatprefs";
 import { socketAllowed } from "./lib/privacy";
+import { safeText } from "./lib/safetext";
 
 /** Nostr kinds. Standard ones throughout, so nothing here is a private dialect:
  *  a general Nostr client pointed at our relay would render these events, and
@@ -558,12 +559,12 @@ export function profileContent(name: string, zkas?: string, about?: string): str
 export function parseProfile(content: string): { name?: string; zkas?: string; about?: string } {
   try {
     const d = JSON.parse(content) as Record<string, unknown>;
-    const name = typeof d.name === "string" ? d.name.trim().slice(0, 32) : undefined;
+    const name = typeof d.name === "string" ? safeText(d.name).slice(0, 32) : undefined;
     const zkas = typeof d.zkas === "string" && d.zkas.startsWith("zkas:") ? d.zkas.trim() : undefined;
     // Truncated AND stripped of line breaks: a stranger controls this string, and
     // a hundred newlines in it would push every other row off the sheet.
     const about =
-      typeof d.about === "string" ? d.about.replace(/\s+/g, " ").trim().slice(0, ABOUT_MAX) : undefined;
+      typeof d.about === "string" ? safeText(d.about).slice(0, ABOUT_MAX) : undefined;
     return { name: name || undefined, zkas, about: about || undefined };
   } catch {
     return {};
