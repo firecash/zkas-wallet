@@ -30,7 +30,7 @@ import { useMaintenance, mergeInFlight } from "./useMaintenance";
 import { isMaintenanceEnabled, setMaintenanceEnabled } from "./maintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./receipts";
-import { byNewest, isConsolidationRow } from "./history";
+import { byNewest, isConsolidationRow, usableTime } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput, shortAddr, trimTrailingZeros } from "./lib/utils";
 import { readLocal, writeLocal } from "./lib/safestore";
@@ -5065,7 +5065,7 @@ function TxDetail({
         </div>
         <div className="detail-row">
           <span className="k">{t("txDetail.when")}</span>
-          <span className="v">{row.timestamp > 0 ? fmtTime(row.timestamp) : t("txDetail.daa", { daa: row.daaScore })}</span>
+          <span className="v">{usableTime(row.timestamp) ? fmtTime(row.timestamp) : t("txDetail.daa", { daa: row.daaScore })}</span>
         </div>
         {row.feeSompi > 0 && (
           <div className="detail-row">
@@ -7736,7 +7736,7 @@ const History = memo(function History({
                   ) : (
                     <span className="mono">{shortAddr(r.txid)}</span>
                   )}
-                  <span>{r.timestamp > 0 ? fmtTime(r.timestamp) : t("history.daa", { daa: r.daaScore })}</span>
+                  <span>{usableTime(r.timestamp) ? fmtTime(r.timestamp) : t("history.daa", { daa: r.daaScore })}</span>
                 </div>
                 {r.kind === "sent" && r.memo && (
                   <div className="txrow-sub">

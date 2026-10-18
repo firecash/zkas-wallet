@@ -44,9 +44,32 @@ export interface Timed {
  * under a 1970 timestamp, which is worse than admitting the gap: among themselves those
  * rows still have a real order, their `daaScore`, so they stay internally chronological.
  */
+/// How far ahead of this device a block's time may be and still be believed.
+///
+/// A block header's timestamp is chosen by whoever mined it, and consensus only requires it
+/// to be within a drift window — so a row can arrive dated in the future. That is not just a
+/// wrong date on screen: `byNewest` sorts on it, so one skewed block sits above every
+/// genuinely newer payment FOREVER, in the one list people scan to find a specific payment.
+///
+/// The tolerance is deliberately generous, because the comparison is against the DEVICE's
+/// clock and that is the thing most likely to be wrong. A phone an hour behind would
+/// otherwise see its own recent, honest history reclassified as undated. Two hours catches
+/// an absurd timestamp while leaving ordinary clock error alone.
+const FUTURE_TOLERANCE_MS = 2 * 60 * 60_000;
+
+/// Is this timestamp usable as a time at all?
+///
+/// Zero means the node served no block metadata (see `byNewest`). Far-future means the value
+/// cannot be trusted as a time. Both are better admitted than displayed: a 1970 date buries
+/// real history at the bottom, and a 2087 date pins it to the top.
+export function usableTime(ts: number, now = Date.now()): boolean {
+  return Number.isFinite(ts) && ts > 0 && ts <= now + FUTURE_TOLERANCE_MS;
+}
+
 export function byNewest<T extends Timed>(rows: T[]): T[] {
-  const known = rows.filter((r) => r.ts > 0).sort((a, b) => b.ts - a.ts);
-  const undated = rows.filter((r) => !(r.ts > 0)).sort((a, b) => (b.daaScore ?? 0) - (a.daaScore ?? 0));
+  const now = Date.now();
+  const known = rows.filter((r) => usableTime(r.ts, now)).sort((a, b) => b.ts - a.ts);
+  const undated = rows.filter((r) => !usableTime(r.ts, now)).sort((a, b) => (b.daaScore ?? 0) - (a.daaScore ?? 0));
   return [...known, ...undated];
 }
 
