@@ -181,14 +181,31 @@ export function Mining() {
   useEffect(() => {
     if (!desktop) return;
     let unlisten: (() => void)[] = [];
+    // `cancelled`, because the subscriptions are set up across an AWAIT — the dynamic
+    // import of the Tauri event module, which is why it is dynamic at all. Leaving this
+    // page while that import was in flight left `unlisten` still empty, so the cleanup
+    // unsubscribed nothing: the listeners attached AFTER unmount, stayed attached, and
+    // went on calling setProgress on a component that no longer existed. Every visit to
+    // this page added another pair.
+    let cancelled = false;
     void (async () => {
       const { listen } = await import("@tauri-apps/api/event");
-      unlisten = [
+      const subs = [
         await listen<DownloadProgress>("download-progress", ({ payload }) => setProgress(payload)),
         await listen("service-state", () => refreshLocal().catch(() => undefined)),
       ];
+      // Unmounted while awaiting: undo immediately rather than hand them to a cleanup
+      // that has already run.
+      if (cancelled) {
+        subs.forEach((fn) => fn());
+        return;
+      }
+      unlisten = subs;
     })();
-    return () => unlisten.forEach((fn) => fn());
+    return () => {
+      cancelled = true;
+      unlisten.forEach((fn) => fn());
+    };
   }, [desktop, refreshLocal]);
 
   const missing = useMemo(() => {
