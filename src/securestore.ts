@@ -141,6 +141,22 @@ let installed = false;
  * an older mirrored one. Returns what it restored, so a purge is visible in the log rather
  * than silently healed.
  */
+/// A mirrored key's name with the wallet token taken out of it.
+///
+/// The restore path logged the names it put back, and every per-wallet key carries the
+/// token as its suffix — `device_seed_<token>`, `watch_fvk_<token>`, `contacts_<token>`.
+/// That token is the bearer credential for the hosted daemon: it is what every request
+/// authenticates with, so whoever holds it can read the wallet's balance and its entire
+/// transaction history server-side. Printing it into the console put it wherever console
+/// output goes — devtools, a screen-share, logcat on a debuggable Android build — on a
+/// wallet whose whole purpose is that this metadata stays private.
+///
+/// The KIND of key is the part with diagnostic value ("the seed came back, so did the view
+/// key"), and it survives. The token does not.
+export function redactKeyName(key: string): string {
+  return key.replace(/[0-9a-f]{16,}$/i, "\u2026");
+}
+
 export async function mirrorRestore(): Promise<string[]> {
   if (!mirrorAvailable()) return [];
   const restored: string[] = [];

@@ -5,7 +5,7 @@ import "./lib/storage-shim";
 // Installs a write-through copy of the few values whose loss costs money, and restores
 // any the system has evicted. iOS only; see securestore.ts for why localStorage alone is
 // not a safe home for a seed there.
-import { installMirror, mirrorRestore, mirrorBackfill, mirrorAvailable } from "./securestore";
+import { installMirror, mirrorAvailable, mirrorBackfill, mirrorRestore, redactKeyName } from "./securestore";
 import { Component, lazy, StrictMode, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -477,7 +477,10 @@ async function boot() {
     try {
       const restored = await mirrorRestore();
       if (restored.length) {
-        console.warn(`[securestore] restored ${restored.length} evicted key(s) from the keychain:`, restored.join(", "));
+        // Names redacted: each per-wallet key ends in the wallet TOKEN, which authenticates
+        // every request to the hosted daemon. See redactKeyName.
+        const kinds = [...new Set(restored.map(redactKeyName))].join(", ");
+        console.warn(`[securestore] restored ${restored.length} evicted key(s) from the keychain:`, kinds);
       }
       installMirror();
       await mirrorBackfill();
