@@ -1,4 +1,4 @@
-import { readLocal } from "./safestore";
+import { readLocal, writeLocal } from "./safestore";
 import { loadStatusCache, type Status } from "../api";
 import { addressFromSeed, accountAddress, accountSeedHex, type Network } from "../signer";
 import { unlockedDeviceSeed, isLockEnabled, sealNewSeed, allUnlockedSeeds } from "../applock";
@@ -19,15 +19,36 @@ function deviceSeedKey(): string {
   return `device_seed_${readLocal("wallet_token") || "default"}`;
 }
 
+/**
+ * A guarded read for the SEED keys — deliberately not `readLocal`.
+ *
+ * safestore's reader falls back to a session map holding what a blocked store refused, and
+ * a spending key must never live there: it would disappear on reload while the owner
+ * believed the wallet had remembered it, which is the key-loss shape `setDeviceSeed` carries
+ * a warning about (a real user lost funds to the earlier version of it). So this catches the
+ * throw and nothing more — "no seed stored" is the honest answer on a browser that cannot
+ * store one, and the app then asks for the recovery phrase, which is correct.
+ *
+ * The WRITES in this module stay raw and loud for the same reason: a seed that could not be
+ * saved has to fail where someone can see it.
+ */
+function readSeed(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
 export function getDeviceSeed(): string {
   const unlocked = unlockedDeviceSeed();
   if (unlocked) return unlocked;
   if (isLockEnabled()) {
     const token = readLocal("wallet_token") || "default";
-    if (localStorage.getItem(`seed_unsealed_${token}`)) return localStorage.getItem(deviceSeedKey()) || "";
+    if (readSeed(`seed_unsealed_${token}`)) return readSeed(deviceSeedKey()) || "";
     return "";
   }
-  return localStorage.getItem(deviceSeedKey()) || "";
+  return readSeed(deviceSeedKey()) || "";
 }
 
 export function setDeviceSeed(seed: string) {
@@ -69,12 +90,12 @@ export function rememberBirthday(daa: number, address?: string | null): void {
   if (!(daa > 0)) return;
   const v = String(Math.floor(daa));
   try {
-    localStorage.setItem(birthdayKey(), v);
+    writeLocal(birthdayKey(), v);
     if (address) {
       // Per address keep the EARLIEST value ever recorded: starting a scan too
       // early costs seconds, starting it too late costs notes.
       const prev = addressBirthday(address);
-      if (!prev || daa < prev) localStorage.setItem(birthdayAddrKey(address), v);
+      if (!prev || daa < prev) writeLocal(birthdayAddrKey(address), v);
     }
   } catch {
     /* best-effort */
@@ -84,13 +105,13 @@ export function rememberBirthday(daa: number, address?: string | null): void {
 /// The active token's remembered birthday only; 0 when this token has none.
 /// Prefer `knownBirthday` wherever the number is about to be SENT somewhere.
 export function walletBirthday(): number {
-  return positive(localStorage.getItem(birthdayKey()));
+  return positive(readLocal(birthdayKey()));
 }
 
 /// The per-address copy (see `birthdayAddrKey`); 0 when none.
 export function addressBirthday(address: string): number {
   try {
-    return positive(localStorage.getItem(birthdayAddrKey(address)));
+    return positive(readLocal(birthdayAddrKey(address)));
   } catch {
     return 0;
   }
@@ -190,7 +211,7 @@ export async function bindResolvedKey(token: string, enteredSecret: string, r: {
 
 /// The remembered scan birthday of any wallet on this device, by token.
 export function birthdayOfToken(token: string): number {
-  const v = Number(localStorage.getItem(`birthday_${token}`) || "0");
+  const v = Number(readLocal(`birthday_${token}`) || "0");
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
 }
 
@@ -204,21 +225,43 @@ export function birthdayOfToken(token: string): number {
 /// here — and without this the coins are stuck. Match every on-device secret by
 /// derived address, then derive the master phrase's accounts, and reattach the
 /// match to the active token.
+/**
+ * Every secret this device holds, as secret -> the token it was filed under (first wins).
+ *
+ * One implementation for the two callers that needed it — `findOrphanedSeed`, which uses the
+ * token to carry a misfiled birthday across, and `deviceCanSign`, which only asks whether
+ * anything here owns an address. They were near-identical loops, and the second was added
+ * during this audit, which is how duplication starts.
+ *
+ * The enumeration is guarded as a whole: `localStorage.length` and `.key(i)` throw on a
+ * browser with site data blocked just as `getItem` does, so guarding only the read would
+ * have protected nothing. Unlocked in-memory seeds are included, since with the app lock on
+ * they are the only copies that exist.
+ */
+function heldSecrets(): Map<string, string> {
+  const out = new Map<string, string>();
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k?.startsWith("device_seed_")) continue;
+      const v = readSeed(k);
+      // Either a legacy 64-hex seed or a recovery phrase; a cheap pre-filter only, the
+      // address derivation downstream is what actually decides.
+      if (v && isSecretShaped(v) && !out.has(v.trim())) out.set(v.trim(), k.slice("device_seed_".length));
+    }
+  } catch {
+    /* storage blocked: only what is unlocked in memory is reachable */
+  }
+  for (const [token, v] of Object.entries(allUnlockedSeeds() ?? {})) {
+    if (isSecretShaped(v) && !out.has(v.trim())) out.set(v.trim(), token);
+  }
+  return out;
+}
+
 export async function findOrphanedSeed(expectedAddress: string): Promise<string> {
   // Seed → the token it was stored under (first one wins), so a match can bring
   // that token's remembered birthday along with it.
-  const candidates = new Map<string, string>();
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k?.startsWith("device_seed_")) {
-      const v = localStorage.getItem(k);
-      // A stored secret is either a legacy 64-hex seed or a recovery phrase.
-      // Accept both shapes here: this is only a cheap pre-filter, and the
-      // address-derivation check below is what actually decides.
-      if (v && isSecretShaped(v) && !candidates.has(v.trim())) candidates.set(v.trim(), k.slice("device_seed_".length));
-    }
-  }
-  for (const [token, v] of Object.entries(allUnlockedSeeds() ?? {})) if (!candidates.has(v.trim())) candidates.set(v.trim(), token);
+  const candidates = heldSecrets();
   const net = networkOfAddress(expectedAddress);
   for (const [seed, token] of candidates) {
     try {
@@ -338,15 +381,7 @@ export async function deviceCanSign(address: string): Promise<boolean | null> {
   if (!address) return null;
   // The same candidates findOrphanedSeed considers — every secret stored under any token,
   // plus any held unlocked in memory — read without writing any of them back.
-  const candidates = new Set<string>();
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k?.startsWith("device_seed_")) {
-      const v = localStorage.getItem(k);
-      if (v && isSecretShaped(v)) candidates.add(v.trim());
-    }
-  }
-  for (const v of Object.values(allUnlockedSeeds() ?? {})) if (isSecretShaped(v)) candidates.add(v.trim());
+  const candidates = new Set(heldSecrets().keys());
   if (candidates.size === 0) return false;
   let undecided = false;
   for (const secret of candidates) {
