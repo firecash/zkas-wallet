@@ -185,7 +185,13 @@ export function pendingTotal(txs: LocalTx[]): number {
 export type Snapshot = { balanceFc: number; spendableFc: number; maturingFc: number; noteCount: number; ts: number };
 
 function snapKey(): string {
-  return `last_known_${localStorage.getItem("wallet_token") || "default"}`;
+  // `readLocal`, like `key()` twenty lines up. This file had one of each: the local-tx key
+  // was migrated to the safe reader and the snapshot key was left reading the accessor
+  // directly, so on a browser with site storage blocked — where the accessor throws rather
+  // than returning null — the last-known-balance safety net died entirely instead of
+  // falling back to the default token. The callers catch, so it was never a crash, just
+  // the net quietly gone on the browsers most likely to need it.
+  return `last_known_${readLocal("wallet_token") || "default"}`;
 }
 
 export function saveSnapshot(s: Snapshot) {

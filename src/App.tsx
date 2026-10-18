@@ -33,6 +33,7 @@ import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./rec
 import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput } from "./lib/utils";
+import { readLocal } from "./lib/safestore";
 import { SEED_REQUIRED, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, reserveAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
@@ -812,7 +813,12 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   const warmingSince = useRef<number | null>(null);
   // The wallet this TAB is showing. Compared against the `storage` event's new value so
   // a switch made in another tab can be noticed; see onOtherTabSwitch below.
-  const bootToken = useRef<string | null>(localStorage.getItem("wallet_token"));
+  // readLocal, not a bare accessor: a useRef initialiser runs DURING RENDER, and with
+  // site storage blocked (Safari "Block all cookies") the accessor itself throws rather
+  // than returning null — which would take the whole wallet screen down. main.tsx guards
+  // the same read on the boot path for exactly this reason, noting the splash once stayed
+  // up forever because of it; this one was added later and missed it.
+  const bootToken = useRef<string | null>(readLocal("wallet_token"));
   /// When the last poll ran while the page was hidden (see HIDDEN_POLL_MS).
   const lastHiddenPoll = useRef(0);
 
