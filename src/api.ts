@@ -1094,8 +1094,17 @@ export const api = {
   // p90 44.1s, p99 167.8s. The 30s default is exceeded by 17.9% of them — so about one in
   // six cold opens failed with an error while the daemon was working correctly. 180s (what
   // `watch` already uses for the same cold-load work) covers 99.1%.
-  history: (limit?: number, timeoutMs = 30_000) =>
-    req<ChainHistory>("GET", `/api/wallet/history${limit ? `?limit=${limit}` : ""}`, undefined, timeoutMs).then(saneHistory),
+  //
+  // `offset` is the daemon's own paging parameter, alongside the `total`/`offset`/`limit` it
+  // returns. Without it the newest `limit` rows were the only history this client could ever
+  // reach, so a wallet past that ceiling had older transactions it could not show at all.
+  history: (limit?: number, timeoutMs = 30_000, offset?: number) =>
+    req<ChainHistory>(
+      "GET",
+      `/api/wallet/history${limit ? `?limit=${limit}` : ""}${offset && offset > 0 ? `${limit ? "&" : "?"}offset=${offset}` : ""}`,
+      undefined,
+      timeoutMs,
+    ).then(saneHistory),
   // Proof of payment. The daemon re-reads the transaction from the chain and discloses
   // what OUR OWN send paid and to whom — the note's recipient, amount, memo and the one
   // random seed that lets anybody recompute the on-chain commitment. Nothing about the

@@ -19,9 +19,11 @@ describe("history tolerates a cold wallet load where it matters", () => {
   const app = readFileSync("src/App.tsx", "utf8");
 
   it("lets the caller choose the timeout, defaulting to the short one", () => {
-    expect(api).toMatch(/history:\s*\(limit\?: number, timeoutMs = 30_000\)/);
-    // The default must still be passed through, not ignored.
-    expect(api).toMatch(/\/api\/wallet\/history[^\n]*undefined,\s*timeoutMs\)/);
+    expect(api).toMatch(/history:\s*\(limit\?: number, timeoutMs = 30_000, offset\?: number\)/);
+    // The caller's timeout must still reach req(), not be dropped on the way.
+    const i = api.indexOf("/api/wallet/history");
+    expect(i).toBeGreaterThan(0);
+    expect(api.slice(i, i + 320)).toContain("timeoutMs");
   });
 
   it("the user-initiated fetch waits long enough for a checkpoint read", () => {
@@ -102,5 +104,36 @@ describe("show all asks for everything the daemon will give, and admits what it 
     const around = app.slice(i - 260, i + 160);
     expect(around).toContain("showAll");
     expect(around).toContain("chain?.total");
+  });
+});
+
+describe("history can reach past the first page", () => {
+  const api = readFileSync("src/api.ts", "utf8");
+  const app = readFileSync("src/App.tsx", "utf8");
+
+  /**
+   * The daemon pages: it takes `offset` and returns `total`/`offset`/`limit`. Without using
+   * it the newest `limit` rows were the only history this client could ever reach, so a
+   * wallet past that ceiling had older transactions it simply could not show.
+   */
+  it("sends the daemon's offset parameter", () => {
+    expect(api).toMatch(/offset\?: number/);
+    expect(api).toContain("offset=${offset}");
+    // And only when it is meaningful, so the common call keeps its clean URL.
+    expect(api).toMatch(/offset && offset > 0/);
+  });
+
+  it("accumulates older pages instead of letting the poll discard them", () => {
+    // The 2s poll replaces `chain`; appended pages have to live outside it.
+    expect(app).toMatch(/const \[older, setOlder\] = useState<ChainHistoryRow\[\]>\(\[\]\)/);
+    const i = app.indexOf("const allRows = useMemo(");
+    expect(i).toBeGreaterThan(0);
+    expect(app.slice(i, i + 220)).toContain("...older");
+  });
+
+  it("asks from where the loaded rows end", () => {
+    const i = app.indexOf("api\n                .history(");
+    const call = i > 0 ? app.slice(i, i + 160) : app.slice(app.indexOf(".history(HISTORY_MAX, 180_000, allRows.length)"), app.indexOf(".history(HISTORY_MAX, 180_000, allRows.length)") + 80);
+    expect(call).toContain("allRows.length");
   });
 });

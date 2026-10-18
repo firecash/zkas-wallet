@@ -130,7 +130,9 @@
     "recoveredNote": "Recovered from the chain by your viewing key. Tap a payment for details.",
     "exportFailed": "Could not export the CSV on this device.",
     "exportCsv": "Export CSV",
-    "truncated": "Showing the most recent {{shown}} of {{total}} transactions."
+    "truncated": "Showing the most recent {{shown}} of {{total}} transactions.",
+    "loadOlder": "Load older transactions",
+    "loadingOlder": "Loading…"
   },
   "vaultSetting": {
     "title": "Security & backup",

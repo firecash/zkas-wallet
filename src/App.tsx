@@ -7425,6 +7425,8 @@ const History = memo(function History({
   }, [labelRevision]);
   // Long histories render windowed — a miner wallet accrues thousands of rows
   // and a multi-thousand-button list makes the tab unusable.
+  const [older, setOlder] = useState<ChainHistoryRow[]>([]);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [showAll, setShowAll] = useState(false);
   // Set while the recovery scan is genuinely in flight. Recovery starts a rescan,
   // but the daemon takes a moment to report itself unsynced — so `synced` was still
@@ -7500,7 +7502,14 @@ const History = memo(function History({
   };
 
   const fresh = justSent ? txs.find((t) => t.txid === justSent) : undefined;
-  const allRows = chain?.rows ?? NO_ROWS;
+  // Pages fetched BEHIND the newest one, kept separately so the 2s poll can keep replacing
+  // `chain` without discarding them. Safe to accumulate: these rows are older than the newest
+  // page and a confirmed transaction does not change. A wallet switch reloads the app (every
+  // `switchWallet` call site does), so they cannot leak between wallets.
+  const allRows = useMemo(
+    () => (older.length ? [...(chain?.rows ?? NO_ROWS), ...older] : (chain?.rows ?? NO_ROWS)),
+    [chain?.rows, older],
+  );
   // Search covers what a person actually remembers about a payment: who, what it
   // was for, and roughly how much — not the txid they never read.
   const needle = q.trim().toLowerCase();
@@ -7751,9 +7760,26 @@ const History = memo(function History({
           so beats a view that quietly stops: the button is gone by now, so without this
           line the missing rows are invisible. */}
       {showAll && (chain?.total ?? 0) > allRows.length && (
-        <p className="muted small" style={{ marginTop: 14 }}>
-          {t("history.truncated", { shown: allRows.length, total: chain?.total ?? 0 })}
-        </p>
+        <div style={{ marginTop: 14 }}>
+          <p className="muted small">{t("history.truncated", { shown: allRows.length, total: chain?.total ?? 0 })}</p>
+          {/* A real next page, via the daemon's `offset`. Asking for HISTORY_MAX again from
+              where the loaded rows end walks backwards through the whole history, instead of
+              stopping at the first page — which was all this client could ever reach. */}
+          <button
+            className="btn ghost small"
+            disabled={loadingOlder}
+            onClick={() => {
+              setLoadingOlder(true);
+              void api
+                .history(HISTORY_MAX, 180_000, allRows.length)
+                .then((h) => setOlder((prev) => [...prev, ...(h.rows ?? [])]))
+                .catch(() => {})
+                .finally(() => setLoadingOlder(false));
+            }}
+          >
+            {loadingOlder ? t("history.loadingOlder") : t("history.loadOlder")}
+          </button>
+        </div>
       )}
       {heldTxids > 0 && (
         <p className="muted small" style={{ marginTop: 14 }}>
