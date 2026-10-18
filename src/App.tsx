@@ -35,6 +35,7 @@ import { tickedConfirmations } from "./confirmations";
 import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput, shortAddr, trimTrailingZeros } from "./lib/utils";
 import { readLocal, writeLocal } from "./lib/safestore";
 import { birthdayAheadOfTip } from "./lib/birthday";
+import { skipPollWhileFailing } from "./lib/pollbackoff";
 import { MEMO_MAX_BYTES, clampUtf8Bytes } from "./lib/safetext";
 import { SEED_REQUIRED, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, reserveAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
@@ -760,6 +761,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // the "can't reach the wallet service" screen — that unmounts the whole wallet
   // (a half-filled Send form included) and oscillates on a flaky connection.
   const failedPolls = useRef(0);
+  /// When the last poll ran inside the failing-service backoff (see skipPollWhileFailing).
+  const lastFailingPoll = useRef(0);
   /// Consecutive polls the on-device engine's node has been unreachable. Sustained, not
   /// instantaneous: a node blips, and restarting the engine on every blip costs more
   /// than the blip does.
@@ -851,6 +854,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       if (Date.now() - lastHiddenPoll.current < HIDDEN_POLL_MS) return;
       lastHiddenPoll.current = Date.now();
     }
+    // Stop hammering a service that has been failing for minutes. See skipPollWhileFailing:
+    // the threshold sits past the longest `flipAt`, so no user-visible timing changes.
+    if (skipPollWhileFailing(failedPolls.current, lastFailingPoll.current)) return;
+    lastFailingPoll.current = Date.now();
     refreshInFlight.current = true;
     // WHICH wallet this poll is about. Captured before the request, because the
     // active token can change while it is in flight — `recreatePhraseAccounts`
