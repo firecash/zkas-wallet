@@ -140,40 +140,8 @@ export function shortAddr(a: string): string {
   return body.length > 20 ? `${a.slice(0, 16)}…${a.slice(-6)}` : a;
 }
 
-export function fmtTime(ms: number): string {
-  return new Date(ms).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
-export function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
-}
 
-export function historyCsv(rows: ChainHistoryRow[]): string {
-  const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  const head = ["kind", "amount_zkas", "fee_zkas", "time_utc", "daa_score", "counterparty", "memo", "txid"];
-  const lines = rows.map((r) =>
-    [
-      r.kind,
-      r.amountZkas.toFixed(8),
-      (r.feeSompi / 1e8).toFixed(8),
-      r.timestamp > 0 ? new Date(r.timestamp).toISOString() : "",
-      String(r.daaScore),
-      displayName(r.recipient, r.recipient ?? ""),
-      r.memo ?? "",
-      r.txid,
-    ]
-      .map(esc)
-      .join(","),
-  );
-  return [head.join(","), ...lines].join("\n");
-}
 
 export function networkOf(status: Status | null): Network {
   return status?.network === "testnet" ? "testnet" : "mainnet";

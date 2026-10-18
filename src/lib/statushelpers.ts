@@ -13,6 +13,14 @@ export function sameStatus(a: Status, b: Status): boolean {
     a.warming_eta_secs === b.warming_eta_secs &&
     // Mirrors App.tsx's sameStatus: the spend gate can flip on its own.
     a.spend_ready === b.spend_ready &&
+    // It did NOT mirror it, despite the line above: `private_sends` was compared in
+    // App.tsx's copy and missing here, and this is the copy store/wallet.ts uses to
+    // decide whether to publish a new status at all. A status whose only change was the
+    // private-sends setting counted as unchanged, so the store would have kept the old
+    // one and anything reading it would show a stale privacy state. Latent rather than
+    // live only because nothing imports that store yet — and the test for this function
+    // was asserting this copy's field list while the app ran the other one.
+    a.private_sends === b.private_sends &&
     a.loading === b.loading &&
     a.node_connected === b.node_connected &&
     a.balance_fc === b.balance_fc &&
@@ -64,14 +72,6 @@ export function pendingOutFc(status: Status | null): number {
   return status?.pending_out_fc != null ? parseFloat(status.pending_out_fc) : 0;
 }
 
-export function confBadge(t: LocalTx): string {
-  const confs = t.confs ?? 0;
-  if (confs >= 1) {
-    return Date.now() - t.ts > CONF_RECENT_RETRY_MS ? i18n.t("confirmations.confirmed") : i18n.t("confirmations.confs", { count: confs });
-  }
-  if (t.confs == null && (t.confTries ?? 0) >= CONF_MAX_TRIES) return i18n.t("statushelpers.notSeen");
-  return i18n.t("statushelpers.sending");
-}
 
 let lastSnapshotKey = "";
 export function snapshotDirty(s: Status): boolean {
@@ -91,17 +91,3 @@ export function isTransientNote(msg: string): boolean {
   return /[….]{1,3}$/.test(m) && m === m.toLowerCase() && m.length < 40;
 }
 
-export function localTxToRow(t: LocalTx): ChainHistoryRow & { confs?: number } {
-  return {
-    kind: "sent",
-    txid: t.txid,
-    daaScore: 0,
-    timestamp: t.ts,
-    amountSompi: Math.round(t.amountFc * 1e8),
-    amountZkas: t.amountFc,
-    feeSompi: Math.round(t.feeFc * 1e8),
-    recipient: t.to,
-    memo: null,
-    confs: t.confs,
-  };
-}

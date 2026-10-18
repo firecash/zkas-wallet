@@ -31,10 +31,3 @@ export const MOBILE_SCROLL_MAX_WIDTH = 720;
 export const FEE_FC = 0.03;
 export const FEE_MAX_FC = 0.045;
 
-export function scrollToPane(force = false) {
-  if (typeof window === "undefined") return;
-  if (!force && window.innerWidth > MOBILE_SCROLL_MAX_WIDTH) return;
-  requestAnimationFrame(() => {
-    document.querySelector(".pane")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-}
