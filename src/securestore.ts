@@ -56,7 +56,21 @@ export function shouldMirror(key: string): boolean {
     key === "mnemonic_unsealed" ||
     key === "wallets_v1" ||
     key.startsWith("wallet_account_") ||
-    key === "account_high_water"
+    key === "account_high_water" ||
+    // A WATCH-ONLY wallet's viewing key, which for that wallet is the whole wallet: there
+    // is no seed behind it. Lose this to an eviction and `watchKey()` returns "",
+    // `isWatchOnly()` goes false, and the app treats what is left as an ordinary wallet
+    // with no key — asking for a recovery phrase that never existed for it. The funds are
+    // safe on the device that issued the link, but the viewer is gone and the owner has to
+    // go and fetch the link again. 96 bytes, and the Keychain is a better home for a key
+    // that reveals an entire transaction history than evictable website data is.
+    key.startsWith("watch_fvk_") ||
+    // The address book. On a shielded chain nothing on-chain says who an address belongs
+    // to — contacts.ts opens with exactly that — so this cannot be rebuilt from anywhere,
+    // which is the test this file sets for what belongs in the Keychain. It is also the
+    // only thing here that is neither a key nor a counter, and it is small: a contact is
+    // a name and an address.
+    key.startsWith("contacts_")
   );
 }
 

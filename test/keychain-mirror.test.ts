@@ -55,7 +55,7 @@ describe("the Keychain mirror covers everything a locked wallet needs", () => {
 
   it("does NOT mirror things that are caches or preferences", () => {
     // The Keychain is small and shared; only what cannot be rebuilt belongs in it.
-    for (const k of ["qr_zkas:abc", "status_cache_abc", "theme", "local_txs_abc", "contacts_abc", "walletd_base"]) {
+    for (const k of ["qr_zkas:abc", "status_cache_abc", "theme", "local_txs_abc", "last_known_abc", "walletd_base"]) {
       expect(shouldMirror(k), `${k} should not be mirrored`).toBe(false);
     }
   });
@@ -107,6 +107,10 @@ describe("the erase path covers everything the mirror protects", () => {
       "wallets_v1",
       "wallet_account_sometoken",
       "account_high_water",
+      // A watch-only wallet's viewing key IS that wallet — there is no seed behind it.
+      "watch_fvk_sometoken",
+      // The address book cannot be rebuilt: nothing on-chain says who an address is.
+      "contacts_sometoken",
     ];
     for (const k of mirrored) {
       expect(shouldMirror(k), `${k} should be mirrored`).toBe(true);
