@@ -68,8 +68,9 @@
     "warmBanner": "<b>⚡ Your first payment will take a few minutes.</b><br/>Locating your coins — this happens once. You can start the payment now.",
     "reviewSend": "Review send",
     "waitingForSync": "Still reading the chain — you can send the moment it catches up.",
-    "unknownFailure": "The payment was refused and the wallet could not read why. Nothing was sent — check History before trying again.",
-    "walletChanged": "The active wallet changed while this payment was being made, so nothing was sent. Check which wallet you are in and try again."
+    "unknownFailure": "The payment was refused and the wallet could not read why. Check History before trying again — if the payment is listed there, it went out.",
+    "walletChanged": "The active wallet changed while this payment was being made, so nothing was sent. Check which wallet you are in and try again.",
+    "submitOutcomeUnknown": "The wallet service stopped answering while this payment was being broadcast, so the wallet cannot tell whether it went out. Check History before trying again — sending a second time could pay twice."
   },
   "sign": {
     "title": "Sign message",

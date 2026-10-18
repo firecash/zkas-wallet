@@ -37,6 +37,25 @@ export interface SendPart {
  * them (History row + optimistic balance subtraction) before showing the error,
  * or the balance keeps showing funds that already left and invites a double-send.
  */
+/// A submit whose outcome the wallet does not know.
+///
+/// `/api/wallet/submit` is the call that broadcasts. If it answers — even with an error —
+/// the daemon decided, and the daemon is explicit when it has not broadcast ("cannot reach
+/// the node to broadcast; nothing was sent"). If it does NOT answer, the wallet knows
+/// nothing: `api.ts` marks a request that timed out, and its own note says a timeout means
+/// "something accepted the connection and is still working". For a broadcast that is the
+/// dangerous case — the transaction may already be on the network.
+///
+/// It had no type of its own, so a 60-second submit timeout reached the user as "the wallet
+/// service is not responding", worded exactly like a failure that never left the device.
+/// Being told a payment failed when it is in flight is how somebody pays twice.
+export class SubmitUnknownError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SubmitUnknownError";
+  }
+}
+
 export class PartialSendError extends Error {
   parts: SendPart[];
   constructor(message: string, parts: SendPart[]) {
@@ -536,7 +555,18 @@ export async function sendNonCustodial(
       );
 
       onStage?.("broadcasting", progress());
-      const res = await api.submit(prep.session, sigs);
+      // A submit that never got an answer is NOT a failed send — it is an unknown one.
+      // Only this one call broadcasts, so this is the only place the distinction exists.
+      let res;
+      try {
+        res = await api.submit(prep.session, sigs);
+      } catch (e) {
+        const marked = e as { timedOut?: boolean; unreachable?: boolean };
+        if (marked?.timedOut || marked?.unreachable) {
+          throw new SubmitUnknownError(i18n.t("send.submitOutcomeUnknown"));
+        }
+        throw e;
+      }
       txids.push(res.txid);
       // Prefer the daemon's EXACT decimal strings, as the prepare path above already
       // does. walletd's SendResp carries them for "clients whose number type cannot
