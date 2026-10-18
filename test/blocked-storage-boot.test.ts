@@ -107,3 +107,38 @@ describe("the wallet stays coherent for a session when storage is blocked", () =
     expect(readLocal("k2")).toBeNull();
   });
 });
+
+describe("reads that happen during RENDER", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+    vi.resetModules();
+  });
+
+  it("the receipt baseline answers null instead of throwing", async () => {
+    // App.tsx reads this in a useRef initialiser, which runs during render, so a throw
+    // here takes the whole wallet screen down rather than degrading. saveBaseline beside
+    // it already wrapped its write; only the read was bare.
+    blockStorage();
+    const { loadBaseline } = await import("../src/receipts");
+    expect(() => loadBaseline()).not.toThrow();
+    expect(loadBaseline()).toBeNull();
+  });
+
+  it("a baseline still round-trips within the session when storage is blocked", async () => {
+    blockStorage();
+    const { loadBaseline, saveBaseline } = await import("../src/receipts");
+    saveBaseline(12.5);
+    // Held by safestore for this page, so arrival detection keeps working instead of
+    // treating every poll as the first one it has ever seen.
+    expect(loadBaseline()).toBe(12.5);
+  });
+
+  it("forgetting a wallet's receipts does not leave them to come back", async () => {
+    const { saveBaseline, forgetReceipts, loadBaseline } = await import("../src/receipts");
+    localStorage.setItem("wallet_token", "0123456789abcdef0123456789abcdef");
+    saveBaseline(9);
+    forgetReceipts("0123456789abcdef0123456789abcdef");
+    expect(loadBaseline()).toBeNull();
+  });
+});

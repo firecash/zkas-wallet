@@ -1,5 +1,5 @@
 
-import { readLocal } from "./lib/safestore";// On-device record of money ARRIVING, and the balance baseline that lets the app
+// On-device record of money ARRIVING, and the balance baseline that lets the app
 // notice an arrival at all.
 //
 // The wallet already announced incoming payments — but only ones that landed while
@@ -27,6 +27,7 @@ import { readLocal } from "./lib/safestore";// On-device record of money ARRIVIN
 // sender, which is unknowable for a shielded payment by design. The UI must say so
 // rather than dress these up as chain records.
 
+import { readLocal, removeLocal, writeLocal } from "./lib/safestore";
 export interface Receipt {
   /// ZKAS that arrived, as the balance delta that revealed it.
   amountFc: number;
@@ -54,7 +55,7 @@ function baselineKey(): string {
 
 export function loadReceipts(): Receipt[] {
   try {
-    const raw = JSON.parse(localStorage.getItem(receiptsKey()) || "[]");
+    const raw = JSON.parse(readLocal(receiptsKey()) || "[]");
     return Array.isArray(raw) ? (raw as Receipt[]).filter((r) => Number.isFinite(r?.amountFc) && Number.isFinite(r?.ts)) : [];
   } catch {
     return [];
@@ -65,7 +66,7 @@ export function recordArrival(amountFc: number, whileAway: boolean, ts = Date.no
   if (!(amountFc > 0)) return loadReceipts();
   const next = [{ amountFc, ts, whileAway }, ...loadReceipts()].slice(0, MAX);
   try {
-    localStorage.setItem(receiptsKey(), JSON.stringify(next));
+    writeLocal(receiptsKey(), JSON.stringify(next));
   } catch {
     // Quota or private mode. The balance is still correct; only the note about how
     // it got there is lost, so this must never throw into the poll.
@@ -81,7 +82,12 @@ export function recordArrival(amountFc: number, whileAway: boolean, ts = Date.no
  * "between launches" is precisely when background sync is doing its job.
  */
 export function loadBaseline(): number | null {
-  const raw = localStorage.getItem(baselineKey());
+  // `readLocal`, because App.tsx reads this in a useRef initialiser — which runs DURING
+  // RENDER — and with site storage blocked the bare accessor throws rather than returning
+  // null, taking the whole wallet screen with it. saveBaseline below already wrapped its
+  // write; only the read was left bare, which is the same asymmetry localtx had between
+  // its two key builders.
+  const raw = readLocal(baselineKey());
   if (raw === null) return null;
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
@@ -90,7 +96,7 @@ export function loadBaseline(): number | null {
 export function saveBaseline(balanceFc: number): void {
   if (!Number.isFinite(balanceFc)) return;
   try {
-    localStorage.setItem(baselineKey(), String(balanceFc));
+    writeLocal(baselineKey(), String(balanceFc));
   } catch {
     /* best-effort; a lost baseline costs one missed announcement, never money */
   }
@@ -100,8 +106,11 @@ export function saveBaseline(balanceFc: number): void {
 /// cannot inherit another's balance history.
 export function forgetReceipts(forToken: string): void {
   try {
-    localStorage.removeItem(`local_receipts_${forToken}`);
-    localStorage.removeItem(`last_final_balance_${forToken}`);
+    // removeLocal for both: a raw remove leaves whatever safestore is holding for the key,
+    // and a forgotten wallet's receipts coming back would be the resurrection bug this
+    // module's sibling had with `wallet_token`.
+    removeLocal(`local_receipts_${forToken}`);
+    removeLocal(`last_final_balance_${forToken}`);
   } catch {
     /* nothing recoverable to do */
   }
