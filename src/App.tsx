@@ -32,7 +32,7 @@ import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./receipts";
 import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
-import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput } from "./lib/utils";
+import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput, shortAddr } from "./lib/utils";
 import { readLocal, writeLocal } from "./lib/safestore";
 import { SEED_REQUIRED, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, reserveAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
@@ -5062,8 +5062,16 @@ function TxDetail({
         {row.recipient && (
           <div className="detail-row">
             <span className="k">{isConsolidation ? t("txDetail.mergedInto") : row.kind === "sent" ? t("txDetail.to") : t("txDetail.receivedAt")}</span>
-            <span className="v mono" style={{ fontSize: 12 }}>
-              {contact ? <b>{contact.name}</b> : shortAddr(row.recipient)}
+            {/* The FULL address here, not shortAddr. This row is the surface somebody
+                opens to answer "did I pay the right person?", and a truncation cannot
+                answer it: an attacker can grind a vanity address matching both ends of a
+                target, which is what address poisoning is, and 11 leading plus 6 trailing
+                characters is well inside what that costs. The compact list rows above stay
+                truncated — they are for recognising a payment, not verifying one — and a
+                known contact still shows as its name, which is a stronger answer than
+                either. */}
+            <span className="v mono addr-full" style={{ fontSize: 12 }}>
+              {contact ? <b>{contact.name}</b> : row.recipient}
             </span>
           </div>
         )}
@@ -7275,11 +7283,11 @@ function Verify({ embedded }: { embedded?: boolean }) {
     </div>
   );
 }
+/// shortAddr — ONE implementation, in ./lib/utils. This file carried a byte-identical
+/// copy and, because it declared it locally, never imported the original: every screen ran
+/// the copy. Same arrangement as looksLikeAddress and parsePaymentUri before them, and the
+/// same reason it matters — this one decides how much of an address a person gets to check.
 
-function shortAddr(a: string): string {
-  const body = a.replace(/^(zkas|firecash)(test)?:/, "");
-  return body.length > 20 ? `${a.slice(0, 16)}…${a.slice(-6)}` : a;
-}
 
 // In the UI language, not the OS locale (amounts stay as they are: they get copied).
 function fmtTime(ms: number): string {

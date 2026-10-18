@@ -89,3 +89,26 @@ describe("storage rules that must not be tidied away", () => {
     }
   });
 });
+
+describe("how much of an address a person gets to check", () => {
+  const app = readFileSync("src/App.tsx", "utf8");
+
+  it("does not re-declare shortAddr", () => {
+    // It was declared here too, byte-identical, so every screen ran the copy rather than
+    // the one in lib/utils — the third helper to do that after looksLikeAddress and
+    // parsePaymentUri. This one decides how much of an address a user can verify.
+    expect(/^function shortAddr\(/m.test(app)).toBe(false);
+  });
+
+  it("shows the FULL recipient in the transaction detail row", () => {
+    // Address poisoning is grinding a vanity address that matches both ends of a target,
+    // so a truncation cannot answer "did I pay the right person?" — and that row is the
+    // surface somebody opens to ask exactly that. The compact list rows stay truncated on
+    // purpose: they are for recognising a payment, not verifying one.
+    const i = app.indexOf('className="v mono addr-full"');
+    expect(i, "the detail row should render the full address").toBeGreaterThan(0);
+    const row = app.slice(i, i + 200);
+    expect(row).toContain("row.recipient");
+    expect(row).not.toContain("shortAddr(row.recipient)");
+  });
+});

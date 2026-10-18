@@ -2130,6 +2130,16 @@ select { appearance: none; cursor: pointer; }
   font-size: 13px;
   line-height: 1.45;
 }
+/* A full 79-character address in a detail row. It has to WRAP rather than overflow the
+   card or force a horizontal scroll — this file is full of notes about not letting the
+   layout move — and it may break anywhere, because bech32 has no word boundaries worth
+   respecting. */
+.addr-full {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  line-height: 1.45;
+  text-align: right;
+}
 .status-stale {
   display: inline-flex;
   align-items: center;
