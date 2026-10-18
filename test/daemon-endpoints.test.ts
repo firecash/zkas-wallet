@@ -75,3 +75,21 @@ describe("daemon endpoints the client depends on", () => {
     expect(LIVE.filter((p) => NOT_DEPLOYED.includes(p))).toEqual([]);
   });
 });
+
+describe("the unguarded balance endpoint stays unreachable", () => {
+  const api = readFileSync("src/api.ts", "utf8");
+
+  it("exposes no balance() wrapper", () => {
+    // `/api/wallet/balance` lacks the `tip > 0` guard `/api/status` has, so a wallet
+    // mid-scan reports synced:true from it — a funded wallet telling its owner it is up to
+    // date having seen a fraction of the chain. The wrapper had no callers and existed only
+    // as a loaded gun for the next person who needed a balance.
+    expect(api).not.toMatch(/^\s*balance:\s*\(\)\s*=>/m);
+    expect(api).not.toContain('"/api/wallet/balance"');
+  });
+
+  it("and the UI takes every balance from the guarded status call", () => {
+    // status() carries the figure and applies the guard, so nothing is lost by removing it.
+    expect(api).toContain('req<Status>("GET", "/api/status"');
+  });
+});

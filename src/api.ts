@@ -959,7 +959,17 @@ export const api = {
   // is `abortInFlight()` on the `online` event, which cuts dead sockets loose instead of
   // waiting out their timeout.
   status: () => req<Status>("GET", "/api/status", undefined, localEngine() ? 4_000 : undefined).then(saneStatus),
-  balance: () => req<Balance>("GET", "/api/wallet/balance"),
+  // NO `balance:` wrapper here, deliberately.
+  //
+  // `/api/wallet/balance` lacks the `tip > 0` guard that `/api/status` has, so a wallet
+  // mid-scan reports `synced: true` from it — a funded wallet telling its owner it is up to
+  // date when it has seen a fraction of the chain. Every balance the UI shows comes from
+  // `status()`, which is guarded and already carries the figure, so this wrapper had no
+  // callers and existed only as a loaded gun: the next person needing a balance would reach
+  // for the obviously-named method and get the unguarded answer.
+  //
+  // If it is ever needed, fix the daemon's guard first. The `Balance` shape stays below as
+  // documentation of what that endpoint returns.
   // Ask the daemon to build this wallet's spend index NOW, in the background, rather
   // than at the end of a caught-up sync pass — or, worst, on the first payment. The
   // build's progress then shows in `status.warming_pct`. Idempotent and cheap: the
