@@ -1,4 +1,5 @@
 import { readLocal } from "./lib/safestore";
+import { elapsedSince } from "./lib/elapsed";
 // On-device record of sends performed from THIS device, scoped to the wallet
 // token. The daemon exposes no per-wallet transaction history, so this powers two
 // things purely client-side (nothing here ever leaves the device):
@@ -208,7 +209,7 @@ export function reconcile(daemonFc: number, synced: boolean): LocalTx[] {
       // was already showing — belongs on the Send screen, which now subtracts
       // the same `max(daemon pendingOut, local)` the hero does.
       const maxAge = r.confs != null ? PENDING_CONFIRMED_MAX_AGE_MS : PENDING_MAX_AGE_MS;
-      if (dropCovers || now - r.ts > maxAge) clear.add(r.txid);
+      if (dropCovers || elapsedSince(r.ts, now) > maxAge) clear.add(r.txid);
     }
   }
   if (clear.size === 0) return txs;

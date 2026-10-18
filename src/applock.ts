@@ -23,6 +23,7 @@
 
 import { seal, unseal, type Sealed } from "./backup";
 import { readLocal } from "./lib/safestore";
+import { elapsedSince } from "./lib/elapsed";
 
 const LOCK_KEY = "app_lock_v2";
 /** Legacy per-wallet records, migrated on unlock. */
@@ -454,7 +455,7 @@ export function installAutoLock(onLocked: () => void): void {
     if (!isLockEnabled()) return;
     if (document.hidden) {
       hiddenAt = Date.now();
-    } else if (hiddenAt && Date.now() - hiddenAt >= GRACE_MS) {
+    } else if (hiddenAt && elapsedSince(hiddenAt) >= GRACE_MS) {
       hiddenAt = 0;
       lock();
       onLocked();

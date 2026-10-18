@@ -12,6 +12,7 @@
 // hidden, and listeners are only told about a price that actually changed.
 import { useEffect, useState } from "react";
 import { clearnetAllowed } from "./lib/privacy";
+import { elapsedSince } from "./lib/elapsed";
 
 const PRICE_URL = "https://mining-pool.zkas.info/api/otc/price";
 const CACHE_KEY = "zkas_price_v1";
@@ -109,7 +110,7 @@ async function fetchPrice(): Promise<ZkasPrice | null> {
 /// Fetch only when the cached figure is stale (or absent).
 function refreshIfStale(): void {
   const cur = cachedPrice();
-  if (cur && Date.now() - cur.asOf < FRESH_MS) return;
+  if (cur && elapsedSince(cur.asOf) < FRESH_MS) return;
   void refreshPrice();
 }
 
