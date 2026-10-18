@@ -472,7 +472,7 @@ export interface Status {
 // network round-trips land. The 1s poll corrects any staleness within a second.
 // Keyed by wallet token so switching wallets never shows another wallet's data.
 function statusCacheKey(): string {
-  return `status_cache_${localStorage.getItem("wallet_token") || "default"}`;
+  return `status_cache_${readLocal("wallet_token") || "default"}`;
 }
 export function loadStatusCache(): Status | null {
   try {

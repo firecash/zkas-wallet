@@ -1,4 +1,5 @@
-// The address book.
+
+import { readLocal } from "./lib/safestore";// The address book.
 //
 // On a shielded chain every address is ~79 characters of bech32 noise, and the
 // chain itself reveals nothing — so unless the wallet remembers who an address
@@ -20,7 +21,7 @@ export interface Contact {
 }
 
 function key(): string {
-  return `contacts_${localStorage.getItem("wallet_token") || "default"}`;
+  return `contacts_${readLocal("wallet_token") || "default"}`;
 }
 
 export function loadContacts(): Contact[] {

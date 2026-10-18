@@ -9,6 +9,7 @@
 // so the "desktop.ts imports nothing from api.ts, therefore cannot cycle"
 // property that api.ts relies on still holds.
 import { clearnetAllowed } from "./lib/privacy";
+import { readLocal, writeLocal } from "./lib/safestore";
 
 export interface DesktopConfig {
   base: string;
@@ -105,7 +106,7 @@ export async function initDesktop(): Promise<DesktopConfig | null> {
   // The shell's token is the FIRST wallet, not the only one. Writing it on every
   // boot clobbered whichever wallet the user had switched to — the embedded
   // daemon serves any token, so the app's choice is the one that counts.
-  if (!localStorage.getItem("wallet_token")) localStorage.setItem("wallet_token", cfg.token);
+  if (!readLocal("wallet_token")) writeLocal("wallet_token", cfg.token);
   return cfg;
 }
 
@@ -154,7 +155,7 @@ export async function unlockVault(passphrase: string): Promise<DesktopConfig> {
   // one. Unlocking restarted the daemon but changed nothing about which wallet
   // the user had selected — writing it here switched them back to wallet #1 on
   // every unlock.
-  if (!localStorage.getItem("wallet_token")) localStorage.setItem("wallet_token", cfg.token);
+  if (!readLocal("wallet_token")) writeLocal("wallet_token", cfg.token);
   return cfg;
 }
 
@@ -164,7 +165,7 @@ export async function setPassphrase(passphrase: string): Promise<DesktopConfig> 
   applyDaemonBase(cfg);
   // Preserve the active wallet, exactly like unlockVault — encrypting at rest is
   // not a wallet switch.
-  if (!localStorage.getItem("wallet_token")) localStorage.setItem("wallet_token", cfg.token);
+  if (!readLocal("wallet_token")) writeLocal("wallet_token", cfg.token);
   return cfg;
 }
 
@@ -194,7 +195,7 @@ export async function restoreBackup(
 ): Promise<DesktopConfig> {
   const cfg = await invoke<DesktopConfig>("restore_backup", { path, backupPassphrase, passphrase });
   applyDaemonBase(cfg);
-  localStorage.setItem("wallet_token", cfg.token);
+  writeLocal("wallet_token", cfg.token);
   return cfg;
 }
 

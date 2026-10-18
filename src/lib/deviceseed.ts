@@ -23,7 +23,7 @@ export function getDeviceSeed(): string {
   const unlocked = unlockedDeviceSeed();
   if (unlocked) return unlocked;
   if (isLockEnabled()) {
-    const token = localStorage.getItem("wallet_token") || "default";
+    const token = readLocal("wallet_token") || "default";
     if (localStorage.getItem(`seed_unsealed_${token}`)) return localStorage.getItem(deviceSeedKey()) || "";
     return "";
   }
@@ -33,7 +33,7 @@ export function getDeviceSeed(): string {
 export function setDeviceSeed(seed: string) {
   if (!seed) return;
   if (isLockEnabled()) {
-    const token = localStorage.getItem("wallet_token") || "default";
+    const token = readLocal("wallet_token") || "default";
     void sealNewSeed(token, seed).then((ok) => {
       if (!ok) {
         localStorage.setItem(deviceSeedKey(), seed);
@@ -46,7 +46,7 @@ export function setDeviceSeed(seed: string) {
 }
 
 function birthdayKey(): string {
-  return `birthday_${localStorage.getItem("wallet_token") || "default"}`;
+  return `birthday_${readLocal("wallet_token") || "default"}`;
 }
 /// The birthday is ALSO kept per address (`birthday_addr_<address>`). The per-token
 /// copy is written only by the create/import/restore paths, for the token active at
@@ -241,7 +241,7 @@ export async function findOrphanedSeed(expectedAddress: string): Promise<string>
   if (master) {
     const account = await phraseAccountFor(master, expectedAddress);
     if (account !== null) {
-      const token = localStorage.getItem("wallet_token") || "default";
+      const token = readLocal("wallet_token") || "default";
       setAccountOf(token, account);
       return account === 0 ? master : await accountSeedHex(master, account);
     }
@@ -370,7 +370,7 @@ export async function resolveDeviceSeed(expectedAddress?: string): Promise<strin
   // exactly where it is and fail this attempt. The next one, with a working
   // signer, returns it normally.
   if (stored && expectedAddress && owns === false) {
-    await shelveMismatchedSeed(localStorage.getItem("wallet_token") || "default", stored);
+    await shelveMismatchedSeed(readLocal("wallet_token") || "default", stored);
   }
   if (expectedAddress) {
     const orphan = await findOrphanedSeed(expectedAddress);

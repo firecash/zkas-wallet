@@ -22,6 +22,7 @@
 // from the OS keystore, and the seeds would still be sealed with it at rest.
 
 import { seal, unseal, type Sealed } from "./backup";
+import { readLocal } from "./lib/safestore";
 
 const LOCK_KEY = "app_lock_v2";
 /** Legacy per-wallet records, migrated on unlock. */
@@ -76,7 +77,7 @@ function write(rec: LockRecord): void {
 }
 
 function activeToken(): string {
-  return localStorage.getItem("wallet_token") || "default";
+  return readLocal("wallet_token") || "default";
 }
 
 /** Every wallet seed currently sitting in the clear, by token. */

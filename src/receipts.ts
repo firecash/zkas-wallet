@@ -1,4 +1,5 @@
-// On-device record of money ARRIVING, and the balance baseline that lets the app
+
+import { readLocal } from "./lib/safestore";// On-device record of money ARRIVING, and the balance baseline that lets the app
 // notice an arrival at all.
 //
 // The wallet already announced incoming payments — but only ones that landed while
@@ -40,7 +41,7 @@ export interface Receipt {
 const MAX = 200;
 
 function token(): string {
-  return localStorage.getItem("wallet_token") || "default";
+  return readLocal("wallet_token") || "default";
 }
 
 function receiptsKey(): string {

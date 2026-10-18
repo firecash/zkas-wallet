@@ -673,7 +673,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   /// never revealed and nothing recording that it had been skipped. Seeded from
   /// durable storage so the card comes back until the quiz is actually finished.
   const [freshSeed, setFreshSeed] = useState<{ seed: string; address: string } | null>(() => {
-    const token = localStorage.getItem("wallet_token") || "default";
+    const token = readLocal("wallet_token") || "default";
     const address = backupPending(token);
     if (!address) return null;
     // The PHRASE, not the key derived from it. `create()` stores
@@ -843,14 +843,14 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
     // the desktop shell can hand back a new token at any moment. Everything
     // below used to read `wallet_token` AFTER the await and attribute this
     // response to whatever was active by then.
-    const pollToken = localStorage.getItem("wallet_token");
+    const pollToken = readLocal("wallet_token");
     try {
       const s = await api.status();
       // The wallet changed under us: this answer describes the previous one.
       // Applying it wrote another wallet's address into the registry row of the
       // new one — "Your wallets" then listed a wallet beside an address that was
       // not its own — and briefly showed that wallet's balance too.
-      if (localStorage.getItem("wallet_token") !== pollToken) return;
+      if (readLocal("wallet_token") !== pollToken) return;
       // Never let a transient poll un-render the wallet. While the daemon is reloading a
       // wallet (or a status call races a sync pass) it can answer has_wallet:false /
       // address:null for a beat. Rendering that verbatim unmounted the whole tab block —
@@ -1619,7 +1619,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           seed={freshSeed.seed}
           address={freshSeed.address}
           onDone={() => {
-            clearBackupPending(localStorage.getItem("wallet_token") || "default");
+            clearBackupPending(readLocal("wallet_token") || "default");
             setFreshSeed(null);
           }}
         />
@@ -1629,7 +1629,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       )}
       {reachable && !freshSeed && !walletLost && status && !status.has_wallet && (
         <Onboard status={status} onCreated={(seed, address) => {
-                  markBackupPending(localStorage.getItem("wallet_token") || "default", address);
+                  markBackupPending(readLocal("wallet_token") || "default", address);
                   setFreshSeed({ seed, address });
                 }} onImported={refresh} />
       )}
@@ -1864,7 +1864,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
 /// is never asked to re-type it. Clearing site data forgets it; Send then asks
 /// once and re-remembers.
 function deviceSeedKey(): string {
-  return `device_seed_${localStorage.getItem("wallet_token") || "default"}`;
+  return `device_seed_${readLocal("wallet_token") || "default"}`;
 }
 export function getDeviceSeed(): string {
   // With the app lock on, the seed exists only in memory for the current
@@ -1876,7 +1876,7 @@ export function getDeviceSeed(): string {
   const unlocked = unlockedDeviceSeed();
   if (unlocked) return unlocked;
   if (isLockEnabled()) {
-    const token = localStorage.getItem("wallet_token") || "default";
+    const token = readLocal("wallet_token") || "default";
     if (localStorage.getItem(`seed_unsealed_${token}`)) return localStorage.getItem(deviceSeedKey()) || "";
     return "";
   }
@@ -1899,7 +1899,7 @@ export function setDeviceSeed(seed: string) {
   // the cleartext on the very next unlock. See GitHub issue #4 and PR #8, whose
   // "write nothing / throw SEED_REQUIRED" proposal would reintroduce the loss.
   if (isLockEnabled()) {
-    const token = localStorage.getItem("wallet_token") || "default";
+    const token = readLocal("wallet_token") || "default";
     void sealNewSeed(token, seed).then((ok) => {
       if (!ok) {
         // Sealing failed (an auto-lock raced this creation/import). NEVER drop a
@@ -3628,7 +3628,7 @@ function addSeparateWallet(): void {
 async function persistDeviceSeed(seed: string, forToken?: string): Promise<boolean> {
   try {
     if (isLockEnabled()) {
-      const token = forToken || localStorage.getItem("wallet_token") || "default";
+      const token = forToken || readLocal("wallet_token") || "default";
       const ok = await sealNewSeed(token, seed);
       if (!ok) {
         // Same principle as setDeviceSeed: never drop a key silently.
@@ -5306,7 +5306,7 @@ function StopWatching() {
                 // holds the only "Stop watching" button disappeared, and the app
                 // offered Send, Reveal seed, Signatures and Tools for a wallet
                 // this device has no key for.
-                const token = localStorage.getItem("wallet_token");
+                const token = readLocal("wallet_token");
                 clearWatchKey();
                 if (token) {
                   wipeWalletState(token);
