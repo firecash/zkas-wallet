@@ -37,11 +37,23 @@ export function mirrorAvailable(): boolean {
  * or replaceable, and copying them into the Keychain would put hundreds of KB of
  * non-secret data somewhere it does not belong.
  */
-function shouldMirror(key: string): boolean {
+export function shouldMirror(key: string): boolean {
   return (
     key.startsWith("device_seed_") ||
     key === "device_mnemonic" ||
-    key === "applock_v1" ||
+    // THE LOCK RECORD. This said "applock_v1", a key that does not exist anywhere in the
+    // app — applock.ts calls it `app_lock_v2`, with `app_lock_v1_` as the legacy prefix.
+    // The consequence was the exact loss this file exists to prevent: with the lock ON the
+    // seed is sealed INSIDE this record and the cleartext device_seed_ copy is deleted, so
+    // mirroring device_seed_ captured nothing and the sealed copy was not mirrored at all.
+    // One eviction and a locked wallet was unrecoverable without its recovery phrase.
+    key === "app_lock_v2" ||
+    key.startsWith("app_lock_v1_") ||
+    // The flags that make a restored seed READABLE. getDeviceSeed only returns the
+    // plaintext fallback when `seed_unsealed_<token>` is present, so restoring the seed
+    // without its flag hands back a key the app refuses to use; same for the phrase.
+    key.startsWith("seed_unsealed_") ||
+    key === "mnemonic_unsealed" ||
     key === "wallets_v1" ||
     key.startsWith("wallet_account_") ||
     key === "account_high_water"
@@ -79,8 +91,23 @@ export function installMirror(): void {
   const origSet = proto.setItem.bind(localStorage);
   const origRemove = proto.removeItem.bind(localStorage);
   localStorage.setItem = (key: string, value: string) => {
-    origSet(key, value);
+    // MIRROR FIRST, then store. The other order meant that when localStorage refused a
+    // write — iOS enforces a quota, and a blocked store throws outright — the exception
+    // propagated and mirrorPut was never reached. The Keychain is a SEPARATE store with
+    // its own limits, so localStorage refusing a value says nothing about whether the
+    // mirror could hold it, and the mirror is the copy that exists precisely to survive
+    // localStorage being emptied. Losing both because one failed is the opposite of the
+    // point.
+    //
+    // Mirroring a value the app then failed to store is right, not wrong: the app INTENDED
+    // to store it, so putting it back at the next launch is what the owner expects — and
+    // for a seed it is the difference between recovering the wallet and asking for the
+    // recovery phrase.
     void mirrorPut(key, value);
+    // Still throws if localStorage refuses, so callers that must fail loudly — setDeviceSeed
+    // above all — keep doing so. Swallowing it here would reintroduce the silent key-drop
+    // that cost a real user their funds.
+    origSet(key, value);
   };
   localStorage.removeItem = (key: string) => {
     origRemove(key);
