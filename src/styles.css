@@ -2119,6 +2119,17 @@ select { appearance: none; cursor: pointer; }
 /* The balance is being HELD because polls have stopped arriving. Same slot and the
    same muted colour as .status-ok, so the card does not change height or shout — the
    difference that matters is the absence of the green dot, not a new colour. */
+/* A warning that belongs above the address, not a failure: muted, not red, because the
+   coins are recoverable and the person has done nothing wrong. */
+.rcv-nokey {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
 .status-stale {
   display: inline-flex;
   align-items: center;

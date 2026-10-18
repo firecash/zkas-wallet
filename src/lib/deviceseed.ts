@@ -314,6 +314,50 @@ async function shelveMismatchedSeed(token: string, secret: string): Promise<bool
   }
 }
 
+/**
+ * Can anything this device holds sign for `address`? Read-only, three-state.
+ *
+ * The question the send path answers destructively — `resolveDeviceSeed` shelves a
+ * mismatched seed and reattaches an orphan's birthday — asked without touching anything,
+ * so a screen can show the answer before the user needs it. Measured gap: with a stored
+ * seed that derives a DIFFERENT address, Receive displayed the wallet's address with no
+ * indication at all, and the mismatch only surfaced at "Confirm & send". Somebody can
+ * fund an address this device cannot spend from and not find out until they try.
+ *
+ * `null` means UNDECIDABLE — the signer was not ready — and the caller must say nothing.
+ * The difference matters: a wrong "cannot send" on a healthy wallet is worse than the late
+ * failure this replaces, because the late failure at least refuses to sign.
+ *
+ * Account-aware through `secretOwnsAddress`, so a phrase-derived wallet whose stored
+ * secret is a phrase (not this account's raw seed) is NOT reported as foreign — the naive
+ * `addressFromSeed` comparison would have branded those wallets unusable. Answers are
+ * cached per (secret, address) by that helper, so this is one derivation per wallet, not
+ * one per render.
+ */
+export async function deviceCanSign(address: string): Promise<boolean | null> {
+  if (!address) return null;
+  // The same candidates findOrphanedSeed considers — every secret stored under any token,
+  // plus any held unlocked in memory — read without writing any of them back.
+  const candidates = new Set<string>();
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k?.startsWith("device_seed_")) {
+      const v = localStorage.getItem(k);
+      if (v && isSecretShaped(v)) candidates.add(v.trim());
+    }
+  }
+  for (const v of Object.values(allUnlockedSeeds() ?? {})) if (isSecretShaped(v)) candidates.add(v.trim());
+  if (candidates.size === 0) return false;
+  let undecided = false;
+  for (const secret of candidates) {
+    const owns = await secretOwnsAddress(secret, address);
+    if (owns === true) return true;
+    if (owns === null) undecided = true;
+  }
+  // One undecidable candidate is enough to stay quiet: it may be the one that owns it.
+  return undecided ? null : false;
+}
+
 export async function resolveDeviceSeed(expectedAddress?: string): Promise<string> {
   const stored = getDeviceSeed();
   // A stored secret is only this wallet's key if it derives this wallet's address.

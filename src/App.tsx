@@ -33,7 +33,7 @@ import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./rec
 import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { pasteText, sanitizeAmountInput } from "./lib/utils";
-import { SEED_REQUIRED, resolveDeviceSeed, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
+import { SEED_REQUIRED, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, reserveAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
@@ -5928,6 +5928,27 @@ function Receive({ status }: { status: Status }) {
   const [qr, setQr] = useState(() => (addr && localStorage.getItem("qr_" + addr)) || "");
   const [copied, setCopied] = useState(false);
   const [mode, setMode] = useState<"address" | "request">("address");
+  // Whether anything on this device can actually spend what arrives here.
+  //
+  // Measured gap: with a stored seed deriving a DIFFERENT address, this screen showed the
+  // wallet's address with nothing to say the key was missing, and the mismatch surfaced
+  // only at "Confirm & send". Somebody can fund an address this device cannot spend from
+  // and not learn of it until they try to move the coins.
+  //
+  // Only ever set from a DEFINITE answer. `deviceCanSign` returns null while the signer
+  // is not ready or any candidate secret is undecidable, and that stays silent: a wrong
+  // "cannot spend" on a healthy wallet would be worse than the late failure, which at
+  // least refuses to sign. It is account-aware and cached, so this is one derivation per
+  // wallet rather than per render.
+  const [cannotSpend, setCannotSpend] = useState(false);
+  useEffect(() => {
+    if (!addr) return;
+    let live = true;
+    void deviceCanSign(addr)
+      .then((can) => { if (live) setCannotSpend(can === false); })
+      .catch(() => { /* undecidable: say nothing */ });
+    return () => { live = false; };
+  }, [addr]);
   useEffect(() => {
     if (!addr) return; // never blank an already-rendered QR on a transient empty poll
     const cached = localStorage.getItem("qr_" + addr);
@@ -5963,6 +5984,15 @@ function Receive({ status }: { status: Status }) {
   return (
     <div className="card">
       <h2>{t("receive.title")}</h2>
+      {/* Said BEFORE the address, because it changes whether the address should be used
+          at all. Coins sent here are not lost — the key exists somewhere, and restoring
+          the phrase on this device recovers them — so the wording says what is true
+          rather than alarming someone about funds that are safe. */}
+      {cannotSpend && (
+        <div className="rcv-nokey" role="status">
+          {t("receive.cannotSpendHere")}
+        </div>
+      )}
 
       <div className="rcv-toggle" role="tablist" aria-label={t("receive.modeAria")}>
         <button type="button" role="tab" aria-selected={mode === "address"} className={"rcv-seg" + (mode === "address" ? " on" : "")} title={t("receive.modeAddress")} onClick={() => setMode("address")}>

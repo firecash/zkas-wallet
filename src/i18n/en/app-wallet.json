@@ -230,5 +230,8 @@
     "generic": "The wallet service hit a problem while reading the chain. Your coins are safe on the chain.",
     "details": "Technical details",
     "nodeBusy": "The public node is at capacity and turned this wallet away. Your coins are safe. It retries on its own, or you can switch to the other node in Settings → Network privacy."
+  },
+  "receive": {
+    "cannotSpendHere": "This device can't spend from this address. Anything sent here is safe, but you'll need this wallet's recovery phrase on this device to move it."
   }
 }
