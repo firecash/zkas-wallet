@@ -3687,8 +3687,21 @@ async function persistDeviceSeed(seed: string, forToken?: string): Promise<boole
 /// active wallet is put back to the one that was restored. Before this a phrase
 /// restore re-established only account 0 and every other account — and its
 /// balance — simply did not appear, which reads as "my money is gone".
-async function recreatePhraseAccounts(phrase: string, wanted: number[], birthday: number): Promise<void> {
-  if (!wanted.length || !isPhraseSecret(phrase)) return;
+/// Returns the accounts it could NOT bring back.
+///
+/// Every failure here used to be swallowed — "best-effort: a missing account can still be
+/// added by hand, in order" — which is true and also silent. A restore of a five-account
+/// phrase could produce four wallets and say nothing, leaving the fifth account's funds
+/// invisible until the user happened to add that account by hand, in the right order, without
+/// having been told it was missing. `api.watch` is the step that fails: it allows 180s and a
+/// cold load on the hosted daemon is p99 168s, so a timeout here is ordinary, not exotic.
+///
+/// The rest of this app reports partial success rather than hiding it — PartialSendError for a
+/// payment that went out in pieces, "showing the most recent N of TOTAL" for a truncated
+/// history. This brings a partial restore up to that standard.
+async function recreatePhraseAccounts(phrase: string, wanted: number[], birthday: number): Promise<number[]> {
+  const failed: number[] = [];
+  if (!wanted.length || !isPhraseSecret(phrase)) return failed;
   const home = activeToken();
   // Accounts this device ALREADY has. Without this check a restore onto a
   // device that still holds the same phrase minted a second token for every
@@ -3711,6 +3724,7 @@ async function recreatePhraseAccounts(phrase: string, wanted: number[], birthday
       const token = addWallet(false);
       if (!(await persistDeviceSeed(secret, token))) {
         unregisterWallet(token);
+        failed.push(account);
         continue;
       }
       const { address } = await api.watch(fvk, birthday, token);
@@ -3724,7 +3738,9 @@ async function recreatePhraseAccounts(phrase: string, wanted: number[], birthday
       // which during this very loop is a different one every iteration.
       ensureRegistered(token, address);
     } catch {
-      /* best-effort: a missing account can still be added by hand, in order */
+      // Still best-effort — one account failing must not abandon the others — but recorded,
+      // so the caller can say which are missing instead of leaving it to be noticed.
+      failed.push(account);
     }
   }
   // No switch back. This used to restore `home` because the loop activated each wallet
@@ -3738,6 +3754,7 @@ async function recreatePhraseAccounts(phrase: string, wanted: number[], birthday
   // checking, and the next person to make this path actually switch would have
   // inherited a silent "new wallet shows the old one's address".
   void home;
+  return failed;
 }
 
 /// How long "Add account" waits for the daemon before giving up. The watch
@@ -4526,8 +4543,9 @@ function Onboard({
         // siblings back and the backup would silently be worth less than it is.
         await adoptExistingPhrase(tk, seedHex).catch(() => undefined);
       }
-      await recreatePhraseAccounts(seedHex, accountList, birthday);
+      const missed = await recreatePhraseAccounts(seedHex, accountList, birthday);
       onImported();
+      if (missed.length) setError(t("onboard.accountsNotRestored", { accounts: missed.join(", ") }));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -9095,8 +9113,9 @@ function RestoreSeedBackup({ onBack }: { onBack: () => void }) {
           await adoptExistingPhrase(tk, seedHex).catch(() => undefined);
         }
       }
-      await recreatePhraseAccounts(seedHex, accountList, birthday);
+      const missed = await recreatePhraseAccounts(seedHex, accountList, birthday);
       setOk(true);
+      if (missed.length) setErr(t("onboard.accountsNotRestored", { accounts: missed.join(", ") }));
     } catch (e) {
       setErr((e as Error).message);
     } finally {

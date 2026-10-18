@@ -216,7 +216,8 @@
     "usePublicInstead": "Use the public wallet service instead",
     "wordsSoFar": "{{n}} of 12 words so far.",
     "wordsOddLength": "{{n}} words. A recovery phrase is 12, 18 or 24 words long.",
-    "birthdayAhead": "That block is ahead of the chain (the tip is {{tip}}). A wallet restored from there would scan nothing and show an empty balance — check the height."
+    "birthdayAhead": "That block is ahead of the chain (the tip is {{tip}}). A wallet restored from there would scan nothing and show an empty balance — check the height.",
+    "accountsNotRestored": "Your wallet was restored, but these linked accounts could not be added: {{accounts}}. Their funds are not lost — add them with Add account, in order, and they will reappear."
   },
   "confirmWatch": {
     "title": "Watch this wallet?",
