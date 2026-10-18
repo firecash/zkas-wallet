@@ -22,7 +22,7 @@ import {
 } from "./localtx";
 import { ensureSigner, fvkHex, generateMnemonicWallet, accountSeedHex, signLocal, verifyLocal, type Network } from "./signer";
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, prepareAhead, prepareAheadUsable, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, MIN_NOTES_PER_MERGE, type PreparedAhead, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
-import { walletStatus, walletCanSpend } from "./status";
+import { signerCanSign, walletCanSpend, walletStatus } from "./status";
 import { useZkasPrice, fmtFiat } from "./price";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
 import { feeReserveSompi } from "./fees";
@@ -1706,7 +1706,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 // The single spend predicate — see `walletCanSpend`. A synced wallet
                 // may spend, including while it is still warming up. An unsynced one
                 // may not: it does not yet know about all of its own notes.
-                disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready })}
+                disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready , network: status?.network })}
                 aria-label={t("app.sendAria")}
                 title={t("app.send")}
               >
@@ -1716,7 +1716,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               {!viewOnly && <button
                 className="qa qa-consolidate"
                 onClick={() => setShowConsolidate(true)}
-                disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready })}
+                disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready , network: status?.network })}
                 aria-label={t("app.notesAria")}
               >
                 <span className="qa-label">{t("app.notes")}</span>
@@ -6628,7 +6628,7 @@ function Send({
   // The same predicate every other spend control uses. Reading `synced` here let the
   // button stay enabled in the one state where the daemon refuses the payment.
   const canProceed =
-    addrOk && amtValid && !overspend && walletCanSpend({ online: !!status, synced: !!status?.synced, spendReady: status?.spend_ready });
+    addrOk && amtValid && !overspend && walletCanSpend({ online: !!status, synced: !!status?.synced, spendReady: status?.spend_ready , network: status?.network });
 
   const setMax = () => {
     const max = Math.max(0, spendable - feeReserve);
@@ -7189,9 +7189,12 @@ function Send({
         </div>
       )}
 
-      {!walletCanSpend({ online: !!status, synced: !!status?.synced, spendReady: status?.spend_ready }) && (
+      {!walletCanSpend({ online: !!status, synced: !!status?.synced, spendReady: status?.spend_ready , network: status?.network }) && (
         <div className="msg warn small">
-          {t("send.catchingUp")}
+          {/* "Catching up" is right while the wallet is still scanning, and wrong when this
+                device simply cannot sign for the network the daemon is on — that never
+                resolves by waiting. See signerCanSign. */}
+            {signerCanSign(status?.network) ? t("send.catchingUp") : t("send.networkNotSignable", { network: status?.network ?? "" })}
         </div>
       )}
       {status?.synced && status?.warming && (

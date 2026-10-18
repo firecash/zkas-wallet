@@ -80,8 +80,26 @@ export type WalletPhase = "offline" | "opening" | "setting-up" | "catching-up" |
  * A wallet that has not finished scanning does not yet know about all of its own
  * coins, so it must not spend — a partial view can pick an already-spent note.
  */
-export function walletCanSpend(s: { online: boolean; synced: boolean; spendReady?: boolean }): boolean {
+/// Networks whose payments this device can actually sign.
+///
+/// The on-device verifier is mainnet-pinned. `verify_and_sign_payment` DERIVES addresses for
+/// mainnet, testnet, devnet and simnet alike, but refuses to sign for anything but mainnet:
+/// "unknown network …; only mainnet is pinned for on-device verification". Verified by calling
+/// the real signer with a valid address per network — mainnet reaches the bundle, the other
+/// three are refused outright.
+///
+/// Without this gate a wallet pointed at a testnet daemon could create a wallet, derive an
+/// address and receive funds, and only discover it cannot send AFTER composing the payment and
+/// waiting out the daemon's proving — ending in that sentence, which is addressed to whoever
+/// built the signer rather than to whoever is trying to pay.
+export function signerCanSign(network: string | null | undefined): boolean {
+  return (network ?? "mainnet") === "mainnet";
+}
+
+export function walletCanSpend(s: { online: boolean; synced: boolean; spendReady?: boolean; network?: string | null }): boolean {
   if (!s.online) return false;
+  // Nothing else matters if this device cannot sign for the network the daemon is on.
+  if (!signerCanSign(s.network)) return false;
   // The daemon is the authority on whether it would accept a spend. `synced` only says
   // the scan reached the tip; `/prepare` additionally requires a valid mirror tree, and
   // a wallet can satisfy the first and not the second. Prefer the daemon's own answer
