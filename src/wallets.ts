@@ -36,7 +36,27 @@ export function listWallets(): WalletRef[] {
 }
 
 function save(list: WalletRef[]): void {
-  localStorage.setItem(LIST_KEY, JSON.stringify(list));
+  // A storage failure here must not propagate.
+  //
+  // `ensureRegistered` runs INSIDE the status poll's try block, so when this threw —
+  // localStorage full, or unavailable at all, which on iOS is ordinary since WKWebView
+  // treats it as evictable website data, and in Safari private mode it can throw on
+  // write — a perfectly good status reply was discarded as a failed poll. Five of those
+  // and the wallet announced "Can't reach the wallet service" while the daemon was
+  // answering every request. The symptom pointed at the network; the cause was a
+  // bookkeeping write.
+  //
+  // Swallowing is right for THIS list and wrong a few lines away: the registry is
+  // labels and addresses, rebuilt from the daemon on the next poll, whereas a seed
+  // write that fails has to be loud — `setDeviceSeed` stays unguarded on purpose,
+  // because silently dropping a key already cost a real user their funds (issue #4).
+  try {
+    localStorage.setItem(LIST_KEY, JSON.stringify(list));
+  } catch {
+    /* not persisted; the next poll re-registers from the daemon's own answer */
+  }
+  // Dispatched either way: listeners re-read from storage, so a failed write simply
+  // leaves them on the previous list instead of desynchronising them from it.
   window.dispatchEvent(new CustomEvent("wallets-changed"));
 }
 
