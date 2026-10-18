@@ -33,11 +33,34 @@ function num(s: unknown): number {
   return s == null ? NaN : Number(String(s).replace(/[^0-9.]/g, ""));
 }
 
+/**
+ * A price we are willing to multiply a balance by.
+ *
+ * The live fetch below already refuses a rate that is not finite or not positive. The
+ * CACHE did not: it was JSON.parse'd straight from localStorage and cast, so a corrupt or
+ * hand-edited entry became the rate and went to the screen beside the user's balance —
+ * "$NaN" for a non-numeric one, "$-62.500" for a negative. One rule, both paths.
+ *
+ * Rejected whole rather than patched: a price object that cannot be trusted for its rate
+ * cannot be trusted for its timestamp either, and the caller already handles "no price" by
+ * printing nothing.
+ */
+function sanePrice(p: unknown): ZkasPrice | null {
+  if (!p || typeof p !== "object") return null;
+  const q = p as Partial<ZkasPrice>;
+  if (typeof q.usdPerZkas !== "number" || !Number.isFinite(q.usdPerZkas) || q.usdPerZkas <= 0) return null;
+  const kas = typeof q.kasPerZkas === "number" && Number.isFinite(q.kasPerZkas) && q.kasPerZkas >= 0 ? q.kasPerZkas : 0;
+  // A broken asOf would make `Date.now() - asOf` NaN, and `NaN < FRESH_MS` is false, so
+  // the figure would be treated as stale on every tick and refetched every time.
+  const asOf = typeof q.asOf === "number" && Number.isFinite(q.asOf) ? q.asOf : 0;
+  return { usdPerZkas: q.usdPerZkas, kasPerZkas: kas, asOf };
+}
+
 export function cachedPrice(): ZkasPrice | null {
   if (mem) return mem;
   try {
     const r = localStorage.getItem(CACHE_KEY);
-    if (r) mem = JSON.parse(r) as ZkasPrice;
+    if (r) mem = sanePrice(JSON.parse(r));
   } catch {
     /* private mode / disabled storage — fall through to a live fetch */
   }
@@ -66,7 +89,8 @@ async function fetchPrice(): Promise<ZkasPrice | null> {
     const usd = num(j?.mid?.usd) || num(j?.last?.usd);
     const kas = num(j?.mid?.kas) || num(j?.last?.kas);
     if (!Number.isFinite(usd) || usd <= 0) return mem;
-    const next: ZkasPrice = { usdPerZkas: usd, kasPerZkas: Number.isFinite(kas) ? kas : 0, asOf: Date.now() };
+    const next = sanePrice({ usdPerZkas: usd, kasPerZkas: Number.isFinite(kas) ? kas : 0, asOf: Date.now() });
+    if (!next) return mem;
     const changed = !mem || mem.usdPerZkas !== next.usdPerZkas || mem.kasPerZkas !== next.kasPerZkas;
     mem = next;
     try {
