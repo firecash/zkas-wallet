@@ -1024,7 +1024,12 @@ export const api = {
       300_000,
     ).then(sanePrepare),
   submit: (session: string, sigs: { index: number; sig: string }[]) =>
-    req<{ txid: string; amount_sompi: number; fee_sompi: number }>("POST", "/api/wallet/submit", { session, sigs }, 60_000).then(saneSubmit),
+    req<{ txid: string; amount_sompi: number; fee_sompi: number; amount_sompi_exact?: string; fee_sompi_exact?: string }>(
+      "POST",
+      "/api/wallet/submit",
+      { session, sigs },
+      60_000,
+    ).then(saneSubmit),
   sign: (message: string) =>
     req<{ address: string; message: string; signature: string; note: string }>("POST", "/api/wallet/sign", { message }, 15_000),
   // Chain-derived history: recovered from the blocks themselves during scan

@@ -538,9 +538,18 @@ export async function sendNonCustodial(
       onStage?.("broadcasting", progress());
       const res = await api.submit(prep.session, sigs);
       txids.push(res.txid);
-      sentParts.push({ txid: res.txid, amount_sompi: res.amount_sompi, fee_sompi: res.fee_sompi });
-      sent += BigInt(Math.round(res.amount_sompi));
-      fees += BigInt(Math.round(res.fee_sompi));
+      // Prefer the daemon's EXACT decimal strings, as the prepare path above already
+      // does. walletd's SendResp carries them for "clients whose number type cannot
+      // represent u64", and this path was reading the JSON number instead: sompi passes
+      // 2^53 at ~90 million ZKAS, so past that the amount and fee recorded for a send
+      // drift from what was actually paid. The transaction itself is unaffected — it was
+      // signed from the bundle — but History and the optimistic balance are rebuilt from
+      // these figures, so they are what the owner is shown afterwards.
+      const paidAmount = BigInt(res.amount_sompi_exact ?? Math.round(res.amount_sompi));
+      const paidFee = BigInt(res.fee_sompi_exact ?? Math.round(res.fee_sompi));
+      sentParts.push({ txid: res.txid, amount_sompi: Number(paidAmount), fee_sompi: Number(paidFee) });
+      sent += paidAmount;
+      fees += paidFee;
 
       if (remaining <= 0n) break;
       owed = remaining;

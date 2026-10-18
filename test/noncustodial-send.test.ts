@@ -291,3 +291,52 @@ describe("noncustodial consolidation", () => {
     expect(submit).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Sompi crosses Number.MAX_SAFE_INTEGER at about 90 million ZKAS, which is why walletd
+ * sends `*_exact` decimal strings beside every figure — its own comment says they are
+ * "for clients whose number type cannot represent u64". The prepare path used them; the
+ * submit path read the JSON number, so what the owner was SHOWN after a very large send
+ * could differ from what was actually paid.
+ */
+describe("very large sends keep their exact figures", () => {
+  beforeEach(() => {
+    prepare.mockReset();
+    submit.mockReset();
+    verifyAndSignPayment.mockClear();
+    verifyAndSignPayment.mockResolvedValue([{ index: 0, sig: "sig" }]);
+  });
+
+  it("records the figure from the exact string, not the JSON number", async () => {
+    // The two are made to DISAGREE so there is no doubt which one is read. A real daemon
+    // would not disagree with itself — and when one disagrees with the REQUEST the send
+    // refuses outright ("The daemon changed the requested amount. Refusing to sign."),
+    // which is why the mismatch is placed on the submit reply, where no such check runs
+    // and the figures go straight into History and the optimistic balance.
+    prepare.mockResolvedValue({
+      session: "big", bundle_hex: "aa", disclosure: {}, spend_auth: [],
+      amount_sompi_exact: "1000000000", fee_sompi_exact: "3000000", remaining_sompi_exact: "0",
+    });
+    submit.mockResolvedValue({
+      txid: "a".repeat(64),
+      amount_sompi: 999_999_999,            // what a lossy JSON number would give
+      fee_sompi: 2_999_999,
+      amount_sompi_exact: "1000000000",     // what was actually paid
+      fee_sompi_exact: "3000000",
+    });
+    const res = await sendNonCustodial("ab".repeat(32), "mainnet", "zkas:test", 10);
+    expect(res.parts[0]).toMatchObject({ amount_sompi: 1_000_000_000, fee_sompi: 3_000_000 });
+    expect(res.amount_sompi).toBe(1_000_000_000);
+    expect(res.fee_sompi).toBe(3_000_000);
+  });
+
+  it("still works against a daemon too old to send the exact forms", async () => {
+    prepare.mockResolvedValue({
+      session: "old", bundle_hex: "aa", disclosure: {}, spend_auth: [],
+      amount_sompi: 1_000_000_000, fee_sompi: 3_000_000, remaining_sompi: 0,
+    });
+    submit.mockResolvedValue({ txid: "b".repeat(64), amount_sompi: 1_000_000_000, fee_sompi: 3_000_000 });
+    const res = await sendNonCustodial("ab".repeat(32), "mainnet", "zkas:test", 10);
+    expect(res.parts[0]).toMatchObject({ amount_sompi: 1_000_000_000, fee_sompi: 3_000_000 });
+  });
+});
