@@ -41,3 +41,36 @@ describe("history tolerates a cold wallet load where it matters", () => {
     expect(api).toContain("timeoutMs = 180_000");
   });
 });
+
+describe("every wallet-touching call survives a cold load, and only those", () => {
+  const api = readFileSync("src/api.ts", "utf8");
+
+  it("states the measurement it is derived from", () => {
+    // The number must not become folklore: it came from 40,380 checkpoint loads.
+    expect(api).toMatch(/40,380 checkpoint loads/);
+    expect(api).toMatch(/const COLD_WALLET_MS = 180_000/);
+  });
+
+  it("covers the user-initiated wallet calls that had short bounds", () => {
+    // /api/wallet/settings was 15s (36.9% of loads exceed it) and
+    // /api/wallet/proof was 30s (17.9%).
+    for (const path of ["/api/wallet/settings", "/api/wallet/proof"]) {
+      const i = api.indexOf(path);
+      expect(i, path).toBeGreaterThan(0);
+      expect(api.slice(i, i + 220), path).toContain("COLD_WALLET_MS");
+    }
+  });
+
+  it("leaves the poll, the fire-and-forget call and the wallet-free one short", () => {
+    // Lengthening these would be the opposite mistake: a poll queues behind the wallet
+    // lock, warm's failure is swallowed, and /api/verify needs no wallet at all.
+    const verify = api.indexOf('"/api/verify"');
+    expect(verify).toBeGreaterThan(0);
+    expect(api.slice(verify, verify + 120)).toContain("15_000");
+
+    const warm = api.indexOf('"/api/wallet/warm"');
+    expect(api.slice(warm, warm + 160)).toContain("15_000");
+
+    expect(api).toMatch(/\/api\/status", undefined, localEngine\(\) \? 4_000/);
+  });
+});

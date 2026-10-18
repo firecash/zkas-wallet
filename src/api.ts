@@ -939,6 +939,23 @@ function saneSubmit<T extends { txid: string; amount_sompi: number; fee_sompi: n
   return r;
 }
 
+/// How long a call that needs the WALLET may wait before the client gives up.
+///
+/// A request can land on a wallet the daemon has evicted, and it reads that wallet's
+/// checkpoint before answering ("checkpoint on disk; it reloads on its next request").
+/// Measured from the hosted daemon's own log, 40,380 checkpoint loads: p50 9.8s, p90 44.1s,
+/// p99 167.8s. Over 10s: 49.3%. Over 15s: 36.9%. Over 30s: 17.9%. Over 180s: 0.9%.
+///
+/// A short bound on such a call turns a daemon doing exactly the right thing into an error
+/// the user sees. 180s is what `watch` already used for the same cold-load work.
+///
+/// NOT for everything, and the exceptions are the point: a POLL keeps a short timeout
+/// because it retries and a long one queues requests behind the per-page wallet lock
+/// (`status`, the History poll); anything fire-and-forget keeps one too (`warm`, whose
+/// failure is swallowed); and `/api/verify` needs no wallet at all — it is signature
+/// arithmetic — so 15s there is correct, not an oversight.
+const COLD_WALLET_MS = 180_000;
+
 export const api = {
   // The deadline depends on WHICH daemon is answering, because the two are not
   // comparable.
@@ -1087,8 +1104,8 @@ export const api = {
   // Private sends: build payments without the sender-recoverable ciphertext. Off by
   // default; the cost is that such a payment can never be recovered or proven.
   setPrivateSends: (on: boolean) =>
-    req<{ recoverableHistory: boolean; privateSends: boolean }>("POST", "/api/wallet/settings", { private_sends: on }, 15_000),
-  proof: (txid: string) => req<{ proofs: PaymentProof[] }>("GET", `/api/wallet/proof?txid=${txid}`, undefined, 30_000),
+    req<{ recoverableHistory: boolean; privateSends: boolean }>("POST", "/api/wallet/settings", { private_sends: on }, COLD_WALLET_MS),
+  proof: (txid: string) => req<{ proofs: PaymentProof[] }>("GET", `/api/wallet/proof?txid=${txid}`, undefined, COLD_WALLET_MS),
   // Check somebody's proof against the chain. Needs no wallet: verifying is what a
   // recipient, an exchange or an arbitrator does.
   verifyProof: (proof: PaymentProof) => req<ProofVerdict>("POST", "/api/proof/verify", proof, 30_000),
