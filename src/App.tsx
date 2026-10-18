@@ -616,6 +616,14 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   }, []);
   const [reachable, setReachable] = useState<boolean | null>(() => (loadStatusCache() ? true : null));
   const [reachError, setReachError] = useState<string | null>(null);
+  // Polls have been failing for a while but not long enough to flip the screen. The
+  // balance on display is then the last one the daemon confirmed, and saying nothing
+  // showed it as if it were live — measured at ~2 minutes on the hosted path, where a
+  // timeout needs twelve failures at 10s each before anything changes.
+  const [pollStalled, setPollStalled] = useState(false);
+  // Whether the LAST failure was the daemon refusing the token rather than the daemon
+  // being out of reach. The two need different words: see Setup's heading.
+  const [reachAuth, setReachAuth] = useState(false);
   // Opens on History, not Receive. "Receive" is now a button, and landing inside it
   // meant every launch started with a QR code nobody asked for; what a person wants on
   // opening a wallet is to see that their money is there and what happened to it.
@@ -1095,6 +1103,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         if (known > 0 && (walletBirthday() !== known || addressBirthday(s.address) !== known)) rememberBirthday(known, s.address);
       }
       failedPolls.current = 0;
+      setPollStalled(false);
       setReachError(null);
       setReachable(true);
       // Ask for notification permission only once a wallet actually exists —
@@ -1314,8 +1323,22 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         // mean nothing is there.
         const timedOut = !!(error as { timedOut?: boolean })?.timedOut;
         const flipAt = busy ? 120 : starting ? 60 : timedOut ? 12 : 5;
-        if (failedPolls.current >= flipAt) {
+        // A refused TOKEN is not an unreachable service, and it was reaching this screen
+        // as one: the daemon answered all five times and only rejected the credential,
+        // but the heading still read "Can't reach the wallet service", which sends
+        // somebody looking for a network fault that does not exist. `req` already
+        // distinguishes it — this is where that distinction has to be USED, or marking
+        // the error changes nothing that anyone sees.
+        // Three failures is late enough not to fire on a single blip and early enough
+        // to stop presenting a held figure as a live one. Not while the engine is BUSY
+        // or STARTING: a send blocks the in-process engine for ~50s and a cold start
+        // fails every poll until the port is up, and in both cases the wallet is
+        // working, so a staleness note there would be noise about nothing.
+        if (!busy && !starting && failedPolls.current >= 3) setPollStalled(true);
+        const tokenRejected = (error as Error)?.name === "WalletdUnauthorizedError";
+        if (failedPolls.current >= flipAt || tokenRejected) {
           setReachError((error as Error)?.message || String(error));
+          setReachAuth(tokenRejected);
           setReachable(false);
         }
       }
@@ -1608,7 +1631,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           </div>
         </div>
       )}
-      {reachable === false && <Setup error={reachError} />}
+      {reachable === false && <Setup error={reachError} tokenRejected={reachAuth} />}
       {/* Seed backup takes priority and stays until dismissed — independent of has_wallet. */}
       {reachable && freshSeed && (
         <SeedBackup
@@ -1651,7 +1674,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       {reachable && !freshSeed && status && status.has_wallet && !routeSticky && (
         <div className="wallet-dashboard">
           <section className="wallet-overview" aria-label={t("app.overviewAria")}>
-            <BalanceHero status={status} txs={txs} />
+            <BalanceHero status={status} txs={txs} stalled={pollStalled} />
           {/* The two things people open a wallet to DO, as the two biggest targets on
               the screen.
               Before this they were tabs — 13px text in a 9px-padded pill, the same
@@ -3202,7 +3225,7 @@ function friendlyDaemonError(msg: string): string {
   return i18n.t("daemonError.generic");
 }
 
-function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
+function BalanceHero({ status, txs, stalled }: { status: Status; txs: LocalTx[]; stalled?: boolean }) {
   // NB: every hook here runs BEFORE the `restoring` early return below. That
   // return comes and goes with the daemon's scan state, so a hook placed after
   // it would change hook order between renders — React's "rendered fewer hooks
@@ -3455,10 +3478,22 @@ function BalanceHero({ status, txs }: { status: Status; txs: LocalTx[] }) {
           // to a warning. A green dot is read before any word is, and it costs one
           // glance instead of one read — which is the whole job of this line when
           // nothing is wrong.
+          stalled ? (
+            // Nothing is arriving, so this figure is the last the daemon confirmed and
+            // the line says so — in the SAME height-reserved slot, because every line in
+            // this card is fixed-height on purpose (see the comments above) and adding a
+            // row here would shove Receive down the page.
+            //
+            // Deliberately without the green dot: that dot is read before any word is,
+            // and its whole job is to say nothing is wrong. Showing it beside a figure
+            // that has stopped updating is the reassurance pointed the wrong way.
+            <span className="status-stale">{t("balanceHero.notUpdating")}</span>
+          ) : (
           <span className="status-ok">
             <span className="status-dot" aria-hidden="true" />
             {view.label}
           </span>
+          )
         )}
       </div>
       {/* The wording lives in `status.ts` with every other state, so this can no
@@ -9212,7 +9247,7 @@ export function DesktopEngineDown({ requestError }: { requestError?: string | nu
   );
 }
 
-function Setup({ error: requestError }: { error?: string | null }) {
+function Setup({ error: requestError, tokenRejected }: { error?: string | null; tokenRejected?: boolean }) {
   const { t } = useTranslation();
   const [base, setB] = useState(getBase());
   const [error, setError] = useState("");
@@ -9240,7 +9275,7 @@ function Setup({ error: requestError }: { error?: string | null }) {
   const lastSeen = loadStatusCache();
   return (
     <div className="card setup">
-      <h2>{t("setup.title")}</h2>
+      <h2>{t(tokenRejected ? "setup.titleTokenRejected" : "setup.title")}</h2>
       {lastSeen?.balance_fc && (
         <div className="setup-lastbalance">
           <span className="muted small">{t("setup.lastBalance")}</span>

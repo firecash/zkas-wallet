@@ -2116,6 +2116,16 @@ select { appearance: none; cursor: pointer; }
   gap: 7px;
   color: var(--muted);
 }
+/* The balance is being HELD because polls have stopped arriving. Same slot and the
+   same muted colour as .status-ok, so the card does not change height or shout — the
+   difference that matters is the absence of the green dot, not a new colour. */
+.status-stale {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-style: italic;
+}
 .status-dot {
   width: 7px;
   height: 7px;

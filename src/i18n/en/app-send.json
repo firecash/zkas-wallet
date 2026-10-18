@@ -353,7 +353,8 @@
     "lastBalance": "Last confirmed balance",
     "retry": "Try again",
     "advanced": "Connect to a different wallet service",
-    "restartEngine": "Restart the on-device engine"
+    "restartEngine": "Restart the on-device engine",
+    "titleTokenRejected": "The wallet service rejected this wallet"
   },
   "privateSends": {
     "intro": "Your payments normally carry a copy of their details encrypted to <b>your own</b> key, so your history survives a restore and you can prove a payment later. An anonymous send leaves that copy out.",
