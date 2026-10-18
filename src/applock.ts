@@ -72,6 +72,18 @@ function record(): LockRecord | null {
   }
 }
 
+/// Deliberately UNGUARDED, and it must stay that way.
+///
+/// This persists the lock record, which is where a sealed seed lives. Swallowing a failure
+/// here would let `sealNewSeed` return true for a seal that was never stored, and its
+/// callers take "true" to mean the key is safe and skip writing the plaintext fallback —
+/// so a quiet catch converts a loud failure into silent KEY LOSS.
+///
+/// Throwing is therefore correct, and the callers are responsible for it: `setDeviceSeed`
+/// and `setMasterMnemonic` both `.catch(fallback)`, treating a rejection exactly as they
+/// treat a resolved false. They did NOT until October 2026 — the rejection went unhandled,
+/// the fallback never ran, and a storage-full device ended up with a key neither sealed nor
+/// stored. See the comment on setDeviceSeed for what that cost.
 function write(rec: LockRecord): void {
   localStorage.setItem(LOCK_KEY, JSON.stringify(rec));
 }

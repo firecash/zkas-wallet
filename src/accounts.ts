@@ -58,16 +58,23 @@ export function setMasterMnemonic(phrase: string): void {
   // phrase survives and the state is discoverable — losing every account is a
   // worse outcome than a flagged plaintext copy. Same principle as setDeviceSeed.
   if (isLockEnabled()) {
-    void sealNewMnemonic(clean).then((ok) => {
-      if (!ok) {
-        try {
-          localStorage.setItem(MASTER_KEY, clean);
-          localStorage.setItem("mnemonic_unsealed", "1");
-        } catch {
-          /* storage full/private — caller still holds the phrase */
-        }
+    const fallback = () => {
+      try {
+        localStorage.setItem(MASTER_KEY, clean);
+        localStorage.setItem("mnemonic_unsealed", "1");
+      } catch {
+        /* storage full/private — caller still holds the phrase */
       }
-    });
+    };
+    // `.catch(fallback)` for the same reason as setDeviceSeed's: this handled a RESOLVED
+    // false and not a REJECTION, and sealNewMnemonic can reject — `await seal(...)` is
+    // WebCrypto and the `write(rec)` after it is an unguarded setItem. A phrase lost here
+    // loses EVERY account derived from it, which is why the fallback exists at all.
+    void sealNewMnemonic(clean)
+      .then((ok) => {
+        if (!ok) fallback();
+      })
+      .catch(fallback);
     return;
   }
   try {
