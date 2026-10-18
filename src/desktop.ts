@@ -9,7 +9,7 @@
 // so the "desktop.ts imports nothing from api.ts, therefore cannot cycle"
 // property that api.ts relies on still holds.
 import { clearnetAllowed } from "./lib/privacy";
-import { readLocal, writeLocal } from "./lib/safestore";
+import { readLocal, removeLocal, writeLocal } from "./lib/safestore";
 
 export interface DesktopConfig {
   base: string;
@@ -72,9 +72,9 @@ export function setDesktopRemoteBase(url: string): void {
 /// `setNodeSource` clears it, because picking a node IS choosing the embedded one.
 function applyDaemonBase(cfg: DesktopConfig): void {
   const remote = desktopRemoteBase();
-  localStorage.setItem("walletd_base", remote || cfg.base);
-  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
-  else localStorage.removeItem("walletd_bearer");
+  writeLocal("walletd_base", remote || cfg.base);
+  if (cfg.wallet_bearer) writeLocal("walletd_bearer", cfg.wallet_bearer);
+  else removeLocal("walletd_bearer");
   adoptShellBirthday(cfg);
 }
 
@@ -101,8 +101,8 @@ export async function initDesktop(): Promise<DesktopConfig | null> {
   if (!isDesktop()) return null;
   const cfg = await invoke<DesktopConfig>("wallet_config");
   applyDaemonBase(cfg);
-  if (cfg.wallet_bearer) localStorage.setItem("walletd_bearer", cfg.wallet_bearer);
-  else localStorage.removeItem("walletd_bearer");
+  if (cfg.wallet_bearer) writeLocal("walletd_bearer", cfg.wallet_bearer);
+  else removeLocal("walletd_bearer");
   // The shell's token is the FIRST wallet, not the only one. Writing it on every
   // boot clobbered whichever wallet the user had switched to — the embedded
   // daemon serves any token, so the app's choice is the one that counts.

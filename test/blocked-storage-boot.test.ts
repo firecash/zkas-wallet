@@ -142,3 +142,37 @@ describe("reads that happen during RENDER", () => {
     expect(loadBaseline()).toBeNull();
   });
 });
+
+describe("the request path itself on a storage-blocked browser", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+    vi.resetModules();
+  });
+
+  it("can still work out where to send a request", async () => {
+    // getBase is read on EVERY request, and through localEngine() from render paths too.
+    // Fixing getToken alone was not enough: this threw just as fatally one line later, so
+    // the wallet still could not issue a single call.
+    blockStorage();
+    const { getBase, getWalletdBearer } = await import("../src/api");
+    expect(() => getBase()).not.toThrow();
+    expect(getBase()).toMatch(/^https?:\/\//);
+    expect(() => getWalletdBearer()).not.toThrow();
+  });
+
+  it("keeps a daemon the user chose for the session", async () => {
+    blockStorage();
+    const { getBase, setBase } = await import("../src/api");
+    setBase("https://example.invalid/daemon");
+    // Without the session fallback every call would snap back to the default, so the
+    // service the user picked would never be the one actually used.
+    expect(getBase()).toBe("https://example.invalid/daemon");
+  });
+
+  it("builds a header set without throwing", async () => {
+    blockStorage();
+    const { getToken, getWalletdBearer } = await import("../src/api");
+    expect(() => ({ "X-Wallet-Token": getToken(), auth: getWalletdBearer() })).not.toThrow();
+  });
+});

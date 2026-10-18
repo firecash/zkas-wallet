@@ -33,7 +33,7 @@ import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./rec
 import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput } from "./lib/utils";
-import { readLocal } from "./lib/safestore";
+import { readLocal, writeLocal } from "./lib/safestore";
 import { SEED_REQUIRED, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, reserveAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
@@ -1119,9 +1119,9 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         const addr = s.address;
         void (async () => {
           try {
-            if (localStorage.getItem("qr_" + addr)) return;
+            if (readLocal("qr_" + addr)) return;
             const url = dotQrDataUrl(addr, { size: 440, margin: 2 });
-            localStorage.setItem("qr_" + addr, url);
+            writeLocal("qr_" + addr, url);
           } catch {
             /* best-effort: Receive still encodes on demand */
           }
@@ -5906,7 +5906,11 @@ function Receive({ status }: { status: Status }) {
   const addr = status.address || "";
   // The address QR never changes, so it's cached after the first render and shows
   // instantly on every later open — no beat where the card has a QR-shaped hole.
-  const [qr, setQr] = useState(() => (addr && localStorage.getItem("qr_" + addr)) || "");
+  // readLocal: a useState initialiser runs during render, and the bare accessor throws
+  // rather than returning null on a browser with site data blocked — which would take the
+  // Receive screen down over a cached QR image. The QR is recomputed below anyway when the
+  // cache misses, so there is nothing to lose by reading it safely.
+  const [qr, setQr] = useState(() => (addr && readLocal("qr_" + addr)) || "");
   const [copied, setCopied] = useState(false);
   const [mode, setMode] = useState<"address" | "request">("address");
   // Whether anything on this device can actually spend what arrives here.
@@ -5932,7 +5936,7 @@ function Receive({ status }: { status: Status }) {
   }, [addr]);
   useEffect(() => {
     if (!addr) return; // never blank an already-rendered QR on a transient empty poll
-    const cached = localStorage.getItem("qr_" + addr);
+    const cached = readLocal("qr_" + addr);
     if (cached) {
       setQr(cached);
       return;
@@ -5944,7 +5948,7 @@ function Receive({ status }: { status: Status }) {
       const url = dotQrDataUrl(addr, { size: 440, margin: 2 });
       setQr(url);
       try {
-        localStorage.setItem("qr_" + addr, url);
+        writeLocal("qr_" + addr, url);
       } catch {
         /* best-effort cache */
       }

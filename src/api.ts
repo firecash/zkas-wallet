@@ -1,4 +1,4 @@
-import { readLocal, writeLocal } from "./lib/safestore";
+import { readLocal, removeLocal, writeLocal } from "./lib/safestore";
 // Thin client for the zkas-walletd daemon.
 //
 // Default: the HOSTED daemon, reached same-origin at `<origin>/daemon` (nginx
@@ -60,7 +60,11 @@ function defaultBase(): string {
 }
 
 export function getBase(): string {
-  return localStorage.getItem("walletd_base") || defaultBase();
+  // Through safestore, like getToken below. This is read on EVERY request — and from
+  // render paths via localEngine() — so the bare accessor throwing on a browser with site
+  // data blocked left the wallet unable to issue a single call. Fixing getToken alone was
+  // not enough: this one threw just as fatally, one line later.
+  return readLocal("walletd_base") || defaultBase();
 }
 /** True when the wallet service is a single-wallet engine on THIS device — the
  * desktop's embedded daemon, the Android in-process engine, or a self-hosted walletd on
@@ -78,18 +82,21 @@ export function isNative(): boolean {
   return !!cap?.isNativePlatform?.();
 }
 export function setBase(url: string) {
-  if (!url.trim()) localStorage.removeItem("walletd_base");
-  else localStorage.setItem("walletd_base", url.replace(/\/$/, ""));
+  // Paired with the safe read above: writeLocal holds the choice for the session when
+  // storage refuses it, so a daemon the user picked still applies until they reload,
+  // instead of every call snapping back to the default.
+  if (!url.trim()) removeLocal("walletd_base");
+  else writeLocal("walletd_base", url.replace(/\/$/, ""));
 }
 
 export function getWalletdBearer(): string {
-  return localStorage.getItem("walletd_bearer") ?? "";
+  return readLocal("walletd_bearer") ?? "";
 }
 
 export function setWalletdBearer(token: string) {
   const clean = token.trim();
-  if (clean) localStorage.setItem("walletd_bearer", clean);
-  else localStorage.removeItem("walletd_bearer");
+  if (clean) writeLocal("walletd_bearer", clean);
+  else removeLocal("walletd_bearer");
 }
 
 /** The default port a self-hosted `zkas-walletd` listens on. */

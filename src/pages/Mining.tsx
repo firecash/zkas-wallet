@@ -15,6 +15,7 @@ import {
   type NodeStatus,
 } from "../desktop-services";
 import { ServiceLogsDialog } from "../components/ServiceLogsDialog";
+import { readLocal, writeLocal } from "../lib/safestore";
 import {
   BRIDGE_DASHBOARD_PORT,
   MANAGED_KASPA_RPC,
@@ -70,7 +71,9 @@ export function Mining() {
   const [stratumPort, setStratumPort] = useState(STRATUM_PORT);
   const [shareDifficulty, setShareDifficulty] = useState(8192);
   const [lanIps, setLanIps] = useState<string[]>([]);
-  const [externalHost, setExternalHost] = useState(() => localStorage.getItem("mining_external_host") ?? "");
+  // readLocal: a useState initialiser runs during render, so the bare accessor would take
+  // this page down on a browser with site data blocked.
+  const [externalHost, setExternalHost] = useState(() => readLocal("mining_external_host") ?? "");
   const [busy, setBusy] = useState<Busy>(null);
   const [stage, setStage] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -428,7 +431,7 @@ export function Mining() {
           )}
           <div className="endpoint-card external-endpoint">
             <div className="endpoint-title"><Globe2 size={18} /><span><b>{t("mining.remoteAsic")}</b><small>{t("mining.remoteNote")}</small></span></div>
-            <input value={externalHost} onChange={(event) => { setExternalHost(event.target.value); localStorage.setItem("mining_external_host", event.target.value); }} placeholder="mine.example.com" />{/* i18n-ignore: example hostname */}
+            <input value={externalHost} onChange={(event) => { setExternalHost(event.target.value); writeLocal("mining_external_host", event.target.value); }} placeholder="mine.example.com" />{/* i18n-ignore: example hostname */}
             {external && <button onClick={() => void copyEndpoint("external", endpoint(external))}><code>{endpoint(external)}</code>{copied === "external" ? <Check size={15} /> : <Copy size={15} />}</button>}
           </div>
         </div>
