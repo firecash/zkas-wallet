@@ -1,4 +1,4 @@
-import { readLocal } from "./lib/safestore";
+import { readLocal, writeLocal } from "./lib/safestore";
 // Several wallets on one device.
 //
 // The daemon has always been multi-wallet: every wallet is identified by a token
@@ -136,11 +136,14 @@ export function addWallet(activate = true): string {
   const list = listWallets();
   list.push({ token, label: i18n.t("wallets.defaultLabel", { n: nextLabelNumber(list) }) });
   save(list);
-  if (activate) localStorage.setItem("wallet_token", token);
+  if (activate) writeLocal("wallet_token", token);
   return token;
 }
 
 /** Switch the active wallet. The other wallets' data stays exactly where it is. */
 export function switchWallet(token: string): void {
-  localStorage.setItem("wallet_token", token);
+  // writeLocal: a raw setItem threw out of the click handler that called this, so on a
+  // browser with storage blocked tapping another wallet did nothing at all — not even the
+  // reload that follows. It now takes effect for the session even when it cannot persist.
+  writeLocal("wallet_token", token);
 }

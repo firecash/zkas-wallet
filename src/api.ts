@@ -1,4 +1,4 @@
-import { readLocal } from "./lib/safestore";
+import { readLocal, writeLocal } from "./lib/safestore";
 // Thin client for the zkas-walletd daemon.
 //
 // Default: the HOSTED daemon, reached same-origin at `<origin>/daemon` (nginx
@@ -364,7 +364,7 @@ export function walletdTransportError(url: string): string | null {
  * it, rather than a blank one that reads as lost funds. */
 export function setToken(token: string) {
   const clean = token.trim().toLowerCase();
-  if (/^[0-9a-f]{16,128}$/.test(clean)) localStorage.setItem("wallet_token", clean);
+  if (/^[0-9a-f]{16,128}$/.test(clean)) writeLocal("wallet_token", clean);
 }
 
 // A random per-browser wallet token. On the hosted daemon this selects THIS
@@ -375,7 +375,12 @@ export function getToken(): string {
     const b = new Uint8Array(16);
     crypto.getRandomValues(b);
     t = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
-    localStorage.setItem("wallet_token", t);
+    // writeLocal, which holds the value for this session when storage refuses it. A raw
+    // setItem THREW here, and this runs on every request — so with site storage blocked
+    // the wallet could not issue a single call. Writing without remembering would have
+    // been worse than the throw: each request would mint a fresh token and the daemon
+    // would answer every one with a different empty wallet.
+    writeLocal("wallet_token", t);
   }
   return t;
 }

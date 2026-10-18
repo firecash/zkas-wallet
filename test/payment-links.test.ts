@@ -40,15 +40,21 @@ describe("payment links", () => {
     }
   });
 
-  it("reports failure instead of throwing when storage refuses the write", () => {
+  it("still delivers the link when storage refuses the write", () => {
     // The boot path calls this. An unguarded write threw on a full or unavailable
     // localStorage — ordinary on iOS, and Safari private mode can throw outright — and
     // that exception escaped into startup where nothing catches it.
+    //
+    // This asserted `false` when the write was merely swallowed. safestore now holds a
+    // refused value for the session, so the stronger property holds: the link is not just
+    // survivable, it WORKS — the payment the user tapped actually opens. Within a session
+    // is the honest limit; a reload cannot bring back what storage would not keep.
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new DOMException("QuotaExceededError");
     });
     expect(() => queuePaymentLink(`${ADDR}?amount=1`)).not.toThrow();
-    expect(queuePaymentLink(`${ADDR}?amount=1`)).toBe(false);
+    expect(queuePaymentLink(`${ADDR}?amount=1`)).toBe(true);
+    expect(takePaymentLink()).toBe(`${ADDR}?amount=1`);
   });
 
   it("survives a storage that refuses READS too", () => {
