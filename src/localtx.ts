@@ -51,6 +51,27 @@ function key(): string {
   return `local_txs_${readLocal("wallet_token") || "default"}`;
 }
 
+/**
+ * Apply a change to the stored send list, reading it at the moment of WRITING.
+ *
+ * Every writer here was read -> change -> write the WHOLE list, and two tabs share this
+ * storage. `reconcile` runs on every poll in every tab, so the window was hit routinely:
+ * tab A records a send, tab B's next reconcile writes a list it read BEFORE that, and the
+ * send record is gone. Losing it loses the optimistic subtraction with it, so the balance
+ * goes back to showing coins that have already left — and the obvious thing to do with a
+ * balance that still shows the money is to send it again.
+ *
+ * Re-reading inside the writer closes it to the gap between these two statements, which no
+ * other tab can interleave because each is synchronous. The transform must therefore be
+ * written against "whatever the list is now" rather than a list captured earlier — that is
+ * why these take a function instead of an array.
+ */
+function mutate(fn: (txs: LocalTx[]) => LocalTx[]): LocalTx[] {
+  const next = fn(loadTxs());
+  save(next);
+  return next;
+}
+
 export function loadTxs(): LocalTx[] {
   try {
     const v = JSON.parse(readLocal(key()) || "[]");
@@ -101,9 +122,7 @@ function save(txs: LocalTx[]) {
 
 /** Record a freshly broadcast send. Returns the updated list. */
 export function recordSend(t: Omit<LocalTx, "pending">): LocalTx[] {
-  const next = [{ ...t, pending: true }, ...loadTxs().filter((x) => x.txid !== t.txid)];
-  save(next);
-  return next;
+  return mutate((txs) => [{ ...t, pending: true }, ...txs.filter((x) => x.txid !== t.txid)]);
 }
 
 /**
@@ -118,20 +137,22 @@ export function recordSend(t: Omit<LocalTx, "pending">): LocalTx[] {
  */
 export function applyChainStatus(txid: string, confirmations: number): LocalTx[] {
   let changed = false;
-  const txs = loadTxs().map((t) => {
-    if (t.txid !== txid) return t;
-    if (t.confs !== confirmations || t.confTries) changed = true;
-    return { ...t, confs: confirmations, confAt: Date.now(), confTries: 0 };
-  });
-  if (changed) save(txs);
-  return txs;
+  const next = mutate((txs) =>
+    txs.map((t) => {
+      if (t.txid !== txid) return t;
+      if (t.confs !== confirmations || t.confTries) changed = true;
+      return { ...t, confs: confirmations, confAt: Date.now(), confTries: 0 };
+    }),
+  );
+  // `changed` only gates whether this was worth persisting; the write is harmless either
+  // way now that it is a merge onto the current list rather than an overwrite of a stale one.
+  void changed;
+  return next;
 }
 
 /** Count one unanswered confirmation lookup against `txid` (see `confTries`). */
 export function bumpConfTry(txid: string): LocalTx[] {
-  const txs = loadTxs().map((t) => (t.txid === txid ? { ...t, confTries: (t.confTries ?? 0) + 1 } : t));
-  save(txs);
-  return txs;
+  return mutate((txs) => txs.map((t) => (t.txid === txid ? { ...t, confTries: (t.confTries ?? 0) + 1 } : t)));
 }
 
 // A pending spend that the CHAIN has confirmed keeps its subtraction much longer:
@@ -191,9 +212,24 @@ export function reconcile(daemonFc: number, synced: boolean): LocalTx[] {
     }
   }
   if (clear.size === 0) return txs;
-  const next = txs.map((t) => (t.pending && clear.has(t.txid) ? { ...t, pending: false } : t));
-  save(next);
-  return next;
+  return applyPendingCleared(clear);
+}
+
+/**
+ * Clear `pending` on exactly these txids, against the list as it is NOW.
+ *
+ * Split out from `reconcile` so the two phases are separable, because the gap between them
+ * is where the bug was: reconcile decides from a list it read at its top, and writing that
+ * same list back erased anything another tab had recorded in between — a send, most of the
+ * time, since that is the only thing that adds a row. It runs on every poll in every tab,
+ * so the window was hit routinely rather than theoretically.
+ *
+ * The DECISION still comes from the earlier read, which is right: those are the rows whose
+ * balance drop was actually measured. Only the WRITE has to be current. Separating them also
+ * makes the interleaving testable, which it was not while both lived in one function.
+ */
+export function applyPendingCleared(clear: Set<string>): LocalTx[] {
+  return mutate((cur) => cur.map((t) => (t.pending && clear.has(t.txid) ? { ...t, pending: false } : t)));
 }
 
 /** Total still-pending outflow — the amount to subtract from the daemon balance. */
