@@ -60,3 +60,57 @@ describe("the Keychain mirror covers everything a locked wallet needs", () => {
     }
   });
 });
+
+/**
+ * Anything worth MIRRORING is worth ERASING.
+ *
+ * Those two lists live in different files — shouldMirror in securestore.ts, the per-wallet
+ * prefixes in walletstate.ts and the device-wide keys inline in AppLockScreen's "erase this
+ * device" — and nothing tied them together. They are two statements about the same set: the
+ * things that survive losing localStorage, and the things an erase has to remove. If the
+ * mirror protects a key the erase misses, "erase this device" leaves it in the Keychain
+ * and a restore brings it back; if the erase clears one the mirror does not protect, the
+ * wallet can lose it to an ordinary iOS eviction.
+ *
+ * `applock_v1` got into the mirror precisely because no test compared it with anything.
+ */
+describe("the erase path covers everything the mirror protects", () => {
+  const walletstate = readFileSync("src/walletstate.ts", "utf8");
+  const lockScreen = readFileSync("src/AppLockScreen.tsx", "utf8");
+
+  const perWalletPrefixes = [...walletstate.matchAll(/^\s*"([a-z0-9_]+_)",/gim)].map((m) => m[1]);
+  const deviceWide = [
+    ...[...lockScreen.matchAll(/removeLocal\("([a-z0-9_]+)"\)/gi)].map((m) => m[1]),
+    ...[...lockScreen.matchAll(/for \(const k of \[([^\]]+)\]\)/gi)].flatMap((m) =>
+      [...m[1].matchAll(/"([a-z0-9_]+)"/gi)].map((x) => x[1]),
+    ),
+  ];
+
+  const erased = (key: string) =>
+    deviceWide.includes(key) || perWalletPrefixes.some((p) => key.startsWith(p));
+
+  it("found both lists in the source", () => {
+    // If a refactor moves them, this fails loudly rather than the checks below passing
+    // vacuously against empty arrays.
+    expect(perWalletPrefixes.length).toBeGreaterThan(5);
+    expect(deviceWide.length).toBeGreaterThan(3);
+  });
+
+  it("erases every key the mirror would restore", () => {
+    const mirrored = [
+      "device_seed_sometoken",
+      "device_mnemonic",
+      "app_lock_v2",
+      "app_lock_v1_sometoken",
+      "seed_unsealed_sometoken",
+      "mnemonic_unsealed",
+      "wallets_v1",
+      "wallet_account_sometoken",
+      "account_high_water",
+    ];
+    for (const k of mirrored) {
+      expect(shouldMirror(k), `${k} should be mirrored`).toBe(true);
+      expect(erased(k), `${k} is mirrored but "erase this device" does not remove it`).toBe(true);
+    }
+  });
+});

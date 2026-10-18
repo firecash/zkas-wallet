@@ -11,7 +11,7 @@ import { lockKind, unlock } from "./applock";
 import { disableBiometricUnlock, enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured, unlockWithBiometric } from "./biometric";
 import { listWallets } from "./wallets";
 import { wipeWalletState } from "./walletstate";
-import { readLocal, writeLocal } from "./lib/safestore";
+import { readLocal, removeLocal, writeLocal } from "./lib/safestore";
 
 /** The status line under the mark, which actually decrypts.
  *
@@ -263,13 +263,16 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
                   wipeWalletState(null);
                   // The sealed record is unrecoverable without the secret — that is
                   // the point of the lock — so the way out is erasing it too.
-                  localStorage.removeItem("app_lock_v2");
+                  // removeLocal, not the bare accessor: safestore holds what a blocked
+                  // store refused, and a raw remove leaves that copy — so a key the user
+                  // just erased would still answer reads for the rest of the session.
+                  removeLocal("app_lock_v2");
                   // The master phrase, its plaintext-fallback flag, the wallet
                   // registry and the account counter are device-wide, not per
                   // wallet, so the per-wallet sweep above leaves them behind —
                   // and "erase this device" that keeps the recovery phrase is not
                   // an erase.
-                  for (const k of ["device_mnemonic", "mnemonic_unsealed", "wallets_v1", "account_high_water"]) localStorage.removeItem(k);
+                  for (const k of ["device_mnemonic", "mnemonic_unsealed", "wallets_v1", "account_high_water"]) removeLocal(k);
                   // The fingerprint binding too. Without this the flag survived
                   // an erase while the secret it unlocks no longer opens
                   // anything: Settings went on advertising "Fingerprint", every
