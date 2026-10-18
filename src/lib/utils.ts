@@ -90,6 +90,15 @@ export async function pasteText(): Promise<PasteResult> {
 // Keep a money field to something that can actually be a number: digits, one
 // decimal point, at most 8 places (a sompi is 1e-8 ZKAS — more digits are not
 // representable and silently round).
+/// A plain decimal, never exponential notation.
+///
+/// `String(Number(x))` switches to exponential below 1e-6, which is how the Max button put
+/// "1e-7" into the amount field. Amounts are shown to people and re-parsed by the field's
+/// own sanitiser, and neither handles an exponent the way a reader would.
+export function trimTrailingZeros(fixed: string): string {
+  return fixed.includes(".") ? fixed.replace(/\.?0+$/, "") : fixed;
+}
+
 export function sanitizeAmountInput(raw: string): string {
   // Separators first, and this is not cosmetic. Stripping every non-[0-9.] turned
   // "1,5" into "15" — a TEN-TIMES overpayment, typed by anyone who writes decimals
@@ -100,6 +109,25 @@ export function sanitizeAmountInput(raw: string): string {
   // the decimal separator and anything earlier is grouping. Arabic-Indic and
   // Persian digits, and the Arabic decimal mark, map to their ASCII forms —
   // otherwise an Arabic or Farsi keyboard produces an empty field.
+  // An EXPONENT first, before anything strips characters.
+  //
+  // `1e-7` reached here and came back as "17" — the digits concatenated with the `e` and
+  // the `-` thrown away. That is a value 170 million times larger than what was written,
+  // and it is the same mistake this function exists to prevent: the note below is about
+  // "1,5" becoming "15", a ten-times overpayment. An exponent is worse by seven orders of
+  // magnitude.
+  //
+  // It is expanded rather than rejected, because someone who writes 1e-7 means 1e-7. Eight
+  // decimals is the whole precision of the chain, so toFixed(8) loses nothing; anything at
+  // or above 1e21 is refused outright, since toFixed itself returns exponential notation up
+  // there and no balance can reach it.
+  const exp = raw.trim();
+  if (/^[+-]?(\d+\.?\d*|\.\d+)[eE][+-]?\d+$/.test(exp)) {
+    const n = Number(exp);
+    if (!Number.isFinite(n) || n < 0 || Math.abs(n) >= 1e21) return "";
+    return trimTrailingZeros(n.toFixed(8));
+  }
+
   const digits = raw
     .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
     .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))

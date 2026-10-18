@@ -32,7 +32,7 @@ import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./receipts";
 import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
-import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput, shortAddr } from "./lib/utils";
+import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput, shortAddr, trimTrailingZeros } from "./lib/utils";
 import { readLocal, writeLocal } from "./lib/safestore";
 import { MEMO_MAX_BYTES, clampUtf8Bytes } from "./lib/safetext";
 import { SEED_REQUIRED, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
@@ -6579,7 +6579,10 @@ function Send({
 
   const setMax = () => {
     const max = Math.max(0, spendable - feeReserve);
-    setAmount(max > 0 ? String(Number(max.toFixed(8))) : "0");
+    // trimTrailingZeros, not String(Number(…)): that switches to exponential below 1e-6, so
+    // on a wallet holding barely more than the fee this button wrote "1e-7" into the amount
+    // field — and the field's own sanitiser turned that into "17" on the next keystroke.
+    setAmount(max > 0 ? trimTrailingZeros(max.toFixed(8)) : "0");
   };
 
   // Start proving the moment the Confirm screen opens. Nothing about the witness

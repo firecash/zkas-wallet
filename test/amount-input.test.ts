@@ -32,7 +32,15 @@ describe("amount input cannot silently change the number", () => {
   it("never turns a negative or an exponent into a larger positive number", () => {
     // "-5" previously became "5" with the Review button ENABLED, and "1e9" became "19".
     expect(parseAmount(sanitizeAmountInput("-5"))).not.toBe(15);
-    expect(sanitizeAmountInput("1e9")).toBe("19"); // documented: still digit-joining
     expect(sanitizeAmountInput("-5")).toBe("5");
+
+    // This line used to read `toBe("19")`, with the comment "documented: still
+    // digit-joining" — recording the digit-joining as accepted rather than fixing it. It
+    // contradicted this test's own title: joining the digits of "1e-7" gives "17", which is
+    // 170 million times LARGER, and the Max button fed exactly that shape in on a wallet
+    // holding barely more than the fee. An exponent is now expanded, so the stronger
+    // property holds — the field means what was written.
+    expect(sanitizeAmountInput("1e9")).toBe("1000000000");
+    expect(sanitizeAmountInput("1e-7")).toBe("0.0000001");
   });
 });
