@@ -6,6 +6,7 @@
 // explorer website's React Query internals) gives every platform identical data.
 
 import { clearnetAllowed, onionBase } from "../lib/privacy";
+import i18n from "../i18n";
 import { readLocal, removeLocal, writeLocal } from "../lib/safestore";
 
 const DEFAULT_EXPLORER_BASE = "https://wallet.zkas.info/chain";
@@ -311,12 +312,33 @@ export interface PulseInfo {
   timestamp: number;
 }
 
+/// A list endpoint that answered with something that is not a list.
+///
+/// `settled()` turns a REJECTION into null, and `keep()` then falls back to the previous or
+/// cached value — the designed behaviour for "this endpoint did not answer usefully". Neither
+/// notices a 200 whose body is the wrong SHAPE, so a response like `{"error": …}` reached the
+/// view as `data.blocks`, survived `?? []` because it is truthy, and threw on `.slice` — the
+/// Explore page went blank.
+///
+/// This API has produced exactly that kind of answer in production: a boot race once had it
+/// serving "0.00s block time / 0 shielded notes / empty" while it was still starting. And the
+/// asymmetry was backwards — `cachedDashboard()` already validates with `Array.isArray` before
+/// trusting the LOCAL cache, while the remote response was cast and believed.
+///
+/// Throwing is deliberate: it routes a malformed answer into the machinery that already
+/// exists for an absent one, rather than substituting an empty list that would read on screen
+/// as "the chain has no recent blocks".
+function asList<T>(what: string, value: unknown): T[] {
+  if (!Array.isArray(value)) throw new Error(i18n.t("api.invalidResponse", { status: what }));
+  return value as T[];
+}
+
 export const explorerApi = {
   blockdag: () => explorerGet<BlockdagInfo>("/info/blockdag"),
   network: () => explorerGet<NetworkInfo>("/info/network"),
   nodes: () => explorerGet<NodesInfo>("/info/nodes"),
   relay: () => explorerGet<RelayInfo>("/info/relay"),
-  recentBlocks: () => explorerGet<BlockSummary[]>("/blocks/recent"),
+  recentBlocks: () => explorerGet<unknown>("/blocks/recent").then((v) => asList<BlockSummary>("/blocks/recent", v)),
   block: (id: string) => explorerGet<BlockDetail>(`/blocks/${encodeURIComponent(id)}`),
   transaction: (id: string) => explorerGet<TransactionDetail>(`/transactions/${encodeURIComponent(id)}`),
   shieldedPool: () => explorerGet<ShieldedPoolInfo>("/info/shielded"),
