@@ -1067,8 +1067,18 @@ export const api = {
   // the device-local send list it survives a seed restore and other devices.
   // `limit` caps the page the daemon serialises under the wallet lock: the tab shows
   // HISTORY_PAGE rows unless "show all" is pressed, so it asks for only that many.
-  history: (limit?: number) =>
-    req<ChainHistory>("GET", `/api/wallet/history${limit ? `?limit=${limit}` : ""}`, undefined, 30_000).then(saneHistory),
+  //
+  // `timeoutMs` is the caller's, because the two callers want opposite things. The History
+  // tab POLLS this (every 2s while recovering) and swallows failures, so it must stay short
+  // or requests pile up behind the wallet lock. A user pressing "show all" sees the error,
+  // and that request can land on an EVICTED wallet, which reloads a checkpoint first.
+  //
+  // Measured on the hosted daemon, 40,380 checkpoint loads from its own log: p50 9.8s,
+  // p90 44.1s, p99 167.8s. The 30s default is exceeded by 17.9% of them — so about one in
+  // six cold opens failed with an error while the daemon was working correctly. 180s (what
+  // `watch` already uses for the same cold-load work) covers 99.1%.
+  history: (limit?: number, timeoutMs = 30_000) =>
+    req<ChainHistory>("GET", `/api/wallet/history${limit ? `?limit=${limit}` : ""}`, undefined, timeoutMs).then(saneHistory),
   // Proof of payment. The daemon re-reads the transaction from the chain and discloses
   // what OUR OWN send paid and to whom — the note's recipient, amount, memo and the one
   // random seed that lets anybody recompute the on-chain commitment. Nothing about the

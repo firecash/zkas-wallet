@@ -7473,7 +7473,12 @@ const History = memo(function History({
       // correct to display, but only if the tab knows more is coming. The 2s poll
       // above then fills it in.
       setRecovering(true);
-      setChain(await api.history(showAll ? undefined : HISTORY_PAGE));
+      // 180s, not the 30s default: this is the user-initiated fetch, and it can land on an
+      // evicted wallet whose checkpoint has to be read first (p90 44s, p99 168s on the
+      // hosted daemon). The 2s poll above fills rows in meanwhile, so the wait is visible
+      // progress rather than a frozen screen — and the alternative is an error on a daemon
+      // that is working.
+      setChain(await api.history(showAll ? undefined : HISTORY_PAGE, 180_000));
     } catch (e) {
       setErr((e as Error).message);
     } finally {
