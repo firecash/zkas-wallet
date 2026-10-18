@@ -53,14 +53,21 @@ export function tickedConfirmations({ serverConfs, serverAt, lastShown, now = Da
   if (serverConfs === null || !Number.isFinite(serverConfs)) {
     // No answer yet. Anything already shown stays — a payment does not un-confirm
     // because one poll timed out.
-    return lastShown ?? null;
+    return Number.isFinite(lastShown) ? (lastShown as number) : null;
   }
-  const elapsed = Math.max(0, now - serverAt);
+  // `serverAt` and `lastShown` come from a RECORD ON DISK, and that record is only checked
+  // to be inside an array when it is loaded. A corrupt or hand-edited one — confAt as a
+  // string, say — made `now - serverAt` NaN, which survived Math.max, floor and Math.min
+  // untouched and came out of here as NaN. `confirmationLabel` then rendered it, because
+  // `NaN <= 0` is false: the History row read "NaN confirmations".
+  const at = Number.isFinite(serverAt) ? serverAt : now;
+  const shown = Number.isFinite(lastShown) ? (lastShown as number) : 0;
+  const elapsed = Math.max(0, now - at);
   const localAdvance = Math.min(MAX_LOCAL_ADVANCE, Math.floor(elapsed / LOCAL_BLOCK_MS));
   const ticked = serverConfs + (serverConfs > 0 ? localAdvance : 0);
   // A transaction with 0 confirmations is not "about to have 3": it has not been mined.
   // Only a mined payment accrues blocks, which is why the advance is gated above.
-  return Math.max(ticked, lastShown ?? 0);
+  return Math.max(ticked, shown);
 }
 
 /**

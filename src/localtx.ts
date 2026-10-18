@@ -53,8 +53,39 @@ function key(): string {
 
 export function loadTxs(): LocalTx[] {
   try {
-    const v = JSON.parse(localStorage.getItem(key()) || "[]");
-    return Array.isArray(v) ? v : [];
+    const v = JSON.parse(readLocal(key()) || "[]");
+    if (!Array.isArray(v)) return [];
+    // Only the ARRAY was checked here, never the records in it, so a corrupt or
+    // hand-edited entry travelled all the way to the screen: a non-numeric `confAt`
+    // reached tickedConfirmations and came back NaN, which History printed as "NaN
+    // confirmations". Same rule saneHistory states for chain rows — a record that cannot
+    // be understood is dropped rather than repaired, because inventing an amount puts a
+    // wrong number in a list of payments, which is worse than a missing line.
+    return (v as unknown[]).filter((r): r is LocalTx => {
+      if (!r || typeof r !== "object") return false;
+      const t = r as Partial<LocalTx>;
+      // Only what genuinely cannot be defaulted. The first version of this check also
+      // required preFc, feeFc and spentFc — and two existing tests caught it, because
+      // `recordSend` is called WITHOUT preFc (and without `to`). Requiring them would have
+      // deleted real send history, including every record written by an older build: this
+      // type already documents that older records lack fields (`payId` says so), and a
+      // migration that silently drops a user's payment list is far worse than the NaN it
+      // was trying to prevent.
+      if (typeof t.txid !== "string" || !t.txid) return false;
+      if (!Number.isFinite(t.amountFc) || !Number.isFinite(t.ts)) return false;
+      // The money fields that CAN be defaulted are, rather than costing the record. 0 is
+      // already a defined state downstream: reconcile reads preFc <= 0 as "the balance was
+      // unknown when this was recorded" and ages the row out instead of testing a drop,
+      // and a spentFc of 0 subtracts nothing from the displayed balance.
+      if (!Number.isFinite(t.feeFc)) t.feeFc = 0;
+      if (!Number.isFinite(t.preFc)) t.preFc = 0;
+      if (!Number.isFinite(t.spentFc)) t.spentFc = 0;
+      // The optional chain-status pair is cleaned rather than fatal: a send with no
+      // confirmation yet is the normal case, so only a PRESENT-but-broken value goes.
+      if (t.confs !== undefined && !Number.isFinite(t.confs)) delete t.confs;
+      if (t.confAt !== undefined && !Number.isFinite(t.confAt)) delete t.confAt;
+      return true;
+    });
   } catch {
     return [];
   }
