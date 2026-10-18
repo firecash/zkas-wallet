@@ -1271,6 +1271,14 @@ fn allowed_wallet_api_path(path: &str) -> bool {
             | "/api/wallet/proof"
             | "/api/proof/verify"
             | "/api/wallet/scan-receipt"
+            // Backgrounding asks the engine to checkpoint its scan immediately. The call
+            // used a raw keepalive fetch for every shell, which on desktop leaves the
+            // WebView origin and aims at whatever port localStorage holds while Rust owns
+            // the real one — so it was routed through here instead, and then needed to be
+            // allowed. Without this the bridge answers "wallet API path is not allowed"
+            // and the checkpoint is silently not written, which is the exact failure the
+            // comment above records for the previous four.
+            | "/api/checkpoint"
     )
 }
 

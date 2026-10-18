@@ -5,7 +5,7 @@ import { ProvePayment } from "./PaymentProof";
 import { useCallback, useEffect, useRef, useState, lazy, Suspense, useMemo, memo, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { dotQrDataUrl } from "./lib/dotqr";
-import { abortInFlight, api, chainTx, findReachableDaemon, getBase, getToken, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, isOnionAddress, DEFAULT_WALLETD_PORT, isNative, localEngine, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
+import { abortInFlight, api, chainTx, checkpointNow, findReachableDaemon, getBase, getToken, getWalletdBearer, setBase, setToken, setWalletdBearer, normalizeDaemonInput, walletdTransportError, isOnionAddress, DEFAULT_WALLETD_PORT, isNative, localEngine, loadStatusCache, saveStatusCache, type ChainHistory, type ChainHistoryRow, type Status } from "./api";
 import { parsePairingUri } from "./pairing";
 import { attachTapHaptics, successFeedback } from "./haptics";
 import { ensureNotificationPermission, notifyOs, useToast } from "./toast";
@@ -1520,11 +1520,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
     // request complete even as the page is being backgrounded. Best-effort.
     const onHidden = () => {
       if (!embeddedChosen()) return;
-      const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
-      const bearer = getWalletdBearer();
-      if (bearer) headers.Authorization = `Bearer ${bearer}`;
       try {
-        void fetch(`${getBase()}/api/checkpoint`, { method: "POST", headers, keepalive: true }).catch(() => {});
+        // Shell-aware: keepalive fetch on web/mobile, through Rust on desktop, where a
+        // WebView request would hit a possibly-stale port and CORS and fail silently.
+        void checkpointNow().catch(() => {});
       } catch {
         /* nothing to do — the periodic checkpoint still applies */
       }
@@ -3655,7 +3654,17 @@ async function recreatePhraseAccounts(phrase: string, wanted: number[], birthday
       /* best-effort: a missing account can still be added by hand, in order */
     }
   }
-  if (home) switchWallet(home);
+  // No switch back. This used to restore `home` because the loop activated each wallet
+  // as it minted it; it now mints them inactive (`addWallet(false)`), so the active
+  // wallet never moves and switching to it was a no-op.
+  //
+  // Worth removing rather than leaving: it was the ONLY switchWallet in the app not
+  // followed by a reload, and the status merge above reasons from "every path that
+  // changes wallet reloads the page" when it lets a previous poll fill in an address.
+  // A no-op switch did not break that, but it made the invariant look false to anyone
+  // checking, and the next person to make this path actually switch would have
+  // inherited a silent "new wallet shows the old one's address".
+  void home;
 }
 
 /// How long "Add account" waits for the daemon before giving up. The watch

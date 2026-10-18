@@ -242,8 +242,23 @@ export function daemonEndpointCandidates(raw: string): string[] {
  * wrong — advice about firewalls and IP addresses would send the user hunting
  * for a problem that does not exist. */
 export class WalletdUnauthorizedError extends Error {
-  constructor(public url: string) {
-    super(i18n.t("api.unauthorized"));
+  /**
+   * `detail` keeps the daemon's OWN words ("missing or invalid bearer token"). The
+   * message shown to the user is localized and actionable; the daemon's string is jargon
+   * and is kept beside it rather than instead of it, because it is the only thing that
+   * distinguishes a rotated token from a proxy refusing the header, and discarding it
+   * leaves nothing to diagnose from.
+   *
+   * `text` overrides the user-facing message. The default advice — copy the token from
+   * the Host screen — is right for someone typing in a self-hosted address and wrong on
+   * the status poll, where there is no Host screen and nothing for them to copy.
+   */
+  constructor(
+    public url: string,
+    public detail?: string,
+    text?: string,
+  ) {
+    super(text ?? i18n.t("api.unauthorized"));
     this.name = "WalletdUnauthorizedError";
   }
 }
@@ -691,8 +706,44 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
     } catch {
       throw new Error(i18n.t("api.invalidResponse", { status }));
     }
+  } else if (status >= 200 && status < 300 && status !== 204) {
+    // A 2xx with NO BODY is a broken response, not an empty object.
+    //
+    // This fell through and returned `{}`, which the caller casts to its expected type.
+    // For /api/status that produced a Status with every field undefined, and the wallet
+    // rendered it as a real answer: SHIELDED BALANCE 0 ZKAS, spendable 0, and the status
+    // card reporting ready. A funded wallet telling its owner they have nothing is the
+    // worst thing this app can say short of losing the coins, and the trigger is as
+    // mundane as a proxy closing the connection after the headers.
+    //
+    // Reproduced against a daemon answering 200 with an empty body; every endpoint this
+    // app calls returns JSON, so there is no legitimate empty 2xx. 204 is excluded
+    // because that status means "no content" by definition.
+    throw new Error(i18n.t("api.invalidResponse", { status }));
   }
-  if (status < 200 || status >= 300) throw new Error(typeof data.error === "string" ? data.error : `${status} ${statusText}`.trim());
+  // 401/403 is an AUTH failure, and the remedy has nothing to do with reachability.
+  // WalletdUnauthorizedError already exists for exactly this, with a note that generic
+  // connection advice "would send the user hunting for a problem that does not exist" —
+  // but it was only ever thrown from `probe()`, the manual connect flow. On the normal
+  // path a 401 became an ordinary error, counted as a failed poll like a dead socket, and
+  // after five of them the wallet announced "Can't reach the wallet service" for a daemon
+  // that was answering perfectly and only refusing the token. That is the hunt the class
+  // was written to prevent.
+  if (status === 401 || status === 403) {
+    throw new WalletdUnauthorizedError(
+      getBase(),
+      typeof data.error === "string" ? data.error : `${status} ${statusText}`.trim(),
+      i18n.t("api.tokenRejected"),
+    );
+  }
+  // Everything else non-2xx: the daemon ANSWERED, so this is not unreachability either.
+  // Marked so the caller can tell a bad reply from no reply — an nginx 502 while the
+  // daemon restarts is a different fact from a refused connection.
+  if (status < 200 || status >= 300) {
+    throw Object.assign(new Error(typeof data.error === "string" ? data.error : `${status} ${statusText}`.trim()), {
+      httpStatus: status,
+    });
+  }
   return data as T;
 }
 
@@ -750,14 +801,73 @@ function saneHistory(h: ChainHistory | null | undefined): ChainHistory {
   };
 }
 
+/**
+ * Refuse a structurally impossible status instead of rendering it.
+ *
+ * `saneHistory` exists for the same reason one row below, but nothing guarded STATUS —
+ * and status is where the balance comes from. Driving the wallet against a daemon
+ * answering `balance_fc: "-1"` produced "SHIELDED BALANCE 0 ZKAS ... Ready": a figure
+ * that is not the wallet's, presented with confidence.
+ *
+ * Rejected rather than repaired, and rejected WHOLE. A negative balance is not a number
+ * to clamp — it means this reply cannot be trusted, and clamping it to zero would tell
+ * the owner of a funded wallet that they have nothing, which is the failure this is
+ * guarding against. Throwing lets the poll hold the last good status, which is what the
+ * UI already does for every other failed poll.
+ */
+function saneStatus(s: Status): Status {
+  const money = [s.balance_fc, s.spendable_fc, s.maturing_fc, s.pending_in_fc, s.pending_out_fc, s.pending_change_fc];
+  for (const v of money) {
+    if (v == null) continue;
+    const n = parseFloat(v);
+    // NaN from a non-numeric string is as corrupt as a negative one.
+    if (!Number.isFinite(n) || n < 0) throw new Error(i18n.t("api.invalidResponse", { status: 200 }));
+  }
+  for (const n of [s.note_count, s.scanned_blocks, s.chain_len, s.daa_score]) {
+    if (n == null) continue;
+    if (!Number.isFinite(n) || n < 0) throw new Error(i18n.t("api.invalidResponse", { status: 200 }));
+  }
+  return s;
+}
+
+/**
+ * Ask the on-device engine to write its scan checkpoint NOW, from a page that is being
+ * backgrounded.
+ *
+ * Split by shell because the two have opposite constraints.
+ *
+ * Web and mobile need `keepalive`: the page is going away and a normal fetch would be
+ * cancelled with it. That is the whole point of the call on Android, where the process
+ * can be frozen or killed moments later and a killed process never runs the graceful
+ * flush — every block scanned since the last periodic checkpoint was rescanned on the
+ * next open, which read as progress going back to zero.
+ *
+ * Desktop must NOT use fetch. Rust owns the embedded engine and its port, and Host access
+ * can restart it on a different one, so the base in localStorage can be stale; the WebView
+ * origin is `tauri://localhost`, which is also subject to CORS. Both failures are silent
+ * behind the best-effort catch, so the one shell that looked covered was writing no
+ * checkpoint at all. Rust is not subject to either, and `invoke` outlives the page hide.
+ */
+export async function checkpointNow(): Promise<void> {
+  if ("__TAURI_INTERNALS__" in globalThis) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("wallet_api_request", {
+      method: "POST",
+      path: "/api/checkpoint",
+      body: null,
+      walletToken: getToken(),
+      timeoutMs: 10_000,
+      base: desktopRemoteBase() || null,
+    });
+    return;
+  }
+  const headers: Record<string, string> = { "X-Wallet-Token": getToken() };
+  const bearer = getWalletdBearer();
+  if (bearer) headers.Authorization = `Bearer ${bearer}`;
+  await fetch(`${getBase()}/api/checkpoint`, { method: "POST", headers, keepalive: true });
+}
+
 export const api = {
-  // 4s, not the 10s default. This is the 1 Hz poll and the daemon answers it
-  // from memory in milliseconds, so a reply that takes longer than four seconds
-  // is a dead connection, not a slow one. At 10s a network change — which leaves
-  // sockets HANGING rather than refused — took five serialised timeouts, 55
-  // seconds measured, before the wallet admitted anything was wrong, and it
-  // looked frozen the whole time. One slow poll still changes nothing: the
-  // screen only flips after five consecutive failures.
   // The deadline depends on WHICH daemon is answering, because the two are not
   // comparable.
   //
@@ -776,7 +886,7 @@ export const api = {
   // Recovery after a network change does not depend on this either way: what fixes that
   // is `abortInFlight()` on the `online` event, which cuts dead sockets loose instead of
   // waiting out their timeout.
-  status: () => req<Status>("GET", "/api/status", undefined, localEngine() ? 4_000 : undefined),
+  status: () => req<Status>("GET", "/api/status", undefined, localEngine() ? 4_000 : undefined).then(saneStatus),
   balance: () => req<Balance>("GET", "/api/wallet/balance"),
   // Ask the daemon to build this wallet's spend index NOW, in the background, rather
   // than at the end of a caught-up sync pass — or, worst, on the first payment. The

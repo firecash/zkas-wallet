@@ -15,7 +15,8 @@
     "notResponding": "The wallet service is not responding (timed out).",
     "cannotReachDaemon": "Cannot reach the wallet daemon. ({{detail}})",
     "invalidResponse": "The wallet service returned an invalid response ({{status}}).",
-    "blockedByPrivacy": "Blocked: {{host}} is not reachable privately, and Tor is on. Turn Tor off or choose an onion service."
+    "blockedByPrivacy": "Blocked: {{host}} is not reachable privately, and Tor is on. Turn Tor off or choose an onion service.",
+    "tokenRejected": "The wallet service rejected this wallet's access token. It has not lost your funds — your keys are on this device. Try again shortly; if it persists, reconnect the wallet from Settings."
   },
   "noncustodial": {
     "fragmentedDefault": "This payment needs more notes than one transaction can spend.",
