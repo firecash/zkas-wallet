@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
-import { safeText, hasUnsafeText } from "../src/lib/safetext";
+import { MEMO_MAX_BYTES, clampUtf8Bytes, hasUnsafeText, safeText } from "../src/lib/safetext";
 import { addContact, displayName, loadContacts, updateContact } from "../src/contacts";
 import { parsePaymentUri } from "../src/lib/utils";
 import { parseProfile } from "../src/chatclient";
@@ -85,5 +86,68 @@ describe("the three doors a hostile display string comes through", () => {
     expect(r.memo).toBe("ref42");
     // And the amount still parses, so cleaning did not disturb the rest.
     expect(r.amount).toBe("1");
+  });
+});
+
+describe("the memo field is 512 BYTES, not 512 characters", () => {
+  /**
+   * walletd answers `memo too long (max 512 bytes)` with a 400, and the inputs capped at
+   * 400 CHARACTERS — which is only the same thing in ASCII. So a memo written in most of
+   * the languages this wallet ships in was rejected after the user had typed it and tapped
+   * send: 400 Cyrillic or Arabic characters is 800 bytes, 400 CJK is 1200, 400 emoji 1600.
+   */
+  const bytes = (s: string) => new TextEncoder().encode(s).length;
+
+  it("keeps a memo within the protocol's byte budget in every script", () => {
+    // 600 characters, so the input exceeds 512 bytes in EVERY script including ASCII —
+    // at 400 ASCII characters there is nothing to clamp, which is the whole point of the
+    // old limit being wrong only for everybody else.
+    for (const [label, ch] of [["ascii", "a"], ["cyrillic", "д"], ["arabic", "ش"], ["cjk", "字"], ["emoji", "😀"]]) {
+      const clamped = clampUtf8Bytes(ch.repeat(600), MEMO_MAX_BYTES);
+      expect(bytes(clamped), `${label} exceeded the field`).toBeLessThanOrEqual(MEMO_MAX_BYTES);
+      // And it kept as much as actually fits rather than over-trimming to be safe: one more
+      // character of this script would not have fitted. (4 = the widest UTF-8 character.)
+      expect(bytes(clamped), `${label} was over-trimmed`).toBeGreaterThan(MEMO_MAX_BYTES - 4);
+    }
+  });
+
+  it("lets an ASCII memo use the whole field, which 400 characters did not", () => {
+    // The old cap was not merely wrong for multi-byte scripts, it was short for ASCII too.
+    expect(clampUtf8Bytes("a".repeat(512), MEMO_MAX_BYTES).length).toBe(512);
+  });
+
+  it("never splits a character in half", () => {
+    // Truncating by byte index would leave a lone surrogate or a partial sequence, which
+    // renders as a replacement glyph — a memo ending in garbage looks like corruption.
+    const clamped = clampUtf8Bytes("😀".repeat(400), MEMO_MAX_BYTES);
+    expect(clamped).not.toContain("�");
+    expect([...clamped].every((c) => c === "😀")).toBe(true);
+    expect(bytes(clamped)).toBe(512);        // 128 × 4
+  });
+
+  it("leaves a short memo untouched", () => {
+    expect(clampUtf8Bytes("rent for April", MEMO_MAX_BYTES)).toBe("rent for April");
+    expect(clampUtf8Bytes("", MEMO_MAX_BYTES)).toBe("");
+  });
+
+  it("agrees with the limit walletd actually enforces", () => {
+    // If the daemon's cap ever moves, this is the one place the client needs to follow.
+    expect(MEMO_MAX_BYTES).toBe(512);
+  });
+});
+
+describe("both memo inputs are wired to the byte clamp", () => {
+  // The unit tests above prove clampUtf8Bytes is correct; they say nothing about whether
+  // the inputs call it. These pin the wiring, which is the part that was broken.
+  const app = readFileSync("src/App.tsx", "utf8");
+
+  it("no memo input caps by character count any more", () => {
+    expect(app).not.toContain("setMemo(e.target.value.slice(0, 400))");
+    expect(app).not.toContain("maxLength={400}");
+  });
+
+  it("both the send memo and the payment-request memo clamp by bytes", () => {
+    const uses = app.match(/setMemo\(clampUtf8Bytes\(e\.target\.value, MEMO_MAX_BYTES\)\)/g) ?? [];
+    expect(uses.length, "send memo and payment-request memo").toBe(2);
   });
 });

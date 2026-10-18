@@ -34,6 +34,7 @@ import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput, shortAddr } from "./lib/utils";
 import { readLocal, writeLocal } from "./lib/safestore";
+import { MEMO_MAX_BYTES, clampUtf8Bytes } from "./lib/safetext";
 import { SEED_REQUIRED, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, reserveAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
@@ -5887,7 +5888,9 @@ function RequestAmount({ address }: { address: string }) {
       <label>{t("requestAmount.amountLabel")}</label>
       <input value={amount} onChange={(e) => setAmount(sanitizeAmountInput(e.target.value))} placeholder="0.00" inputMode="decimal" autoFocus />
       <label>{t("requestAmount.memoLabel")}</label>
-      <input value={memo} onChange={(e) => setMemo(e.target.value.slice(0, 400))} placeholder={t("requestAmount.memoPlaceholder")} maxLength={400} />
+      {/* Capped by BYTES, not characters: the field is 512 bytes of UTF-8, and 400
+          characters only fits inside that in ASCII. See clampUtf8Bytes. */}
+      <input value={memo} onChange={(e) => setMemo(clampUtf8Bytes(e.target.value, MEMO_MAX_BYTES))} placeholder={t("requestAmount.memoPlaceholder")} />
 
       <div className={"qr-vault" + (ready ? "" : " empty")}>
         <span className="qr-aura" aria-hidden="true" />
@@ -7100,9 +7103,8 @@ function Send({
           <label>{t("send.memoLabel")}</label>
           <input
             value={memo}
-            onChange={(e) => setMemo(e.target.value.slice(0, 400))}
+            onChange={(e) => setMemo(clampUtf8Bytes(e.target.value, MEMO_MAX_BYTES))}
             placeholder={t("send.memoPlaceholder")}
-            maxLength={400}
             autoFocus
           />
           <div className="fieldhint">

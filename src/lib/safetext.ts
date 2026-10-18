@@ -31,3 +31,30 @@ export function safeText(s: string): string {
 export function hasUnsafeText(s: string): boolean {
   return UNSAFE.test(s) || CONTROLS.test(s);
 }
+
+/// The protocol's memo field is 512 BYTES of UTF-8, not 512 characters.
+///
+/// The send and payment-request inputs capped at 400 CHARACTERS, which is only the same
+/// thing in ASCII. walletd answers `memo too long (max 512 bytes)` with a 400, so a memo
+/// written in most of the languages this wallet ships in was rejected AFTER the user had
+/// typed it and tapped send: 400 Cyrillic or Arabic characters is 800 bytes, 400 CJK is
+/// 1200, 400 emoji is 1600. What actually fits is 256 Cyrillic, 170 CJK, 128 emoji.
+///
+/// Truncation is by code POINT, never by byte index, so a multi-byte character is never cut
+/// in half into a replacement glyph — and the loop walks back from the character boundary
+/// rather than slicing blind.
+export function clampUtf8Bytes(s: string, maxBytes: number): string {
+  const enc = new TextEncoder();
+  if (enc.encode(s).length <= maxBytes) return s;
+  // Whole code points, so surrogate pairs stay intact.
+  const points = [...s];
+  let out = "";
+  for (const p of points) {
+    if (enc.encode(out + p).length > maxBytes) break;
+    out += p;
+  }
+  return out;
+}
+
+/// The memo field's real capacity, as walletd enforces it.
+export const MEMO_MAX_BYTES = 512;
