@@ -6581,6 +6581,18 @@ function Send({
   /// refusing. Read from the same source the reserve uses.
   const feeFloorFc = feeReserveSompi(1) / 1e8;
   const feeShown = feeCustomSet ? feeCustom : feeReserve;
+  // A CUSTOM fee larger than the payment itself.
+  //
+  // The floor is guarded carefully on the confirm screen — a custom fee below the node's
+  // minimum is shown as a range, because the node charges its own minimum anyway. Nothing
+  // guarded the other end: there is no ceiling in this app and none in walletd either, so a
+  // fee typed as `10` instead of `0.001` is simply paid, and `overspend` only intervenes when
+  // amount plus fee exceeds the balance — on a funded wallet it does not.
+  //
+  // A warning, not a block: a high fee can be deliberate when someone wants priority, and
+  // this app does not get to overrule that. But "you are paying more in fees than you are
+  // sending" is a fact worth putting in front of someone before they confirm.
+  const feeExceedsAmount = feeCustomSet && amtValid && feeCustom > amt;
   const overspend = amtValid && amt + feeReserve > spendable + 1e-9;
   // The maturing balance would cover it — the shortfall is just not-yet-matured funds.
   const blockedByMaturing = overspend && amtValid && amt + feeReserve <= spendable + maturing + 1e-9;
@@ -6856,6 +6868,11 @@ function Send({
               : t("send.feeRange", { min: Number(Math.max(feeCustomSet ? feeCustom : 0, feeFloorFc).toFixed(8)), max: Number(feeReserve.toFixed(8)) })}
           </span>
         </div>
+        {feeExceedsAmount && (
+          <p className="muted small" style={{ margin: "6px 0 0" }}>
+            ⚠ {t("send.feeExceedsAmount", { fee: Number(feeCustom.toFixed(8)), amount: Number(amt.toFixed(8)) })}
+          </p>
+        )}
         <div className="confirm-row total">
           <span>{t("send.total")}</span>
           <span className="mono">
