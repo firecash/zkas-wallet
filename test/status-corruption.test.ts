@@ -93,3 +93,66 @@ describe("a status reply that cannot be trusted", () => {
     expect((err as { httpStatus?: number }).httpStatus).toBe(503);
   });
 });
+
+describe("a prepare or submit answer the client cannot use", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem("wallet_token", "0123456789abcdef0123456789abcdef");
+    localStorage.setItem("walletd_base", "http://127.0.0.1:8899");
+  });
+
+  const prep = (over: Record<string, unknown>) => ({
+    session: "s1", sighash: "aa", bundle_hex: "00".repeat(32),
+    value_balance: 0, amount_sompi: 100_000_000, fee_sompi: 1_000_000, remaining_sompi: 0,
+    spend_auth: [], disclosure: [], ...over,
+  });
+
+  it("rejects a prepare with no figures instead of throwing BigInt(NaN) at the user", async () => {
+    // Committing a send against a daemon that answered 200 with a plausible but empty
+    // bundle put a raw JavaScript TypeError on screen mid-payment: "The number NaN
+    // cannot be converted to a BigInt because it is not an integer". The send path does
+    // BigInt(Math.round(prep.amount_sompi)) in six places and nothing checked the field
+    // was there.
+    answer(200, JSON.stringify({ session: "s1", bundle_hex: "00".repeat(32), spend_auth: [], disclosure: [] }));
+    await expect(api.prepare("ab".repeat(96), "zkas:x", 1n)).rejects.toThrow(/invalid response/i);
+  });
+
+  it("rejects a prepare whose fee is not a number", async () => {
+    answer(200, JSON.stringify(prep({ fee_sompi: "lots" })));
+    await expect(api.prepare("ab".repeat(96), "zkas:x", 1n)).rejects.toThrow(/invalid response/i);
+  });
+
+  it("rejects a prepare with no session or no bundle", async () => {
+    answer(200, JSON.stringify(prep({ session: "" })));
+    await expect(api.prepare("ab".repeat(96), "zkas:x", 1n)).rejects.toThrow(/invalid response/i);
+    answer(200, JSON.stringify(prep({ bundle_hex: "" })));
+    await expect(api.prepare("ab".repeat(96), "zkas:x", 1n)).rejects.toThrow(/invalid response/i);
+  });
+
+  it("accepts the exact decimal-string form on its own", async () => {
+    // Newer daemons send *_exact precisely because the JS numbers lose precision; a
+    // response carrying only those must not be rejected.
+    answer(200, JSON.stringify(prep({
+      amount_sompi: undefined, fee_sompi: undefined,
+      amount_sompi_exact: "100000000", fee_sompi_exact: "1000000",
+    })));
+    await expect(api.prepare("ab".repeat(96), "zkas:x", 1n)).resolves.toMatchObject({ session: "s1" });
+  });
+
+  it("accepts a prepare with the remainder absent, which means nothing is left over", async () => {
+    answer(200, JSON.stringify(prep({ remaining_sompi: undefined })));
+    await expect(api.prepare("ab".repeat(96), "zkas:x", 1n)).resolves.toMatchObject({ session: "s1" });
+  });
+
+  it("rejects a submit result with no txid or unusable figures", async () => {
+    answer(200, JSON.stringify({ amount_sompi: 1, fee_sompi: 1 }));
+    await expect(api.submit("s1", [])).rejects.toThrow(/invalid response/i);
+    answer(200, JSON.stringify({ txid: "deadbeef", fee_sompi: 1 }));
+    await expect(api.submit("s1", [])).rejects.toThrow(/invalid response/i);
+  });
+
+  it("accepts a normal submit result", async () => {
+    answer(200, JSON.stringify({ txid: "deadbeef", amount_sompi: 100_000_000, fee_sompi: 1_000_000 }));
+    await expect(api.submit("s1", [])).resolves.toMatchObject({ txid: "deadbeef" });
+  });
+});

@@ -867,6 +867,58 @@ export async function checkpointNow(): Promise<void> {
   await fetch(`${getBase()}/api/checkpoint`, { method: "POST", headers, keepalive: true });
 }
 
+/**
+ * Refuse a prepare/submit answer the client cannot do arithmetic on.
+ *
+ * The send path turns the daemon's figures into bigints —
+ * `BigInt(prep.amount_sompi_exact ?? Math.round(prep.amount_sompi))` and the same for the
+ * fee, the remainder and the submit result. Nothing checked the fields were there, and
+ * `Math.round(undefined)` is NaN, so a daemon that answered 200 with an incomplete body
+ * put a raw JavaScript TypeError in front of the user mid-payment: "The number NaN cannot
+ * be converted to a BigInt because it is not an integer". Measured by committing a send
+ * against a daemon returning a plausible-looking but empty bundle.
+ *
+ * Checked once, here, rather than at the six BigInt call sites, so a new one cannot
+ * reintroduce it. The figures are not repaired — a payment is not a place to guess a
+ * number — and the message is the same one any other unusable reply gets.
+ */
+function saneMoneyFields(o: Record<string, unknown>, fields: [string, string | null][]): void {
+  const bad = () => new Error(i18n.t("api.invalidResponse", { status: 200 }));
+  for (const [num, exact] of fields) {
+    const e = exact ? o[exact] : undefined;
+    // An exact decimal string is the preferred form and is enough on its own.
+    if (typeof e === "string" && /^\d+$/.test(e.trim())) continue;
+    const v = o[num];
+    // An absent remainder means nothing is left over, which the caller already defaults.
+    if (v == null && num === "remaining_sompi" && e == null) continue;
+    if (typeof v !== "number" || !Number.isFinite(v) || v < 0) throw bad();
+  }
+}
+
+function sanePrepare(p: PrepareResp): PrepareResp {
+  const bad = () => new Error(i18n.t("api.invalidResponse", { status: 200 }));
+  if (!p || typeof p !== "object") throw bad();
+  if (typeof p.session !== "string" || !p.session) throw bad();
+  if (typeof p.bundle_hex !== "string" || !p.bundle_hex) throw bad();
+  if (!Array.isArray(p.spend_auth)) throw bad();
+  saneMoneyFields(p as unknown as Record<string, unknown>, [
+    ["amount_sompi", "amount_sompi_exact"],
+    ["fee_sompi", "fee_sompi_exact"],
+    ["remaining_sompi", "remaining_sompi_exact"],
+  ]);
+  return p;
+}
+
+function saneSubmit<T extends { txid: string; amount_sompi: number; fee_sompi: number }>(r: T): T {
+  const bad = () => new Error(i18n.t("api.invalidResponse", { status: 200 }));
+  if (!r || typeof r !== "object" || typeof r.txid !== "string" || !r.txid) throw bad();
+  saneMoneyFields(r as unknown as Record<string, unknown>, [
+    ["amount_sompi", null],
+    ["fee_sompi", null],
+  ]);
+  return r;
+}
+
 export const api = {
   // The deadline depends on WHICH daemon is answering, because the two are not
   // comparable.
@@ -970,9 +1022,9 @@ export const api = {
         allow_partial,
       },
       300_000,
-    ),
+    ).then(sanePrepare),
   submit: (session: string, sigs: { index: number; sig: string }[]) =>
-    req<{ txid: string; amount_sompi: number; fee_sompi: number }>("POST", "/api/wallet/submit", { session, sigs }, 60_000),
+    req<{ txid: string; amount_sompi: number; fee_sompi: number }>("POST", "/api/wallet/submit", { session, sigs }, 60_000).then(saneSubmit),
   sign: (message: string) =>
     req<{ address: string; message: string; signature: string; note: string }>("POST", "/api/wallet/sign", { message }, 15_000),
   // Chain-derived history: recovered from the blocks themselves during scan
