@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { looksLikeAddress, looksLikeKaspaAddress } from "../lib/utils";
 /// The same shape WalletTools and Explorer already validate against.
-const ADDRESS_RE = /^(zkas|firecash):[a-z0-9]{50,100}$/i;
+// No local address regex here. This file had its own — `/^(zkas|firecash):[a-z0-9]{50,100}$/i`
+// — which accepted `b`, `i`, `o` and `1`, the four characters bech32 leaves out BECAUSE they
+// are confusable when a human copies them. The comment further down already said "the app
+// already owns the real test"; this file then did not use it. Fourth helper shadowed by a
+// weaker local copy, after looksLikeAddress, parsePaymentUri and shortAddr.
 import { Check, ChevronDown, Copy, Cpu, ExternalLink, Globe2, Network, Server, Square, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { api, loadStatusCache } from "../api";
@@ -228,8 +233,11 @@ export function Mining() {
   // is the same shape as the withdrawal that sat for 10 hours because only the
   // prefix was checked. The app already owns the real test and uses it in
   // WalletTools and Explorer; Mining is the one place that did not.
-  const valid = ADDRESS_RE.test(walletAddress.trim())
-    && (mode === "solo" || kaspaAddress.trim().startsWith("kaspa:"))
+  const valid = looksLikeAddress(walletAddress)
+    // The Kaspa payout got exactly the prefix check the comment above warns about, on the
+    // line directly below the warning. Mining to an address wrong by one character sends the
+    // rewards somewhere unrecoverable.
+    && (mode === "solo" || looksLikeKaspaAddress(kaspaAddress))
     && (zkasMode === "local" || !!zkasRpc.trim())
     && (mode === "solo" || kaspaMode === "local" || !!kaspaRpc.trim())
     && stratumPort >= 1024 && stratumPort <= 65535

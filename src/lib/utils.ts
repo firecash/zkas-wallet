@@ -31,6 +31,19 @@ export async function copyText(text: string) {
 // A zkas: shielded address is bech32 with an "orchard" version byte; a full
 // decode happens on-device at send time, but this catches the obvious typo/paste
 // mistakes instantly so the user gets a red/green cue while typing.
+/// The same test for a KASPA address, for the dual-mining payout field.
+///
+/// That field was gated on `startsWith("kaspa:")` — a prefix check, which is exactly the
+/// shape that left 1,650 KAS parked for ten hours when an address carrying a SPACE passed a
+/// prefix test on the OTC desk. The charset class is what catches it: bech32 omits `b`, `i`,
+/// `o` and `1` precisely because they are confusable in transcription, and a space is not in
+/// it either, so internal whitespace fails here rather than being silently stripped.
+///
+/// Ends are trimmed because that is what a paste carries; the body is then tested whole.
+export function looksLikeKaspaAddress(a: string): boolean {
+  return /^kaspa(test|sim|dev)?:[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{50,80}$/.test(a.trim());
+}
+
 export function looksLikeAddress(a: string): boolean {
   const s = a.trim();
   return /^(zkas|firecash)(test|sim|dev)?:[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{60,80}$/.test(s);
