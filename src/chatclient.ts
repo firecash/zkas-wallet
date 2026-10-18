@@ -44,6 +44,49 @@ export const KIND_MUTE_LIST = 10000; // NIP-51
 export const KIND_REPORT = 1984; // NIP-56
 export const KIND_GIFT_WRAP = 1059; // NIP-59, carrying a NIP-17 private message
 
+/**
+ * A relay frame turned into a ChatEvent, or null.
+ *
+ * Everything on this socket is a stranger's JSON — the relay operator's, or whoever
+ * reached the relay — and the EVENT frame was cast straight to ChatEvent with nothing
+ * checked. The consumers then trusted the shape: `ev.tags.find(...)` throws if `tags` is
+ * absent or not an array, and because the cast happens inside `ws.onmessage` with no try
+ * around it, one malformed event from a hostile or buggy relay threw out of the socket
+ * handler. `parseProfile` is already written this way ("it is a stranger's JSON") — this
+ * extends the same stance to the envelope around it, at the boundary rather than in each
+ * consumer, which is where the other sanitisers in this codebase live.
+ *
+ * Fields are checked, never coerced: an event whose id or author cannot be read is not an
+ * event, and inventing values for it would put a stranger's message on screen attributed
+ * to nobody.
+ */
+export function saneEvent(x: unknown): ChatEvent | null {
+  if (!x || typeof x !== "object") return null;
+  const e = x as Record<string, unknown>;
+  if (typeof e.id !== "string" || !e.id) return null;
+  if (typeof e.pubkey !== "string" || !e.pubkey) return null;
+  if (typeof e.kind !== "number" || !Number.isFinite(e.kind)) return null;
+  if (typeof e.content !== "string") return null;
+  // created_at drives ordering; a missing one sorts to the epoch rather than dropping a
+  // real message, but a non-numeric one cannot be allowed to poison a comparison.
+  const created = Number.isFinite(e.created_at) ? (e.created_at as number) : 0;
+  // Tags: keep only the well-formed rows instead of rejecting the event, since a single
+  // malformed tag should not lose a message, and normalise to the array every consumer
+  // already assumes.
+  const tags = Array.isArray(e.tags)
+    ? (e.tags as unknown[]).filter((t): t is string[] => Array.isArray(t) && t.every((v) => typeof v === "string"))
+    : [];
+  return {
+    id: e.id,
+    pubkey: e.pubkey,
+    created_at: created,
+    kind: e.kind,
+    tags,
+    content: e.content,
+    sig: typeof e.sig === "string" ? e.sig : "",
+  };
+}
+
 export interface ChatEvent {
   id: string;
   pubkey: string;
@@ -249,7 +292,10 @@ export class ChatClient {
         return;
       }
       if (!Array.isArray(frame)) return;
-      if (frame[0] === "EVENT" && frame[2]) this.onEvent(frame[2] as ChatEvent);
+      if (frame[0] === "EVENT" && frame[2]) {
+        const ev = saneEvent(frame[2]);
+        if (ev) this.onEvent(ev);
+      }
       // NIP-01's verdict on something we published. Nothing read this, so a
       // message the relay REFUSED — rate limit, proof-of-work requirement, a
       // blocked room — was painted with the delivered tick and left there. The
@@ -596,7 +642,12 @@ export function countUnread(opts: {
       try {
         const f = JSON.parse(String(msg.data));
         if (f[0] === "EVENT" && f[2]) {
-          const ev = f[2] as ChatEvent;
+          // Validated like the main socket's. This one is inside a try, so a malformed
+          // event could not throw out of the handler — it just abandoned the rest of the
+          // unread scan silently, which reads as "no unread messages" rather than as a
+          // broken frame. Skipping the one bad event keeps the count honest.
+          const ev = saneEvent(f[2]);
+          if (!ev) return;
           if (ev.kind === KIND_GIFT_WRAP) {
             if (!seen.has(ev.id)) dmHits.add(ev.id);
             return;
