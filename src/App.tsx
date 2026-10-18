@@ -827,6 +827,9 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   /// not replace the wallet with an alarm. See where it is read.
   const nodeDownSince = useRef<number | null>(null);
   const warmingSince = useRef<number | null>(null);
+  // The wallet this TAB is showing. Compared against the `storage` event's new value so
+  // a switch made in another tab can be noticed; see onOtherTabSwitch below.
+  const bootToken = useRef<string | null>(localStorage.getItem("wallet_token"));
   /// When the last poll ran while the page was hidden (see HIDDEN_POLL_MS).
   const lastHiddenPoll = useRef(0);
 
@@ -1538,11 +1541,32 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       if (document.hidden) onHidden();
       else onResume();
     };
+    // ANOTHER TAB switching wallet. localStorage is shared across tabs but a
+    // CustomEvent is not, so `wallets-changed` never left the tab that fired it: the
+    // second tab went on showing Wallet A's name, while `wallet_token` underneath it
+    // had become Wallet B's and every poll from then on fetched Wallet B. Measured with
+    // two tabs — the untouched one reported label "Wallet A" with token "bbbb…", so it
+    // displayed another wallet's balance, and its Receive screen another wallet's
+    // address, under the wrong name. Copying that address is the part that does damage.
+    //
+    // A reload is exactly what every in-tab switchWallet call site already does, which
+    // is also the invariant the status merge depends on when it lets a previous poll
+    // fill in an address. The `storage` event only fires in OTHER documents, so the tab
+    // that made the change does not reload twice, and comparing against the token this
+    // tab is actually using keeps an unrelated key or a rewrite of the same value from
+    // triggering anything.
+    const onOtherTabSwitch = (e: StorageEvent) => {
+      if (e.key !== "wallet_token") return;
+      if (!e.newValue || e.newValue === bootToken.current) return;
+      location.reload();
+    };
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("focus", onResume);
+    window.addEventListener("storage", onOtherTabSwitch);
     return () => {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", onResume);
+      window.removeEventListener("storage", onOtherTabSwitch);
     };
   }, [refresh]);
 

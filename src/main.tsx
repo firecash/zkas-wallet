@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { Blocks, HardDrive, LayoutGrid, Pickaxe, Server, Settings, WalletCards } from "lucide-react";
 import { LockScreen } from "./LockScreen";
 import { AppLockScreen } from "./AppLockScreen";
-import { installAutoLock, isLockEnabled, isUnlocked } from "./applock";
+import { installAutoLock, isLockEnabled, isUnlocked, lock } from "./applock";
 import { ToastHost } from "./toast";
 import { applyStoredTheme } from "./theme";
 // Importing the instance also initialises i18next with the merged English catalogue and
@@ -66,6 +66,25 @@ function Root({ locked, askNode, whatsNew, pendingWatch }: { locked: boolean; as
   const [appUnlocked, setAppUnlocked] = useState(!isLockEnabled() || isUnlocked());
   useEffect(() => {
     installAutoLock(() => setAppUnlocked(false));
+    // Turning the lock on in ANOTHER TAB has to lock this one too.
+    //
+    // `appUnlocked` is seeded once at mount, so a tab opened before the lock existed
+    // held `true` for the rest of its life and the gate below never engaged, however
+    // many times it re-rendered. That tab kept its in-memory seeds and could still
+    // spend. The auto-lock only re-locks after time in the BACKGROUND, so a tab left
+    // visible stayed open indefinitely — and somebody who has just set a PIN has every
+    // reason to believe they locked the wallet, not one of its windows.
+    //
+    // `lock()` drops the in-memory seeds; it cannot break a payment already in flight,
+    // which holds what it needs in its own closure. The sealed copies are untouched, so
+    // the PIN opens it again.
+    const onLockElsewhere = (e: StorageEvent) => {
+      if (e.key !== "app_lock_v2" || !e.newValue) return;
+      lock();
+      setAppUnlocked(false);
+    };
+    window.addEventListener("storage", onLockElsewhere);
+    return () => window.removeEventListener("storage", onLockElsewhere);
   }, []);
   if (isLockEnabled() && !appUnlocked) return <AppLockScreen onUnlocked={() => setAppUnlocked(true)} />;
   if (!unlocked) return <LockScreen onUnlocked={() => setUnlocked(true)} />;
