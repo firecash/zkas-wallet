@@ -1,5 +1,5 @@
 
-import { readLocal } from "./lib/safestore";// The address book.
+// The address book.
 //
 // On a shielded chain every address is ~79 characters of bech32 noise, and the
 // chain itself reveals nothing — so unless the wallet remembers who an address
@@ -11,6 +11,7 @@ import { readLocal } from "./lib/safestore";// The address book.
 // pay, which is exactly the metadata this project exists to keep private. They
 // live beside the wallet's other device state and leave with it.
 
+import { readLocal, writeLocal } from "./lib/safestore";
 export interface Contact {
   /// Stable id so a rename cannot orphan history references.
   id: string;
@@ -26,7 +27,7 @@ function key(): string {
 
 export function loadContacts(): Contact[] {
   try {
-    const raw = localStorage.getItem(key());
+    const raw = readLocal(key());
     if (!raw) return [];
     const list = JSON.parse(raw) as Contact[];
     return Array.isArray(list) ? list : [];
@@ -36,7 +37,12 @@ export function loadContacts(): Contact[] {
 }
 
 function save(list: Contact[]): void {
-  localStorage.setItem(key(), JSON.stringify(list));
+  // Through safestore, read and write BOTH: this is called from click handlers ("Save as
+  // contact", rename, delete), and a raw setItem throws out of them on a full or blocked
+  // store — the same failure the wallet registry had. Reading the same way matters just as
+  // much: safestore holds what a blocked store refused, and a raw read here would not see
+  // it, so a contact would vanish the instant it was saved.
+  writeLocal(key(), JSON.stringify(list));
   // Let every mounted view refresh without prop-drilling a store through the app.
   window.dispatchEvent(new CustomEvent("contacts-changed"));
 }

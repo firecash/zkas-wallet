@@ -1,4 +1,4 @@
-import { readLocal } from "./lib/safestore";
+import { readLocal, removeLocal } from "./lib/safestore";
 import { forgetSentDms } from "./lib/dmlog";
 // Removing a wallet, completely.
 //
@@ -142,7 +142,11 @@ export function wipeWalletState(token: string | null): void {
   // name.
   const wipingActive = t === (readLocal("wallet_token") || "default");
   if (wipingActive) {
-    localStorage.removeItem("wallet_token");
+    // removeLocal, not the raw accessor. safestore holds what a blocked store refused for
+    // the lifetime of the page, and a raw removeItem does not touch that copy — so on such
+    // a browser the removed wallet's token came straight back on the next read, and the
+    // wallet the user had just deleted answered to its own name again.
+    removeLocal("wallet_token");
     // Session state belongs to the wallet that was on screen, so it only goes
     // when that is the wallet being wiped.
     sessionStorage.clear();

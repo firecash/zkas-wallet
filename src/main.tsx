@@ -38,6 +38,7 @@ import { bgSyncReconfigure } from "./bgsync";
 import { internalRouteFromLink, queuePaymentLink } from "./paymentlinks";
 import "./styles.css";
 import "./styles.boot.css";
+import { readLocal } from "./lib/safestore";
 
 // Every tool page used to ship in the first JavaScript download, including QR,
 // explorer, service-directory and mining code a user may never open. Load a
@@ -413,7 +414,7 @@ async function boot() {
   let hasWalletHistory = false;
   try {
     hasWalletHistory =
-      listWallets().length > 0 || !!loadStatusCache() || !!localStorage.getItem("wallet_token");
+      listWallets().length > 0 || !!loadStatusCache() || !!readLocal("wallet_token");
     if (hasWalletHistory && needsNodeChoice()) markNodeChoiceMade();
   } catch {
     /* storage unavailable — a fresh-install boot, at best */
