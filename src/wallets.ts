@@ -24,12 +24,41 @@ export interface WalletRef {
 }
 
 const LIST_KEY = "wallets_v1";
+/// Tokens the user has REMOVED, so a stale write cannot bring one back.
+///
+/// Every mutation here is read -> change -> write the WHOLE list, and two tabs share this
+/// storage. Most of those races heal themselves: the status poll re-registers a row it
+/// finds missing, and a freshly minted wallet becomes active and re-registers too.
+/// Removal is the one that does not heal, it un-heals — tab A removes a wallet and writes
+/// the shorter list, tab B writes a list it read BEFORE that, and the removed wallet is
+/// back in the switcher. Its data is already wiped, so it reappears as a wallet this
+/// device cannot spend from: alarming, and the opposite of what the user asked for.
+///
+/// A retry after writing would not close the window, because the stale write lands later.
+/// A tombstone does, because it makes the removal a fact that any later list is filtered
+/// against rather than a state that a later list can overwrite.
+const GONE_KEY = "wallets_removed_v1";
+/// Capped: this exists to beat an in-flight write from another tab, which is a matter of
+/// milliseconds, not to remember every wallet ever deleted.
+const GONE_MAX = 20;
+
+function tombstones(): string[] {
+  try {
+    const raw = readLocal(GONE_KEY);
+    const v = raw ? (JSON.parse(raw) as string[]) : [];
+    return Array.isArray(v) ? v.filter((t) => typeof t === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 export function listWallets(): WalletRef[] {
   try {
     const raw = localStorage.getItem(LIST_KEY);
     const list = raw ? (JSON.parse(raw) as WalletRef[]) : [];
-    return Array.isArray(list) ? list : [];
+    if (!Array.isArray(list)) return [];
+    const gone = new Set(tombstones());
+    return gone.size ? list.filter((w) => !gone.has(w.token)) : list;
   } catch {
     return [];
   }
@@ -93,7 +122,19 @@ export function renameWallet(token: string, label: string): void {
 
 /** Drop a wallet from the registry (the caller wipes its data separately). */
 export function unregisterWallet(token: string): void {
+  // Tombstone FIRST, so even a write that lands between these two lines cannot resurrect
+  // it: the row may come back in storage, but listWallets filters it out.
+  const gone = tombstones().filter((t) => t !== token);
+  gone.push(token);
+  writeLocal(GONE_KEY, JSON.stringify(gone.slice(-GONE_MAX)));
   save(listWallets().filter((w) => w.token !== token));
+}
+
+/// Forget a tombstone — for a token being REUSED, which is the one case where a removed
+/// name legitimately comes back. Without this a reissued token would be invisible.
+export function clearTombstone(token: string): void {
+  const gone = tombstones().filter((t) => t !== token);
+  writeLocal(GONE_KEY, JSON.stringify(gone));
 }
 
 /** Mint a token for a NEW wallet and make it active. Nothing else is touched. */

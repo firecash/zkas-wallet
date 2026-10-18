@@ -15,6 +15,7 @@ import { WALLET_SERVICE_PORT } from "./ports";
 import { desktopRemoteBase } from "./desktop";
 import i18n from "./i18n";
 import { publicEndpoint, privacyMode } from "./lib/privacy";
+import { clearTombstone } from "./wallets";
 
 /// Refuse to talk to a wallet service that a privacy mode does not permit.
 ///
@@ -371,7 +372,14 @@ export function walletdTransportError(url: string): string | null {
  * it, rather than a blank one that reads as lost funds. */
 export function setToken(token: string) {
   const clean = token.trim().toLowerCase();
-  if (/^[0-9a-f]{16,128}$/.test(clean)) writeLocal("wallet_token", clean);
+  if (!/^[0-9a-f]{16,128}$/.test(clean)) return;
+  writeLocal("wallet_token", clean);
+  // Adopting a token DELIBERATELY — pairing, or a desktop shell handing one back — is the
+  // one case where a previously removed wallet legitimately returns, so its removal
+  // tombstone goes. Without this the row would be filtered out of the switcher forever and
+  // the paired wallet would be invisible. Deliberately NOT done from the status poll's
+  // ensureRegistered, which would clear the tombstone it exists to honour.
+  clearTombstone(clean);
 }
 
 // A random per-browser wallet token. On the hosted daemon this selects THIS
