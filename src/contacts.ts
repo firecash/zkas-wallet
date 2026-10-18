@@ -30,7 +30,9 @@ export function loadContacts(): Contact[] {
     const raw = readLocal(key());
     if (!raw) return [];
     const list = JSON.parse(raw) as Contact[];
-    return Array.isArray(list) ? list : [];
+    if (!Array.isArray(list)) return [];
+    const gone = new Set(tombstones());
+    return gone.size ? list.filter((c) => !gone.has(c.id)) : list;
   } catch {
     return [];
   }
@@ -48,6 +50,34 @@ export function loadContacts(): Contact[] {
  * Re-reading inside the writer closes it to the gap between these two statements, which no
  * other tab can interleave because each is synchronous.
  */
+/// Contacts the user has DELETED, so a stale write from another tab cannot bring one back.
+///
+/// `mutate` closes the lost-update window for additions and renames, but not for removal:
+/// that is the one change another tab can undo by writing a list it read first, and the
+/// result is a contact reappearing after the user deleted it. The registry solved the same
+/// problem the same way for wallets.
+///
+/// Keyed by contact ID rather than address, which is what makes this simpler than the
+/// wallet version: re-adding the same ADDRESS mints a fresh id, so a deliberate re-add is
+/// never filtered and nothing has to clear a tombstone. Capped, because this exists to beat
+/// an in-flight write from another tab rather than to remember every deletion.
+const GONE_KEY_PREFIX = "contacts_removed_";
+const GONE_MAX = 50;
+
+function goneKey(): string {
+  return `${GONE_KEY_PREFIX}${readLocal("wallet_token") || "default"}`;
+}
+
+function tombstones(): string[] {
+  try {
+    const raw = readLocal(goneKey());
+    const v = raw ? (JSON.parse(raw) as string[]) : [];
+    return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 function mutate(fn: (list: Contact[]) => Contact[]): Contact[] {
   const next = fn(loadContacts());
   save(next);
@@ -120,6 +150,10 @@ export function updateContact(id: string, patch: Partial<Pick<Contact, "name" | 
 }
 
 export function removeContact(id: string): void {
+  // Tombstone FIRST, so a write landing between these two statements cannot resurrect it.
+  const gone = tombstones().filter((t) => t !== id);
+  gone.push(id);
+  writeLocal(goneKey(), JSON.stringify(gone.slice(-GONE_MAX)));
   mutate((list) => list.filter((c) => c.id !== id));
 }
 

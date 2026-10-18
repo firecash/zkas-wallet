@@ -126,3 +126,50 @@ describe("the address book under a concurrent writer", () => {
     expect(src).toContain("...loadReceipts()");
   });
 });
+
+describe("deleting a contact is durable", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem("wallet_token", "0123456789abcdef0123456789abcdef");
+  });
+
+  const BOOK = "contacts_0123456789abcdef0123456789abcdef";
+
+  it("does not come back when another tab writes a stale list", () => {
+    const bob = addContact("Bob", A);
+    addContact("Ann", B);
+    const stale = JSON.parse(localStorage.getItem(BOOK)!);   // what the other tab already read
+
+    removeContact(bob.id);
+    expect(loadContacts().map((c) => c.name)).toEqual(["Ann"]);
+
+    // The other tab writes its stale list — Bob is back in STORAGE...
+    localStorage.setItem(BOOK, JSON.stringify(stale));
+    expect(JSON.parse(localStorage.getItem(BOOK)!)).toHaveLength(2);
+    // ...but not in the book, because the deletion is a fact rather than a state.
+    expect(loadContacts().map((c) => c.name)).toEqual(["Ann"]);
+  });
+
+  it("lets the same ADDRESS be saved again after deletion", () => {
+    // The tombstone is keyed by id, so re-adding mints a fresh one and is never filtered.
+    // That is what makes this simpler than the wallet registry's, which needs an explicit
+    // clear on re-adoption.
+    const bob = addContact("Bob", A);
+    removeContact(bob.id);
+    expect(loadContacts()).toHaveLength(0);
+
+    const again = addContact("Bob again", A);
+    expect(again.id).not.toBe(bob.id);
+    expect(loadContacts().map((c) => c.name)).toEqual(["Bob again"]);
+    expect(findContact(A)?.name).toBe("Bob again");
+  });
+
+  it("caps the tombstone list", () => {
+    for (let i = 0; i < 70; i++) {
+      const c = addContact(`C${i}`, `zkas:p${String(i).padStart(2, "0")}${"q".repeat(77)}`);
+      removeContact(c.id);
+    }
+    expect(JSON.parse(localStorage.getItem("contacts_removed_0123456789abcdef0123456789abcdef")!).length)
+      .toBeLessThanOrEqual(50);
+  });
+});
