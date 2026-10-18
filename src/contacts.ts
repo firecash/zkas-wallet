@@ -36,6 +36,24 @@ export function loadContacts(): Contact[] {
   }
 }
 
+/**
+ * Apply a change to the stored book, reading it at the moment of WRITING.
+ *
+ * Same reason as localtx's `mutate`: every writer here was read -> change -> write the WHOLE
+ * list, and two tabs share this storage, so one tab's new or renamed contact was erased by
+ * the other's next write. Lower stakes than a send record — an address book entry, not
+ * money — but on a shielded chain this book is the only thing that says who an address
+ * belongs to, so losing an entry loses that permanently.
+ *
+ * Re-reading inside the writer closes it to the gap between these two statements, which no
+ * other tab can interleave because each is synchronous.
+ */
+function mutate(fn: (list: Contact[]) => Contact[]): Contact[] {
+  const next = fn(loadContacts());
+  save(next);
+  return next;
+}
+
 function save(list: Contact[]): void {
   // Through safestore, read and write BOTH: this is called from click handlers ("Save as
   // contact", rename, delete), and a raw setItem throws out of them on a full or blocked
@@ -65,40 +83,44 @@ export function displayName(address: string | null | undefined, fallback: string
 }
 
 export function addContact(name: string, address: string, note?: string): Contact {
-  const list = loadContacts();
-  const existing = list.find((c) => norm(c.address) === norm(address));
-  if (existing) {
-    // Re-saving a known address renames it rather than creating a duplicate that
-    // would make "who is this?" ambiguous later.
-    existing.name = name.trim();
-    if (note !== undefined) existing.note = note.trim() || undefined;
-    save(list);
-    return existing;
-  }
-  const c: Contact = {
-    id: crypto.randomUUID(),
-    name: name.trim(),
-    address: address.trim(),
-    note: note?.trim() || undefined,
-    createdUnix: Math.floor(Date.now() / 1000),
-  };
-  list.push(c);
-  save(list);
-  return c;
+  let result: Contact | null = null;
+  mutate((list) => {
+    const existing = list.find((c) => norm(c.address) === norm(address));
+    if (existing) {
+      // Re-saving a known address renames it rather than creating a duplicate that
+      // would make "who is this?" ambiguous later.
+      existing.name = name.trim();
+      if (note !== undefined) existing.note = note.trim() || undefined;
+      result = existing;
+      return list;
+    }
+    const c: Contact = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      address: address.trim(),
+      note: note?.trim() || undefined,
+      createdUnix: Math.floor(Date.now() / 1000),
+    };
+    result = c;
+    return [...list, c];
+  });
+  // Non-null by construction: every branch above assigns it.
+  return result as unknown as Contact;
 }
 
 export function updateContact(id: string, patch: Partial<Pick<Contact, "name" | "address" | "note">>): void {
-  const list = loadContacts();
-  const c = list.find((x) => x.id === id);
-  if (!c) return;
-  if (patch.name !== undefined) c.name = patch.name.trim();
-  if (patch.address !== undefined) c.address = patch.address.trim();
-  if (patch.note !== undefined) c.note = patch.note.trim() || undefined;
-  save(list);
+  mutate((list) => {
+    const c = list.find((x) => x.id === id);
+    if (!c) return list;
+    if (patch.name !== undefined) c.name = patch.name.trim();
+    if (patch.address !== undefined) c.address = patch.address.trim();
+    if (patch.note !== undefined) c.note = patch.note.trim() || undefined;
+    return list;
+  });
 }
 
 export function removeContact(id: string): void {
-  save(loadContacts().filter((c) => c.id !== id));
+  mutate((list) => list.filter((c) => c.id !== id));
 }
 
 /** Contacts sorted for display: alphabetical, case-insensitive. */

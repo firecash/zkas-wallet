@@ -85,3 +85,44 @@ describe("contacts", () => {
     expect(sortedContacts().map((c) => c.name)).toEqual(["Ann", "zoe"]);
   });
 });
+
+describe("the address book under a concurrent writer", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem("wallet_token", "0123456789abcdef0123456789abcdef");
+  });
+
+  it("keeps a contact added by another tab mid-write", () => {
+    addContact("Bob", A);
+    // The other tab adds one in the gap between this tab's read and write. With the writer
+    // re-reading at write time, both survive.
+    const other = JSON.parse(localStorage.getItem("contacts_0123456789abcdef0123456789abcdef")!);
+    other.push({ id: "x", name: "Ann", address: B, createdUnix: 1 });
+    localStorage.setItem("contacts_0123456789abcdef0123456789abcdef", JSON.stringify(other));
+
+    addContact("Carol", "zkas:p" + "q".repeat(79));
+    const names = loadContacts().map((c) => c.name).sort();
+    expect(names).toEqual(["Ann", "Bob", "Carol"]);
+  });
+
+  it("every write goes through mutate(), so no writer can persist a stale list", async () => {
+    // Structural, for the same reason as localtx: the stale-write shape is no longer
+    // expressible, so a behavioural test cannot fail against it. One save() call site, and
+    // it is the one inside mutate.
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("src/contacts.ts", "utf8");
+    const calls = [...src.matchAll(/^\s*save\(/gm)];
+    expect(calls).toHaveLength(1);
+    const mutateAt = src.indexOf("function mutate(");
+    expect(calls[0].index!).toBeGreaterThan(mutateAt);
+    expect(calls[0].index!).toBeLessThan(src.indexOf("\n}", mutateAt));
+  });
+
+  it("recordArrival needs no such guard — it reads inside the write", async () => {
+    // Documented so nobody "fixes" receipts.ts to match: its read and write are one
+    // statement, `[{new}, ...loadReceipts()]`, which no other tab can interleave.
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("src/receipts.ts", "utf8");
+    expect(src).toContain("...loadReceipts()");
+  });
+});
