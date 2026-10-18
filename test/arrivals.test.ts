@@ -53,7 +53,14 @@ describe("telling the native worker when to stay quiet", () => {
   });
 
   it("keeps extending while a send is still pending", () => {
-    expect(quietUntil([{ ts: now - 60_000, pending: true }], now)).toBe(now + SETTLING_WINDOW_MS);
+    // This asserted exactly `now + SETTLING_WINDOW_MS`, which was the bug rather than the
+    // property: 20 minutes is the SUCCESS horizon (the change note maturing), while walletd
+    // holds a never-landed spend for `PENDING_SPEND_EXPIRY_DAA = 3_600` — about an hour —
+    // and then reclaims it as a balance INCREASE. The hold has to outlast that, or the
+    // worker announces the user's own failed payment as money received.
+    const q = quietUntil([{ ts: now - 60_000, pending: true }], now);
+    expect(q).toBeGreaterThanOrEqual(now + SETTLING_WINDOW_MS);
+    expect(q).toBeGreaterThan(now - 60_000 + 60 * 60_000);
   });
 
   it("takes the furthest deadline when several are settling", () => {

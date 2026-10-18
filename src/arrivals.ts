@@ -46,6 +46,27 @@ export interface OutgoingRecord {
 export const SETTLING_WINDOW_MS = 20 * 60_000;
 
 /**
+ * How long a send that is still PENDING must keep the worker quiet.
+ *
+ * `SETTLING_WINDOW_MS` is sized for the success path — the change note maturing past the
+ * anchor, about ten and a half minutes — and that is the only path it was measured against.
+ * A send that never lands has a different and much longer horizon: walletd holds the spend
+ * and then reclaims it (`PENDING_SPEND_EXPIRY_DAA = 3_600`, roughly an hour at one block per
+ * second, logged as "never appeared on-chain within ~3600s").
+ *
+ * That reclaim is a balance INCREASE. With a twenty-minute hold it arrives long after the
+ * worker has gone live again, so a payment of the user's own that FAILED was announced to
+ * them as money received — while the app was closed, which is exactly when the worker is the
+ * only thing watching.
+ *
+ * 75 minutes covers the daemon's hour plus the time it takes to notice, and "slightly too
+ * quiet is the safe direction" applies here more strongly than anywhere: the cost of being
+ * quiet is a missed notification for a payment the user can still see in the app, and the
+ * cost of being loud is telling them they were paid when they were not.
+ */
+export const PENDING_WINDOW_MS = 75 * 60_000;
+
+/**
  * Can this device explain a balance increase by its own outgoing activity?
  *
  * True while any recorded send is still pending, or finished recently enough that its
@@ -86,6 +107,12 @@ export function arrivalAmount(
  * nothing is settling, which clears any previous hold.
  */
 export function quietUntil(sends: OutgoingRecord[], now = Date.now(), windowMs = SETTLING_WINDOW_MS): number {
-  const deadlines = sends.filter((s) => s.pending || now - s.ts <= windowMs).map((s) => (s.pending ? now + windowMs : s.ts + windowMs));
+  const deadlines = sends
+    .filter((s) => s.pending || now - s.ts <= windowMs)
+    // A pending send is anchored on its OWN timestamp as well as on now: the deadline is a
+    // property of the send, so it survives the app being closed for the whole hour the
+    // daemon may hold the spend. The rolling `now` term stays as well, so a send still
+    // pending after that long keeps the worker quiet rather than going live mid-resolution.
+    .map((s) => (s.pending ? Math.max(s.ts + PENDING_WINDOW_MS, now + windowMs) : s.ts + windowMs));
   return deadlines.length ? Math.max(...deadlines) : 0;
 }
