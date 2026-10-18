@@ -17,6 +17,7 @@ import { getBase, getToken, getWalletdBearer, isNative } from "./api";
 import { quietUntil } from "./arrivals";
 import { loadTxs } from "./localtx";
 import { embeddedChosen, embeddedNode, embeddedTor, ORBOT_SOCKS } from "./embedded";
+import { readLocal, removeLocal, writeLocal } from "./lib/safestore";
 
 interface BackgroundSyncPlugin {
   configure(opts: { baseUrl: string; token: string; bearer: string; quietUntil: number; embedded?: boolean; node?: string; socks?: string }): Promise<void>;
@@ -44,19 +45,24 @@ export function bgSyncAvailable(): boolean {
 }
 
 export function bgSyncEnabled(): boolean {
-  return isAndroid() && localStorage.getItem(FLAG) === "1";
+  // readLocal: App.tsx reads this in a useState initialiser, which runs DURING RENDER, so a
+  // bare accessor takes the settings row down on a browser with site data blocked. The
+  // `isAndroid()` short-circuit means it only bites on Android with storage disabled — the
+  // narrowest case of this class so far, and the same one-word fix as the other four
+  // (bootToken, loadBaseline, the Receive QR cache, the Mining host).
+  return isAndroid() && readLocal(FLAG) === "1";
 }
 
 export async function bgSyncEnable(): Promise<void> {
   // Configure BEFORE enabling so the worker never wakes to stale credentials.
   await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer(), quietUntil: quietUntil(loadTxs()), embedded: embeddedChosen(), node: embeddedNode(), socks: embeddedTor() ? ORBOT_SOCKS : undefined });
   await Native.enable();
-  localStorage.setItem(FLAG, "1");
+  writeLocal(FLAG, "1");
 }
 
 export async function bgSyncDisable(): Promise<void> {
   await Native.disable();
-  localStorage.removeItem(FLAG);
+  removeLocal(FLAG);
 }
 
 /**
@@ -142,7 +148,7 @@ const PENDING = "bg_prompt_pending";
 
 export function markBackgroundPromptPending(): void {
   try {
-    if (isAndroid()) localStorage.setItem(PENDING, "1");
+    if (isAndroid()) writeLocal(PENDING, "1");
   } catch {
     /* ignore */
   }
@@ -151,8 +157,8 @@ export function markBackgroundPromptPending(): void {
 /** Read and clear. Clearing on read is deliberate: a prompt shown is a prompt spent. */
 export function takeBackgroundPromptPending(): boolean {
   try {
-    const had = localStorage.getItem(PENDING) === "1";
-    if (had) localStorage.removeItem(PENDING);
+    const had = readLocal(PENDING) === "1";
+    if (had) removeLocal(PENDING);
     return had;
   } catch {
     return false;

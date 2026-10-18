@@ -18,6 +18,7 @@
 import { Capacitor } from "@capacitor/core";
 import { NativeBiometric } from "capacitor-native-biometric";
 import { unlock } from "./applock";
+import { readLocal, removeLocal, writeLocal } from "./lib/safestore";
 
 /** Namespaces the stored secret in the OS credential store. */
 const SERVER = "info.zkas.wallet.applock";
@@ -26,7 +27,11 @@ const FLAG = "biometric_unlock_enabled";
 
 /** Has the user turned fingerprint unlock on (a stored secret should exist)? */
 export function isBiometricConfigured(): boolean {
-  return localStorage.getItem(FLAG) === "1";
+  // readLocal: App.tsx reads this in a useState initialiser, which runs DURING RENDER, so
+  // the bare accessor took the app-lock settings row down on a browser with site data
+  // blocked. The sixth and last instance of that shape — the others were bootToken,
+  // loadBaseline, the Receive QR cache, the Mining host and bgSyncEnabled.
+  return readLocal(FLAG) === "1";
 }
 
 /** Does this device have usable, enrolled biometric hardware right now? */
@@ -64,13 +69,13 @@ export async function enableBiometricUnlock(secret: string): Promise<boolean> {
     return false; // no scan, no binding — the PIN stays the only way in
   }
   await NativeBiometric.setCredentials({ username: "applock", password: secret, server: SERVER });
-  localStorage.setItem(FLAG, "1");
+  writeLocal(FLAG, "1");
   return true;
 }
 
 /** Turn fingerprint unlock off and erase the stored secret. Safe to call redundantly. */
 export async function disableBiometricUnlock(): Promise<void> {
-  localStorage.removeItem(FLAG);
+  removeLocal(FLAG);
   try {
     await NativeBiometric.deleteCredentials({ server: SERVER });
   } catch {

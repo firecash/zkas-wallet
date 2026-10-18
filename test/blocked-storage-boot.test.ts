@@ -224,3 +224,48 @@ describe("the app still STARTS when storage is blocked", () => {
     await expect(deviceCanSign("zkas:p" + "a".repeat(80))).resolves.toBeDefined();
   });
 });
+
+describe("no render path reaches an unguarded storage read", () => {
+  // The class that produced six bugs: a storage read reached from a useState/useRef
+  // initialiser, which runs DURING RENDER, where the accessor throwing takes the component
+  // down instead of degrading. The first five were found by reading; the last two
+  // (bgSyncEnabled, isBiometricConfigured) only by sweeping TRANSITIVELY, because the
+  // initialiser called a function that read storage rather than reading it inline.
+  it("has no useState/useRef initialiser that can throw", async () => {
+    const { readFileSync, readdirSync, statSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const walk = (d: string): string[] =>
+      readdirSync(d).flatMap((e) => {
+        const p = join(d, e);
+        if (statSync(p).isDirectory()) return e === "signer" ? [] : walk(p);
+        return /\.tsx?$/.test(e) && !p.includes("safestore") ? [p] : [];
+      });
+    const files = walk("src");
+    const srcs = new Map(files.map((f) => [f, readFileSync(f, "utf8")]));
+
+    // Functions whose body reads storage with no try around it.
+    const risky = new Map<string, string>();
+    for (const [f, src] of srcs) {
+      for (const m of src.matchAll(/(?:export\s+)?function\s+([A-Za-z_]\w*)\s*\([^)]*\)[^{]*\{/g)) {
+        const end = src.indexOf("\n}", m.index! + m[0].length);
+        if (end < 0) continue;
+        const body = src.slice(m.index! + m[0].length, end);
+        if (/localStorage\.(getItem|length|key)\b/.test(body) && !/\btry\s*\{/.test(body)) {
+          risky.set(m[1], f);
+        }
+      }
+    }
+
+    const offenders: string[] = [];
+    for (const [f, src] of srcs) {
+      for (const m of src.matchAll(/use(?:State|Ref)\(([^;]{0,200}?)\)(?:;|,)/gs)) {
+        const arg = m[1];
+        if (/localStorage\./.test(arg)) offenders.push(`${f}: inline localStorage in an initialiser`);
+        for (const [name, where] of risky) {
+          if (new RegExp(`\\b${name}\\s*\\(`).test(arg)) offenders.push(`${f}: initialiser calls ${name}() from ${where}`);
+        }
+      }
+    }
+    expect(offenders, "wrap the read (or route it through safestore) — a throw here kills the render").toEqual([]);
+  });
+});
