@@ -215,7 +215,8 @@
     "connectingWhy": "Your wallet service is still catching up with the chain. A new wallet waits for the current block, so it does not scan years of history it cannot have.",
     "usePublicInstead": "Use the public wallet service instead",
     "wordsSoFar": "{{n}} of 12 words so far.",
-    "wordsOddLength": "{{n}} words. A recovery phrase is 12, 18 or 24 words long."
+    "wordsOddLength": "{{n}} words. A recovery phrase is 12, 18 or 24 words long.",
+    "birthdayAhead": "That block is ahead of the chain (the tip is {{tip}}). A wallet restored from there would scan nothing and show an empty balance — check the height."
   },
   "confirmWatch": {
     "title": "Watch this wallet?",

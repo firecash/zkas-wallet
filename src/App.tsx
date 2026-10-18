@@ -34,6 +34,7 @@ import { byNewest, isConsolidationRow, usableTime } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput, shortAddr, trimTrailingZeros } from "./lib/utils";
 import { readLocal, writeLocal } from "./lib/safestore";
+import { birthdayAheadOfTip } from "./lib/birthday";
 import { MEMO_MAX_BYTES, clampUtf8Bytes } from "./lib/safetext";
 import { SEED_REQUIRED, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, reserveAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
@@ -4410,6 +4411,21 @@ function Onboard({
   // they made the wallet. Two days of margin absorb timezones and fuzzy memory —
   // scanning a couple of days too much costs seconds, skipping a day too much
   // costs notes.
+  /// The chain tip, when this client knows it. A restore can run before any status has
+  /// arrived, so absence means "cannot check" — never zero.
+  const knownTip = status?.daa_score && status.daa_score > 0 ? status.daa_score : null;
+  /// A typed height AHEAD of the tip, which cannot be what anyone means.
+  ///
+  /// The date path below is bounded at both ends already — `Math.max(0, …)` for the floor and
+  /// `ageSec > 0` for a date in the future. The typed height had no bound at all, and the
+  /// consequence is the worst reading this app can give: the scan starts after every block
+  /// that could hold this wallet's notes, so it finds nothing and the restored wallet reports
+  /// an empty balance. Neither side clamps it — walletd has no tip check either.
+  ///
+  /// Refused rather than clamped. Clamping to the tip would scan from now, so the old funds
+  /// would still be missing and the user would still be told there is nothing there; naming
+  /// the tip lets them fix the digit they mistyped.
+  const birthdayAhead = (): number | null => birthdayAheadOfTip(birthday, knownTip);
   const birthdayFromInputs = (): number => {
     if (birthday.trim()) return Number(birthday.trim()); // exact height wins
     if (createdDate && status?.daa_score) {
@@ -4423,6 +4439,11 @@ function Onboard({
     setError("");
     try {
       const seed = importHex.trim();
+      const ahead = birthdayAhead();
+      if (ahead !== null) {
+        setError(t("onboard.birthdayAhead", { tip: ahead.toLocaleString() }));
+        return;
+      }
       const b = birthdayFromInputs();
       // DERIVE BEFORE STORING. `fvkHex` is what actually validates the phrase —
       // it throws on a bad BIP39 checksum — and it used to run one line AFTER the
