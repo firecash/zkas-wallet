@@ -32,7 +32,7 @@ import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./receipts";
 import { byNewest, isConsolidationRow } from "./history";
 import { tickedConfirmations } from "./confirmations";
-import { pasteText, sanitizeAmountInput } from "./lib/utils";
+import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput } from "./lib/utils";
 import { SEED_REQUIRED, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, reserveAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
@@ -139,40 +139,15 @@ export async function copyText(text: string) {
   }
 }
 
-// A zkas: shielded address is bech32 with an "orchard" version byte; a full
-// decode happens on-device at send time, but this catches the obvious typo/paste
-// mistakes instantly so the user gets a red/green cue while typing.
-function looksLikeAddress(a: string): boolean {
-  // A shielded address is a fixed-size Orchard payload → 79 bech32 chars after
-  // the HRP (transparent payloads are shorter). The old guard accepted ANY length
-  // ≥70 and the full [0-9a-z] range — including 1, b, i, o, which bech32 forbids —
-  // so a typo'd address got the green border and only failed at send time with a
-  // raw decode error. Restrict to the bech32 charset and a sane length window;
-  // this stays a guard, not a second decoder — the real validation is the
-  // on-device decode at send time.
-  const s = a.trim();
-  return /^(zkas|firecash)(test|sim|dev)?:[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{60,80}$/.test(s);
-}
+/// looksLikeAddress and parsePaymentUri — ONE implementation, in ./lib/utils.
+///
+/// This file carried its own byte-identical copies, and because it defined them locally it
+/// never imported the originals: every screen ran the copies, and no test touched them.
+/// That is the arrangement that already bit this codebase once — the note on
+/// resolveDeviceSeed below records copies drifting until the app ran the stale, destructive
+/// one. These two decide where money goes, so they get the same treatment: imported, not
+/// duplicated.
 
-// A scanned QR may be a bare address ("zkas:pxvt…") or a payment URI carrying
-// an amount ("zkas:pxvt…?amount=1.5"). Split off the address and, if present,
-// a numeric amount the caller can prefill.
-function parsePaymentUri(text: string): { address: string; amount?: string; memo?: string; label?: string } {
-  const s = text.trim();
-  const q = s.indexOf("?");
-  if (q === -1) return { address: s };
-  const address = s.slice(0, q);
-  const p = new URLSearchParams(s.slice(q + 1));
-  const amount = p.get("amount");
-  return {
-    address,
-    amount: amount && /^\d*\.?\d+$/.test(amount) ? amount : undefined,
-    // `memo` rides into the encrypted note; `label` names the payee for the
-    // sender's own address book and never leaves this device.
-    memo: p.get("memo") || undefined,
-    label: p.get("label") || undefined,
-  };
-}
 
 /// Build the payment URI a payee hands out: address plus whatever they want
 /// filled in for the payer. Everything after the address is a request, not a
