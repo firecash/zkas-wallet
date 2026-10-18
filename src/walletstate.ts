@@ -56,12 +56,19 @@ function sweepScattered(token: string): void {
   } catch {
     /* ignore */
   }
-  for (let i = localStorage.length - 1; i >= 0; i--) {
-    const k = localStorage.key(i);
-    if (!k) continue;
-    if (k.startsWith(`device_seed_stray_${token}_`)) localStorage.removeItem(k);
-    // timing_<op>_<token>: the token is the suffix, not the prefix.
-    else if (k.startsWith("timing_") && k.endsWith(`_${token}`)) localStorage.removeItem(k);
+  // Guarded: `localStorage.length` throws on a browser with site data blocked, and this is
+  // "Remove wallet" — a handler that must not die partway through, leaving some of a
+  // removed wallet's keys behind.
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (k.startsWith(`device_seed_stray_${token}_`)) localStorage.removeItem(k);
+      // timing_<op>_<token>: the token is the suffix, not the prefix.
+      else if (k.startsWith("timing_") && k.endsWith(`_${token}`)) localStorage.removeItem(k);
+    }
+  } catch {
+    /* storage unavailable: nothing enumerable to sweep */
   }
 }
 
@@ -116,16 +123,23 @@ export function wipeWalletState(token: string | null): void {
   // that names it is gone, and leave the copy alone when another registered wallet
   // on this device still holds the same address.
   const address = addressOf(t);
-  for (const p of PER_WALLET_PREFIXES) localStorage.removeItem(p + t);
+  // removeLocal throughout: this runs from "Remove wallet", and a throw partway through
+  // leaves some of the removed wallet's keys behind — worse than not sweeping at all. It
+  // also clears what safestore holds for each key, which a raw removeItem does not.
+  for (const p of PER_WALLET_PREFIXES) removeLocal(p + t);
   sweepScattered(t);
-  if (address && !registeredElsewhere(t, address)) localStorage.removeItem(`birthday_addr_${address}`);
+  if (address && !registeredElsewhere(t, address)) removeLocal(`birthday_addr_${address}`);
   void NEVER_TOUCH; // documentation of intent; see the comment above
 
   // QR images are cached per ADDRESS, and the address of a wallet being removed
   // is not worth reconstructing just to delete one entry — sweep the prefix.
-  for (let i = localStorage.length - 1; i >= 0; i--) {
-    const k = localStorage.key(i);
-    if (k?.startsWith("qr_")) localStorage.removeItem(k);
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k?.startsWith("qr_")) removeLocal(k);
+    }
+  } catch {
+    /* storage unavailable: no cached QR images to sweep */
   }
 
   // The token itself last, and ONLY if the wallet being wiped is the active one.

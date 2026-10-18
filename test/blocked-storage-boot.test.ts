@@ -176,3 +176,51 @@ describe("the request path itself on a storage-blocked browser", () => {
     expect(() => ({ "X-Wallet-Token": getToken(), auth: getWalletdBearer() })).not.toThrow();
   });
 });
+
+describe("the app still STARTS when storage is blocked", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+    vi.resetModules();
+  });
+
+  /** A store that throws on the ENUMERATION too, which is what a blocked one does. */
+  function blockEverything() {
+    blockStorage();
+    vi.spyOn(Storage.prototype, "key").mockImplementation(() => {
+      throw new DOMException("Access is denied for this document.", "SecurityError");
+    });
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new DOMException("Access is denied for this document.", "SecurityError");
+    });
+    Object.defineProperty(Storage.prototype, "length", {
+      configurable: true,
+      get() { throw new DOMException("Access is denied for this document.", "SecurityError"); },
+    });
+  }
+
+  it("isLockEnabled does not throw, so main.tsx can mount", async () => {
+    // main.tsx reads this in a useState initialiser, which runs during render. It calls
+    // legacyRecords(), whose loop touched localStorage.length with only the inner
+    // JSON.parse guarded — so on such a browser the exception came before React had
+    // mounted anything and the wallet never appeared at all.
+    blockEverything();
+    const { isLockEnabled } = await import("../src/applock");
+    expect(() => isLockEnabled()).not.toThrow();
+    expect(isLockEnabled()).toBe(false);
+  });
+
+  it("removing a wallet does not die partway through its key sweep", async () => {
+    // "Remove wallet" enumerates keys to delete. Dying halfway would leave some of a
+    // removed wallet's keys behind, which is worse than not starting the sweep.
+    blockEverything();
+    const { wipeWalletState } = await import("../src/walletstate");
+    expect(() => wipeWalletState("0123456789abcdef0123456789abcdef")).not.toThrow();
+  });
+
+  it("asking what this device can sign does not throw either", async () => {
+    blockEverything();
+    const { deviceCanSign } = await import("../src/lib/deviceseed");
+    await expect(deviceCanSign("zkas:p" + "a".repeat(80))).resolves.toBeDefined();
+  });
+});

@@ -83,12 +83,20 @@ function activeToken(): string {
 /** Every wallet seed currently sitting in the clear, by token. */
 function plaintextSeeds(): Record<string, string> {
   const out: Record<string, string> = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k?.startsWith("device_seed_")) {
-      const v = localStorage.getItem(k);
-      if (v) out[k.slice("device_seed_".length)] = v;
+  // The ENUMERATION is guarded, not just the read: `localStorage.length` and `.key(i)`
+  // throw on a browser with site data blocked exactly as `getItem` does, so wrapping the
+  // inner read alone would protect nothing. Nothing in the clear to find is the right
+  // answer there — such a browser is storing no seeds to begin with.
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith("device_seed_")) {
+        const v = localStorage.getItem(k);
+        if (v) out[k.slice("device_seed_".length)] = v;
+      }
     }
+  } catch {
+    /* storage unavailable: there are no cleartext seeds here to seal */
   }
   return out;
 }
@@ -104,15 +112,24 @@ export function isLockEnabled(): boolean {
 
 function legacyRecords(): Record<string, Sealed & { kind?: "pin" | "passphrase" }> {
   const out: Record<string, Sealed & { kind?: "pin" | "passphrase" }> = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k?.startsWith(LEGACY_PREFIX)) {
-      try {
-        out[k.slice(LEGACY_PREFIX.length)] = JSON.parse(localStorage.getItem(k) || "");
-      } catch {
-        /* ignore an unreadable legacy record */
+  // Guarded around the whole enumeration, and this one decided whether the app STARTS.
+  // `isLockEnabled()` calls it, and main.tsx reads that in a useState initialiser — which
+  // runs during render — so on a browser with site data blocked `localStorage.length` threw
+  // before React had mounted anything and the wallet never appeared at all. The inner try
+  // below only ever covered the JSON.parse of one record.
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith(LEGACY_PREFIX)) {
+        try {
+          out[k.slice(LEGACY_PREFIX.length)] = JSON.parse(localStorage.getItem(k) || "");
+        } catch {
+          /* ignore an unreadable legacy record */
+        }
       }
     }
+  } catch {
+    /* storage unavailable: no legacy lock can be recorded there either */
   }
   return out;
 }
@@ -182,9 +199,15 @@ async function resealFallbacks(secret: string): Promise<void> {
   if (!rec) return;
   let changed = false;
   const flags: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k?.startsWith("seed_unsealed_")) flags.push(k);
+  // Guarded enumeration: a blocked store throws on `.length` itself, and this runs while
+  // re-sealing fallback copies — a path that must not abort halfway with a key in the clear.
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith("seed_unsealed_")) flags.push(k);
+    }
+  } catch {
+    /* nothing enumerable: no unsealed flags to reseal */
   }
   for (const flag of flags) {
     const token = flag.slice("seed_unsealed_".length);
