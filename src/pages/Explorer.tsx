@@ -368,9 +368,26 @@ function BlockView({ id }: { id: string }) {
   const [block, setBlock] = useState<BlockDetail | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
+    // `live`, because this effect is keyed on the route id and the answers can land out of
+    // order. Following "selected parent" from block A to block B starts a second request
+    // while the first is still open; if A is slower, B renders and is then OVERWRITTEN by A,
+    // leaving this page showing one block's contents under another block's hash — in the
+    // explorer someone opens to check a payment. Services.tsx and the history poll already
+    // guard their fetches the same way.
+    let live = true;
     setBlock(null);
     setError("");
-    explorerApi.block(id).then(setBlock).catch((e) => setError((e as Error).message));
+    explorerApi
+      .block(id)
+      .then((b) => {
+        if (live) setBlock(b);
+      })
+      .catch((e) => {
+        if (live) setError((e as Error).message);
+      });
+    return () => {
+      live = false;
+    };
   }, [id]);
   return (
     <DetailShell title={t("blockView.title")} id={id} error={error}>
@@ -410,9 +427,22 @@ function TransactionView({ id }: { id: string }) {
   const [tx, setTx] = useState<TransactionDetail | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
+    // Same race as the block view above: keyed on the route id, so a slow earlier request can
+    // land after a fast later one and show the wrong transaction under the right hash.
+    let live = true;
     setTx(null);
     setError("");
-    explorerApi.transaction(id).then(setTx).catch((e) => setError((e as Error).message));
+    explorerApi
+      .transaction(id)
+      .then((x) => {
+        if (live) setTx(x);
+      })
+      .catch((e) => {
+        if (live) setError((e as Error).message);
+      });
+    return () => {
+      live = false;
+    };
   }, [id]);
   return (
     <DetailShell title={t("transactionView.title")} id={id} error={error}>
