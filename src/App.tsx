@@ -4334,7 +4334,13 @@ function Onboard({
         // The device's FIRST phrase becomes the master; this wallet is account 0.
         // Cache the derived key in the per-token slot so every existing
         // (synchronous) path keeps working; the phrase is the backup, not the cache.
-        setMasterMnemonic(w.mnemonic);
+        // Refused rather than assumed, for the same reason persistDeviceSeed is checked
+        // below: if the phrase did not land, `hasMaster()` reads false afterwards and the
+        // NEXT wallet becomes a second "first" master — while this one has already been
+        // recorded as account 0 of a phrase the device never stored.
+        if (!(await setMasterMnemonic(w.mnemonic))) {
+          throw new Error(t("onboard.errStore"));
+        }
         adoptedMaster = true;
         secret = await accountSeedHex(w.mnemonic, 0);
         if (token) setAccountOf(token, 0);

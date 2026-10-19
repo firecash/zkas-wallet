@@ -50,9 +50,21 @@ export function masterMnemonic(): string {
   }
 }
 
-export function setMasterMnemonic(phrase: string): void {
+/// Store the device master phrase, and PROVE it landed.
+///
+/// Returns false when it did not, so a caller can refuse to build on it — the same
+/// contract as `persistDeviceSeed`, and for a stronger reason. This used to return void and
+/// swallow the failure, reasoning that "the caller still holds the phrase to show the user".
+/// The caller does, but the DEVICE then does not: `hasMaster()` reads false afterwards, so
+/// the next wallet created becomes a second "first" master, while the first wallet has
+/// already been recorded as account 0 of the phrase that was never stored. One device, two
+/// masters, and an account mapping pointing at the missing one.
+///
+/// Async because with the lock on the phrase is SEALED asynchronously, and a synchronous
+/// check would report failure for a write that was simply still in flight.
+export async function setMasterMnemonic(phrase: string): Promise<boolean> {
   const clean = phrase.trim();
-  if (!clean) return;
+  if (!clean) return false;
   // Lock on → seal it, never write the phrase in the clear. If sealing fails
   // (an auto-lock raced this write) fall back to plaintext AND flag it, so the
   // phrase survives and the state is discoverable — losing every account is a
@@ -70,18 +82,24 @@ export function setMasterMnemonic(phrase: string): void {
     // false and not a REJECTION, and sealNewMnemonic can reject — `await seal(...)` is
     // WebCrypto and the `write(rec)` after it is an unguarded setItem. A phrase lost here
     // loses EVERY account derived from it, which is why the fallback exists at all.
-    void sealNewMnemonic(clean)
+    // Awaited now, so the result can be proven. The `.catch(fallback)` stays: a REJECTION
+    // (WebCrypto, or the unguarded setItem inside `write(rec)`) must still leave the phrase
+    // in the flagged plaintext copy rather than nowhere.
+    await sealNewMnemonic(clean)
       .then((ok) => {
         if (!ok) fallback();
       })
       .catch(fallback);
-    return;
+  } else {
+    try {
+      localStorage.setItem(MASTER_KEY, clean);
+    } catch {
+      /* storage full/private — proven below, and the caller is told */
+    }
   }
-  try {
-    localStorage.setItem(MASTER_KEY, clean);
-  } catch {
-    /* storage full/private — the caller still holds the phrase to show the user */
-  }
+  // Prove it, exactly as persistDeviceSeed does for a device seed. Losing a phrase loses
+  // EVERY account derived from it, so this is the one that can least afford to be assumed.
+  return masterMnemonic().trim() === clean;
 }
 
 /**
@@ -254,7 +272,10 @@ export async function adoptExistingPhrase(token: string, secret: string): Promis
   const phrase = secret.trim();
   // Only a real, checksum-valid phrase may become the master.
   if (!(await isValidMnemonic(phrase))) return;
-  setMasterMnemonic(phrase);
+  // Only claim the token as account 0 of this master once the master is actually stored:
+  // the mapping is what makes a wallet "an account of" the phrase, and recording it against
+  // a phrase that did not persist is the corrupt state described on setMasterMnemonic.
+  if (!(await setMasterMnemonic(phrase))) return;
   if (accountOf(token) === null) setAccountOf(token, 0);
 }
 
