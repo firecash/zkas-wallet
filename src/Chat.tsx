@@ -201,8 +201,23 @@ function Avatar({ person, big }: { person: Person; big?: boolean }) {
  *  Links are shown and copyable; they are NOT auto-opened and NOT previewed.
  *  Fetching a preview would make every reader's device call a host the author
  *  chose, leaking the reader's IP and handing a stranger a tracker. */
+/// What one message may render. Generous for chat — a long post is a few hundred characters —
+/// and the point is only that it is BOUNDED.
+///
+/// `content` arrives from the relay type-checked but uncapped, unlike the profile fields
+/// beside it (`name` 32, `about` 160), and this is the most attacker-controlled string in the
+/// app: anyone on a public relay writes it. Rendering it whole means `split` allocating an
+/// array proportional to its length and React mounting a node per part, so a multi-megabyte
+/// message freezes every reader's client.
+///
+/// Capped HERE rather than in the event parser on purpose: a DM arrives as an encrypted gift
+/// wrap whose `content` is ciphertext, and truncating that would destroy the message instead
+/// of bounding a render. The data stays whole; only what is drawn is limited.
+const BODY_MAX = 4_000;
+
 function Body({ text }: { text: string }) {
-  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  const shown = text.length > BODY_MAX ? `${text.slice(0, BODY_MAX)}\u2026` : text;
+  const parts = shown.split(/(https?:\/\/[^\s]+)/g);
   return (
     <>
       {parts.map((p, i) =>
