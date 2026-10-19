@@ -286,9 +286,23 @@ export function forgetChat(): void {
     [CONSENT_KEY, NICK_KEY, MUTE_KEY, ADDR_KEY, ROOM_KEY, PUBKEY_KEY, RECENT_KEY, DM_SEEN_KEY, BIO_KEY].forEach((k) =>
       localStorage.removeItem(k),
     );
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith(SEEN_KEY))
-      .forEach((k) => localStorage.removeItem(k));
+    // Enumerated with `length`/`key(i)`, not Object.keys.
+    //
+    // lib/storage-shim replaces a BLOCKED localStorage with an in-memory Storage, and that
+    // substitute is an object literal: `Object.keys` on it returns its own method names
+    // ("getItem", "setItem", ...), never the stored keys. So on a browser with site data
+    // blocked this filter matched nothing and every per-room read cursor survived "leave
+    // chat" — the one thing this function promises to undo.
+    //
+    // Every other enumeration in the codebase (applock, securestore, deviceseed, walletstate,
+    // main.tsx — eight of them) already uses this form, which the shim implements on purpose.
+    // Collected before removing: deleting while indexing by position skips entries.
+    const stale: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(SEEN_KEY)) stale.push(k);
+    }
+    stale.forEach((k) => localStorage.removeItem(k));
   } catch {
     /* ignore */
   }
