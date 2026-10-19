@@ -187,6 +187,17 @@ export function shortAddr(a: string): string {
 
 
 
+/// Which network the SIGNER should be told about.
+///
+/// Default MAINNET on anything unexpected: the on-device signer only signs mainnet, so a
+/// missing or odd network string must fail toward the chain everything actually runs on,
+/// not toward a testnet that cannot sign.
+///
+/// One function, used everywhere, because the two sites that derived this independently
+/// disagreed: payments took not-testnet to mean mainnet, while message signing took
+/// not-mainnet to mean testnet. On mainnet and testnet they agreed; on devnet or simnet they
+/// did not, so a message would have been signed under the testnet domain while the wallet was
+/// on another chain. The reasoning above only holds if it is applied once.
 export function networkOf(status: Status | null): Network {
   return status?.network === "testnet" ? "testnet" : "mainnet";
 }

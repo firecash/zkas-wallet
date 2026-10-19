@@ -32,7 +32,7 @@ import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./receipts";
 import { byNewest, isConsolidationRow, usableTime } from "./history";
 import { tickedConfirmations } from "./confirmations";
-import { looksLikeAddress, parsePaymentUri, pasteText, sanitizeAmountInput, shortAddr, trimTrailingZeros } from "./lib/utils";
+import { looksLikeAddress, networkOf, parsePaymentUri, pasteText, sanitizeAmountInput, shortAddr, trimTrailingZeros } from "./lib/utils";
 import { readLocal, writeLocal } from "./lib/safestore";
 import { birthdayAheadOfTip } from "./lib/birthday";
 import { skipPollWhileFailing } from "./lib/pollbackoff";
@@ -4058,13 +4058,6 @@ function SeedBackup({ seed, address, onDone }: { seed: string; address: string; 
 /// the seed is still on screen, and cannot be satisfied by clicking through.
 /// The signer's network name for the daemon's chain (only mainnet/testnet exist
 /// for address encoding; anything else is a devnet using the testnet HRP).
-function networkOf(status: Status | null): Network {
-  // Default MAINNET on anything unexpected: the on-device signer only signs
-  // mainnet, so a missing/odd network string must fail toward the chain
-  // everything actually runs on, not toward a testnet that cannot sign.
-  return status?.network === "testnet" ? "testnet" : "mainnet";
-}
-
 /// The daemon lost this wallet's registration and this device holds no key to
 /// auto-repair with. The worst possible answer is a bare "create a new wallet"
 /// — the user panic-creates over their existing wallet. Show the cached address,
@@ -7273,7 +7266,11 @@ function Sign({ status, embedded }: { status: Status | null; embedded?: boolean 
     setResult(null);
     try {
       const seed = await resolveDeviceSeed(status?.address ?? undefined);
-      const net: Network = status?.network === "mainnet" ? "mainnet" : "testnet";
+      // networkOf, not a second mapping. This line read
+      // `status?.network === "mainnet" ? "mainnet" : "testnet"` — the OPPOSITE default to the
+      // one payments use, so on devnet or simnet a message was signed under the testnet
+      // domain while the wallet was on another chain.
+      const net: Network = networkOf(status);
       const r = await signLocal(seed, net, message);
       setResult({ address: r.address, signature: r.signatureHex });
     } catch (e) {
