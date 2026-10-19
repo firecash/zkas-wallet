@@ -370,8 +370,21 @@ async function boot() {
       // shorter than a person's patience with a frozen app. Nothing is lost by
       // giving up: App.tsx starts the engine again on mount and adopts the port
       // whenever it does arrive, so this await is an optimisation, not the mechanism.
+      //
+      // The engine promise is held in a variable and given its own handler, because
+      // `Promise.race` does NOT cancel the loser: when the timeout wins, `ensureEmbedded`
+      // keeps running — which is deliberate, App.tsx adopts the port whenever it arrives —
+      // and if it then REJECTS, that rejection has nobody listening. An unhandled rejection
+      // is noise rather than a failure here, but it is noise in the one place this app has
+      // no console: a user's phone at boot, where it lands in whatever crash reporting the
+      // build has and looks like the engine failure it is not.
+      //
+      // Attaching `.catch` does not hide it from the race — that still awaits this very
+      // promise and still sees the rejection inside 20s. It only marks the late case handled.
+      const engine = ensureEmbedded();
+      void engine.catch(() => undefined);
       const url = await Promise.race([
-        ensureEmbedded(),
+        engine,
         new Promise<string>((_, reject) =>
           setTimeout(() => reject(new Error("on-device engine did not bind a port within 20s")), 20_000),
         ),
