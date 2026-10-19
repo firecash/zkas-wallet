@@ -1,3 +1,4 @@
+import { readLocal, writeLocal } from "./lib/safestore";
 export interface EndpointProfile {
   id: string;
   name: string;
@@ -13,7 +14,7 @@ const WALLETD_PROFILES_KEY = "zkas_walletd_profiles_v1";
 
 function read(key: string): EndpointProfile[] {
   try {
-    const value = JSON.parse(localStorage.getItem(key) ?? "[]") as unknown;
+    const value = JSON.parse(readLocal(key) ?? "[]") as unknown;
     if (!Array.isArray(value)) return [];
     return value.filter((item): item is EndpointProfile => {
       if (!item || typeof item !== "object") return false;
@@ -29,7 +30,16 @@ function read(key: string): EndpointProfile[] {
 }
 
 function write(key: string, profiles: EndpointProfile[]) {
-  localStorage.setItem(key, JSON.stringify(profiles.slice(0, 20)));
+  // Through safestore, read and write BOTH — the same rule contacts.ts states for the same
+  // reason. These writes come from user actions: adding a daemon, pairing, saving a mining
+  // endpoint. `walletdProfiles.save` is handed to `switchWalletd` as a callback, so a raw
+  // `setItem` throwing on a full or blocked store would propagate out of a switch that had
+  // ALREADY connected, failing an action that actually succeeded.
+  //
+  // And reading the same way matters just as much: safestore keeps what a blocked store
+  // refused, and a raw read would not see it, so a profile would vanish the instant it was
+  // saved. Mixing the two accessors on one key is the specific mistake to avoid here.
+  writeLocal(key, JSON.stringify(profiles.slice(0, 20)));
   window.dispatchEvent(new CustomEvent("connection-profiles-changed"));
 }
 
