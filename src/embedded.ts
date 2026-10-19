@@ -10,6 +10,7 @@
 // zero-setup default; this is opt-in (first run + Settings → Wallet service).
 
 import { registerPlugin } from "@capacitor/core";
+import { elapsedSince } from "./lib/elapsed";
 import { isNative } from "./api";
 import { knownWalletTokens } from "./walletstate";
 import i18n from "./i18n";
@@ -454,7 +455,9 @@ const KEEPALIVE_REASSERT_MS = 60_000;
  */
 export async function engineKeepAlive(on: boolean): Promise<void> {
   if (!embeddedAvailable() || !embeddedChosen()) return;
-  const stale = Date.now() - keptAliveAt >= KEEPALIVE_REASSERT_MS;
+  // elapsedSince: a backward step makes this negative, never >= the interval, so the
+  // foreground service would never be re-asserted and could lapse mid-sync.
+  const stale = elapsedSince(keptAliveAt) >= KEEPALIVE_REASSERT_MS;
   // Releasing is a one-shot: there is nothing to keep re-asserting once synced.
   if (keptAlive === on && (!on || !stale)) return;
   keptAlive = on;

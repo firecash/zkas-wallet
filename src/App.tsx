@@ -1,4 +1,5 @@
 import { useTranslation, Trans } from "react-i18next";
+import { elapsedSince } from "./lib/elapsed";
 import i18n, { formatDate } from "./i18n";
 import { LanguagePicker, LanguageInline, LanguageNotice, LanguageButton } from "./LanguagePicker";
 import { ProvePayment } from "./PaymentProof";
@@ -851,7 +852,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
     // handler polls immediately on foreground.
     const hidden = typeof document !== "undefined" && document.hidden;
     if (hidden) {
-      if (Date.now() - lastHiddenPoll.current < HIDDEN_POLL_MS) return;
+      // elapsedSince: a backward clock makes this negative, which is less than the interval,
+      // so the throttle would return early every time and the hidden-tab poll would stop
+      // altogether until the skew passed.
+      if (elapsedSince(lastHiddenPoll.current) < HIDDEN_POLL_MS) return;
       lastHiddenPoll.current = Date.now();
     }
     // Stop hammering a service that has been failing for minutes. See skipPollWhileFailing:

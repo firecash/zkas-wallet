@@ -18,6 +18,7 @@
 // bundle, which will not finalize any other bundle).
 
 import { api, type PrepareResp } from "./api";
+import { elapsedSince } from "./lib/elapsed";
 import { fvkHex, verifyAndSignPayment, type Network } from "./signer";
 import { feeReserveSompi, minRelayFeeForSpends } from "./fees";
 import i18n from "./i18n";
@@ -197,7 +198,9 @@ async function waitForSpendIndex(onProgress: (p: IndexProgress) => void): Promis
     if (p.done !== lastDone) {
       lastDone = p.done;
       movedAt = Date.now();
-    } else if (Date.now() - movedAt >= INDEX_STALL_MS) {
+      // elapsedSince: a backward step makes this negative, which is never >= the limit, so a
+      // genuinely stalled index would never be detected and this loop would wait forever.
+    } else if (elapsedSince(movedAt) >= INDEX_STALL_MS) {
       return false;
     }
     await new Promise((r) => setTimeout(r, INDEX_POLL_MS));
@@ -291,7 +294,10 @@ async function prepareWaitingForIndex<T>(
           continue;
         }
         if (busySince == null) busySince = Date.now();
-        const waited = Date.now() - busySince;
+        // elapsedSince, because this is a decision and not just a display: a backward clock
+        // step makes a raw subtraction negative, which is never >= the limit, so the wait for
+        // a busy wallet would never time out and the send would sit here indefinitely.
+        const waited = elapsedSince(busySince);
         if (waited >= BUSY_WALLET_WAIT_MS) throw e;
         onBusy(busyWalletNote(msg), Math.round(waited / 1000));
         await new Promise((r) => setTimeout(r, INDEX_POLL_MS));
@@ -382,7 +388,12 @@ export function prepareAheadUsable(
   return (
     !!ahead &&
     ahead.key === prepareKey(to, amountToSompi(amountFc), fee, memo, allowMultipleTransactions) &&
-    (ahead.finishedAt === null || Date.now() - ahead.finishedAt < PREPARED_AHEAD_MAX_AGE_MS)
+    // elapsedSince: a clock that stepped BACKWARDS makes `Date.now() - finishedAt` negative,
+    // and a negative is less than any limit — so a prepare whose daemon session had long
+    // expired would read as fresh and be adopted, and the payment would be submitted against
+    // a session that is gone. Unknowable elapsed time reports as Infinity, which is not less
+    // than the limit, so this falls back to preparing again: slower, and correct.
+    (ahead.finishedAt === null || elapsedSince(ahead.finishedAt) < PREPARED_AHEAD_MAX_AGE_MS)
   );
 }
 

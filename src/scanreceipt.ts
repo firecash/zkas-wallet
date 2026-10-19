@@ -18,6 +18,7 @@
 // which shows up as a balance lower than a later scan finds.
 
 import { api, getBase } from "./api";
+import { elapsedSince } from "./lib/elapsed";
 
 const KEY = "zkas_scan_receipt_v1";
 
@@ -53,7 +54,10 @@ function read(): Stashed | null {
     const v = JSON.parse(raw) as Partial<Stashed>;
     if (typeof v?.receipt !== "string" || typeof v?.address !== "string") return null;
     const at = Number(v.at ?? 0);
-    if (!Number.isFinite(at) || Date.now() - at > MAX_STASH_AGE_MS) {
+    // elapsedSince: a backward step makes this negative, never greater than the limit, so a
+    // stale stash would never be cleared. It folds in the non-finite check too — a bad
+    // timestamp reports as Infinity, which IS greater than the limit.
+    if (elapsedSince(at) > MAX_STASH_AGE_MS) {
       clear();
       return null;
     }

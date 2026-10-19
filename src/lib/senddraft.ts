@@ -9,6 +9,8 @@
 /// Scoped per wallet token, so switching wallets cannot put one wallet's draft
 /// into another's form, and given a short life so an address does not sit in
 /// storage indefinitely after the user has moved on.
+import { elapsedSince } from "./elapsed";
+
 const KEY = "send_draft_v1";
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
@@ -43,7 +45,9 @@ export function loadSendDraft(token: string): SendDraft | null {
     return null; // storage unavailable (private mode, blocked): just start empty
   }
   if (!stored || stored.token !== token) return null;
-  if (!(Date.now() - stored.at < MAX_AGE_MS)) {
+  // elapsedSince: a backward clock step makes this negative, so a draft well past its age
+  // would read as recent and be restored instead of discarded.
+  if (!(elapsedSince(stored.at) < MAX_AGE_MS)) {
     clearSendDraft();
     return null;
   }
