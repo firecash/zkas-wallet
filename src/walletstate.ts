@@ -1,5 +1,6 @@
 import { readLocal, removeLocal } from "./lib/safestore";
 import { forgetSentDms } from "./lib/dmlog";
+import { forgetSendDraft } from "./lib/senddraft";
 // Removing a wallet, completely.
 //
 // A wallet's state is scattered across storage by design — the daemon holds the
@@ -57,6 +58,14 @@ function sweepScattered(token: string): void {
   // key name, so it needs its own removal rather than a prefix match.
   try {
     forgetSentDms(token);
+  } catch {
+    /* ignore */
+  }
+  // The Send form's saved draft: the recipient, amount and memo of a payment this wallet was
+  // about to make. Global key with the token inside the value, so the prefix sweep below
+  // cannot reach it — the same reason the transaction labels were missed.
+  try {
+    forgetSendDraft(token);
   } catch {
     /* ignore */
   }

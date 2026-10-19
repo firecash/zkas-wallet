@@ -67,6 +67,30 @@ export function saveSendDraft(token: string, draft: SendDraft): void {
 }
 
 /** Called once the payment is away, and when the user clears the form. */
+/// Drop the draft if it belongs to the wallet being removed.
+///
+/// A draft holds the recipient address, the amount and the memo — who you were about to pay
+/// and what for, which is the same category of metadata as a contact name or a transaction
+/// label, and `walletstate` erases both of those on "Remove wallet". This key was missed
+/// because it is GLOBAL (`send_draft_v1`, with the token inside the value), so no per-wallet
+/// prefix sweep could match it — exactly how the transaction labels were missed.
+///
+/// `loadSendDraft` already refuses a draft whose token does not match, so nothing leaked into
+/// the next wallet's form; what survived was the metadata itself, for up to the 24-hour life
+/// above, after the user had deliberately removed the wallet.
+///
+/// Called from `sweepScattered`, beside `forgetSentDms`, which is in walletstate for the same
+/// reason and set the precedent this one missed.
+export function forgetSendDraft(token: string): void {
+  if (!token) return;
+  try {
+    const stored = parse(localStorage.getItem(KEY));
+    if (stored && stored.token === token) localStorage.removeItem(KEY);
+  } catch {
+    /* storage unavailable: there is no draft at rest to erase */
+  }
+}
+
 export function clearSendDraft(): void {
   try {
     localStorage.removeItem(KEY);
