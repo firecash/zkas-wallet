@@ -28,8 +28,25 @@ export function safeText(s: string): string {
 
 /// True when a string carries anything this strips — so a caller can refuse rather than
 /// silently alter what someone typed, where that is the better answer.
+/// Non-global twins of the two patterns above, derived from their own `source` so the
+/// character sets cannot drift apart (and so the invisible characters in the originals are
+/// never retyped).
+///
+/// `RegExp.prototype.test` on a /g regex is STATEFUL: it starts at `lastIndex` and advances
+/// it on a match, so the same string answered true, false, true, false on consecutive calls.
+/// Verified against node before changing anything. `hasUnsafeText` exists so a caller can
+/// REFUSE rather than silently alter what someone typed, which means a name ending in U+202E
+/// — the address-reordering trick this module is written to stop — would have been accepted
+/// on every second attempt. `safeText` was never affected: `replace` with /g always starts
+/// from the beginning and resets `lastIndex` itself.
+///
+/// Nothing calls `hasUnsafeText` today, so this was a landmine rather than a live hole: the
+/// first caller to trust it would have got a check that fails half the time.
+const UNSAFE_ONCE = new RegExp(UNSAFE.source);
+const CONTROLS_ONCE = new RegExp(CONTROLS.source);
+
 export function hasUnsafeText(s: string): boolean {
-  return UNSAFE.test(s) || CONTROLS.test(s);
+  return UNSAFE_ONCE.test(s) || CONTROLS_ONCE.test(s);
 }
 
 /// The protocol's memo field is 512 BYTES of UTF-8, not 512 characters.
