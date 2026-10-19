@@ -222,28 +222,58 @@ async function resealFallbacks(secret: string): Promise<void> {
   } catch {
     /* nothing enumerable: no unsealed flags to reseal */
   }
+  // SEAL EVERYTHING FIRST, PERSIST, AND ONLY THEN DROP THE CLEARTEXT.
+  //
+  // This used to delete `device_seed_<token>` inside the loop while the sealed copy existed
+  // only in `rec`, a JavaScript object, and `write(rec)` ran once after the loop. `write` is
+  // a bare `setItem`, which a full or blocked store throws outright — and there is an `await`
+  // on every iteration, so the app can also be killed partway (this one has a crash log for
+  // exactly that reason). Either way the cleartext was gone and the sealed copy had never
+  // been persisted: the seed existed in neither place, and the wallet was recoverable only
+  // from its recovery phrase. That is the silent key-drop this codebase has already paid for
+  // once.
+  //
+  // Two passes make both failure directions safe. If the write throws, nothing has been
+  // deleted and the fallback is still there to retry from. If the app dies after the write
+  // but before the deletions, the cleartext simply remains flagged and the next unlock
+  // re-seals it — which is what makes this function idempotent in the first place.
+  const sealedSeeds: string[] = [];
   for (const flag of flags) {
     const token = flag.slice("seed_unsealed_".length);
     const seedHex = localStorage.getItem(`device_seed_${token}`);
     if (seedHex) {
       rec.wallets[token] = await seal(seedHex, secret);
       if (unlocked) unlocked[token] = seedHex;
-      localStorage.removeItem(`device_seed_${token}`);
+      sealedSeeds.push(token);
       changed = true;
+    } else {
+      // A flag with no seed behind it is stale: drop it, there is nothing to lose.
+      localStorage.removeItem(flag);
     }
-    localStorage.removeItem(flag);
   }
+  let sealedMnemonic = false;
   if (localStorage.getItem(MNEMONIC_UNSEALED_FLAG)) {
     const phrase = localStorage.getItem(MNEMONIC_KEY);
     if (phrase) {
       rec.mnemonic = await seal(phrase, secret);
       sessionMnemonic = phrase;
-      localStorage.removeItem(MNEMONIC_KEY);
+      sealedMnemonic = true;
       changed = true;
+    } else {
+      localStorage.removeItem(MNEMONIC_UNSEALED_FLAG);
     }
+  }
+  if (!changed) return;
+  // Durable before destructive. A throw here leaves every fallback intact.
+  write(rec);
+  for (const token of sealedSeeds) {
+    localStorage.removeItem(`device_seed_${token}`);
+    localStorage.removeItem(`seed_unsealed_${token}`);
+  }
+  if (sealedMnemonic) {
+    localStorage.removeItem(MNEMONIC_KEY);
     localStorage.removeItem(MNEMONIC_UNSEALED_FLAG);
   }
-  if (changed) write(rec);
 }
 
 /** Turn the lock on: seal every wallet's seed and drop the cleartext copies. */
