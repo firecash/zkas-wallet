@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync} from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -120,5 +120,36 @@ describe("how much of an address a person gets to check", () => {
     const row = app.slice(i, i + 200);
     expect(row).toContain("row.recipient");
     expect(row).not.toContain("shortAddr(row.recipient)");
+  });
+
+  /**
+   * The superseded flat fee constants must stay unimported.
+   *
+   * `lib/constants.ts` exports FEE_FC (0.03) and FEE_MAX_FC (0.045) — a flat fee for one or
+   * two notes, and for six. `fees.ts` computes the real thing from the node's constants:
+   * 0.0185 ZKAS for 2 spends, 0.2458 for 38. So the flat figure understates the fee by more
+   * than five times at the top of the range, and a fee below the node's bytes x 200 minimum is
+   * rejected by relay outright, which has happened on this project before.
+   *
+   * App.tsx already moved everything user-facing to fees.ts. These two survive in a shared
+   * constants file where the next person to need a fee will reasonably look first.
+   */
+  it("nothing imports the superseded flat fee constants", () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(entry.name)) {
+          const src = readFileSync(full, "utf8");
+          // An IMPORT of the name, not a local declaration of it (App.tsx has its own).
+          for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from\s*"[^"]*constants"/g)) {
+            if (/\bFEE_(MAX_)?FC\b/.test(m[1])) offenders.push(full);
+          }
+        }
+      }
+    };
+    walk("src");
+    expect(offenders).toEqual([]);
   });
 });
