@@ -1,3 +1,5 @@
+import { readLocal, removeLocal, writeLocal } from "./lib/safestore";
+
 // Theme choice: dark/light, plus an accent color.
 //
 // The wallet is dark by identity and stays dark unless the user says otherwise.
@@ -36,7 +38,7 @@ export function currentTheme(): Theme {
   // boot path before React mounts — the identity (dark) is the right answer.
   let v: string | null = null;
   try {
-    v = localStorage.getItem(KEY);
+    v = readLocal(KEY);
   } catch {
     /* storage unavailable — dark */
   }
@@ -57,7 +59,7 @@ function resolveTheme(t: Theme): "dark" | "light" {
 export function currentAccent(): Accent {
   let a: string | null = null;
   try {
-    a = localStorage.getItem(ACCENT_KEY);
+    a = readLocal(ACCENT_KEY);
   } catch {
     /* storage unavailable — teal */
   }
@@ -71,9 +73,20 @@ export function applyStoredTheme(): void {
 }
 
 export function setTheme(t: Theme): void {
-  if (t === "dark") localStorage.removeItem(KEY);
-  else localStorage.setItem(KEY, t);
+  // Apply FIRST, and never let the storage write stop it.
+  //
+  // These are raw accessors in a click handler, and on a browser with site data blocked a raw
+  // `setItem` THROWS: the exception escaped the handler and `apply` below was never reached, so
+  // tapping a theme did nothing at all — not even visually. `switchWallet` records the same
+  // failure in almost the same words: "a raw setItem threw out of the click handler that called
+  // this, so on a browser with storage blocked tapping another wallet did nothing at all".
+  //
+  // Through safestore in BOTH directions (see `currentTheme`), so the choice at least holds for
+  // this session when it cannot be persisted, and the reader sees what the writer stored —
+  // mixing a safestore write with a raw read is the mistake that rule exists to prevent.
   apply(t);
+  if (t === "dark") removeLocal(KEY);
+  else writeLocal(KEY, t);
 }
 
 /// When (and only when) the user chose "system", track OS palette changes live so
@@ -93,9 +106,10 @@ function installSystemThemeWatcher(): void {
 }
 
 export function setAccent(a: Accent): void {
-  if (a === "teal") localStorage.removeItem(ACCENT_KEY);
-  else localStorage.setItem(ACCENT_KEY, a);
+  // Same as setTheme: paint first, persist after, and never throw out of the handler.
   applyAccent(a);
+  if (a === "teal") removeLocal(ACCENT_KEY);
+  else writeLocal(ACCENT_KEY, a);
 }
 
 /// Browser/OS chrome colors per palette. `theme-color` paints the tab strip and
