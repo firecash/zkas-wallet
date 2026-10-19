@@ -91,6 +91,43 @@ describe("a function defined twice must not drift", () => {
     expect(b).toEqual(a);
   });
 
+  /**
+   * `src/hooks/index.ts` has NO IMPORTERS AT ALL — verified by grepping for `from "./hooks"`
+   * and `from "../hooks"` across src/. App.tsx carries its own copies of `useScanEta` and
+   * `useCountUp`, and those are the ones that run.
+   *
+   * That makes this worse than an ordinary duplicated constant: a module named `hooks/` looks
+   * like the canonical shared home, so a fix applied there is inert and a reader can easily
+   * believe they are looking at live code. Until one of them is removed — the owner's call,
+   * not a bug fix — the two must not be allowed to drift apart silently.
+   */
+  it("useScanEta has not drifted between its two copies", () => {
+    const norm = (x: string) => x.replace(/\/\/[^\n]*/g, "").replace(/\s+/g, " ").trim();
+    const live = body("src/App.tsx", "useScanEta") ?? "";
+    const shared = body("src/hooks/index.ts", "useScanEta") ?? "";
+    expect(live.length).toBeGreaterThan(200);
+    expect(shared.length).toBeGreaterThan(200);
+    // The guards are the part that matters: a median rate, a positive-rate check and a
+    // clamped numerator are what keep the ETA from going infinite or negative.
+    for (const guard of ["if (!(rate > 0)) return;", "Math.max(0, total - scanned)", "rates.length < 3"]) {
+      expect(norm(live), `App.tsx useScanEta: ${guard}`).toContain(norm(guard));
+      expect(norm(shared), `hooks useScanEta: ${guard}`).toContain(norm(guard));
+    }
+    expect(norm(shared)).toBe(norm(live));
+  });
+
+  it("useCountUp has not drifted either", () => {
+    const norm = (x: string) => x.replace(/\/\/[^\n]*/g, "").replace(/\s+/g, " ").trim();
+    const live = body("src/App.tsx", "useCountUp") ?? "";
+    const shared = body("src/hooks/index.ts", "useCountUp") ?? "";
+    expect(live.length).toBeGreaterThan(200);
+    // Both must animate off performance.now(), not Date.now(): a wall-clock step would
+    // otherwise jump or freeze the balance count-up.
+    expect(live).toContain("performance.now()");
+    expect(shared).toContain("performance.now()");
+    expect(norm(shared)).toBe(norm(live));
+  });
+
   it("fmtEta differs only in which translation keys it uses", () => {
     // App.tsx uses `fmtEta.*`, hooks/index.ts uses `hooks.*`. Both sets exist, so neither
     // renders a raw key; the shapes must still agree.
