@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { scrubWalletTokens } from "../embedded";
+import { knownWalletTokens } from "../walletstate";
 import { Check, Clipboard, Download, Pause, Play, Search, WrapText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ServiceLog } from "../desktop-services";
@@ -16,8 +18,18 @@ function severity(line: ServiceLog): "error" | "warn" | "info" {
   return "info";
 }
 
+/// The text for both Copy and Download — and therefore the text that gets pasted into a
+/// support channel or attached to a bug report.
+///
+/// These are walletd's own logs, and walletd names the wallet token on a great many lines.
+/// That token is the credential for this wallet's FVK view: balances, payments, memos. So it
+/// comes out here, at the one point both paths share, leaving a six-character stub so two
+/// lines can still be matched to the same wallet while 24 bits authenticate nothing. Block
+/// hashes are the same shape as a token and are the reason a log is worth sending, which is
+/// why this redacts the tokens THIS DEVICE HOLDS rather than anything hex-shaped.
 function output(lines: ServiceLog[]): string {
-  return lines.map((line) => `${new Date(line.at_unix_ms).toISOString()} [${line.service}] [${line.stream}] ${line.line}`).join("\n");
+  const text = lines.map((line) => `${new Date(line.at_unix_ms).toISOString()} [${line.service}] [${line.stream}] ${line.line}`).join("\n");
+  return scrubWalletTokens(text, knownWalletTokens());
 }
 
 export function ServiceLogs({ logs, onClear, preferredService }: Props) {

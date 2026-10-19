@@ -11,6 +11,7 @@
 
 import { registerPlugin } from "@capacitor/core";
 import { isNative } from "./api";
+import { knownWalletTokens } from "./walletstate";
 import i18n from "./i18n";
 
 interface EmbeddedEnginePlugin {
@@ -397,6 +398,19 @@ export async function engineExitHistory(): Promise<string> {
   return `how this app ended, most recent first:\n${rows.join("\n")}\n\n`;
 }
 
+/// Replace this device's wallet tokens with a correlatable stub.
+///
+/// Six characters still let two lines in a pasted log be matched to the same wallet, which is
+/// what reading a log requires, while 24 bits authenticates nothing.
+export function scrubWalletTokens(text: string, tokens: string[]): string {
+  let out = text;
+  for (const t of tokens) {
+    if (t.length < 16) continue;
+    out = out.split(t).join(`${t.slice(0, 6)}\u2026[redacted]`);
+  }
+  return out;
+}
+
 export async function engineLogs(): Promise<string> {
   if (!embeddedAvailable()) return "";
   const r = await Native.logs().catch(() => ({ text: "" }));
@@ -404,7 +418,11 @@ export async function engineLogs(): Promise<string> {
   // buffer below it only holds the run that is still going, so when the app died
   // mid-sync the log the user sends is from AFTER the event they are reporting.
   const history = await engineExitHistory();
-  return history + (r.text || "");
+  // Scrubbed HERE, at the one point both the on-screen view and the Copy button read from.
+  // The engine is walletd, walletd logs the wallet token on many lines, and that token is the
+  // credential for the FVK view of this wallet — balances, payments, memos. The button exists
+  // so the text can be pasted into a support channel, which is the whole problem.
+  return scrubWalletTokens(history + (r.text || ""), knownWalletTokens());
 }
 
 /** Turn engine debug-level logging on or off. */

@@ -121,6 +121,23 @@ function registry(): { token: string; address?: string }[] {
   }
 }
 
+/// Every wallet token this device holds, for redacting them out of text the user may share.
+///
+/// walletd logs the token on a great many lines (`log::info!("wallet '{token}': …")`), the
+/// embedded engine IS walletd, and its buffer is surfaced behind a Copy button whose whole
+/// purpose is pasting into a support channel. A token authenticates the FVK view of a wallet:
+/// every balance, every payment, every memo. Redaction has to happen before the text reaches
+/// the screen, and it has to be driven by the tokens this device actually holds — a token is
+/// 16-128 lowercase hex, which is also the shape of a block hash, and the hashes are the part
+/// of a log that makes it worth sending.
+export function knownWalletTokens(): string[] {
+  const out = new Set<string>();
+  const active = readLocal("wallet_token");
+  if (active) out.add(active.toLowerCase());
+  for (const w of registry()) if (w.token) out.add(String(w.token).toLowerCase());
+  return [...out].filter((t) => /^[0-9a-f]{16,128}$/.test(t));
+}
+
 /**
  * Erase every trace of the wallet identified by `token` from this device's
  * storage. Deliberately does NOT touch preferences that are about the app rather
