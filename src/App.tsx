@@ -2905,7 +2905,9 @@ function ConsolidateDialog({
       : null;
 
   const run = async () => {
-    const runStartedAt = Date.now();
+    // Monotonic, like the send path's: this value is only ever subtracted to get a duration,
+    // and mixing it with performance.now() below would be worse than either clock alone.
+    const runStartedAt = performance.now();
     setBusy(true);
     setEngineBusy(true); // on-device engine is now busy — don't let the status poll flip to "unreachable" mid-consolidation
     setError("");
@@ -2961,7 +2963,7 @@ function ConsolidateDialog({
           "consolidate-pass",
           activeToken() ?? "default",
           Math.max(1, Math.round(consolidated.inputs / consolidated.rounds)),
-          Math.round((Date.now() - runStartedAt) / consolidated.rounds),
+          Math.round((performance.now() - runStartedAt) / consolidated.rounds),
         );
       }
       setResult({
@@ -6752,7 +6754,13 @@ function Send({
         onStage("warming", { part: 1, parts: 1, sentFc: 0, totalFc: amt, note: t("send.finishingMerge") });
         await merge;
       }
-      const sendStartedAt = Date.now();
+      // `performance.now()`, not `Date.now()`: this is a DURATION, and the wall clock moves
+      // for reasons that have nothing to do with how long a proof took — an NTP correction, a
+      // laptop waking with a stale RTC, a timezone fixed the wrong way. clock-skew.test
+      // records three live bugs from that class. A jump BACKWARD is already rejected by
+      // recordDuration's floor; a jump FORWARD was not, and it poisons the countdown for the
+      // next eight sends with a number this file's own rule forbids inventing.
+      const sendStartedAt = performance.now();
       // Captured at the START, not at completion: by the time the payment lands the
       // wallet is warm BECAUSE of it, so reading the flag afterwards would file every
       // cold run under "warm" and re-create the over-prediction this bucketing fixes.
@@ -6782,7 +6790,7 @@ function Send({
       // NEXT send can count down instead of only counting up. Recorded on success
       // only: a run that failed part-way measures the failure, not the work.
       const spent = r.parts?.length ? r.parts.length : 1;
-      recordDuration("prepare", activeToken() ?? "default", Math.max(1, spent), Date.now() - sendStartedAt, startedWarm);
+      recordDuration("prepare", activeToken() ?? "default", Math.max(1, spent), performance.now() - sendStartedAt, startedWarm);
       const toAddr = to.trim();
       // The payment is away: the draft has served its purpose and a recipient
       // address should not linger in storage.

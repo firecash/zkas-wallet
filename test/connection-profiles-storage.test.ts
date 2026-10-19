@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Connection profiles are written from user actions: adding a daemon, pairing a desktop,
@@ -12,6 +12,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * profile would vanish the instant it was saved. Mixing the two accessors on one key is the
  * specific mistake.
  */
+// A test should leave storage as it found it, not merely start clean: these write keys
+// (device_mnemonic, lock records, profiles, timing samples) that another file could read.
+afterEach(() => {
+  try {
+    localStorage.clear();
+  } catch {
+    /* a blocked store has nothing to clear */
+  }
+});
+
 describe("saving a connection profile survives a blocked store", () => {
   beforeEach(() => {
     vi.restoreAllMocks();

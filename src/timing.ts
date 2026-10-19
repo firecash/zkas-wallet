@@ -44,6 +44,18 @@ const MAX_SAMPLES = 8;
 /// Below this a sample says more about clock jitter than about the work.
 const MIN_SAMPLE_MS = 250;
 
+/// And above this it says more about the CLOCK than about the work.
+///
+/// The callers now measure with `performance.now()`, which no clock correction can move, but
+/// this store is the thing that has to stay honest regardless of who writes to it: one absurd
+/// sample sets the countdown for the next eight runs, and this file's whole rule is that the
+/// estimate is measured and never invented.
+///
+/// The ceiling is deliberately far above the worst MEASURED run — 425.5 s for 38 notes cold,
+/// and a prepare once observed at eight minutes on the hosted daemon — so a real slow proof is
+/// still learned from. Thirty minutes is not a proof; it is a clock that moved.
+const MAX_SAMPLE_MS = 30 * 60_000;
+
 /// Samples older than this describe a wallet, daemon and chain height that no longer
 /// exist. Kept generous — someone who pays once a month still deserves a countdown.
 const SAMPLE_TTL_MS = 30 * 24 * 60 * 60_000;
@@ -96,6 +108,7 @@ function read(op: TimedOperation, token: string, store: Storage | null, now = Da
         Number.isFinite(s?.ms) &&
         Number.isFinite(s?.notes) &&
         s.ms >= MIN_SAMPLE_MS &&
+        s.ms <= MAX_SAMPLE_MS &&
         s.notes > 0 &&
         (s.at === undefined || now - s.at <= SAMPLE_TTL_MS),
     );
@@ -119,7 +132,7 @@ export function recordDuration(
   warm?: boolean,
   store: Storage | null = storage(),
 ): void {
-  if (!(ms >= MIN_SAMPLE_MS) || !(notes > 0)) return;
+  if (!(ms >= MIN_SAMPLE_MS) || ms > MAX_SAMPLE_MS || !(notes > 0)) return;
   try {
     const samples = [...read(op, token, store), { notes, ms, warm, at: Date.now() }].slice(-MAX_SAMPLES);
     store?.setItem(key(op, token), JSON.stringify(samples));

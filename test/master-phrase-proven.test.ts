@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * The device master phrase derives EVERY account on the device. `setMasterMnemonic` used to
@@ -15,6 +15,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * RECEIVE and never spend ... so the caller must be able to refuse to create it."
  */
 const PHRASE = "legal winner thank year wave sausage worth useful legal winner thank yellow";
+
+// A test should leave storage as it found it, not merely start clean: these write keys
+// (device_mnemonic, lock records, profiles, timing samples) that another file could read.
+afterEach(() => {
+  try {
+    localStorage.clear();
+  } catch {
+    /* a blocked store has nothing to clear */
+  }
+});
 
 describe("the master phrase is proven stored, not assumed", () => {
   beforeEach(() => {

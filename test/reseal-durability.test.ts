@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * `resealFallbacks` converts a plaintext fallback (written when a seal raced an auto-lock,
@@ -36,6 +36,16 @@ async function lockedDeviceWithFallback() {
   localStorage.setItem(`seed_unsealed_${TOKEN_B}`, "1");
   return applock;
 }
+
+// A test should leave storage as it found it, not merely start clean: these write keys
+// (device_mnemonic, lock records, profiles, timing samples) that another file could read.
+afterEach(() => {
+  try {
+    localStorage.clear();
+  } catch {
+    /* a blocked store has nothing to clear */
+  }
+});
 
 describe("re-sealing a fallback never leaves the seed nowhere", () => {
   beforeEach(() => {
