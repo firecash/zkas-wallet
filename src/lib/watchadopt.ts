@@ -1,4 +1,4 @@
-import { api } from "../api";
+import { api, getBase } from "../api";
 import { addWallet, ensureRegistered } from "../wallets";
 import { birthdayFromUrl, isViewKey, setWatchKey, viewKeyFromUrl } from "./watchonly";
 import { rememberBirthday } from "./deviceseed";
@@ -24,7 +24,9 @@ export async function adoptViewKey(key: string, birthday = 0): Promise<string> {
   // Keep the birthday the link carried: a later history recovery scans from here
   // instead of replaying the chain from genesis for a wallet born last week.
   rememberBirthday(birthday, address);
-  ensureRegistered(token, address);
+  // The base that just answered /watch is the daemon holding this wallet, so record it —
+  // otherwise prewarm has no way to tell that this token belongs here and skips it.
+  ensureRegistered(token, address, getBase());
   return address;
 }
 

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { getBase } from "../api";
 import { api, type Status, type ChainHistory } from "../api";
 import { loadTxs, recordSend, reconcile, pendingTotal, saveSnapshot, loadSnapshot, type LocalTx } from "../localtx";
 import { loadStatusCache, saveStatusCache } from "../api";
@@ -63,9 +64,11 @@ export const useWalletStore = create<WalletStore>((set, get) => ({
           });
         }
 
-        // Ensure wallet is registered
+        // Ensure wallet is registered, recording WHICH daemon answered: prewarm will only
+        // send a wallet's token to the daemon that holds it, and an unstamped wallet is
+        // skipped rather than guessed at. See WalletRef.base.
         if (status.has_wallet && status.address) {
-          ensureRegistered(activeToken() || "", status.address);
+          ensureRegistered(activeToken() || "", status.address, getBase());
         }
       }
     } catch {

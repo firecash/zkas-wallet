@@ -46,6 +46,15 @@ describe("a wallet's token only goes to the daemon that holds it", () => {
     expect(app).toContain("ensureRegistered(pollToken, s.address, getBase())");
   });
 
+  it("every registration path records the daemon, not just the main poll", () => {
+    // A path that forgot it would leave the wallet unstamped, which fails closed (no
+    // credential sent) but silently loses warming for that wallet forever.
+    const store = readFileSync("src/store/wallet.ts", "utf8");
+    const adopt = readFileSync("src/lib/watchadopt.ts", "utf8");
+    expect(store).toContain('ensureRegistered(activeToken() || "", status.address, getBase())');
+    expect(adopt).toContain("ensureRegistered(token, address, getBase())");
+  });
+
   it("a wallet that moves daemons is re-stamped, not left pointing at the old one", () => {
     const i = wallets.indexOf("export function ensureRegistered");
     const body = wallets.slice(i, i + 900);
