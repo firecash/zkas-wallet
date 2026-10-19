@@ -7509,13 +7509,30 @@ const History = memo(function History({
     // rows alone cannot be the only exit.
     if ((chain?.rows?.length ?? 0) > 0 || (synced && sawUnsynced.current)) setRecovering(false);
   }, [recovering, chain, synced]);
+  /// One /history request at a time. A plain object here would be recreated on every
+  /// render and guard nothing — which is the shape of bug this whole audit kept finding.
+  const pulling = useRef(false);
   useEffect(() => {
     let live = true;
     const pull = () => {
       // Nobody is reading a hidden tab; the daemon serialises the whole page under
       // the wallet lock for each of these, so don't ask for it until it is visible.
       if (typeof document !== "undefined" && document.hidden) return;
-      void api.history(showAll ? HISTORY_MAX : HISTORY_PAGE).then((h) => live && setChain(h)).catch(() => {});
+      // One at a time. The status poll has had `refreshInFlight` for this since a dead
+      // request held the lock and nothing else ran; this poll had no equivalent, and it is
+      // the one that fires every 2s while `recovering` — exactly when the wallet is scanning
+      // and slowest to answer. With a 30s request timeout that is up to fifteen concurrent
+      // /history calls from one client, and the comment above says what each costs: the
+      // daemon serialises the whole page under the wallet lock.
+      if (pulling.current) return;
+      pulling.current = true;
+      void api
+        .history(showAll ? HISTORY_MAX : HISTORY_PAGE)
+        .then((h) => live && setChain(h))
+        .catch(() => {})
+        .finally(() => {
+          pulling.current = false;
+        });
     };
     pull();
     // 15s is fine for a settled wallet, but a recovery scan writes rows continuously
