@@ -53,6 +53,8 @@ export function useMaintenance(options: MaintenanceOptions): void {
   // re-rendering on it would be visible churn for something the user is not
   // watching.
   const running = useRef(false);
+  const failures = useRef(0);
+  const lastFailureAt = useRef<number | null>(null);
   const latest = useRef(options);
   latest.current = options;
 
@@ -68,6 +70,11 @@ export function useMaintenance(options: MaintenanceOptions): void {
         busy,
         enabled: isMaintenanceEnabled() && !embeddedChosen(),
         lastRunAt: lastMaintenanceRun(token),
+        // Session-scoped on purpose: a reload is a user action and clears the backoff, while
+        // a wallet left open with a consolidation that keeps failing stops paying for a
+        // 38-spend proof every minute. See maintenanceBackoffMs.
+        consecutiveFailures: failures.current,
+        lastFailureAt: lastFailureAt.current,
         now: Date.now(),
       });
       if (!decision.run || !status?.address) return;
@@ -85,11 +92,17 @@ export function useMaintenance(options: MaintenanceOptions): void {
             // Recorded only on success, so a daemon that is busy or a device that
             // cannot sign does not consume the wallet's next maintenance window.
             recordMaintenanceRun(token, Date.now());
+            failures.current = 0;
+            lastFailureAt.current = null;
             onMerged?.();
           }
         } catch {
           // Locked app, no seed on this device, prover busy, node unreachable — all
           // ordinary and all temporary. Stay silent and let the next tick decide.
+          // Counted, though: "temporary" that repeats for an hour is a round costing the
+          // daemon a Halo 2 proof every minute for nothing.
+          failures.current += 1;
+          lastFailureAt.current = Date.now();
         }
       })();
       inFlight = round;

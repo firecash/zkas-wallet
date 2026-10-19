@@ -49,6 +49,23 @@ const MAX_FEE_SOMPI = feeReserveSompi(MAX_NOTES_PER_TX);
 
 const LAST_RUN_KEY = "maintenance_last_run_";
 
+/// How long to wait after consecutive FAILED rounds, by failure count.
+///
+/// A failed round is not recorded as a run, deliberately — "so a daemon that is busy or a
+/// device that cannot sign does not consume the wallet's next maintenance window". That is
+/// right for a TRANSIENT failure and wrong for a persistent one: the tick is every 60s, and a
+/// round that fails inside `/prepare` has already cost the daemon a 38-spend Halo 2 proof,
+/// measured at 40-92 s on the hosted deployment. Retrying that once a minute, from every
+/// note-heavy wallet whose consolidation keeps failing, is load the daemon can least afford.
+///
+/// Same shape as the status poll's backoff (`skipPollWhileFailing`), and for the same reason —
+/// the daemon's own supervisor puts it plainly: hammering it helps nobody. Capped, and reset
+/// by any success, so a wallet that recovers resumes its normal window immediately.
+export function maintenanceBackoffMs(consecutiveFailures: number): number {
+  if (consecutiveFailures <= 0) return 0;
+  return Math.min(MAINTENANCE_MIN_INTERVAL_MS * 2 ** (consecutiveFailures - 1), 4 * 60 * 60_000);
+}
+
 export type MaintenanceSkip =
   | "disabled"
   | "not-synced"
@@ -56,11 +73,17 @@ export type MaintenanceSkip =
   | "few-notes"
   | "too-soon"
   | "nothing-spendable"
+  | "backing-off"
   | "busy";
 
 export type MaintenanceDecision = { run: true } | { run: false; because: MaintenanceSkip };
 
 export interface MaintenanceInputs {
+  /// Rounds that have failed in a row, reset by any success. Optional so existing callers
+  /// and tests keep their meaning.
+  consecutiveFailures?: number;
+  /// When the last failed round finished.
+  lastFailureAt?: number | null;
   status: Status | null;
   /// True while the user is doing something the merge must not compete with — a
   /// send in flight, a dialog open. Maintenance is never worth interrupting.
@@ -88,6 +111,11 @@ export function shouldRunMaintenance(input: MaintenanceInputs): MaintenanceDecis
   if (status.spend_ready === false) return { run: false, because: "not-spend-ready" };
   if ((status.note_count ?? 0) <= MAINTENANCE_NOTE_THRESHOLD) return { run: false, because: "few-notes" };
   if (lastRunAt !== null && now - lastRunAt < MAINTENANCE_MIN_INTERVAL_MS) return { run: false, because: "too-soon" };
+  // Repeated failures: wait, rather than paying for another proof every minute.
+  const backoff = maintenanceBackoffMs(input.consecutiveFailures ?? 0);
+  if (backoff > 0 && input.lastFailureAt != null && now - input.lastFailureAt < backoff) {
+    return { run: false, because: "backing-off" };
+  }
 
   // Merging spends the balance to itself, so there must be enough to cover the
   // fee. Without this the round reaches /prepare only to be refused.
