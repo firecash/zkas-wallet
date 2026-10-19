@@ -57,11 +57,23 @@ class EmbeddedEnginePlugin : Plugin() {
         }.start()
     }
 
+    /**
+     * Stop the engine, then stand the service down — in that order.
+     *
+     * This had it the other way round: the foreground service was removed first and the
+     * engine was flushed afterwards, on a background thread, with the process no longer
+     * foreground and the app usually already behind. The foreground service is the only
+     * thing keeping the process alive while the engine drains, and the service's own timeout
+     * path says what losing it costs: "a flush discards everything since the last checkpoint
+     * — the same loss that made a sync look like it restarted".
+     *
+     * `EngineControl.stopEngine` is that correct order, and is what `onTimeout` already
+     * calls, so this defers to it instead of keeping a second copy that disagreed.
+     */
     @PluginMethod
     fun stop(call: PluginCall) {
-        EngineForegroundService.stop(context)
         Thread {
-            try { uniffi.zkas_walletd_mobile.stop() } catch (_: Throwable) {}
+            EngineControl.stopEngine(context)
             call.resolve()
         }.start()
     }
