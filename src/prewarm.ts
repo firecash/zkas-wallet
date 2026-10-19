@@ -22,7 +22,7 @@
 // polling it every second.
 
 import { getBase, touchWallet } from "./api";
-import { activeToken, listWallets } from "./wallets";
+import { activeToken, listWallets, normBase } from "./wallets";
 
 /** Gap between touches. One restore at a time, not a thundering herd. */
 const STAGGER_MS = 4_000;
@@ -39,9 +39,23 @@ async function round(): Promise<void> {
     // No daemon chosen yet, or the on-device engine is still starting: nothing to warm.
     if (!getBase()) return;
     const active = activeToken();
+    // ONLY the wallets this daemon actually serves.
+    //
+    // A token is a credential — it authenticates the FVK view of its wallet on the daemon
+    // holding it — and this loop sends one per wallet, every 120 s, to whatever base is
+    // configured now. With no record of where each wallet lived, pointing the app at
+    // another daemon (a self-host, a community node, a URL handed over by "support")
+    // delivered it the tokens of every wallet hosted elsewhere. The active wallet is a
+    // different matter: sending ITS token to the daemon the user just chose is the whole
+    // point, and it is skipped here anyway.
+    //
+    // No stamp means the wallet has not been seen on any daemon since the registry started
+    // recording it, so it is left alone until its own status poll establishes where it
+    // lives. Warming it is a convenience; guessing with a credential is not worth it.
+    const here = normBase(getBase());
     const others = listWallets()
-      .map((w) => w.token)
-      .filter((t) => t && t !== active);
+      .filter((w) => w.token && w.token !== active && w.base && w.base === here)
+      .map((w) => w.token);
     for (const token of others) {
       await touchWallet(token);
       await new Promise((r) => setTimeout(r, STAGGER_MS));

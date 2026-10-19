@@ -1257,7 +1257,9 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // Keep the wallet registry in step: a wallet that existed before the
       // switcher (or one just created) must appear in the list, with an address
       // recognisable enough to pick from.
-      if (s.has_wallet && s.address && pollToken) ensureRegistered(pollToken, s.address);
+      // getBase() here records WHICH daemon served this status, so prewarm can tell which
+      // of the user's wallets this daemon actually holds. See WalletRef.base.
+      if (s.has_wallet && s.address && pollToken) ensureRegistered(pollToken, s.address, getBase());
       // ONLY snapshot a SYNCED wallet. A mid-scan balance is a partial count that
       // climbs from zero, so saving it overwrote the last known good figure with a
       // fraction of it — the safety net eating itself. A pool wallet rescanning at

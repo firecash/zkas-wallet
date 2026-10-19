@@ -21,6 +21,25 @@ export interface WalletRef {
   label: string;
   /** Cached address, purely so the switcher can show something recognisable. */
   address?: string;
+  /**
+   * The daemon this wallet was last seen served by, normalised.
+   *
+   * A token is a credential: it authenticates the FVK view of a wallet — balances,
+   * payments, memos — on the daemon holding it. The registry had no idea which daemon any
+   * of these belonged to, and `prewarm` touches every registered token against whatever
+   * base is configured NOW, so pointing the app at a different daemon handed that daemon
+   * the credentials of wallets hosted elsewhere, every 120 seconds.
+   *
+   * Written from the status poll, which is the moment a wallet is known to be served by
+   * the current base. Absent means "not established since this field was added" and is
+   * treated as a reason NOT to send the token anywhere.
+   */
+  base?: string;
+}
+
+/** Compare daemon URLs without tripping over a trailing slash or case. */
+export function normBase(url: string | null | undefined): string {
+  return (url || "").trim().replace(/\/+$/, "").toLowerCase();
 }
 
 const LIST_KEY = "wallets_v1";
@@ -98,17 +117,27 @@ export function activeToken(): string | null {
  * before this existed have a token but no entry, and must not appear to vanish
  * the moment a switcher shows up.
  */
-export function ensureRegistered(token: string, address?: string): void {
+export function ensureRegistered(token: string, address?: string, base?: string): void {
   const list = listWallets();
+  const b = base ? normBase(base) : undefined;
   const found = list.find((w) => w.token === token);
   if (found) {
+    let dirty = false;
     if (address && found.address !== address) {
       found.address = address;
-      save(list);
+      dirty = true;
     }
+    // Re-stamped rather than kept: a wallet that moved daemons (self-hosting, a restored
+    // backup, pairing) belongs to the one now serving it, and a stale stamp would keep
+    // sending its token to the old one.
+    if (b && found.base !== b) {
+      found.base = b;
+      dirty = true;
+    }
+    if (dirty) save(list);
     return;
   }
-  list.push({ token, label: i18n.t("wallets.defaultLabel", { n: nextLabelNumber(list) }), address });
+  list.push({ token, label: i18n.t("wallets.defaultLabel", { n: nextLabelNumber(list) }), address, base: b });
   save(list);
 }
 
