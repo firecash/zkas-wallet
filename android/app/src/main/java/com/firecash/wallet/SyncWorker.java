@@ -119,7 +119,7 @@ public class SyncWorker extends Worker {
                 if (i + 1 < tries) sleep(EMBEDDED_POLL_MS);
             }
             if (status == null) return Result.retry();
-            processStatus(p, status);
+            processStatus(p, status, token);
             return Result.success();
         } finally {
             // Only stop the engine if THIS worker started it AND the app is not now in the
@@ -183,7 +183,7 @@ public class SyncWorker extends Worker {
     }
 
     /** Compare the reported balance against the stored baseline and notify on a real rise. */
-    private void processStatus(SharedPreferences p, JSONObject status) {
+    private void processStatus(SharedPreferences p, JSONObject status, String token) {
         // Only a FULLY SCANNED wallet reports a balance worth comparing. A wallet still
         // opening or catching up answers with what it has found SO FAR — commonly 0 — and
         // that is not a balance, it is an absence of one. Without this gate the worker stored
@@ -199,14 +199,24 @@ public class SyncWorker extends Worker {
         }
 
         String last = p.getString("lastTotalSompi", null);
-        p.edit().putString("lastTotalSompi", total.toString()).apply();
+        // WHOSE balance that baseline is. One global key, and the app switches wallets: the
+        // baseline was wallet A's while the status being compared was wallet B's, so switching
+        // to a wallet holding more announced the DIFFERENCE BETWEEN TWO WALLETS as an incoming
+        // payment. A switch is a first run for the wallet switched to, and the first-run rule
+        // below is already the right one — "announcing the whole balance as 'received' is
+        // exactly the lie the in-app announcement avoids too".
+        String baselineToken = p.getString("baselineToken", "");
+        p.edit()
+            .putString("lastTotalSompi", total.toString())
+            .putString("baselineToken", token)
+            .apply();
         // A rise the app can explain by its OWN settling payment is not a payment to you.
         long quietUntil = p.getLong("quietUntil", 0L);
         boolean quiet = quietUntil > 0 && System.currentTimeMillis() < quietUntil;
         WalletWidget.refreshAll(getApplicationContext());
         // First run only records the baseline — announcing the whole balance as "received"
         // is exactly the lie the in-app announcement avoids too.
-        if (last != null) {
+        if (last != null && baselineToken.equals(token)) {
             try {
                 BigInteger previous = new BigInteger(last);
                 if (!quiet && total.compareTo(previous) > 0) notifyPayment(formatZkas(total.subtract(previous)));

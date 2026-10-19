@@ -27,7 +27,12 @@ public class WalletWidget extends AppWidgetProvider {
 
     private static void update(Context context, AppWidgetManager manager, int id) {
         SharedPreferences prefs = context.getSharedPreferences(BackgroundSyncPlugin.PREFS, Context.MODE_PRIVATE);
+        // Only if that cached figure belongs to the wallet now configured. It is one global
+        // key and the app switches wallets, so after a switch this sat on the home screen
+        // showing the PREVIOUS wallet's balance until the next background run overwrote it.
         String sompi = prefs.getString("lastTotalSompi", null);
+        String baselineToken = prefs.getString("baselineToken", "");
+        if (!baselineToken.equals(prefs.getString("token", ""))) sompi = null;
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.wallet_widget);
         // The eye toggle applies here most of all. This sits on the HOME SCREEN, readable by
         // anyone who glances at the phone — the exact thing hiding balances is for — and the
