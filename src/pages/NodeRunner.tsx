@@ -265,18 +265,29 @@ export function NodeRunner() {
   const run = async (name: typeof busy, task: () => Promise<unknown>): Promise<boolean> => {
     setBusy(name);
     setError(null);
+    let ok = false;
     try {
       await task();
+      // The TASK is what this returns. `refresh` rethrows so its caller can tell a dead
+      // supervisor from a live one, and awaiting it inside this try meant a successful
+      // action whose refresh then failed was reported as a failed action: `startNode` does
+      // `if (started) setShowStart(false)`, so the Start dialog stayed open with an error on
+      // it while the node was in fact running — and the next click answered "already
+      // running". Same principle the send path states: an answer that did not arrive is not
+      // a failure, it is an unknown.
+      ok = true;
       // No page reload: the API reads its base URL per request, so refreshing the
       // shell config (initDesktop / setNodeSource) and this page's state is enough.
-      await refresh();
-      return true;
+      //
+      // A refresh that fails here still tells the user — `refresh` sets both `stale` and the
+      // error text — so nothing is hidden; it simply no longer claims the action failed.
+      await refresh().catch(() => undefined);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-      return false;
     } finally {
       setBusy(null);
     }
+    return ok;
   };
 
   const openStartDialog = () => {
