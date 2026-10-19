@@ -1,3 +1,5 @@
+import { elapsedSince } from "./elapsed";
+
 /// Should this status poll be skipped because the service keeps failing?
 ///
 /// The daemon's own supervisor backs off when a restart fails immediately — "one that dies
@@ -21,5 +23,8 @@ const BACKOFF_EVERY_MS = 15_000;
 
 export function skipPollWhileFailing(failures: number, lastAttemptMs: number, now = Date.now()): boolean {
   if (failures < BACKOFF_AFTER_FAILURES) return false;
-  return now - lastAttemptMs < BACKOFF_EVERY_MS;
+  // elapsedSince: a backward clock step makes this negative, which is less than the interval,
+  // so the poll would be skipped on every tick and the status screen would stop updating
+  // altogether for as long as the skew lasted.
+  return elapsedSince(lastAttemptMs, now) < BACKOFF_EVERY_MS;
 }

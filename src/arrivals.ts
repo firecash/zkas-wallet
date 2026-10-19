@@ -1,3 +1,5 @@
+import { elapsedSince } from "./lib/elapsed";
+
 // Deciding whether the balance going UP means somebody paid you.
 //
 // The wallet has no way to be *told* about an incoming shielded payment — that is the
@@ -73,7 +75,10 @@ export const PENDING_WINDOW_MS = 75 * 60_000;
  * change could still be landing.
  */
 export function ownActivityExplainsRise(sends: OutgoingRecord[], now = Date.now(), windowMs = SETTLING_WINDOW_MS): boolean {
-  return sends.some((s) => s.pending || now - s.ts <= windowMs);
+  // elapsedSince, not `now - s.ts`: a backward clock step makes that negative, which is less
+  // than any window, so EVERY send would look like it had just settled and a real incoming
+  // payment would be attributed to the owner's own activity and never announced.
+  return sends.some((s) => s.pending || elapsedSince(s.ts, now) <= windowMs);
 }
 
 /**
@@ -108,7 +113,9 @@ export function arrivalAmount(
  */
 export function quietUntil(sends: OutgoingRecord[], now = Date.now(), windowMs = SETTLING_WINDOW_MS): number {
   const deadlines = sends
-    .filter((s) => s.pending || now - s.ts <= windowMs)
+    // Same guard as ownActivityExplainsRise: a negative elapsed would hold the quiet window
+    // open for every past send and silence the notifications entirely.
+    .filter((s) => s.pending || elapsedSince(s.ts, now) <= windowMs)
     // A pending send is anchored on its OWN timestamp as well as on now: the deadline is a
     // property of the send, so it survives the app being closed for the whole hour the
     // daemon may hold the spend. The rolling `now` term stays as well, so a send still

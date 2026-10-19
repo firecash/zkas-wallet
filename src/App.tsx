@@ -951,7 +951,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         // whose startup we are waiting on.
         const ownEngine = embeddedChosen() || (isDesktop() && localEngine());
         const stillOpeningLocally =
-          ownEngine && missingSince.current != null && now - missingSince.current < LOCAL_ENGINE_MISSING_GRACE_MS;
+          // elapsedSince: a backward clock makes this negative, so a wallet the daemon has
+          // genuinely stopped serving would read as "still opening locally" indefinitely and
+          // the real problem would never surface.
+          ownEngine && missingSince.current != null && elapsedSince(missingSince.current, now) < LOCAL_ENGINE_MISSING_GRACE_MS;
         const transient = missingPolls.current <= MISSING_TOLERANCE || stillOpeningLocally;
         const denied = !!prev?.has_wallet && !s.has_wallet;
         // Out of grace with a wallet on record: if this device holds the seed,
@@ -992,7 +995,9 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
           (denied || missingKnownWallet) &&
           hasLocalKey &&
           !noKeyHere.current &&
-          (repairInFlight.current || (repairAttempts.current > 0 && now - lastRepairAt.current < 20_000));
+          // elapsedSince for the same reason: negative means "repaired moments ago", which
+          // would hold the wallet in the repair state permanently.
+          (repairInFlight.current || (repairAttempts.current > 0 && elapsedSince(lastRepairAt.current, now) < 20_000));
         // The hold is ending and no repair can run (this device holds no key for
         // the wallet under ANY token): do NOT drop to "create a new wallet" —
         // surface the recovery screen instead. A user watching their wallet

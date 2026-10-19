@@ -24,6 +24,7 @@
 // refuses to sign anything that is not a payment to this wallet itself.
 
 import { MAX_NOTES_PER_TX } from "./noncustodial";
+import { elapsedSince } from "./lib/elapsed";
 import { feeReserveSompi } from "./fees";
 import type { Status } from "./api";
 
@@ -110,10 +111,14 @@ export function shouldRunMaintenance(input: MaintenanceInputs): MaintenanceDecis
   // spend; asking anything weaker here just moves the failure to /prepare.
   if (status.spend_ready === false) return { run: false, because: "not-spend-ready" };
   if ((status.note_count ?? 0) <= MAINTENANCE_NOTE_THRESHOLD) return { run: false, because: "few-notes" };
-  if (lastRunAt !== null && now - lastRunAt < MAINTENANCE_MIN_INTERVAL_MS) return { run: false, because: "too-soon" };
+  // elapsedSince: a backward clock makes this negative, so every run would read as "too
+  // soon" and consolidation would stop entirely until the skew passed.
+  if (lastRunAt !== null && elapsedSince(lastRunAt, now) < MAINTENANCE_MIN_INTERVAL_MS) return { run: false, because: "too-soon" };
   // Repeated failures: wait, rather than paying for another proof every minute.
   const backoff = maintenanceBackoffMs(input.consecutiveFailures ?? 0);
-  if (backoff > 0 && input.lastFailureAt != null && now - input.lastFailureAt < backoff) {
+  // elapsedSince here too — my own backoff had the same raw subtraction, and negative means
+  // "still backing off", i.e. permanently.
+  if (backoff > 0 && input.lastFailureAt != null && elapsedSince(input.lastFailureAt, now) < backoff) {
     return { run: false, because: "backing-off" };
   }
 

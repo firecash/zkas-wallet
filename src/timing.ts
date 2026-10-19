@@ -33,6 +33,7 @@
 // the matching bucket, and the fit is affine whenever the samples can support one.
 
 import i18n from "./i18n";
+import { elapsedSince } from "./lib/elapsed";
 
 export type TimedOperation = "prepare" | "consolidate-pass";
 
@@ -110,7 +111,8 @@ function read(op: TimedOperation, token: string, store: Storage | null, now = Da
         s.ms >= MIN_SAMPLE_MS &&
         s.ms <= MAX_SAMPLE_MS &&
         s.notes > 0 &&
-        (s.at === undefined || now - s.at <= SAMPLE_TTL_MS),
+        // elapsedSince: a negative elapsed would keep every aged-out sample alive.
+        (s.at === undefined || elapsedSince(s.at, now) <= SAMPLE_TTL_MS),
     );
   } catch {
     return [];

@@ -1,4 +1,5 @@
 import { readLocal, removeLocal, writeLocal } from "./lib/safestore";
+import { elapsedSince } from "./lib/elapsed";
 // Thin client for the zkas-walletd daemon.
 //
 // Default: the HOSTED daemon, reached same-origin at `<origin>/daemon` (nginx
@@ -541,7 +542,9 @@ export function saveStatusCache(s: Status) {
     ].join("|");
     const now = Date.now();
     const previous = statusCacheWrites.get(key);
-    if (previous?.meaningful === meaningful && now - previous.at < 5_000) return;
+    // elapsedSince: a negative elapsed reads as "written moments ago", so the cache write
+    // would be skipped every time and the cached status would stop advancing.
+    if (previous?.meaningful === meaningful && elapsedSince(previous.at, now) < 5_000) return;
     localStorage.setItem(key, JSON.stringify(s));
     statusCacheWrites.set(key, { meaningful, at: now });
   } catch {
