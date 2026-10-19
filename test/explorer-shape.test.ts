@@ -46,3 +46,43 @@ describe("a list endpoint that answers with a non-list is a failure, not data", 
     expect(page).toContain("Array.isArray(value.blocks)");
   });
 });
+
+describe("every explorer response the views ITERATE is shape-checked", () => {
+  const api = readFileSync("src/api/explorer.ts", "utf8");
+  const page = readFileSync("src/pages/Explorer.tsx", "utf8");
+
+  /**
+   * #72 fixed /blocks/recent and left its neighbours as plain casts. The views reach INTO
+   * those responses without optional-chaining the inner access:
+   *   `data?.nodes?.nodes.map(...)`      — outer chained, `.nodes.map` not
+   *   `data?.nodes?.countries.map(...)`  — same
+   *   `block.verboseData.transactionIds.map(...)` — three unguarded accesses in a row
+   * A 200 with any of those fields missing or non-array throws "`.map` is not a function" and
+   * the page goes blank. `settled()`/`keep()` only notice a rejection.
+   */
+  it("validates the endpoints whose fields are iterated", () => {
+    for (const [fn, path] of [["asList", "/blocks/recent"], ["asNodesInfo", "/info/nodes"], ["asBlockDetail", "/blocks/"]]) {
+      expect(api, path).toContain(fn as string);
+      const i = api.indexOf(`"${path}"`) >= 0 ? api.indexOf(`"${path}"`) : api.indexOf(path as string);
+      expect(i, path).toBeGreaterThan(0);
+    }
+    // And the casts are gone from those three.
+    expect(api).not.toContain('explorerGet<NodesInfo>("/info/nodes")');
+    expect(api).not.toMatch(/explorerGet<BlockDetail>/);
+  });
+
+  it("checks the exact fields the views iterate, not just the envelope", () => {
+    const i = api.indexOf("function asNodesInfo");
+    expect(api.slice(i, i + 420)).toContain("Array.isArray(v.nodes)");
+    expect(api.slice(i, i + 420)).toContain("Array.isArray(v.countries)");
+    const j = api.indexOf("function asBlockDetail");
+    expect(api.slice(j, j + 460)).toContain("transactionIds");
+  });
+
+  it("the views still reach in the way that made this necessary", () => {
+    // If someone later optional-chains these, the guards stay correct but this test records
+    // why they exist.
+    expect(page).toContain("data?.nodes?.nodes.map");
+    expect(page).toContain("block.verboseData.transactionIds.map");
+  });
+});

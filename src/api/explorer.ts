@@ -328,6 +328,40 @@ export interface PulseInfo {
 /// Throwing is deliberate: it routes a malformed answer into the machinery that already
 /// exists for an absent one, rather than substituting an empty list that would read on screen
 /// as "the chain has no recent blocks".
+/// A `/info/nodes` answer whose list fields are not lists.
+///
+/// The map view reads `data?.nodes?.nodes.map(...)` and `data?.nodes?.countries.map(...)`: the
+/// OUTER access is optional-chained, the inner `.map` is not. So a 200 whose `nodes` or
+/// `countries` field is missing, null, or any non-array throws `.map is not a function` and
+/// the Explore page goes blank — the same failure as /blocks/recent (fixed above), on the
+/// endpoint next to it. `settled()` and `keep()` still only notice a REJECTION, not a
+/// wrong-shaped success.
+///
+/// Throws for the same reason `asList` does: it routes a malformed answer into the machinery
+/// that already handles an absent one, rather than substituting empty lists that would render
+/// as "the network has no nodes".
+/// A `/blocks/:id` answer whose transaction list is not a list.
+///
+/// The block view reads `block.verboseData.transactionIds.map(...)` — three unguarded
+/// accesses in a row. A 200 missing `verboseData`, or carrying a non-array `transactionIds`,
+/// throws there and the detail page goes blank. Same class as /blocks/recent and /info/nodes:
+/// `settled()` and `keep()` only notice a rejection, never a wrong-shaped success.
+function asBlockDetail(value: unknown): BlockDetail {
+  const v = value as Partial<BlockDetail> | null;
+  if (!v || typeof v !== "object" || !Array.isArray((v.verboseData as { transactionIds?: unknown } | undefined)?.transactionIds)) {
+    throw new Error(i18n.t("api.invalidResponse", { status: "/blocks/:id" }));
+  }
+  return v as BlockDetail;
+}
+
+function asNodesInfo(value: unknown): NodesInfo {
+  const v = value as Partial<NodesInfo> | null;
+  if (!v || typeof v !== "object" || !Array.isArray(v.nodes) || !Array.isArray(v.countries)) {
+    throw new Error(i18n.t("api.invalidResponse", { status: "/info/nodes" }));
+  }
+  return v as NodesInfo;
+}
+
 function asList<T>(what: string, value: unknown): T[] {
   if (!Array.isArray(value)) throw new Error(i18n.t("api.invalidResponse", { status: what }));
   return value as T[];
@@ -336,10 +370,10 @@ function asList<T>(what: string, value: unknown): T[] {
 export const explorerApi = {
   blockdag: () => explorerGet<BlockdagInfo>("/info/blockdag"),
   network: () => explorerGet<NetworkInfo>("/info/network"),
-  nodes: () => explorerGet<NodesInfo>("/info/nodes"),
+  nodes: () => explorerGet<unknown>("/info/nodes").then(asNodesInfo),
   relay: () => explorerGet<RelayInfo>("/info/relay"),
   recentBlocks: () => explorerGet<unknown>("/blocks/recent").then((v) => asList<BlockSummary>("/blocks/recent", v)),
-  block: (id: string) => explorerGet<BlockDetail>(`/blocks/${encodeURIComponent(id)}`),
+  block: (id: string) => explorerGet<unknown>(`/blocks/${encodeURIComponent(id)}`).then(asBlockDetail),
   transaction: (id: string) => explorerGet<TransactionDetail>(`/transactions/${encodeURIComponent(id)}`),
   shieldedPool: () => explorerGet<ShieldedPoolInfo>("/info/shielded"),
   halving: () => explorerGet<HalvingInfo>("/info/halving"),
