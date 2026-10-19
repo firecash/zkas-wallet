@@ -509,6 +509,22 @@ export async function sendNonCustodial(
       const chunkAmount = BigInt(prep.amount_sompi_exact ?? Math.round(prep.amount_sompi));
       const chunkFee = BigInt(prep.fee_sompi_exact ?? Math.round(prep.fee_sompi));
       const remaining = BigInt(prep.remaining_sompi_exact ?? Math.round(prep.remaining_sompi ?? 0));
+      // None of these can be negative, and the equation below does NOT catch it.
+      //
+      // `chunkAmount + remaining === owed` holds just as nicely with remaining = -X and
+      // chunkAmount = owed + X. That matters because the figure the device verifies against
+      // is the one computed HERE: `verifyAndSignPayment` is handed `chunkAmount` and checks
+      // that the bundle pays the user's recipient exactly that, so an inflated chunkAmount
+      // is an inflated payment that verifies and signs cleanly. The recipient stays the
+      // user's; the amount would not be, and it is bounded only by what the wallet can
+      // spend. `remaining <= 0n` then breaks the loop, so it would be one quiet transaction
+      // for up to the whole balance.
+      //
+      // This is the daemon the architecture already refuses to trust — "the guard against a
+      // malicious prover" — so its arithmetic gets checked for sign before it is used.
+      if (chunkAmount < 0n || chunkFee < 0n || remaining < 0n) {
+        throw new Error(i18n.t("noncustodial.amountChanged"));
+      }
       // A daemon that pays less than asked must account for every missing sompi
       // in `remaining` — anything else is it silently rewriting the payment.
       if (chunkAmount + remaining !== owed) {
