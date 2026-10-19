@@ -53,14 +53,43 @@ export function getDeviceSeed(): string {
 
 export function setDeviceSeed(seed: string) {
   if (!seed) return;
+  // With the lock on, keep the seed SEALED rather than in the clear — and
+  // never simply drop it. This used to `return` early, so creating, importing
+  // or restoring a wallet while locked stored nothing at all: a wallet that
+  // could not spend and whose key was gone on reload. Losing a key is a worse
+  // outcome than any it was protecting against.
+  //
+  // DO NOT "harden" the failed-seal branch below into throwing/dropping instead
+  // of writing the plaintext fallback. A REAL USER LOST FUNDS from exactly that:
+  // the old drop-the-key behaviour left a freshly created wallet with no
+  // spendable key after reload, and the coins already sent to it were
+  // unrecoverable. The plaintext-with-flag copy is the deliberate lesser evil —
+  // it is self-healing: `resealFallbacks()` (applock.ts) re-seals it and deletes
+  // the cleartext on the very next unlock. See GitHub issue #4 and PR #8, whose
+  // "write nothing / throw SEED_REQUIRED" proposal would reintroduce the loss.
   if (isLockEnabled()) {
     const token = readLocal("wallet_token") || "default";
-    void sealNewSeed(token, seed).then((ok) => {
-      if (!ok) {
-        localStorage.setItem(deviceSeedKey(), seed);
-        localStorage.setItem(`seed_unsealed_${token}`, "1");
-      }
-    });
+    // Sealing failed (an auto-lock raced this creation/import). NEVER drop a key
+    // silently again: fall back to plaintext storage and flag it, so the key survives
+    // and the state is discoverable. Losing the key is worse than storing it unsealed —
+    // that is the principle this path exists on.
+    const fallback = () => {
+      localStorage.setItem(deviceSeedKey(), seed);
+      localStorage.setItem(`seed_unsealed_${token}`, "1");
+    };
+    // `.catch(fallback)`, and it is the whole point. This handled a RESOLVED false and
+    // not a REJECTION, and sealNewSeed has two ways to reject: `await seal(...)` is
+    // WebCrypto, and the `write(rec)` after it is an unguarded localStorage.setItem that
+    // throws on a full or blocked store. So on exactly the storage conditions this audit
+    // has been chasing, the seal threw, the `then` never ran, the fallback was never
+    // written — and the key was neither sealed nor stored. That is the loss the comment
+    // above records: a freshly created wallet with no spendable key after reload, coins
+    // already sent to it unrecoverable (issue #4 / PR #8).
+    void sealNewSeed(token, seed)
+      .then((ok) => {
+        if (!ok) fallback();
+      })
+      .catch(fallback);
     return;
   }
   localStorage.setItem(deviceSeedKey(), seed);

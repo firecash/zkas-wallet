@@ -37,7 +37,7 @@ import { readLocal, writeLocal } from "./lib/safestore";
 import { birthdayAheadOfTip } from "./lib/birthday";
 import { skipPollWhileFailing } from "./lib/pollbackoff";
 import { MEMO_MAX_BYTES, clampUtf8Bytes } from "./lib/safetext";
-import { SEED_REQUIRED, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
+import { SEED_REQUIRED, getDeviceSeed, setDeviceSeed, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
 import { masterMnemonic, setMasterMnemonic, clearMasterMnemonic, setAccountOf, clearAccountOf, nextFreeAccount, releaseAccount, reserveAccount, accountOf, adoptExistingPhrase, hasMaster } from "./accounts";
 
 const WalletTools = lazy(() => import("./pages/WalletTools").then((m) => ({ default: m.WalletTools })));
@@ -1890,65 +1890,32 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
 function deviceSeedKey(): string {
   return `device_seed_${readLocal("wallet_token") || "default"}`;
 }
-export function getDeviceSeed(): string {
-  // With the app lock on, the seed exists only in memory for the current
-  // session — nothing readable is left in storage to fall back to. One
-  // exception: the `seed_unsealed_` fallback, written when sealing a new
-  // wallet's key FAILED (an auto-lock raced its creation). That copy is the
-  // difference between a flagged-but-saved key and a lost wallet, so it is
-  // readable even while locked.
-  const unlocked = unlockedDeviceSeed();
-  if (unlocked) return unlocked;
-  if (isLockEnabled()) {
-    const token = readLocal("wallet_token") || "default";
-    if (localStorage.getItem(`seed_unsealed_${token}`)) return localStorage.getItem(deviceSeedKey()) || "";
-    return "";
-  }
-  return localStorage.getItem(deviceSeedKey()) || "";
-}
-export function setDeviceSeed(seed: string) {
-  if (!seed) return;
-  // With the lock on, keep the seed SEALED rather than in the clear — and
-  // never simply drop it. This used to `return` early, so creating, importing
-  // or restoring a wallet while locked stored nothing at all: a wallet that
-  // could not spend and whose key was gone on reload. Losing a key is a worse
-  // outcome than any it was protecting against.
-  //
-  // DO NOT "harden" the failed-seal branch below into throwing/dropping instead
-  // of writing the plaintext fallback. A REAL USER LOST FUNDS from exactly that:
-  // the old drop-the-key behaviour left a freshly created wallet with no
-  // spendable key after reload, and the coins already sent to it were
-  // unrecoverable. The plaintext-with-flag copy is the deliberate lesser evil —
-  // it is self-healing: `resealFallbacks()` (applock.ts) re-seals it and deletes
-  // the cleartext on the very next unlock. See GitHub issue #4 and PR #8, whose
-  // "write nothing / throw SEED_REQUIRED" proposal would reintroduce the loss.
-  if (isLockEnabled()) {
-    const token = readLocal("wallet_token") || "default";
-    // Sealing failed (an auto-lock raced this creation/import). NEVER drop a key
-    // silently again: fall back to plaintext storage and flag it, so the key survives
-    // and the state is discoverable. Losing the key is worse than storing it unsealed —
-    // that is the principle this path exists on.
-    const fallback = () => {
-      localStorage.setItem(deviceSeedKey(), seed);
-      localStorage.setItem(`seed_unsealed_${token}`, "1");
-    };
-    // `.catch(fallback)`, and it is the whole point. This handled a RESOLVED false and
-    // not a REJECTION, and sealNewSeed has two ways to reject: `await seal(...)` is
-    // WebCrypto, and the `write(rec)` after it is an unguarded localStorage.setItem that
-    // throws on a full or blocked store. So on exactly the storage conditions this audit
-    // has been chasing, the seal threw, the `then` never ran, the fallback was never
-    // written — and the key was neither sealed nor stored. That is the loss the comment
-    // above records: a freshly created wallet with no spendable key after reload, coins
-    // already sent to it unrecoverable (issue #4 / PR #8).
-    void sealNewSeed(token, seed)
-      .then((ok) => {
-        if (!ok) fallback();
-      })
-      .catch(fallback);
-    return;
-  }
-  localStorage.setItem(deviceSeedKey(), seed);
-}
+/// Re-exported from `lib/deviceseed`, which is where this lives now.
+///
+/// There were two copies of this function with the same logic and different reads: that one
+/// goes through `readSeed`, which catches the throw a BLOCKED store raises on every access
+/// (and deliberately skips safestore's session fallback, because a spending key must never
+/// live somewhere that empties on reload). This copy used a bare `localStorage.getItem`.
+///
+/// This was the copy called from render — `!!(getDeviceSeed() || cachedAddress)` in a
+/// derived value, the status poll, the send path — so on a browser with site data blocked it
+/// threw where its twin would have answered "no seed stored" and asked for the recovery
+/// phrase. Exactly what `bgSyncEnabled` was fixed for: "a bare accessor takes the settings
+/// row down on a browser with site data blocked".
+export { getDeviceSeed };
+/// `setDeviceSeed` — ONE implementation, in ./lib/deviceseed, re-exported here.
+///
+/// There were two. The copy over there had the same shape but only a `.then`, no
+/// `.catch(fallback)` — and it was NOT dead: `resolveDeviceSeed` calls it on the
+/// orphan-recovery path, where a seed found under a stale token is re-homed under the
+/// current one. So on a full or blocked store the seal rejected, the `then` never ran, and
+/// the rescued seed was persisted NOWHERE: the recovery returned a working key for that one
+/// call and lost it again on reload, which is the very key-drop this function's own comment
+/// was written about.
+///
+/// Consolidated rather than patched in place, exactly as SEED_REQUIRED and resolveDeviceSeed
+/// already were: two writers for the most dangerous value in the app will drift again.
+export { setDeviceSeed };
 
 // The wallet's scan birthday (DAA height) — rememberBirthday / walletBirthday /
 // knownBirthday — lives in ./lib/deviceseed (one implementation, no drift). It is

@@ -62,14 +62,24 @@ describe("storage rules that must not be tidied away", () => {
     expect(deviceseed).not.toContain("readLocal(`seed_unsealed_${token}`)");
   });
 
-  it("seed WRITES stay loud", () => {
+  it("seed WRITES stay loud, wherever the writer lives", () => {
     // The opposite half of the same rule: a seed that could not be stored has to fail where
     // somebody sees it, so these must not be routed through writeLocal, which swallows.
-    const app = readFileSync("src/App.tsx", "utf8");
-    const set = app.slice(app.indexOf("export function setDeviceSeed"));
+    //
+    // Found by file originally, which broke the moment the writer moved — and the move was
+    // itself a fix, because there were TWO copies of it and the one `resolveDeviceSeed`
+    // called on the orphan-recovery path lacked the `.catch(fallback)`. So this now locates
+    // the definition instead of assuming a file, and pins that there is exactly one.
+    const files = ["src/App.tsx", "src/lib/deviceseed.ts"];
+    const defining = files.filter((f) => readFileSync(f, "utf8").includes("export function setDeviceSeed"));
+    expect(defining, "exactly one module may define setDeviceSeed").toHaveLength(1);
+    const src = readFileSync(defining[0], "utf8");
+    const set = src.slice(src.indexOf("export function setDeviceSeed"));
     const body = set.slice(0, set.indexOf("\n}") + 2);
     expect(body).toContain("localStorage.setItem");
     expect(body).not.toContain("writeLocal(");
+    // And the rejection path that cost a user their coins stays covered.
+    expect(body).toContain(".catch(fallback)");
   });
 
   it("storage enumerations are guarded, since .length throws too", () => {
