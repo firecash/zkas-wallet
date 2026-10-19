@@ -107,6 +107,28 @@ export async function captureScanReceipt(address?: string | null): Promise<boole
  * call is harmless; we drop the stash either way, because a receipt is a snapshot and a
  * stale one is worth less than the scan that has since run.
  */
+/// Drop the stash if it belongs to the wallet being removed.
+///
+/// The stash records an `address` and that wallet's scan receipt. Adoption is already guarded
+/// by the address — "so it is never applied to another" wallet — so a leftover could not be
+/// misapplied; what survived "Remove wallet" was the metadata, since the key is GLOBAL
+/// (`zkas_scan_receipt_v1`) and no per-wallet prefix sweep can reach it. walletstate removes
+/// `birthday_addr_<address>` for the same reason — an address identifies a wallet — and it
+/// already has the address in hand at that point.
+///
+/// Third key found this way, after the transaction labels and the Send draft.
+export function forgetScanReceipt(address: string): void {
+  if (!address) return;
+  // Raw accessor, like every other access in this file — mixing safestore in for one
+  // operation is what left a send recorded only in a session map elsewhere.
+  try {
+    const stash = read();
+    if (stash && stash.address === address) localStorage.removeItem(KEY);
+  } catch {
+    /* storage unavailable: there is no stash at rest to erase */
+  }
+}
+
 export async function adoptScanReceipt(address?: string | null): Promise<boolean> {
   const stash = read();
   if (!stash || !address || stash.address !== address) return false;

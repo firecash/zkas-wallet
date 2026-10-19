@@ -48,3 +48,44 @@ describe("removing a wallet erases what it was about to pay", () => {
     expect(() => forgetSendDraft("")).not.toThrow();
   });
 });
+
+describe("and the cross-device scan stash goes with it", () => {
+  /**
+   * `zkas_scan_receipt_v1` stashes `{ address, receipt, scannedDaa }` for cross-device fast
+   * sync. Adoption is already guarded by the address — "so it is never applied to another"
+   * wallet — so a leftover could not be misapplied. What survived "Remove wallet" was the
+   * metadata: the removed wallet's address and its scan receipt, because the key is global
+   * and no per-wallet prefix sweep can reach it.
+   *
+   * walletstate removes `birthday_addr_<address>` for the same reason — an address identifies
+   * a wallet — and already has the address in hand there.
+   */
+  const ADDR = "zkas:" + "q".repeat(70);
+
+  beforeEach(() => localStorage.clear());
+
+  it("erases a stash belonging to the removed wallet", async () => {
+    const { forgetScanReceipt } = await import("../src/scanreceipt");
+    localStorage.setItem("zkas_scan_receipt_v1", JSON.stringify({ address: ADDR, receipt: "ff00", scannedDaa: 5, at: Date.now(), from: "x" }));
+    forgetScanReceipt(ADDR);
+    expect(localStorage.getItem("zkas_scan_receipt_v1")).toBeNull();
+  });
+
+  it("leaves another wallet's stash alone", async () => {
+    const { forgetScanReceipt } = await import("../src/scanreceipt");
+    const other = "zkas:" + "p".repeat(70);
+    localStorage.setItem("zkas_scan_receipt_v1", JSON.stringify({ address: other, receipt: "ff00", scannedDaa: 5, at: Date.now(), from: "x" }));
+    forgetScanReceipt(ADDR);
+    expect(localStorage.getItem("zkas_scan_receipt_v1")).not.toBeNull();
+  });
+
+  it("is wired into wipeWalletState via the address it already derives", async () => {
+    const { readFileSync } = await import("node:fs");
+    const ws = readFileSync("src/walletstate.ts", "utf8");
+    // The CODE line, not the comment that also names the key — the comment appears first,
+    // which is the fourth time tonight an assertion matched prose instead of behaviour.
+    const i = ws.indexOf("removeLocal(`birthday_addr_");
+    expect(i).toBeGreaterThan(0);
+    expect(ws.slice(i, i + 560)).toContain("forgetScanReceipt(address)");
+  });
+});

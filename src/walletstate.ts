@@ -1,6 +1,7 @@
 import { readLocal, removeLocal } from "./lib/safestore";
 import { forgetSentDms } from "./lib/dmlog";
 import { forgetSendDraft } from "./lib/senddraft";
+import { forgetScanReceipt } from "./scanreceipt";
 // Removing a wallet, completely.
 //
 // A wallet's state is scattered across storage by design — the daemon holds the
@@ -141,7 +142,18 @@ export function wipeWalletState(token: string | null): void {
   // also clears what safestore holds for each key, which a raw removeItem does not.
   for (const p of PER_WALLET_PREFIXES) removeLocal(p + t);
   sweepScattered(t);
-  if (address && !registeredElsewhere(t, address)) removeLocal(`birthday_addr_${address}`);
+  if (address && !registeredElsewhere(t, address)) {
+    removeLocal(`birthday_addr_${address}`);
+    // The cross-device scan stash is keyed by ADDRESS inside a global key, so the prefix
+    // sweep above cannot reach it. Adoption is already address-guarded, so a leftover could
+    // not be misapplied — but it held this wallet's address and scan receipt after the user
+    // removed it. Third global key found this way, after the labels and the Send draft.
+    try {
+      forgetScanReceipt(address);
+    } catch {
+      /* ignore */
+    }
+  }
   void NEVER_TOUCH; // documentation of intent; see the comment above
 
   // QR images are cached per ADDRESS, and the address of a wallet being removed
