@@ -124,10 +124,23 @@ export function installMirror(): void {
     origSet(key, value);
   };
   localStorage.removeItem = (key: string) => {
-    origRemove(key);
-    // A key the app deliberately deleted must not come back on the next restore —
-    // otherwise removing a wallet would resurrect it, which is worse than losing it.
-    if (shouldMirror(key)) void mirrorDrop(key);
+    try {
+      origRemove(key);
+    } finally {
+      // A key the app deliberately deleted must not come back on the next restore —
+      // otherwise removing a wallet would resurrect it, which is worse than losing it.
+      //
+      // In a `finally` for the same reason setItem above mirrors FIRST: `origRemove` can
+      // throw. A store that is blocked rather than merely full throws on every access, and
+      // `removeLocal` wraps this call in a `catch` that swallows it — so the app would
+      // believe the key was gone while the Keychain still held it, and `mirrorRestore` would
+      // hand it back at the next launch. For "Remove wallet" that resurrects a wallet; for
+      // the lock screen's "erase this device" it leaves the seed of a wallet someone erased
+      // under duress sitting in the Keychain.
+      //
+      // The throw still propagates, so callers that must fail loudly keep doing so.
+      if (shouldMirror(key)) void mirrorDrop(key);
+    }
   };
 }
 
