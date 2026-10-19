@@ -5,7 +5,22 @@ const KEY = "zkas_pending_payment_v1";
 
 function normalize(raw: string): string | null {
   let value = raw.trim();
-  if (value.startsWith("web+zkas:")) value = decodeURIComponent(value.slice("web+zkas:".length));
+  if (value.startsWith("web+zkas:")) {
+    // decodeURIComponent THROWS a URIError on a malformed escape — "web+zkas:%" is enough —
+    // and this runs on the BOOT path: main.tsx reads `?payment=` straight out of
+    // location.search and hands it here before the app mounts, so the exception escaped into
+    // startup and the wallet did not come up. Because the query sits in the URL, reloading
+    // hit the same link again, which made it stick rather than pass.
+    //
+    // That is the very failure the comments below describe for the storage write ("that
+    // exception escaped into startup, where there is nothing to catch it"); the decode was
+    // the half nobody guarded. A link that will not decode is simply not a payment link.
+    try {
+      value = decodeURIComponent(value.slice("web+zkas:".length));
+    } catch {
+      return null;
+    }
+  }
   if (value.length > 1_024) return null;
   const address = value.split("?", 1)[0];
   // `looksLikeAddress`, not a third copy of its regex. This file carried the pattern
