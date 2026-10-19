@@ -40,12 +40,31 @@ export function torEnabled(): boolean {
 
 /** Any scheme, not just http(s) — the chat relay is `ws:`/`wss:`, and an
  *  http-only pattern read "wss://x.onion/..." as a host of "wss:" and answered
- *  "not an onion", which would have refused the one relay that IS private. */
+ *  "not an onion", which would have refused the one relay that IS private.
+ *
+ *  Parsed with `new URL`, NOT by splitting on the first slash. That split took the host to
+ *  be everything before the first `/`, which ignores `#` and `?`:
+ *
+ *      isOnion("https://evil.com#.onion")   -> true,  real host evil.com
+ *      isOnion("wss://evil.com?a=.onion")   -> true,  real host evil.com
+ *
+ *  Both made this gate fail OPEN, which is the one way it must never fail. `onionBase()` then
+ *  reported mode "onion", so the wallet believed it was private while `publicEndpoint` and
+ *  `socketAllowed` sent the request to evil.com — handing a hostile relay the real IP of
+ *  someone who had turned Tor on. `walletd_base` is set by PAIRING as well as by Settings,
+ *  so this was reachable without the user typing a URL at all.
+ *
+ *  `hostname` also excludes userinfo and the port and unwraps IPv6 brackets, which the hand
+ *  -rolled version was doing by hand. A value that will not parse is not an onion. */
 function isOnion(raw: string): boolean {
   const s = raw.trim().toLowerCase();
-  const scheme = s.match(/^[a-z][a-z0-9+.-]*:\/\/([^/]+)/);
-  const host = (scheme ? scheme[1] : s).split("/")[0].replace(/^\[|\]$/g, "").split(":")[0];
-  return host.endsWith(".onion");
+  if (!s) return false;
+  try {
+    const absolute = /^[a-z][a-z0-9+.-]*:\/\//.test(s) ? s : `https://${s}`;
+    return new URL(absolute).hostname.endsWith(".onion");
+  } catch {
+    return false;
+  }
 }
 
 /** The onion origin that also serves `/chain` and `/services.v1.json` — the
