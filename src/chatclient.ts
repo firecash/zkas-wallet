@@ -31,6 +31,7 @@ export {
 import { GLOBAL_ROOM, relayUrl, mutedKeys } from "./lib/chatprefs";
 import { socketAllowed } from "./lib/privacy";
 import { safeText } from "./lib/safetext";
+import { looksLikeAddress } from "./lib/utils";
 
 /** Nostr kinds. Standard ones throughout, so nothing here is a private dialect:
  *  a general Nostr client pointed at our relay would render these events, and
@@ -560,7 +561,21 @@ export function parseProfile(content: string): { name?: string; zkas?: string; a
   try {
     const d = JSON.parse(content) as Record<string, unknown>;
     const name = typeof d.name === "string" ? safeText(d.name).slice(0, 32) : undefined;
-    const zkas = typeof d.zkas === "string" && d.zkas.startsWith("zkas:") ? d.zkas.trim() : undefined;
+    // The address gets the STRICTEST treatment here, not the weakest — it is the only field
+    // in this profile that feeds a payment. It used to be accepted on `startsWith("zkas:")`
+    // alone, while `name` and `about` beside it were both sanitised and capped.
+    //
+    // Three things were missing. A charset check: `looksLikeAddress` is the app's own
+    // validator and `zkas:` plus anything at all passed without it. A length cap: a stranger
+    // could park a megabyte in a cached profile. And `safeText`, which matters most — it
+    // strips the bidi overrides that reorder text on screen, and contacts.ts spells out why
+    // that is dangerous next to an address: "a name is rendered BESIDE an address ... so a
+    // bidi override in it can reorder that address on screen". This string IS the address,
+    // it arrives from a public relay rather than the user's own address book, and tapping
+    // "Send ZKAS" puts it straight into the send form. The owner then confirms what they can
+    // see, so what they can see has to be what they are paying.
+    const zkasRaw = typeof d.zkas === "string" ? safeText(d.zkas).slice(0, 100) : "";
+    const zkas = looksLikeAddress(zkasRaw) ? zkasRaw.trim() : undefined;
     // Truncated AND stripped of line breaks: a stranger controls this string, and
     // a hundred newlines in it would push every other row off the sheet.
     const about =

@@ -76,11 +76,22 @@ describe("parseProfile stays defensive", () => {
     expect(parseProfile('{"name":{"a":1}}').name).toBeUndefined();
   });
 
-  it("only accepts an advertised address that at least looks like one", () => {
+  it("only accepts an advertised address that really looks like one", () => {
     expect(parseProfile('{"zkas":"not-an-address"}').zkas).toBeUndefined();
-    expect(parseProfile('{"zkas":"zkas:abc"}').zkas).toBe("zkas:abc");
-    // NOTE: this is a prefix check, not looksLikeAddress — a stranger can still advertise
-    // a malformed address here. Sending is gated separately: "Review send" stays disabled
-    // unless looksLikeAddress passes, so the worst case is a bad string on display.
+    // This used to accept `zkas:abc` and documented why that was tolerable: sending is gated
+    // separately, since "Review send" stays disabled unless looksLikeAddress passes, so a
+    // malformed advertised address could only ever be displayed. That reasoning holds — and
+    // it also covers the bidi case, because looksLikeAddress's charset has no room for an
+    // override character either.
+    //
+    // It is still checked HERE now, for the two things that argument does not cover: the
+    // field had no length cap while `name` (32) and `about` both do, so a stranger could
+    // park a megabyte in a cached profile; and it skipped safeText, the one treatment its
+    // two siblings in this same function both get. Parity with them is the point — the field
+    // that can cost money should not have the weakest validation of the three.
+    expect(parseProfile('{"zkas":"zkas:abc"}').zkas).toBeUndefined();
+    const real = "zkas:" + "qpzry9x8gf2tvdw0s3jn54khce6mua7l".repeat(2) + "qpzry9";
+    expect(parseProfile(JSON.stringify({ zkas: real })).zkas).toBe(real);
+    expect(parseProfile(JSON.stringify({ zkas: "zkas:" + "q".repeat(200_000) })).zkas).toBeUndefined();
   });
 });
