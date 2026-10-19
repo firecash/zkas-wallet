@@ -1,4 +1,4 @@
-import { readLocal } from "./lib/safestore";
+import { readLocal, writeLocal } from "./lib/safestore";
 import { elapsedSince } from "./lib/elapsed";
 // On-device record of sends performed from THIS device, scoped to the wallet
 // token. The daemon exposes no per-wallet transaction history, so this powers two
@@ -114,11 +114,14 @@ export function loadTxs(): LocalTx[] {
 }
 
 function save(txs: LocalTx[]) {
-  try {
-    localStorage.setItem(key(), JSON.stringify(txs.slice(0, MAX)));
-  } catch {
-    /* quota / private mode — history is best-effort */
-  }
+  // writeLocal, to match the reader. `loadTxs` already reads through safestore, so a raw
+  // write here could never populate what that reader consults: on a browser with site storage
+  // blocked, a send recorded the instant after it was broadcast vanished from history
+  // immediately, rather than surviving the page the way safestore's session copy allows.
+  // Contacts states the same rule for the same reason — "a raw read here would not see it, so
+  // a contact would vanish the instant it was saved" — and this file had it the other way
+  // round. Still best-effort across a reload, which is all this list ever claimed to be.
+  writeLocal(key(), JSON.stringify(txs.slice(0, MAX)));
 }
 
 /** Record a freshly broadcast send. Returns the updated list. */
@@ -263,16 +266,15 @@ function snapKey(): string {
 }
 
 export function saveSnapshot(s: Snapshot) {
-  try {
-    localStorage.setItem(snapKey(), JSON.stringify(s));
-  } catch {
-    /* storage full / disabled — the snapshot is an optimization, never a source of truth */
-  }
+  // Through safestore both ways, like the list above. The comment on `snapKey` describes the
+  // last-known-balance net dying on exactly the browsers most likely to need it; a raw write
+  // leaves it dead for the session even when the read is safe.
+  writeLocal(snapKey(), JSON.stringify(s));
 }
 
 export function loadSnapshot(): Snapshot | null {
   try {
-    const raw = localStorage.getItem(snapKey());
+    const raw = readLocal(snapKey());
     if (!raw) return null;
     const s = JSON.parse(raw) as Snapshot;
     return typeof s?.balanceFc === "number" ? s : null;

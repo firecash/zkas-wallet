@@ -41,7 +41,12 @@ describe("site storage blocked entirely", () => {
     blockStorage();
     expect(() => saveSnapshot({ balanceFc: 1, spendableFc: 1, maturingFc: 0, noteCount: 1, ts: Date.now() })).not.toThrow();
     expect(() => loadSnapshot()).not.toThrow();
-    expect(loadSnapshot()).toBeNull();
+    // This asserted `toBeNull()`, which pinned the behaviour of the raw accessor rather than
+    // the property this test is named for. Both sides now go through safestore, so the
+    // snapshot SURVIVES the page instead of being absent — strictly better, and still not
+    // taking its callers with it. Across a reload it is gone either way, which is all a
+    // last-known-balance net ever claimed.
+    expect(loadSnapshot()?.balanceFc).toBe(1);
   });
 
   it("a working store still round-trips the snapshot", () => {
