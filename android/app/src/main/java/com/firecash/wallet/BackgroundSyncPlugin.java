@@ -110,6 +110,30 @@ public class BackgroundSyncPlugin extends Plugin {
         call.resolve();
     }
 
+    /**
+     * Cancel the work AND erase everything this plugin stored.
+     *
+     * `disable` stops the schedule but deliberately keeps the configuration, so turning the
+     * toggle back on does not need the app to re-send it. That is wrong for one caller: the
+     * lock screen's "erase this device". That path wipes the wallets, the master phrase, the
+     * registry, the lock record and the biometric binding — and this file kept the wallet
+     * TOKEN, the daemon bearer, the last known balance and `enabled`, which together are a
+     * working read credential plus a poller that goes on asking the daemon about a wallet the
+     * user has just erased, possibly under duress, and can still put a payment on the lock
+     * screen of a phone they thought they had cleared.
+     *
+     * The widget is refreshed last so the home screen stops showing a balance for a wallet
+     * that no longer exists on this device.
+     */
+    @PluginMethod
+    public void forget(PluginCall call) {
+        WorkManager.getInstance(getContext()).cancelUniqueWork(WORK_NAME);
+        WorkManager.getInstance(getContext()).cancelUniqueWork(WORK_NOW);
+        prefs().edit().clear().apply();
+        WalletWidget.refreshAll(getContext());
+        call.resolve();
+    }
+
     @PluginMethod
     public void isEnabled(PluginCall call) {
         JSObject ret = new JSObject();

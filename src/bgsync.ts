@@ -31,6 +31,7 @@ interface BackgroundSyncPlugin {
   configure(opts: { baseUrl: string; token: string; bearer: string; quietUntil: number; hideAmounts: boolean; embedded?: boolean; node?: string; socks?: string }): Promise<void>;
   enable(): Promise<void>;
   disable(): Promise<void>;
+  forget(): Promise<void>;
   isEnabled(): Promise<{ enabled: boolean }>;
   syncNow(): Promise<void>;
   backgroundStatus(): Promise<{ exempt: boolean; suppressed: boolean; shouldAsk: boolean; enabled: boolean }>;
@@ -73,12 +74,25 @@ export async function bgSyncDisable(): Promise<void> {
   removeLocal(FLAG);
 }
 
-/**
- * Re-point the worker at the ACTIVE wallet and current daemon URL. Called on
- * boot (wallet switches reload the app, so boot covers them) and after the
- * daemon URL changes in Settings — the worker is useless while pointing at a
- * wallet this device is no longer looking at.
- */
+/// Erase the worker's whole configuration, for "erase this device".
+///
+/// `bgSyncDisable` keeps the configuration on purpose so re-enabling is cheap. The panic path
+/// needs the opposite: the native side holds the wallet token, the daemon bearer and the last
+/// known balance, none of which are in localStorage and none of which the wipe could reach.
+///
+/// The reload at the end of that path does re-run boot, which reconfigures and would overwrite
+/// the token and bearer with empty values — but a panic wipe must not depend on the app coming
+/// back up to finish erasing. Awaited before the reload for the same reason.
+export async function bgSyncForget(): Promise<void> {
+  if (!bgSyncAvailable()) return;
+  try {
+    await Native.forget();
+  } catch {
+    /* no plugin, or it refused — the reload's reconfigure is the remaining net */
+  }
+  removeLocal(FLAG);
+}
+
 /// Push the eye toggle to the native side the moment it changes.
 ///
 /// The worker and the widget each keep their own copy, and they only learn about it through
@@ -90,6 +104,12 @@ onHideBalancesChange(() => {
   void bgSyncReconfigure();
 });
 
+/**
+ * Re-point the worker at the ACTIVE wallet and current daemon URL. Called on
+ * boot (wallet switches reload the app, so boot covers them) and after the
+ * daemon URL changes in Settings — the worker is useless while pointing at a
+ * wallet this device is no longer looking at.
+ */
 export async function bgSyncReconfigure(): Promise<void> {
   if (!bgSyncEnabled()) return;
   try {

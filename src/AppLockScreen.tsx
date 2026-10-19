@@ -5,6 +5,7 @@
 // nothing to be tricked into revealing.
 
 import { useEffect, useRef, useState } from "react";
+import { bgSyncForget } from "./bgsync";
 import { LanguageButton } from "./LanguagePicker";
 import { useTranslation, Trans } from "react-i18next";
 import { lockKind, unlock } from "./applock";
@@ -281,6 +282,14 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
                   // in the OS credential store indefinitely. The normal
                   // "turn the lock off" path already does this.
                   await disableBiometricUnlock().catch(() => undefined);
+                  // And the native background worker, which none of the above can reach: it
+                  // holds the wallet token, the daemon bearer and the last known balance in
+                  // its own SharedPreferences, with `enabled` still set. Left alone it goes on
+                  // asking the daemon about a wallet this device has just erased and can put a
+                  // payment on the lock screen afterwards. Awaited BEFORE the reload — the
+                  // reload would reconfigure and blank most of it, but an erase must not
+                  // depend on the app coming back up to finish.
+                  await bgSyncForget().catch(() => undefined);
                   location.reload();
                 }}
               >
