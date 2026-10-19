@@ -36,10 +36,11 @@ describe("history tolerates a cold wallet load where it matters", () => {
 
   it("but the 2s poll keeps a short timeout so requests cannot pile up", () => {
     // The polling call site passes no timeout, so it takes the 30s default.
-    const poll = app.indexOf("void api.history(");
+    // Format-independent: the poll's call must not carry the long bound. Anchored on the
+    // in-flight guard that precedes it, since the call itself is now split across lines.
+    const poll = app.indexOf("if (pulling.current) return;");
     expect(poll).toBeGreaterThan(0);
-    const line = app.slice(poll, app.indexOf("\n", poll));
-    expect(line).not.toContain("180_000");
+    expect(app.slice(poll, poll + 420)).not.toContain("180_000");
   });
 
   it("matches the bound watch already uses for the same work", () => {
@@ -93,7 +94,8 @@ describe("show all asks for everything the daemon will give, and admits what it 
   it("requests the daemon's own ceiling instead of omitting the limit", () => {
     expect(app).toMatch(/const HISTORY_MAX = 5_000/);
     expect(app).not.toContain("api.history(showAll ? undefined");
-    const calls = app.match(/api\.history\(showAll \? HISTORY_MAX : HISTORY_PAGE/g) ?? [];
+    // Count the ARGUMENT, not the call's formatting: the poll's call is split across lines.
+    const calls = app.match(/showAll \? HISTORY_MAX : HISTORY_PAGE/g) ?? [];
     expect(calls.length, "both the poll and the user-initiated call").toBe(2);
   });
 
