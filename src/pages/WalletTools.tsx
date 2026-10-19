@@ -1,4 +1,5 @@
 import { VerifyPayment } from "../PaymentProof";
+import { looksLikeAddress } from "../lib/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
@@ -37,7 +38,14 @@ function BatchSend({ status, onRefresh }: { status: Status | null; onRefresh: ()
     const amount_sompi = parseSompi(rawAmount);
     return { line: index + 1, to: to.trim(), amount_sompi, memo: memo.join(",").trim() || undefined };
   }).filter((row) => row.to || row.amount_sompi != null), [rows]);
-  const invalid = parsed.find((row) => !/^(zkas|firecash):[a-z0-9]{50,100}$/i.test(row.to) || row.amount_sompi == null);
+  // looksLikeAddress, not a local regex. This file had its own —
+  // `/^(zkas|firecash):[a-z0-9]{50,100}$/i` — which accepts `b`, `i`, `o` and `1`: the four
+  // characters bech32 leaves out BECAUSE humans confuse them when copying. A batch send is the
+  // worst place for that, because addresses arrive PASTED IN BULK and a one-character
+  // transcription error is exactly what happens here. Mining carried the same regex under a
+  // comment claiming "the app already owns the real test and uses it in WalletTools" — it did
+  // not: this was the instance that comment vouched for.
+  const invalid = parsed.find((row) => !looksLikeAddress(row.to) || row.amount_sompi == null);
   const feeSompi = fee ? parseSompi(fee) : undefined;
   const total = parsed.reduce((sum, row) => sum + (row.amount_sompi ?? 0n), 0n);
   const send = async () => {

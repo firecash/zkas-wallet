@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { looksLikeAddress } from "../lib/utils";
 import { useNavigate, useParams } from "react-router-dom";
 import { clearnetAllowed, onionBase } from "../lib/privacy";
 import { useTranslation } from "react-i18next";
@@ -442,7 +443,10 @@ function TransactionView({ id }: { id: string }) {
 
 function AddressView({ id }: { id: string }) {
   const { t } = useTranslation();
-  const valid = /^(zkas|firecash):[a-z0-9]{50,100}$/i.test(id);
+  // Same shared test as everywhere else. Read-only here, so a weak check only wasted a
+  // lookup — but there is no reason for this file to hold the sixth copy of a regex that
+  // accepts the characters bech32 deliberately omits.
+  const valid = looksLikeAddress(id);
   return (
     <DetailShell title={t("addressView.title")} id={id} error={valid ? "" : t("addressView.invalid")}>
       {valid && (
