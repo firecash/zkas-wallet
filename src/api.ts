@@ -15,7 +15,7 @@ import { WALLET_SERVICE_PORT } from "./ports";
 // desktop.ts imports nothing from here, so this cannot cycle.
 import { desktopRemoteBase } from "./desktop";
 import i18n from "./i18n";
-import { publicEndpoint, privacyMode } from "./lib/privacy";
+import { publicEndpoint, privacyMode, isOnionHost} from "./lib/privacy";
 import { clearTombstone } from "./wallets";
 
 /// Refuse to talk to a wallet service that a privacy mode does not permit.
@@ -116,14 +116,22 @@ export function allowsInsecureWalletd(): boolean {
  * never learns the client's IP. It only actually routes when the device has a
  * Tor transport (Orbot's VPN on Android, or a running Tor on desktop); we add no
  * Tor client of our own. Accepts a bare host, `host:port`, or a full URL. */
-export function isOnionAddress(raw: string): boolean {
-  const s = raw.trim().toLowerCase();
-  let host = s;
-  const scheme = s.match(/^https?:\/\/([^/]+)/i);
-  if (scheme) host = scheme[1];
-  host = host.split("/")[0].replace(/^\[|\]$/g, "").split(":")[0];
-  return host.endsWith(".onion");
-}
+// Re-exported from lib/privacy, which owns the one correct implementation.
+//
+// This had its own copy, and it took the host to be everything before the first slash — so
+// `#` and `?` were part of it:
+//
+//     isOnionAddress("evil.com#.onion")  -> true,  real host evil.com
+//
+// `normalizeDaemonInput` asks this question to choose a SCHEME, because plain http is right
+// for a real onion (Tor encrypts the transport). So a crafted bare host answered "onion" and
+// the wallet was pointed at http://evil.com — precisely the failure the comment in
+// normalizeDaemonInput says was fixed: "typing a hostname pointed the wallet at plain HTTP
+// across the internet, carrying the wallet token and the full viewing key in the clear".
+//
+// There were THREE implementations of this one question. api/explorer.ts and lib/privacy.ts
+// both parse with `new URL().hostname`; this one did not. One home now.
+export const isOnionAddress = isOnionHost;
 
 /**
  * Turn whatever the user typed into their own node's box into a full wallet-service

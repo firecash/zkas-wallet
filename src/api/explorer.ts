@@ -6,6 +6,7 @@
 // explorer website's React Query internals) gives every platform identical data.
 
 import { clearnetAllowed, onionBase } from "../lib/privacy";
+import { isOnionHost } from "../lib/privacy";
 import i18n from "../i18n";
 import { readLocal, removeLocal, writeLocal } from "../lib/safestore";
 
@@ -57,13 +58,10 @@ function publicExplorerOr(url: string): string | null {
   return clearnetAllowed() ? url : null;
 }
 
-function isOnionUrl(url: string): boolean {
-  try {
-    return new URL(url).hostname.toLowerCase().endsWith(".onion");
-  } catch {
-    return false;
-  }
-}
+/// The shared helper — same question, one answer. This file's own version was already
+/// correct (it parsed with `new URL`), which is how the broken third copy in api.ts came to
+/// light: two files in the same tree disagreed about what an onion is.
+const isOnionUrl = isOnionHost;
 
 export function setExplorerBase(url: string): void {
   const normalized = url.trim().replace(/\/+$/, "");

@@ -56,7 +56,7 @@ export function torEnabled(): boolean {
  *
  *  `hostname` also excludes userinfo and the port and unwraps IPv6 brackets, which the hand
  *  -rolled version was doing by hand. A value that will not parse is not an onion. */
-function isOnion(raw: string): boolean {
+export function isOnionHost(raw: string): boolean {
   const s = raw.trim().toLowerCase();
   if (!s) return false;
   try {
@@ -76,7 +76,7 @@ function isOnion(raw: string): boolean {
  *  without the import. */
 export function onionBase(): string | null {
   const base = readKey(BASE_KEY);
-  if (!base || !isOnion(base)) return null;
+  if (!base || !isOnionHost(base)) return null;
   return base.replace(/\/+$/, "").replace(/\/daemon$/, "");
 }
 
@@ -119,5 +119,5 @@ export function publicEndpoint(path: string, fallback: string): string | null {
  *  considered choice rather than an accident. */
 export function socketAllowed(url: string): boolean {
   if (clearnetAllowed()) return true;
-  return isOnion(url);
+  return isOnionHost(url);
 }
