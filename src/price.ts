@@ -30,8 +30,19 @@ let inflight: Promise<ZkasPrice | null> | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 
 /// "$0.00215" | "0.00215" -> 0.00215 ; NaN if not a number.
-function num(s: unknown): number {
-  return s == null ? NaN : Number(String(s).replace(/[^0-9.]/g, ""));
+///
+/// The character class keeps a LEADING MINUS. Stripping every non-digit turned "-62.5" into
+/// 62.5, which meant the `usd <= 0` guard in fetchPrice — and sanePrice's identical one — could
+/// never see a negative figure at all: the sign was gone before they ran, so a feed reporting
+/// -62.50 put "$62.50" on screen beside the balance. The comment on sanePrice claims this path
+/// "already refuses a rate that is not finite or not positive", and that was only true of the
+/// cache, which is JSON and keeps its sign.
+export function parseFigure(s: unknown): number {
+  if (s == null) return NaN;
+  const raw = String(s).trim();
+  const negative = raw.startsWith("-");
+  const magnitude = Number(raw.replace(/[^0-9.]/g, ""));
+  return negative ? -magnitude : magnitude;
 }
 
 /**
@@ -46,7 +57,7 @@ function num(s: unknown): number {
  * cannot be trusted for its timestamp either, and the caller already handles "no price" by
  * printing nothing.
  */
-function sanePrice(p: unknown): ZkasPrice | null {
+export function sanePrice(p: unknown): ZkasPrice | null {
   if (!p || typeof p !== "object") return null;
   const q = p as Partial<ZkasPrice>;
   if (typeof q.usdPerZkas !== "number" || !Number.isFinite(q.usdPerZkas) || q.usdPerZkas <= 0) return null;
@@ -87,8 +98,8 @@ async function fetchPrice(): Promise<ZkasPrice | null> {
       last?: { usd?: string; kas?: string };
     };
     // `mid` is the fair market midpoint; `last` is the fallback if mid is absent.
-    const usd = num(j?.mid?.usd) || num(j?.last?.usd);
-    const kas = num(j?.mid?.kas) || num(j?.last?.kas);
+    const usd = parseFigure(j?.mid?.usd) || parseFigure(j?.last?.usd);
+    const kas = parseFigure(j?.mid?.kas) || parseFigure(j?.last?.kas);
     if (!Number.isFinite(usd) || usd <= 0) return mem;
     const next = sanePrice({ usdPerZkas: usd, kasPerZkas: Number.isFinite(kas) ? kas : 0, asOf: Date.now() });
     if (!next) return mem;
