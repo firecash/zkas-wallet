@@ -64,6 +64,23 @@ describe("a function defined twice must not drift", () => {
     }
   }
 
+  it("deviceSeedKey agrees between App.tsx and lib/deviceseed", () => {
+    // The most dangerous duplicate in the tree, and the one I missed when pinning the other
+    // 21: this function LOCATES THE SEED. App.tsx's copy is used by `persistDeviceSeed`, the
+    // lib's by `setDeviceSeed`/`getDeviceSeed`. If they ever disagree the seed is written
+    // under one key and read under another, and securestore describes what the owner then
+    // sees: "the app treats what is left as an ordinary wallet with no key — asking for a
+    // recovery phrase that never existed for it."
+    const a = body("src/lib/deviceseed.ts", "deviceSeedKey");
+    const b = body("src/App.tsx", "deviceSeedKey");
+    expect(a).not.toBeNull();
+    expect(b).not.toBeNull();
+    expect(b).toBe(a);
+    // And it must stay the raw key with the same fallback, not quietly gain a prefix.
+    expect(a).toContain("device_seed_");
+    expect(a).toContain('readLocal("wallet_token") || "default"');
+  });
+
   it("sameStatus compares the same fields, whatever the order", () => {
     // The one pair that differs textually: the && chain lists `private_sends` in a different
     // place. Logically identical, so the property to pin is the FIELD SET, not the order.
