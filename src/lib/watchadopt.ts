@@ -16,11 +16,27 @@ export async function adoptViewKey(key: string, birthday = 0): Promise<string> {
   // has a spending wallet that would quietly replace what the user can spend
   // with something they only watch.
   const token = addWallet();
+  // Store the key BEFORE registering it with the daemon.
+  //
+  // App.tsx states the rule for a spending seed — "Store the key BEFORE registering the
+  // wallet, and only proceed once it is verifiably on the device: the reverse order can
+  // register a wallet whose key never landed" — and it applies here for the same reason.
+  // `setWatchKey` writes raw and throws, deliberately, so a full or blocked store aborts
+  // this. In the old order that throw arrived AFTER the daemon had registered the FVK and
+  // begun scanning it, leaving a device holding a token and no key: `watchKey()` returns "",
+  // `isWatchOnly()` goes false, and securestore spells out what the owner then sees — "the
+  // app treats what is left as an ordinary wallet with no key — asking for a recovery phrase
+  // that never existed for it".
+  //
+  // Failing the other way round is recoverable: a stored key for a wallet the daemon does not
+  // know yet is fixed by retrying, and nothing was scanned on anyone's behalf.
+  //
+  // It also rejects a malformed key before the network call rather than after it.
+  setWatchKey(key);
   // The daemon records history from the first scan: a full viewing key recovers this
   // wallet's own sends — recipient, amount, memo — through its outgoing viewing key,
   // so a viewer sees destinations without any further step.
   const { address } = await api.watch(key.trim().toLowerCase(), birthday);
-  setWatchKey(key);
   // Keep the birthday the link carried: a later history recovery scans from here
   // instead of replaying the chain from genesis for a wallet born last week.
   rememberBirthday(birthday, address);
