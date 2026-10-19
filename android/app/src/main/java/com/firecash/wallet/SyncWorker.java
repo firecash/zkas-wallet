@@ -252,6 +252,13 @@ public class SyncWorker extends Worker {
         return frac.isEmpty() ? whole : whole + "." + frac;
     }
 
+    /** The eye toggle, as the app last reported it (see BackgroundSyncPlugin.configure). */
+    private boolean hideAmounts() {
+        return getApplicationContext()
+            .getSharedPreferences(BackgroundSyncPlugin.PREFS, Context.MODE_PRIVATE)
+            .getBoolean("hideAmounts", false);
+    }
+
     private void notifyPayment(String amountZkas) {
         Context ctx = getApplicationContext();
         if (Build.VERSION.SDK_INT >= 26) {
@@ -264,7 +271,12 @@ public class SyncWorker extends Worker {
         NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_zkas)
             .setContentTitle("ZKas payment received")
-            .setContentText(amountZkas + " ZKAS arrived in your wallet.")
+            // Hidden means hidden, including here. This notification lands on a lock
+            // screen while the app is closed, which is the single place the eye toggle is
+            // most meant to protect; the arrival is still announced, the figure is not.
+            .setContentText(hideAmounts()
+                ? "A payment arrived in your wallet."
+                : amountZkas + " ZKAS arrived in your wallet.")
             .setContentIntent(tap)
             .setAutoCancel(true);
         try {

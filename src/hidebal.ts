@@ -25,6 +25,20 @@ export function setBalancesHidden(v: boolean): void {
   }
   subs.forEach((f) => f());
 }
+/// Run `on` whenever the eye is toggled, for callers that are not components.
+///
+/// `useHideBalances` covers rendering; this exists because the NATIVE background worker and
+/// the home-screen widget each hold their own copy of the flag, pushed to them by
+/// `bgSyncReconfigure`. Without a non-React subscriber, toggling the eye re-rendered the app
+/// and left the lock-screen notification and the widget showing figures until some unrelated
+/// event happened to reconfigure.
+export function onHideBalancesChange(on: () => void): () => void {
+  subs.add(on);
+  return () => {
+    subs.delete(on);
+  };
+}
+
 export function toggleBalancesHidden(): void {
   setBalancesHidden(!hidden);
 }

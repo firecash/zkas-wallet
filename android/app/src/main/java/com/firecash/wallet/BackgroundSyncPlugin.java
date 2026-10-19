@@ -49,6 +49,11 @@ public class BackgroundSyncPlugin extends Plugin {
         // CHANGE returning out of one of yours. The app knows, and hands it a deadline.
         // 0 clears any hold.
         long quiet = call.getLong("quietUntil", 0L);
+        // The eye toggle, mirrored in. The JS side is explicit that "hidden means hidden:
+        // the arrival is still announced, the amount is not", and this worker is the one
+        // that fires while the app is CLOSED — phone on a lock screen, in public. It was
+        // never told, so it announced the exact figure anyway.
+        boolean hideAmounts = Boolean.TRUE.equals(call.getBoolean("hideAmounts", false));
         prefs().edit()
             .putString("baseUrl", base)
             .putString("token", token)
@@ -57,6 +62,7 @@ public class BackgroundSyncPlugin extends Plugin {
             .putString("node", node)
             .putString("socks", socks)
             .putLong("quietUntil", quiet)
+            .putBoolean("hideAmounts", hideAmounts)
             .apply();
         call.resolve();
     }

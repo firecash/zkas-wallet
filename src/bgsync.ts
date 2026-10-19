@@ -13,6 +13,7 @@
 // daemon it talks to is watch-only. The web bundle only configures and toggles.
 
 import { registerPlugin } from "@capacitor/core";
+import { balancesHidden, onHideBalancesChange } from "./hidebal";
 import { getBase, getToken, getWalletdBearer, isNative } from "./api";
 import { quietUntil } from "./arrivals";
 import { loadTxs } from "./localtx";
@@ -20,7 +21,14 @@ import { embeddedChosen, embeddedNode, embeddedTor, ORBOT_SOCKS } from "./embedd
 import { readLocal, removeLocal, writeLocal } from "./lib/safestore";
 
 interface BackgroundSyncPlugin {
-  configure(opts: { baseUrl: string; token: string; bearer: string; quietUntil: number; embedded?: boolean; node?: string; socks?: string }): Promise<void>;
+  /// `hideAmounts` mirrors the eye toggle into the native worker.
+  ///
+  /// The JS path is careful about this — "Hidden means hidden: the arrival is still
+  /// announced, the amount is not" — and the native worker is the one that fires while the
+  /// app is CLOSED, which is exactly when the phone is on a lock screen in public. It was
+  /// never told, so `SyncWorker.notifyPayment` put the exact figure on the lock screen and
+  /// `WalletWidget` put the balance on the home screen while the app showed `••••••`.
+  configure(opts: { baseUrl: string; token: string; bearer: string; quietUntil: number; hideAmounts: boolean; embedded?: boolean; node?: string; socks?: string }): Promise<void>;
   enable(): Promise<void>;
   disable(): Promise<void>;
   isEnabled(): Promise<{ enabled: boolean }>;
@@ -55,7 +63,7 @@ export function bgSyncEnabled(): boolean {
 
 export async function bgSyncEnable(): Promise<void> {
   // Configure BEFORE enabling so the worker never wakes to stale credentials.
-  await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer(), quietUntil: quietUntil(loadTxs()), embedded: embeddedChosen(), node: embeddedNode(), socks: embeddedTor() ? ORBOT_SOCKS : undefined });
+  await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer(), quietUntil: quietUntil(loadTxs()), hideAmounts: balancesHidden(), embedded: embeddedChosen(), node: embeddedNode(), socks: embeddedTor() ? ORBOT_SOCKS : undefined });
   await Native.enable();
   writeLocal(FLAG, "1");
 }
@@ -71,10 +79,21 @@ export async function bgSyncDisable(): Promise<void> {
  * daemon URL changes in Settings — the worker is useless while pointing at a
  * wallet this device is no longer looking at.
  */
+/// Push the eye toggle to the native side the moment it changes.
+///
+/// The worker and the widget each keep their own copy, and they only learn about it through
+/// `configure`. Before this, turning hiding ON re-rendered the app while the lock-screen
+/// notification and the home-screen widget kept showing figures until a send or a relaunch
+/// happened to reconfigure — which is precisely the window where someone has just decided
+/// they do not want their balance visible.
+onHideBalancesChange(() => {
+  void bgSyncReconfigure();
+});
+
 export async function bgSyncReconfigure(): Promise<void> {
   if (!bgSyncEnabled()) return;
   try {
-    await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer(), quietUntil: quietUntil(loadTxs()), embedded: embeddedChosen(), node: embeddedNode(), socks: embeddedTor() ? ORBOT_SOCKS : undefined });
+    await Native.configure({ baseUrl: getBase(), token: getToken(), bearer: getWalletdBearer(), quietUntil: quietUntil(loadTxs()), hideAmounts: balancesHidden(), embedded: embeddedChosen(), node: embeddedNode(), socks: embeddedTor() ? ORBOT_SOCKS : undefined });
   } catch {
     /* best-effort — the next boot re-tries */
   }

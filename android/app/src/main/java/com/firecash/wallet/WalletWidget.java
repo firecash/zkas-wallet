@@ -29,9 +29,14 @@ public class WalletWidget extends AppWidgetProvider {
         SharedPreferences prefs = context.getSharedPreferences(BackgroundSyncPlugin.PREFS, Context.MODE_PRIVATE);
         String sompi = prefs.getString("lastTotalSompi", null);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.wallet_widget);
+        // The eye toggle applies here most of all. This sits on the HOME SCREEN, readable by
+        // anyone who glances at the phone — the exact thing hiding balances is for — and the
+        // app showed `••••••` while this showed the figure. The widget stays, so somebody who
+        // added it still sees their wallet is there; the number is what goes.
+        boolean hidden = prefs.getBoolean("hideAmounts", false);
         String balance = "Open to sync";
         try {
-            if (sompi != null) balance = format(new BigInteger(sompi)) + " ZKAS";
+            if (sompi != null) balance = hidden ? "•••••• ZKAS" : format(new BigInteger(sompi)) + " ZKAS";
         } catch (NumberFormatException ignored) {
             // A corrupt preference must never crash the launcher/widget host.
         }
