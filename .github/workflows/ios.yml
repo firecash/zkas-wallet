@@ -32,7 +32,7 @@ jobs:
           # CONTRADICTED). This is a plain env var, NOT an actions/checkout `ref:` like the
           # desktop workflows use — an earlier pin bump edited only `ref:` lines and left
           # this file on the old engine, so grep all three when moving the pin.
-          RK_SHA: c41348da5c1afc20c1895e189d755722a3793034
+          RK_SHA: 5069bb61244a7904e27c63ac37e34bc2ef5d30a0
         run: |
           # The engine crate lives in zkas-signer and builds against the node workspace.
           git clone -q --depth 1 https://github.com/firecash/zkas-signer.git ../zkas-signer
