@@ -12,8 +12,12 @@ import { shouldRunMaintenance } from "../src/maintenance";
  *
  * The failure is identical: `now - stored < LIMIT` treats a negative as "just happened", so
  * under a backward clock step the poll backoff skips forever, maintenance is always "too soon",
- * a missing wallet reads as "still opening", and a real incoming payment is attributed to the
- * owner's own activity and never announced.
+ * and a missing wallet reads as "still opening".
+ *
+ * `arrivals.ts` is the one place that wants the OTHER answer, and this file asserted the wrong
+ * one for it. There, "a long time ago" means the user's own change note landing is announced to
+ * them as a payment received, and arrivals.ts ranks that above a missed notification in so many
+ * words. So its clock-step case stays QUIET; see `stillSettling` there.
  */
 // SETTLING_WINDOW_MS is 20 minutes, so a fixture must be well OUTSIDE it to mean anything.
 // My first attempt used a send from 15 minutes ago and asserted it explained nothing — which
@@ -21,19 +25,34 @@ import { shouldRunMaintenance } from "../src/maintenance";
 const WELL_OUTSIDE_MS = 2 * 60 * 60_000;
 
 describe("elapsed decisions that take `now` as a parameter", () => {
-  it("a backward clock does not make every past send look like it just settled", () => {
-    const now = 1_000_000;
-    const old = { ts: now - WELL_OUTSIDE_MS, pending: false, amountFc: 1 } as never;
-    // Honest clock: an old send explains nothing.
-    expect(ownActivityExplainsRise([old], now)).toBe(false);
-    // Clock stepped BACK an hour: it still must explain nothing.
-    expect(ownActivityExplainsRise([old], now - 3_600_000)).toBe(false);
+  // A real epoch, because the fixtures below must stay POSITIVE: `elapsedSince` reports a
+  // timestamp of 0 or less as unknowable too, and a `now` of 1,000,000 ms put a two-hour-old
+  // send at a negative timestamp — which tested the wrong branch. The step back has to exceed
+  // the record's own age, or the record is still in the past and nothing is unknowable.
+  const EPOCH = 1_760_000_000_000;
+  const STEP_BACK_MS = 3 * 60 * 60_000;
+
+  it("an old send explains nothing, and a clock step is not mistaken for an old send", () => {
+    const old = { ts: EPOCH - WELL_OUTSIDE_MS, pending: false, amountFc: 1 } as never;
+    // Honest clock: a send from two hours ago explains nothing.
+    expect(ownActivityExplainsRise([old], EPOCH)).toBe(false);
+    // Clock stepped BACK three hours, past the record's own age, so it is future-dated and no
+    // age can be computed. Arrivals is the one module where "unknowable" must NOT read as
+    // "ancient": announcing the user's own change note as money received is the failure it
+    // ranks highest, so it stays quiet. The silence is self-limiting — these records age out
+    // via `localtx`, which uses the other direction deliberately.
+    expect(ownActivityExplainsRise([old], EPOCH - STEP_BACK_MS)).toBe(true);
+    // But a record with no usable timestamp is not a clock step and silences nothing.
+    expect(ownActivityExplainsRise([{ ts: 0, pending: false, amountFc: 1 } as never], EPOCH)).toBe(false);
   });
 
-  it("a backward clock does not hold the notification quiet window open", () => {
-    const now = 1_000_000;
-    const old = { ts: now - WELL_OUTSIDE_MS, pending: false, amountFc: 1 } as never;
-    expect(quietUntil([old], now - 3_600_000)).toBe(0);
+  it("a clock step holds the notification quiet window rather than going loud", () => {
+    const old = { ts: EPOCH - WELL_OUTSIDE_MS, pending: false, amountFc: 1 } as never;
+    // Honest clock: nothing is settling, so there is nothing to keep the worker quiet about.
+    expect(quietUntil([old], EPOCH)).toBe(0);
+    // Clock stepped back: quiet, for the reason above.
+    expect(quietUntil([old], EPOCH - STEP_BACK_MS)).toBeGreaterThan(0);
+    expect(quietUntil([{ ts: 0, pending: false, amountFc: 1 } as never], EPOCH)).toBe(0);
   });
 
   it("the poll backoff does not skip forever under a backward clock", () => {

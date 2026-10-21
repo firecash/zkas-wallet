@@ -75,10 +75,40 @@ export const PENDING_WINDOW_MS = 75 * 60_000;
  * change could still be landing.
  */
 export function ownActivityExplainsRise(sends: OutgoingRecord[], now = Date.now(), windowMs = SETTLING_WINDOW_MS): boolean {
-  // elapsedSince, not `now - s.ts`: a backward clock step makes that negative, which is less
-  // than any window, so EVERY send would look like it had just settled and a real incoming
-  // payment would be attributed to the owner's own activity and never announced.
-  return sends.some((s) => s.pending || elapsedSince(s.ts, now) <= windowMs);
+  return sends.some((s) => stillSettling(s, now, windowMs));
+}
+
+/// Is this send still close enough to explain a rise in the balance?
+///
+/// The clock-step case is decided the OPPOSITE way round here from everywhere else in the
+/// app, on purpose.
+///
+/// `elapsedSince` reports an unknowable age — a timestamp in the future, i.e. a clock that
+/// stepped backwards — as `Infinity`, because every other decision in this wallet lands safe
+/// on "a long time ago": lock the app, expire the stash, release the pending subtraction,
+/// refetch the price. This one does not. `Infinity` here means "that send is ancient", so the
+/// change note from the user's own payment landing in the balance reads as a rise nobody can
+/// explain, and the wallet announces their own money back to them as a payment received.
+///
+/// This file already ranks those two costs, in these words: "the cost of being quiet is a
+/// missed notification for a payment the user can still see in the app, and the cost of being
+/// loud is telling them they were paid when they were not". So an unknowable age counts as
+/// STILL SETTLING, and the wallet stays quiet.
+///
+/// The quiet is self-limiting, which is what makes it the cheap side: future-dated send
+/// records are dropped by their own age-out in `localtx`, which uses `elapsedSince` in the
+/// usual direction deliberately.
+function stillSettling(s: OutgoingRecord, now: number, windowMs: number): boolean {
+  if (s.pending) return true;
+  // A record with no usable timestamp is NOT a clock step — it carries no information at all,
+  // and must not silence every notification for as long as it is in the list. `elapsedSince`
+  // answers `Infinity` for both cases, so they are told apart here rather than by sniffing it.
+  if (!Number.isFinite(s.ts) || s.ts <= 0) return false;
+  // Future-dated beyond ordinary jitter: the clock stepped back, the age is unknowable, and
+  // unknowable means still settling. The 1s tolerance matches `elapsedSince`, so two reads of
+  // `Date.now()` disagreeing by a millisecond does not hold the window open.
+  if (now - s.ts < -1_000) return true;
+  return elapsedSince(s.ts, now) <= windowMs;
 }
 
 /**
@@ -113,9 +143,8 @@ export function arrivalAmount(
  */
 export function quietUntil(sends: OutgoingRecord[], now = Date.now(), windowMs = SETTLING_WINDOW_MS): number {
   const deadlines = sends
-    // Same guard as ownActivityExplainsRise: a negative elapsed would hold the quiet window
-    // open for every past send and silence the notifications entirely.
-    .filter((s) => s.pending || elapsedSince(s.ts, now) <= windowMs)
+    // Same question, same answer, including the clock-step case — see `stillSettling`.
+    .filter((s) => stillSettling(s, now, windowMs))
     // A pending send is anchored on its OWN timestamp as well as on now: the deadline is a
     // property of the send, so it survives the app being closed for the whole hour the
     // daemon may hold the spend. The rolling `now` term stays as well, so a send still

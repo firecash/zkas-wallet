@@ -1,5 +1,7 @@
 import { useTranslation, Trans } from "react-i18next";
 import { elapsedSince } from "./lib/elapsed";
+import { recordSyncSample, resetSyncSamples, syncRate, fmtCount, fmtDuration, fmtRate } from "./lib/syncrate";
+import { NodeUpdateNotice } from "./components/NodeUpdateNotice";
 import i18n, { formatDate } from "./i18n";
 import { LanguagePicker, LanguageInline, LanguageNotice, LanguageButton } from "./LanguagePicker";
 import { ProvePayment } from "./PaymentProof";
@@ -877,6 +879,11 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // new one — "Your wallets" then listed a wallet beside an address that was
       // not its own — and briefly showed that wallet's balance too.
       if (readLocal("wallet_token") !== pollToken) return;
+      // Record the reading for the sync-rate view (Settings -> diagnostics). Done HERE, on the
+      // accepted answer for the current token, so a status that belonged to a previous wallet
+      // never lands in the history — and before the smoothing below, because the rate wants
+      // the daemon's raw numbers, not the held ones.
+      recordSyncSample(s.scanned_blocks, Math.max(s.daa_score, s.chain_len));
       // Never let a transient poll un-render the wallet. While the daemon is reloading a
       // wallet (or a status call races a sync pass) it can answer has_wallet:false /
       // address:null for a beat. Rendering that verbatim unmounted the whole tab block —
@@ -1688,6 +1695,12 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       {reachable && !freshSeed && status && status.has_wallet && !routeSticky && (
         <div className="wallet-dashboard">
           <section className="wallet-overview" aria-label={t("app.overviewAria")}>
+            {/* A waiting node update is shown HERE as well as on the Node page: that page is the
+                one screen nobody opens while the wallet looks fine, and a node left behind a
+                consensus fork fails closed — it stops accepting payments and serves a chain that
+                has stopped moving, which reaches the user as a stale balance and a refused send.
+                Renders nothing on web, in the mobile shell, or when no update is pending. */}
+            <NodeUpdateNotice />
             <BalanceHero status={status} txs={txs} stalled={pollStalled} />
           {/* The two things people open a wallet to DO, as the two biggest targets on
               the screen.
@@ -5478,7 +5491,7 @@ function SettingsPane({ status }: { status: Status }) {
       </Collapsible>
       {/* Renders its own "Debug logs" Collapsible; kept top-level rather than buried
           inside Background sync. Returns null when there's no on-device engine. */}
-      <DebugLogsCard />
+      <DebugLogsCard status={status} />
       {!roomy && (
         <Collapsible title={t("settingsPane.signatures")}>
           <Signatures status={status} />
@@ -8049,30 +8062,132 @@ function networkPrivacyLabel(): string {
 /// chain your amounts and payments are already hidden on-chain; what a wallet
 /// service can still learn is that SOME IP is asking about a given viewing key. The
 /// choice of service is what controls that, so it belongs in plain sight.
-function DebugLogsCard() {
+/// One `label: value` row of the diagnostics table. Kept out of the component so the same
+/// rows render on screen and serialise into the Copy text from one definition — a debug panel
+/// whose copied text differs from what the reporter is looking at wastes everyone's time.
+function diagRows(status: Status | null): [string, string][] {
+  const r = syncRate();
+  const rows: [string, string][] = [];
+  const base = getBase();
+  rows.push(["service", base || "(default)"]);
+  rows.push(["service kind", networkPrivacyLabel()]);
+  if (status) {
+    const tip = Math.max(status.daa_score, status.chain_len);
+    rows.push(["chain tip (daemon)", fmtCount(tip)]);
+    rows.push(["scanned", fmtCount(status.scanned_blocks)]);
+    rows.push(["behind", `${fmtCount(r.behind)} blocks`]);
+    // The three numbers the old view was missing entirely, and the reason it was useless
+    // against a hosted daemon: whether this is moving, how fast, and when it lands.
+    rows.push(["speed", r.stalled ? "STALLED (no progress)" : fmtRate(r.blocksPerSec)]);
+    rows.push(["eta", r.stalled ? "—" : fmtDuration(r.etaSecs)]);
+    rows.push(["measured over", r.samples < 2 ? "collecting…" : `${fmtDuration(r.windowSecs)} / ${r.samples} polls`]);
+    rows.push(["node reachable (daemon)", status.node_connected === undefined ? "not reported" : String(status.node_connected)]);
+    rows.push(["synced", String(status.synced)]);
+    if (status.spend_ready !== undefined) rows.push(["can send now", String(status.spend_ready)]);
+    if (status.loading) rows.push(["daemon state", "opening this wallet"]);
+    if (status.warming) {
+      const pct = status.warming_pct !== undefined ? ` ${status.warming_pct.toFixed(1)}%` : "";
+      const eta = status.warming_eta_secs !== undefined ? ` · ${fmtDuration(status.warming_eta_secs)} left` : "";
+      rows.push(["spend index build", `running${pct}${eta}`]);
+      if (status.warming_done_leaves !== undefined && status.warming_total_leaves !== undefined) {
+        rows.push(["  leaves folded", `${fmtCount(status.warming_done_leaves)} / ${fmtCount(status.warming_total_leaves)}`]);
+      }
+    }
+    if (status.note_count !== undefined) rows.push(["notes", fmtCount(status.note_count)]);
+    if (status.watch_only) rows.push(["watch only", "true"]);
+    if (status.missing_history) {
+      rows.push(["missing history", `true — daemon serves from DAA ${status.history_from_daa !== undefined ? fmtCount(status.history_from_daa) : "?"}`]);
+    }
+    rows.push(["network", status.network]);
+    if (status.error) rows.push(["daemon error", status.error]);
+  } else {
+    rows.push(["status", "no answer from the service yet"]);
+  }
+  rows.push(["app", `${APP_VERSION} · ${isNative() ? "native" : isDesktop() ? "desktop" : "web"}`]);
+  return rows;
+}
+
+function DebugLogsCard({ status }: { status: Status | null }) {
   const { t } = useTranslation();
   const [on, setOn] = useState(embeddedDebugChosen());
   const [text, setText] = useState("");
   const [shown, setShown] = useState(false);
-  if (!embeddedAvailable()) return null;
+  // Re-render on a cadence so the rate and ETA move while the card is open. The status poll
+  // updates `status`, but the DERIVED rate changes between polls too (the window slides), and
+  // a diagnostics panel whose numbers freeze is the thing being fixed here.
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!shown) return;
+    const id = globalThis.setInterval(() => tick((n) => n + 1), 1000);
+    return () => globalThis.clearInterval(id);
+  }, [shown]);
+
+  const engine = embeddedAvailable();
+  const rows = diagRows(status);
+  const rate = syncRate();
+  // The summary carries the one fact worth seeing without opening the card.
+  const summary = !status
+    ? t("debugLogsCard.normal")
+    : rate.stalled
+      ? "stalled"
+      : rate.behind === 0 && status.synced
+        ? "up to date"
+        : `${fmtCount(rate.behind)} behind · ${fmtRate(rate.blocksPerSec)}`;
+
+  const report = () => rows.map(([k, v]) => `${k.padEnd(24)} ${v}`).join("\n");
   const toggle = async (v: boolean) => { setOn(v); setEmbeddedDebug(v); await setEngineDebugLogs(v); };
-  const show = async () => { setText(await engineLogs()); setShown(true); };
+  const show = async () => { setText(engine ? await engineLogs() : ""); setShown(true); };
+  const copyAll = () => void copyText(`${report()}\n\n${text || "(engine log not shown / not applicable)"}`);
+
   return (
-    <Collapsible title={t("debugLogsCard.title")} summary={on ? t("debugLogsCard.verbose") : t("debugLogsCard.normal")}>
+    <Collapsible title={t("debugLogsCard.title")} summary={summary}>
       <div className="stack">
-        <label className="row" style={{ gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
-          <input type="checkbox" checked={on} style={{ marginTop: 3 }} onChange={(e) => void toggle(e.target.checked)} />
-          <span><b>{t("debugLogsCard.verboseLabel")}</b><br /><span className="muted small">{t("debugLogsCard.verboseHint")}</span></span>
-        </label>
+        <table className="mono small" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <tbody>
+            {rows.map(([k, v]) => (
+              <tr key={k}>
+                <td className="muted" style={{ padding: "2px 10px 2px 0", verticalAlign: "top", whiteSpace: "nowrap" }}>{k}</td>
+                <td style={{ padding: "2px 0", wordBreak: "break-all" }}>{v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-          <button className="btn small" onClick={() => void show()}>{t("debugLogsCard.showLogs")}</button>
-          {text && <button className="btn ghost small" onClick={() => void copyText(text)}>{t("debugLogsCard.copy")}</button>}
+          <button className="btn ghost small" onClick={() => void copyAll()}>{t("debugLogsCard.copy")}</button>
+          <button className="btn ghost small" onClick={() => { resetSyncSamples(); tick((n) => n + 1); }}>reset speed</button>
         </div>
-        {shown && (
-          <pre className="mono small" style={{ maxHeight: 320, overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", padding: 8, borderRadius: 8, border: "1px solid var(--border)" }}>{text || t("debugLogsCard.noLogs")}</pre>
-        )}
       </div>
+      {engine && <DebugLogsEngineSection on={on} toggle={toggle} show={show} shown={shown} text={text} />}
     </Collapsible>
+  );
+}
+
+/// The on-device engine half — only mounted when there IS an engine. Split out so the
+/// diagnostics above render for every user, which is the whole point of the change: a desktop
+/// or web wallet against a hosted daemon has no engine, and used to get an empty card.
+function DebugLogsEngineSection(props: {
+  on: boolean;
+  toggle: (v: boolean) => Promise<void>;
+  show: () => Promise<void>;
+  shown: boolean;
+  text: string;
+}) {
+  const { t } = useTranslation();
+  const { on, toggle, show, shown, text } = props;
+  return (
+    <div className="stack" style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
+      <label className="row" style={{ gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+        <input type="checkbox" checked={on} style={{ marginTop: 3 }} onChange={(e) => void toggle(e.target.checked)} />
+        <span><b>{t("debugLogsCard.verboseLabel")}</b><br /><span className="muted small">{t("debugLogsCard.verboseHint")}</span></span>
+      </label>
+      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        <button className="btn small" onClick={() => void show()}>{t("debugLogsCard.showLogs")}</button>
+        {text && <button className="btn ghost small" onClick={() => void copyText(text)}>{t("debugLogsCard.copy")}</button>}
+      </div>
+      {shown && (
+        <pre className="mono small" style={{ maxHeight: 320, overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", padding: 8, borderRadius: 8, border: "1px solid var(--border)" }}>{text || t("debugLogsCard.noLogs")}</pre>
+      )}
+    </div>
   );
 }
 

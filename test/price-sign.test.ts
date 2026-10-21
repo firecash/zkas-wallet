@@ -16,6 +16,11 @@ describe("a negative rate is rejected, not made positive", () => {
     expect(parseFigure("$0.00215")).toBeCloseTo(0.00215, 8);
     expect(parseFigure("1,234.56")).toBeCloseTo(1234.56, 4);
     expect(parseFigure("0.00215")).toBeCloseTo(0.00215, 8);
+    // A JSON number stays exactly itself. `String(1e-7)` is "1e-7", and the strip that removes
+    // the "$" and the thousands separators would have turned that into 17 — positive, finite,
+    // and seventeen million times the real figure, so no guard downstream would have caught it.
+    expect(parseFigure(1e-7)).toBe(1e-7);
+    expect(parseFigure(0.00215)).toBe(0.00215);
   });
 
   it("carries the sign through so the guard can act on it", async () => {

@@ -39,6 +39,11 @@ let timer: ReturnType<typeof setInterval> | null = null;
 /// cache, which is JSON and keeps its sign.
 export function parseFigure(s: unknown): number {
   if (s == null) return NaN;
+  // A JSON number arrives here AS a number, and the strip below is for strings. `String()` of
+  // a small number is exponent notation — `String(1e-7)` is "1e-7" — and stripping everything
+  // but digits and dots turns that into "17". So a tiny figure came back as seventeen, which
+  // the `usd > 0` guard cannot catch because it is positive and finite. Take a number as it is.
+  if (typeof s === "number") return s;
   const raw = String(s).trim();
   const negative = raw.startsWith("-");
   const magnitude = Number(raw.replace(/[^0-9.]/g, ""));
