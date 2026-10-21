@@ -661,11 +661,22 @@ impl ServiceManager {
     /// Install the bridge once. `set_boxed_logger` refuses a second logger, so a repeat call
     /// is a no-op rather than an error — `serve` is re-callable and must not depend on this
     /// having happened exactly once.
-    pub fn install_log_bridge(&self) {
+    /// Returns whether the bridge became THE logger for this process.
+    ///
+    /// It has to be told apart from failure, and this used to swallow it. `run()` called
+    /// `kaspa_core::log::try_init_logger` before building the Engine, that logger won the
+    /// `log` facade, `set_boxed_logger` then refused the bridge, and the `is_ok()` dropped
+    /// the refusal on the floor. Every engine line went to the Tauri process's stdout --
+    /// which on a desktop app nobody can see -- and the log view showed only the handful of
+    /// lines the shell pushes explicitly ("starting wallet engine on ..."), which is exactly
+    /// the "where are all the logs" the view was rebuilt to answer.
+    pub fn install_log_bridge(&self) -> bool {
         let bridge = LogBridge { logs: Arc::clone(&self.logs) };
-        if log::set_boxed_logger(Box::new(bridge)).is_ok() {
-            log::set_max_level(log::LevelFilter::Info);
+        if log::set_boxed_logger(Box::new(bridge)).is_err() {
+            return false;
         }
+        log::set_max_level(log::LevelFilter::Info);
+        true
     }
 
     /// Raise or lower what the bridge keeps. DEBUG is genuinely verbose on the engine, so it

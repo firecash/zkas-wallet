@@ -356,6 +356,11 @@ struct Engine {
     /// The managed local node's last status probe, so `mining_status` (polled on the
     /// same 2 s tick as `node_status`) reads it instead of probing the node again.
     local_node_probe: Option<(std::time::Instant, Result<NodeProbe, String>)>,
+    /// Whether the engine's LogBridge became THE `log` logger for this process. Only one
+    /// logger can ever be installed, so this records who won: false means something else
+    /// claimed the facade and the caller must install a fallback, or there is no logging
+    /// at all.
+    log_bridge_installed: bool,
     /// The wallet passphrase, held in memory ONLY between unlock and lock. It is
     /// never written anywhere: the daemon uses it to decrypt the seed at load,
     /// and `lock()` drops it and stops the daemon. Nothing on disk can be turned
@@ -580,7 +585,7 @@ impl Engine {
             .build()
             .expect("tokio runtime");
         services::set_log_path(data_dir.join("logs/services.log"));
-        let engine = Self {
+        let mut engine = Self {
             rt,
             port: 0,
             token,
@@ -598,12 +603,15 @@ impl Engine {
             node_clients: NodeClientCache::default(),
             local_node_probe: None,
             secret: None,
+            log_bridge_installed: false,
         };
         // Route the engine's own `log` output into the service log store. The engine is
         // zkas-walletd linked into THIS process, so nothing captures a subprocess's stdout:
         // without a logger installed, the `log` facade silently dropped every line it emitted
         // and the "Wallet engine logs" view showed a single startup message.
-        engine.services.install_log_bridge();
+        // Returned rather than discarded: whether this won the `log` facade decides if the
+        // caller needs a fallback logger, and swallowing it is what hid the bug.
+        engine.log_bridge_installed = engine.services.install_log_bridge();
         engine
     }
 
@@ -3864,7 +3872,11 @@ fn show_main_window(app: &tauri::AppHandle) {
 }
 
 pub fn run() {
-    kaspa_core::log::try_init_logger("info");
+    // The logger is NOT installed here any more. `kaspa_core::log::try_init_logger` claimed
+    // the `log` facade first, so the engine's LogBridge — installed later, in `Engine::new` —
+    // was refused and every engine line went to this process's stdout, which on a desktop app
+    // nobody can see. The bridge is installed with the Engine instead, and `setup` below falls
+    // back to this logger only if the bridge genuinely lost the race.
     // Any panic, on any thread, leaves a trace in crash.log before the default
     // hook runs. Without this, a Windows crash is a window that just vanishes.
     let default_hook = std::panic::take_hook();
@@ -3894,6 +3906,10 @@ pub fn run() {
             std::fs::create_dir_all(&config_dir).ok();
             std::fs::create_dir_all(&data_dir).ok();
             let mut app_engine = Engine::new(config_dir, data_dir);
+            // Only if the bridge lost: without this a lost race means no logging at all.
+            if !app_engine.log_bridge_installed {
+                kaspa_core::log::try_init_logger("info");
+            }
             // The managed node itself is started on the thread below, after the
             // engine is managed: reaping orphans enumerates every process and can
             // wait 12 s + 5 s on one, and none of that belongs in `setup`.
