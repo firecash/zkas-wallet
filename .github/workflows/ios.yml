@@ -26,7 +26,13 @@ jobs:
 
       - name: Sources the engine needs
         env:
-          RK_SHA: 974c75cca916fa77f071177d4414bc535e12056a
+          # Bumped 2026-10-21 with the desktop workflows to the tip of zkas-rusty `main`
+          # (~85 commits past the previous pin, plus the walletd fix that stops a
+          # checkpoint the node could not VERIFY being destroyed as one the node
+          # CONTRADICTED). This is a plain env var, NOT an actions/checkout `ref:` like the
+          # desktop workflows use — an earlier pin bump edited only `ref:` lines and left
+          # this file on the old engine, so grep all three when moving the pin.
+          RK_SHA: 0f096722d2260c3bdace59b9b8f2bcc4e21ef99f
         run: |
           # The engine crate lives in zkas-signer and builds against the node workspace.
           git clone -q --depth 1 https://github.com/firecash/zkas-signer.git ../zkas-signer

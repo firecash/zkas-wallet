@@ -104,7 +104,24 @@ jobs:
           # Full 40-character SHA: actions/checkout refuses a short one, which
           # is how the first attempt at this pin failed CI on both desktop
           # workflows.
-          ref: 974c75cca916fa77f071177d4414bc535e12056a
+          # Bumped 2026-10-21 to the tip of zkas-rusty `main`. The previous pin was also a
+          # main commit, but main had moved ~85 commits past it (consensus and p2p
+          # hardening, several unauthenticated node kills, the h2/rustls RUSTSEC bumps),
+          # none of which this engine was carrying.
+          #
+          # The pin must be a commit ON main: the fix below was first written on a side
+          # branch, and pinning that would have frozen the embedded engine 85 commits
+          # behind on a ref nobody maintains.
+          #
+          # The head commit is the walletd fix for "I was at 8%, updated, and it reset to
+          # 0": a checkpoint the node could not VERIFY is no longer treated as one the node
+          # CONTRADICTED. walletd required an exact size+root match against the node's
+          # frontier at the checkpoint cursor, so a node at a different height — the normal
+          # case when the user points the wallet at someone else's node — quarantined the
+          # scan and restarted it. Measured on the live daemon: 2,975 rejections, 0 of the
+          # same-size/different-root shape that actually proves divergence, 1,478 with the
+          # node's tree simply SMALLER than the wallet's.
+          ref: 0f096722d2260c3bdace59b9b8f2bcc4e21ef99f
           path: rusty-kaspa
 
       - uses: actions/setup-node@v4
