@@ -37,7 +37,10 @@ ENGINE="${ENGINE_CRATE:-$ROOT/../zkas-signer/walletd-mobile}"
 # /root/zkas/android-build, so checking $ROOT/../rusty-kaspa compared a checkout nothing
 # builds from. NODE_SRC overrides it.
 if [ -z "${NODE_SRC:-}" ]; then
-  if [ -d "$ENGINE/../../rusty-kaspa/.git" ]; then NODE_SRC="$ENGINE/../../rusty-kaspa"; else NODE_SRC="$ROOT/../rusty-kaspa"; fi
+  # `-e`, not `-d`: on the build box that path is a git WORKTREE, whose `.git` is a file
+  # containing `gitdir: ...`. Testing for a directory silently fell back to the sibling and
+  # reported the wrong checkout.
+  if [ -e "$ENGINE/../../rusty-kaspa/.git" ]; then NODE_SRC="$ENGINE/../../rusty-kaspa"; else NODE_SRC="$ROOT/../rusty-kaspa"; fi
 fi
 if [ "${ENGINE_PIN_SKIP:-0}" != "1" ]; then
   PIN="${ENGINE_PIN:-}"

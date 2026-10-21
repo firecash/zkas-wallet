@@ -122,11 +122,18 @@ jobs:
           # same-size/different-root shape that actually proves divergence, 1,478 with the
           # node's tree simply SMALLER than the wallet's.
           #
-          # The head commit adds the checkpoint-cadence and page-cache work that had lived
-          # only in a build tree on the build box. It matters to the embedded engine too:
-          # checkpoint writes are this engine's dominant disk I/O, and the built-in 60s
-          # interval is the phone-tuned default.
-          ref: 2c86be4bdfc8e029aac821ffecdf4589755bc5f8
+          # It carries the checkpoint-cadence and page-cache work that had lived only in a
+          # build tree on the build box: checkpoint writes are this engine's dominant disk
+          # I/O and the built-in 60s interval is the phone-tuned default.
+          #
+          # The head commit is why this pin moved again, and it is an EMBEDDED-engine bug as
+          # much as a hosted one: the engine loaded a wallet inside the HTTP request, and the
+          # app aborts a request after 10s while a cold load of a 15M-leaf wallet takes
+          # 10-61s. The app talks to its in-process engine over 127.0.0.1 with that same
+          # timeout, so the load was cancelled and restarted on every poll and the wallet
+          # could never finish opening — "reopened the wallet and it sits at 0% and never
+          # advances". The load now runs detached from the request.
+          ref: c41348da5c1afc20c1895e189d755722a3793034
           path: rusty-kaspa
 
       - uses: actions/setup-node@v4
