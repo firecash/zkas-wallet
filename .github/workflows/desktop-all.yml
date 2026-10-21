@@ -113,15 +113,20 @@ jobs:
           # branch, and pinning that would have frozen the embedded engine 85 commits
           # behind on a ref nobody maintains.
           #
-          # The head commit is the walletd fix for "I was at 8%, updated, and it reset to
-          # 0": a checkpoint the node could not VERIFY is no longer treated as one the node
+          # It carries the walletd fix for "I was at 8%, updated, and it reset to 0": a
+          # checkpoint the node could not VERIFY is no longer treated as one the node
           # CONTRADICTED. walletd required an exact size+root match against the node's
           # frontier at the checkpoint cursor, so a node at a different height — the normal
           # case when the user points the wallet at someone else's node — quarantined the
           # scan and restarted it. Measured on the live daemon: 2,975 rejections, 0 of the
           # same-size/different-root shape that actually proves divergence, 1,478 with the
           # node's tree simply SMALLER than the wallet's.
-          ref: 0f096722d2260c3bdace59b9b8f2bcc4e21ef99f
+          #
+          # The head commit adds the checkpoint-cadence and page-cache work that had lived
+          # only in a build tree on the build box. It matters to the embedded engine too:
+          # checkpoint writes are this engine's dominant disk I/O, and the built-in 60s
+          # interval is the phone-tuned default.
+          ref: 2c86be4bdfc8e029aac821ffecdf4589755bc5f8
           path: rusty-kaspa
 
       - uses: actions/setup-node@v4
