@@ -25,7 +25,20 @@ ENGINE="${ENGINE_CRATE:-$ROOT/../zkas-signer/walletd-mobile}"
 # So read the pin from the workflow that declares it and refuse to build off it.
 # ENGINE_PIN overrides the expected SHA; ENGINE_PIN_SKIP=1 skips the check entirely (for
 # building against a local engine branch on purpose).
-NODE_SRC="${NODE_SRC:-$ROOT/../rusty-kaspa}"
+#
+# Exits 3 (not 1) on a mismatch, because build-android.sh tolerates a FAILED engine build
+# so a host without the NDK still produces a hosted-only app — which would silently ship a
+# release APK with no embedded engine. 3 means "the engine is buildable but would be the
+# wrong one", and that caller turns it into a hard failure.
+#
+# The engine source is where ENGINE_CRATE's path dependency points (`../../rusty-kaspa`
+# relative to the crate), NOT a sibling of this repo: on the build box ENGINE_CRATE is
+# /root/zkas/mobile-test/zkas-signer/walletd-mobile while this repo sits in
+# /root/zkas/android-build, so checking $ROOT/../rusty-kaspa compared a checkout nothing
+# builds from. NODE_SRC overrides it.
+if [ -z "${NODE_SRC:-}" ]; then
+  if [ -d "$ENGINE/../../rusty-kaspa/.git" ]; then NODE_SRC="$ENGINE/../../rusty-kaspa"; else NODE_SRC="$ROOT/../rusty-kaspa"; fi
+fi
 if [ "${ENGINE_PIN_SKIP:-0}" != "1" ]; then
   PIN="${ENGINE_PIN:-}"
   if [ -z "$PIN" ]; then
@@ -33,15 +46,15 @@ if [ "${ENGINE_PIN_SKIP:-0}" != "1" ]; then
   fi
   # Fail closed on both sides: no declared pin means the check would pass vacuously, which
   # is the state this guard exists to end.
-  [ -n "$PIN" ] || { echo "no engine pin found in .github/workflows/desktop-all.yml (set ENGINE_PIN, or ENGINE_PIN_SKIP=1)"; exit 1; }
+  [ -n "$PIN" ] || { echo "no engine pin found in .github/workflows/desktop-all.yml (set ENGINE_PIN, or ENGINE_PIN_SKIP=1)"; exit 3; }
   HAVE="$(git -C "$NODE_SRC" rev-parse HEAD 2>/dev/null || true)"
-  [ -n "$HAVE" ] || { echo "cannot read the engine revision at $NODE_SRC (set NODE_SRC, or ENGINE_PIN_SKIP=1)"; exit 1; }
+  [ -n "$HAVE" ] || { echo "cannot read the engine revision at $NODE_SRC (set NODE_SRC, or ENGINE_PIN_SKIP=1)"; exit 3; }
   if [ "$HAVE" != "$PIN" ]; then
     echo "engine revision mismatch: the APK would not match the desktop/iOS builds." >&2
     echo "  $NODE_SRC is at $HAVE" >&2
     echo "  the workflows pin        $PIN" >&2
     echo "  fix:  git -C $NODE_SRC fetch origin main && git -C $NODE_SRC checkout $PIN" >&2
-    exit 1
+    exit 3
   fi
   echo "engine pin OK — $NODE_SRC at ${PIN:0:12}, matching the desktop/iOS workflows"
 fi

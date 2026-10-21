@@ -28,7 +28,21 @@ MODE="${1:-debug}"
 npm run build
 # Build the on-device wallet engine into jniLibs (best-effort: a build host
 # without the NDK/engine crate still produces a working hosted-only app).
-"$(dirname "$0")/build-engine.sh" || echo "warn: engine build skipped — APK will be hosted-only"
+#
+# "Best-effort" must NOT extend to building the WRONG engine. This `||` once turned a
+# refused engine-revision check into a release APK with no embedded engine at all, printed
+# as one warning line in a 2,000-line build log. build-engine.sh exits 3 for exactly that
+# case — the engine is buildable, it would just be the wrong revision — and 3 is fatal.
+set +e
+"$(dirname "$0")/build-engine.sh"
+engine_rc=$?
+set -e
+if [ "$engine_rc" = "3" ]; then
+  echo "FATAL: the engine revision does not match the pin (above). Refusing to build an APK that disagrees with the desktop and iOS builds." >&2
+  exit 3
+elif [ "$engine_rc" != "0" ]; then
+  echo "warn: engine build skipped (rc=$engine_rc) — APK will be hosted-only"
+fi
 
 npx cap sync android
 
