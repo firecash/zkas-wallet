@@ -14,6 +14,38 @@ ROOT="$(pwd)"
 ENGINE="${ENGINE_CRATE:-$ROOT/../zkas-signer/walletd-mobile}"
 [ -f "$ENGINE/Cargo.toml" ] || { echo "engine crate not found at $ENGINE (set ENGINE_CRATE)"; exit 1; }
 
+# The engine revision must be the one the desktop and iOS workflows pin.
+#
+# Those builds check the SHA out; this one compiles whatever the sibling checkout happens
+# to be sitting at, and nothing connected the two. On 1.0.52-rc2 that shipped an APK whose
+# engine was ~85 commits behind the desktop one — missing the checkpoint fix, on the one
+# platform the problem was reported from. The drift is invisible in the build log: the
+# engine compiles perfectly, it is just a different engine.
+#
+# So read the pin from the workflow that declares it and refuse to build off it.
+# ENGINE_PIN overrides the expected SHA; ENGINE_PIN_SKIP=1 skips the check entirely (for
+# building against a local engine branch on purpose).
+NODE_SRC="${NODE_SRC:-$ROOT/../rusty-kaspa}"
+if [ "${ENGINE_PIN_SKIP:-0}" != "1" ]; then
+  PIN="${ENGINE_PIN:-}"
+  if [ -z "$PIN" ]; then
+    PIN="$(sed -nE 's/^[[:space:]]*ref:[[:space:]]*([0-9a-f]{40})[[:space:]]*$/\1/p' "$ROOT/.github/workflows/desktop-all.yml" | head -1)"
+  fi
+  # Fail closed on both sides: no declared pin means the check would pass vacuously, which
+  # is the state this guard exists to end.
+  [ -n "$PIN" ] || { echo "no engine pin found in .github/workflows/desktop-all.yml (set ENGINE_PIN, or ENGINE_PIN_SKIP=1)"; exit 1; }
+  HAVE="$(git -C "$NODE_SRC" rev-parse HEAD 2>/dev/null || true)"
+  [ -n "$HAVE" ] || { echo "cannot read the engine revision at $NODE_SRC (set NODE_SRC, or ENGINE_PIN_SKIP=1)"; exit 1; }
+  if [ "$HAVE" != "$PIN" ]; then
+    echo "engine revision mismatch: the APK would not match the desktop/iOS builds." >&2
+    echo "  $NODE_SRC is at $HAVE" >&2
+    echo "  the workflows pin        $PIN" >&2
+    echo "  fix:  git -C $NODE_SRC fetch origin main && git -C $NODE_SRC checkout $PIN" >&2
+    exit 1
+  fi
+  echo "engine pin OK — $NODE_SRC at ${PIN:0:12}, matching the desktop/iOS workflows"
+fi
+
 NDK="${ANDROID_NDK_HOME:-}"
 [ -z "$NDK" ] && NDK="$(ls -d "${ANDROID_HOME:-$HOME/Android/Sdk}"/ndk/* 2>/dev/null | sort -V | tail -1 || true)"
 [ -z "$NDK" ] && NDK="$(ls -d /root/zkas/android-ndk-* 2>/dev/null | sort -V | tail -1 || true)"
