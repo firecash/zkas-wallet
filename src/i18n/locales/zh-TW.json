@@ -69,7 +69,10 @@
     "reviewSend": "檢視發送",
     "waitingForSync": "仍在讀取鏈資料 — 同步完成即可發送。",
     "unknownFailure": "付款被拒，錢包無法讀取原因。未發送任何款項 — 重試前請先查看歷史記錄。",
-    "walletChanged": "付款進行中，活躍錢包已切換，因此未發送任何內容。請確認您所在的錢包後再試一次。"
+    "walletChanged": "付款進行中，活躍錢包已切換，因此未發送任何內容。請確認您所在的錢包後再試一次。",
+    "submitOutcomeUnknown": "這筆付款在廣播期間錢包服務停止回應，因此錢包無法判斷它是否已送出。請在重試前查看歷史記錄——再送一次可能會付兩次款。",
+    "feeExceedsAmount": "你設定的手續費（{{fee}} ZKAS）高於你要發送的金額（{{amount}} ZKAS）。請在確認前核對。",
+    "networkNotSignable": "此錢包只能為主網付款簽署，而錢包服務在 {{network}} 上。你可以在這裡接收，但無法發送。"
   },
   "verify": {
     "messagePlaceholder": "已簽名的訊息…",
@@ -117,7 +120,10 @@
     "rescanHint": "重新讀取區塊鏈以重建歷史紀錄，並找回本機遺漏的資金。",
     "recoveredNote": "透過檢視金鑰從鏈上找回。點按付款查看詳情。",
     "exportFailed": "無法在此裝置匯出 CSV。",
-    "exportCsv": "匯出 CSV"
+    "exportCsv": "匯出 CSV",
+    "truncated": "正在顯示 {{total}} 筆交易中最近的 {{shown}} 筆。",
+    "loadOlder": "載入較早的交易",
+    "loadingOlder": "載入中…"
   },
   "sign": {
     "title": "簽署訊息",
@@ -441,7 +447,8 @@
     "lastBalance": "最後確認餘額",
     "retry": "重試",
     "advanced": "連線至不同的錢包服務",
-    "restartEngine": "重新啟動裝置引擎"
+    "restartEngine": "重新啟動裝置引擎",
+    "titleTokenRejected": "錢包服務拒絕了此錢包"
   },
   "sendScene": {
     "warmEta": "約 {{n}} 分鐘",
@@ -612,7 +619,8 @@
     "viewKeyTitle": "錢包查看密鑰",
     "viewKeySummary": "唯讀",
     "seedMoved": "在找你的復原種子嗎？已移至<b>設定 → 復原種子</b>，受你的應用程式鎖保護。",
-    "qrBuilding": "正在準備你的代碼…"
+    "qrBuilding": "正在準備你的代碼…",
+    "cannotSpendHere": "此裝置無法從該位址花費。送到這裡的資金是安全的，但要轉出，需要在本裝置上擁有此錢包的恢復短語。"
   },
   "revealSeedCard": {
     "wrongPin": "PIN 碼錯誤。",
@@ -780,7 +788,8 @@
     "ariaSync": "錢包同步進度",
     "scanning": "錢包掃描鏈時顯示餘額 — 你的資金安全無虞。",
     "lowerBound": "此餘額為<b>下限</b>：錢包的視圖是透過一個已修剪舊歷史的節點重建的，因此很久以前創建的幣可能已遺失。你的幣在鏈上是安全的 — 請僅從提供完整歷史的節點重新掃描（透過此節點重建的結果同樣會不完整）。如果這是你自己的節點且仍在填充屏蔽歷史，請等待其日誌顯示「shielded history: VERIFIED」後再重新掃描。",
-    "lowerBoundFrom": "此餘額為<b>下限</b>：錢包的視圖是透過一個已修剪舊歷史的節點重建的（可從區塊 {{block}} 取得），因此很久以前創建的幣可能已遺失。你的幣在鏈上是安全的 — 請僅從提供完整歷史的節點重新掃描（透過此節點重建的結果同樣會不完整）。如果這是你自己的節點且仍在填充屏蔽歷史，請等待其日誌顯示「shielded history: VERIFIED」後再重新掃描。"
+    "lowerBoundFrom": "此餘額為<b>下限</b>：錢包的視圖是透過一個已修剪舊歷史的節點重建的（可從區塊 {{block}} 取得），因此很久以前創建的幣可能已遺失。你的幣在鏈上是安全的 — 請僅從提供完整歷史的節點重新掃描（透過此節點重建的結果同樣會不完整）。如果這是你自己的節點且仍在填充屏蔽歷史，請等待其日誌顯示「shielded history: VERIFIED」後再重新掃描。",
+    "notUpdating": "最後確認的餘額"
   },
   "iosInstallNotice": {
     "installedCopy": "在 Safari 中已有錢包？它不會與此安裝版本共用——請在此使用助記詞復原。",
@@ -901,7 +910,9 @@
     "wordsSoFar": "已輸入 {{n}} / 12 個單詞。",
     "wordsOddLength": "{{n}} 個單詞。恢復短語長度為 12、18 或 24 個單詞。",
     "connectingWhy": "你的錢包服務仍在同步鏈資料。新錢包會等待當前區塊，以免掃描不可能存在的多年歷史記錄。",
-    "usePublicInstead": "改用公開錢包服務"
+    "usePublicInstead": "改用公開錢包服務",
+    "birthdayAhead": "該區塊超出了鏈的高度（目前鏈頂為 {{tip}}）。從那裡恢復的錢包什麼都掃描不到，餘額會顯示為空——請核對高度。",
+    "accountsNotRestored": "你的錢包已恢復，但以下連結帳戶無法新增：{{accounts}}。它們的資金沒有遺失——用「新增帳戶」按順序新增，它們就會重新出現。"
   },
   "languagePicker": {
     "label": "語言",
@@ -1035,7 +1046,8 @@
     "notResponding": "錢包服務無回應（逾時）。",
     "cannotReachDaemon": "無法連線錢包守護程式。（{{detail}}）",
     "invalidResponse": "錢包服務回傳無效回應（{{status}}）。",
-    "blockedByPrivacy": "已封鎖：{{host}} 無法私下連線，且 Tor 已開啟。請關閉 Tor 或選擇洋蔥服務。"
+    "blockedByPrivacy": "已封鎖：{{host}} 無法私下連線，且 Tor 已開啟。請關閉 Tor 或選擇洋蔥服務。",
+    "tokenRejected": "錢包服務拒絕了此錢包的存取權杖。這並未導致資金遺失——你的金鑰在本裝置上。請稍後重試；若持續如此，請在設定中重新連接錢包。"
   },
   "noncustodial": {
     "fragmentedDefault": "此付款需要的幣數量超過一筆交易可花費的數量。",

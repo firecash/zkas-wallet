@@ -45,7 +45,10 @@
     "rescanHint": "Chain erneut lesen, um Verlauf neu aufzubauen und verlorene Gelder zu finden.",
     "recoveredNote": "Von der Chain mit deinem Betrachtungsschlüssel wiederhergestellt. Tippe für Details.",
     "exportFailed": "CSV-Export auf diesem Gerät nicht möglich.",
-    "exportCsv": "CSV exportieren"
+    "exportCsv": "CSV exportieren",
+    "truncated": "Es werden die neuesten {{shown}} von {{total}} Transaktionen angezeigt.",
+    "loadOlder": "Ältere Transaktionen laden",
+    "loadingOlder": "Wird geladen…"
   },
   "send": {
     "scanAria": "QR scannen",
@@ -117,7 +120,10 @@
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Liest noch die Chain – du kannst senden, sobald sie aufholt.",
     "unknownFailure": "Die Zahlung wurde abgelehnt, Grund unbekannt. Es wurde nichts gesendet – prüf den Verlauf, bevor du es erneut versuchst.",
-    "walletChanged": "Das aktive Wallet hat sich während der Zahlung geändert, daher wurde nichts gesendet. Prüfe, in welchem Wallet du bist, und versuche es erneut."
+    "walletChanged": "Das aktive Wallet hat sich während der Zahlung geändert, daher wurde nichts gesendet. Prüfe, in welchem Wallet du bist, und versuche es erneut.",
+    "submitOutcomeUnknown": "Der Wallet-Dienst hat während des Sendens dieser Zahlung nicht mehr geantwortet, daher kann die Wallet nicht feststellen, ob sie hinausgegangen ist. Prüfe den Verlauf, bevor du es erneut versuchst — ein zweites Senden könnte doppelt bezahlen.",
+    "feeExceedsAmount": "Die eingestellte Gebühr ({{fee}} ZKAS) ist höher als der Betrag, den du sendest ({{amount}} ZKAS). Prüfe das, bevor du bestätigst.",
+    "networkNotSignable": "Diese Wallet kann Zahlungen nur im Mainnet signieren, der Wallet-Dienst läuft aber auf {{network}}. Empfangen ist hier möglich, Senden nicht."
   },
   "sign": {
     "title": "Nachricht signieren",
@@ -353,7 +359,8 @@
     "lastBalance": "Letztes bestätigtes Guthaben",
     "retry": "Erneut versuchen",
     "advanced": "Mit einem anderen Wallet-Dienst verbinden",
-    "restartEngine": "Geräte-Engine neu starten"
+    "restartEngine": "Geräte-Engine neu starten",
+    "titleTokenRejected": "Der Wallet-Dienst hat diese Wallet abgelehnt"
   },
   "sendScene": {
     "warmEta": "noch ca. {{n}} Min.",
@@ -584,7 +591,8 @@
     "viewKeyTitle": "Betrachtungsschlüssel",
     "viewKeySummary": "Nur Lesen",
     "seedMoved": "Suchst du deine Wiederherstellungsphrase? Sie ist jetzt unter <b>Einstellungen → Wiederherstellungsphrase</b>, hinter deiner App-Sperre.",
-    "qrBuilding": "Code wird vorbereitet…"
+    "qrBuilding": "Code wird vorbereitet…",
+    "cannotSpendHere": "Dieses Gerät kann von dieser Adresse nicht senden. Alles, was hierher geschickt wird, ist sicher, aber um es zu bewegen, brauchst du die Wiederherstellungsphrase dieser Wallet auf diesem Gerät."
   },
   "revealSeedCard": {
     "wrongPin": "Falsche PIN.",
@@ -768,7 +776,8 @@
     "blockOf": "Block {{scanned}} von {{total}}",
     "keepsGoing": "Du kannst schließen und wiederkommen – es läuft weiter.",
     "prunedRebuild": "Dieser Node hat alte History gekürzt, daher kann das neu aufgebaute Guthaben eine <b>Untergrenze</b> sein. Deine Coins sind on-chain – scanne von einem Node mit vollständiger History erneut, um alles zu sehen. Falls dies dein eigener Node ist und er noch die abgeschirmte History füllt, warte, bis im Log „shielded history: VERIFIED“ steht, und scanne erneut.",
-    "prunedRebuildFrom": "Dieser Node hat alte History gekürzt (verfügbar ab Block {{block}}), daher kann das neu aufgebaute Guthaben eine <b>Untergrenze</b> sein. Deine Coins sind on-chain – scanne von einem Node mit vollständiger History erneut, um alles zu sehen. Falls dies dein eigener Node ist und er noch die abgeschirmte History füllt, warte, bis im Log „shielded history: VERIFIED“ steht, und scanne erneut."
+    "prunedRebuildFrom": "Dieser Node hat alte History gekürzt (verfügbar ab Block {{block}}), daher kann das neu aufgebaute Guthaben eine <b>Untergrenze</b> sein. Deine Coins sind on-chain – scanne von einem Node mit vollständiger History erneut, um alles zu sehen. Falls dies dein eigener Node ist und er noch die abgeschirmte History füllt, warte, bis im Log „shielded history: VERIFIED“ steht, und scanne erneut.",
+    "notUpdating": "letztes bestätigtes Guthaben"
   },
   "addAccountWallet": {
     "noPhrase": "Dieses Wallet hat keine Wiederherstellungsphrase, daher kann kein Konto abgeleitet werden. Nutze „Separates Wallet hinzufügen“ – es bekommt eine eigene Wiederherstellungsphrase, die du sichern musst.",
@@ -849,7 +858,8 @@
     "notResponding": "Wallet-Dienst antwortet nicht (Timeout). ",
     "cannotReachDaemon": "Wallet-Daemon nicht erreichbar. ({{detail}})",
     "invalidResponse": "Wallet-Dienst gab ungültige Antwort ({{status}}). ",
-    "blockedByPrivacy": "Blockiert: {{host}} ist nicht privat erreichbar, und Tor ist an. Schalte Tor aus oder wähle einen Onion-Dienst."
+    "blockedByPrivacy": "Blockiert: {{host}} ist nicht privat erreichbar, und Tor ist an. Schalte Tor aus oder wähle einen Onion-Dienst.",
+    "tokenRejected": "Der Wallet-Dienst hat das Access-Token dieser Wallet abgelehnt. Dein Guthaben ist nicht verloren — deine Schlüssel liegen auf diesem Gerät. Versuche es in Kürze erneut; wenn es bleibt, verbinde die Wallet in den Einstellungen neu."
   },
   "noncustodial": {
     "fragmentedDefault": "Diese Zahlung benötigt mehr Münzen, als eine Transaktion ausgeben kann.",
@@ -1798,7 +1808,9 @@
     "wordsSoFar": "{{n}} von 12 Wörtern bisher.",
     "wordsOddLength": "{{n}} Wörter. Eine Wiederherstellungsphrase ist 12, 18 oder 24 Wörter lang.",
     "connectingWhy": "Dein Wallet-Dienst holt noch zur Chain auf. Ein neues Wallet wartet auf den aktuellen Block, damit es nicht Jahre alter Geschichte scannt, die es nicht haben kann.",
-    "usePublicInstead": "Stattdessen den öffentlichen Wallet-Dienst nutzen"
+    "usePublicInstead": "Stattdessen den öffentlichen Wallet-Dienst nutzen",
+    "birthdayAhead": "Dieser Block liegt vor der Chain (die Spitze ist {{tip}}). Eine von dort wiederhergestellte Wallet würde nichts scannen und ein leeres Guthaben anzeigen — prüfe die Höhe.",
+    "accountsNotRestored": "Deine Wallet wurde wiederhergestellt, aber diese verknüpften Konten konnten nicht hinzugefügt werden: {{accounts}}. Ihr Guthaben ist nicht verloren — füge sie mit „Konto hinzufügen“ der Reihe nach hinzu, dann erscheinen sie wieder."
   },
   "syncDestination": {
     "tor": "Tor",

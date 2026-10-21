@@ -45,7 +45,10 @@
     "rescanHint": "Đọc lại chuỗi để xây lại lịch sử và thu hồi tiền bị mất.",
     "recoveredNote": "Đã phục hồi từ chuỗi bằng khóa xem của bạn. Chạm để xem chi tiết.",
     "exportFailed": "Không thể xuất CSV trên thiết bị này.",
-    "exportCsv": "Xuất CSV"
+    "exportCsv": "Xuất CSV",
+    "truncated": "Đang hiển thị {{shown}} giao dịch gần nhất trong tổng số {{total}}.",
+    "loadOlder": "Tải các giao dịch cũ hơn",
+    "loadingOlder": "Đang tải…"
   },
   "send": {
     "scanAria": "Quét mã QR",
@@ -117,7 +120,10 @@
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Đang đọc chuỗi — bạn có thể gửi ngay khi đồng bộ xong.",
     "unknownFailure": "Thanh toán bị từ chối và ví không đọc được lý do. Chưa gửi gì — hãy kiểm tra Lịch sử trước khi thử lại.",
-    "walletChanged": "Ví đang dùng đã thay đổi trong lúc thanh toán nên không gửi được gì. Hãy kiểm tra lại ví và thử lại."
+    "walletChanged": "Ví đang dùng đã thay đổi trong lúc thanh toán nên không gửi được gì. Hãy kiểm tra lại ví và thử lại.",
+    "submitOutcomeUnknown": "Dịch vụ ví đã ngừng phản hồi trong lúc khoản thanh toán này được phát lên mạng, nên ví không thể biết nó đã đi hay chưa. Hãy kiểm tra lịch sử trước khi thử lại — gửi lần thứ hai có thể trả tiền hai lần.",
+    "feeExceedsAmount": "Phí bạn đặt ({{fee}} ZKAS) lớn hơn số lượng bạn đang gửi ({{amount}} ZKAS). Hãy kiểm tra trước khi xác nhận.",
+    "networkNotSignable": "Ví này chỉ có thể ký các khoản thanh toán trên mainnet, còn dịch vụ ví đang ở {{network}}. Bạn có thể nhận ở đây, nhưng không thể gửi."
   },
   "sign": {
     "title": "Ký tin nhắn",
@@ -353,7 +359,8 @@
     "lastBalance": "Số dư cuối",
     "retry": "Thử lại",
     "advanced": "Kết nối dịch vụ ví khác",
-    "restartEngine": "Khởi động lại engine trên thiết bị"
+    "restartEngine": "Khởi động lại engine trên thiết bị",
+    "titleTokenRejected": "Dịch vụ ví đã từ chối ví này"
   },
   "sendScene": {
     "warmEta": "còn khoảng {{n}} phút",
@@ -612,7 +619,8 @@
     "viewKeyTitle": "Khóa xem ví",
     "viewKeySummary": "Chỉ xem",
     "seedMoved": "Tìm cụm từ khôi phục? Nó đã chuyển đến <b>Cài đặt → Cụm từ khôi phục</b>, sau khóa ứng dụng.",
-    "qrBuilding": "Đang tạo mã…"
+    "qrBuilding": "Đang tạo mã…",
+    "cannotSpendHere": "Thiết bị này không thể chi tiêu từ địa chỉ này. Mọi khoản gửi tới đây đều an toàn, nhưng để chuyển đi bạn sẽ cần cụm từ khôi phục của ví này trên thiết bị này."
   },
   "revealSeedCard": {
     "wrongPin": "Sai mã PIN.",
@@ -780,7 +788,8 @@
     "ariaSync": "Tiến độ đồng bộ ví",
     "scanning": "Số dư hiện ra khi ví quét chuỗi — tiền của bạn an toàn.",
     "lowerBound": "Số dư này là <b>giới hạn dưới</b>: chế độ xem của ví được xây dựng lại qua một nút đã cắt bớt lịch sử cũ, nên các đồng được tạo từ lâu có thể bị thiếu. Tiền của bạn vẫn an toàn trên chuỗi — chỉ quét lại từ một nút phục vụ lịch sử đầy đủ (xây dựng lại qua nút này cũng sẽ mù tương tự). Nếu đây là nút của bạn và nó vẫn đang điền lịch sử ẩn danh, hãy chờ nhật ký của nó báo \"shielded history: VERIFIED\" rồi quét lại.",
-    "lowerBoundFrom": "Số dư này là <b>giới hạn dưới</b>: chế độ xem của ví được xây dựng lại qua một nút đã cắt bớt lịch sử cũ (có sẵn từ khối {{block}}), nên các đồng được tạo từ lâu có thể bị thiếu. Tiền của bạn vẫn an toàn trên chuỗi — chỉ quét lại từ một nút phục vụ lịch sử đầy đủ (xây dựng lại qua nút này cũng sẽ mù tương tự). Nếu đây là nút của bạn và nó vẫn đang điền lịch sử ẩn danh, hãy chờ nhật ký của nó báo \"shielded history: VERIFIED\" rồi quét lại."
+    "lowerBoundFrom": "Số dư này là <b>giới hạn dưới</b>: chế độ xem của ví được xây dựng lại qua một nút đã cắt bớt lịch sử cũ (có sẵn từ khối {{block}}), nên các đồng được tạo từ lâu có thể bị thiếu. Tiền của bạn vẫn an toàn trên chuỗi — chỉ quét lại từ một nút phục vụ lịch sử đầy đủ (xây dựng lại qua nút này cũng sẽ mù tương tự). Nếu đây là nút của bạn và nó vẫn đang điền lịch sử ẩn danh, hãy chờ nhật ký của nó báo \"shielded history: VERIFIED\" rồi quét lại.",
+    "notUpdating": "số dư đã xác nhận gần nhất"
   },
   "addAccountWallet": {
     "noPhrase": "Ví này không có cụm từ khôi phục, nên không thể tạo tài khoản từ nó. Dùng “Thêm ví riêng” — ví đó có cụm từ riêng, bạn phải sao lưu.",
@@ -899,7 +908,9 @@
     "wordsSoFar": "{{n}} trên 12 từ.",
     "wordsOddLength": "{{n}} từ. Cụm từ khôi phục dài 12, 18 hoặc 24 từ.",
     "connectingWhy": "Dịch vụ ví của bạn đang bắt kịp chuỗi. Ví mới chờ khối hiện tại để không quét năm lịch sử không thể có.",
-    "usePublicInstead": "Dùng dịch vụ ví công cộng"
+    "usePublicInstead": "Dùng dịch vụ ví công cộng",
+    "birthdayAhead": "Khối đó đi trước chuỗi (đỉnh hiện tại là {{tip}}). Ví khôi phục từ đó sẽ không quét được gì và hiện số dư trống — hãy kiểm tra lại độ cao.",
+    "accountsNotRestored": "Ví của bạn đã được khôi phục, nhưng không thể thêm các tài khoản liên kết sau: {{accounts}}. Tiền của chúng không mất — hãy thêm bằng «Thêm tài khoản», theo thứ tự, và chúng sẽ xuất hiện lại."
   },
   "languagePicker": {
     "label": "Ngôn ngữ",
@@ -1833,7 +1844,8 @@
     "notResponding": "Dịch vụ ví không phản hồi (hết giờ).",
     "cannotReachDaemon": "Không thể kết nối daemon ví. ({{detail}})",
     "invalidResponse": "Dịch vụ ví trả về phản hồi không hợp lệ ({{status}}).",
-    "blockedByPrivacy": "Đã chặn: {{host}} không thể truy cập riêng tư và Tor đang bật. Tắt Tor hoặc chọn dịch vụ onion."
+    "blockedByPrivacy": "Đã chặn: {{host}} không thể truy cập riêng tư và Tor đang bật. Tắt Tor hoặc chọn dịch vụ onion.",
+    "tokenRejected": "Dịch vụ ví đã từ chối token truy cập của ví này. Nó không làm mất tiền của bạn — khóa của bạn nằm trên thiết bị này. Hãy thử lại sau một lát; nếu vẫn vậy, kết nối lại ví từ Cài đặt."
   },
   "noncustodial": {
     "fragmentedDefault": "Khoản thanh toán này cần nhiều đồng hơn một giao dịch có thể chi.",

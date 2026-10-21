@@ -45,7 +45,10 @@
     "rescanHint": "Geçmişi yeniden oluşturmak ve kayıp fonları kurtarmak için zinciri yeniden tara.",
     "recoveredNote": "Görüntüleme anahtarınızla zincirden kurtarıldı. Detaylar için bir ödemeye dokunun.",
     "exportFailed": "CSV bu cihaza aktarılamadı.",
-    "exportCsv": "CSV Dışa Aktar"
+    "exportCsv": "CSV Dışa Aktar",
+    "truncated": "Toplam {{total}} işlemden en yeni {{shown}} tanesi gösteriliyor.",
+    "loadOlder": "Daha eski işlemleri yükle",
+    "loadingOlder": "Yükleniyor…"
   },
   "send": {
     "scanAria": "QR Tara",
@@ -117,7 +120,10 @@
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Zincir hâlâ okunuyor — yetiştiği an gönderebilirsiniz.",
     "unknownFailure": "Ödeme reddedildi ve cüzdan sebebini okuyamadı. Hiçbir şey gönderilmedi — tekrar denemeden önce Geçmiş'i kontrol edin.",
-    "walletChanged": "Bu ödeme yapılırken aktif cüzdan değişti, bu yüzden hiçbir şey gönderilmedi. Hangi cüzdanda olduğunuzu kontrol edip tekrar deneyin."
+    "walletChanged": "Bu ödeme yapılırken aktif cüzdan değişti, bu yüzden hiçbir şey gönderilmedi. Hangi cüzdanda olduğunuzu kontrol edip tekrar deneyin.",
+    "submitOutcomeUnknown": "Bu ödeme ağa yayınlanırken cüzdan hizmeti yanıt vermeyi bıraktı, bu yüzden cüzdan ödemenin çıkıp çıkmadığını bilemiyor. Yeniden denemeden önce geçmişi kontrol edin — ikinci kez göndermek iki kez ödemeye yol açabilir.",
+    "feeExceedsAmount": "Belirlediğiniz ücret ({{fee}} ZKAS), gönderdiğiniz miktardan ({{amount}} ZKAS) daha yüksek. Onaylamadan önce kontrol edin.",
+    "networkNotSignable": "Bu cüzdan yalnızca mainnet ödemelerini imzalayabilir, cüzdan hizmeti ise {{network}} üzerinde. Burada alabilirsiniz ama gönderemezsiniz."
   },
   "sign": {
     "title": "Mesaj imzala",
@@ -441,7 +447,8 @@
     "lastBalance": "Son onaylı bakiye",
     "retry": "Tekrar dene",
     "advanced": "Farklı bir cüzdan hizmetine bağlan",
-    "restartEngine": "Cihaz içi motoru yeniden başlat"
+    "restartEngine": "Cihaz içi motoru yeniden başlat",
+    "titleTokenRejected": "Cüzdan hizmeti bu cüzdanı reddetti"
   },
   "sendScene": {
     "warmEta": "yaklaşık {{n}} dk kaldı",
@@ -551,7 +558,8 @@
     "viewKeyTitle": "Cüzdan görüntüleme anahtarı",
     "viewKeySummary": "Salt okunur",
     "seedMoved": "Kurtarma ifadenizi mi arıyorsunuz? <b>Ayarlar → Kurtarma ifadesi</b> bölümüne, uygulama kilidinizin arkasına taşındı.",
-    "qrBuilding": "Kodunuz hazırlanıyor…"
+    "qrBuilding": "Kodunuz hazırlanıyor…",
+    "cannotSpendHere": "Bu cihaz bu adresten harcama yapamaz. Buraya gönderilen her şey güvende, ancak taşımak için bu cihazda bu cüzdanın kurtarma ifadesine ihtiyacınız olacak."
   },
   "revealSeedCard": {
     "wrongPin": "Yanlış PIN.",
@@ -755,7 +763,8 @@
     "blockOf": "blok {{scanned}}/{{total}}",
     "keepsGoing": "Kapatıp dönebilirsiniz — devam eder.",
     "prunedRebuild": "Bu düğüm eski geçmişi budadı, bu nedenle yeniden oluşturulan bakiye <b>alt sınır</b> olabilir. Paralarınız zincirde — tam geçmiş sunan bir düğümden yeniden tarayın. Kendi düğümünüzse ve korumalı geçmişi hâlâ dolduruyorsa, günlüğünde \"shielded history: VERIFIED\" yazmasını bekleyip yeniden tarayın.",
-    "prunedRebuildFrom": "Bu düğüm eski geçmişi budadı (blok {{block}}'dan itibaren mevcut), bu nedenle yeniden oluşturulan bakiye <b>alt sınır</b> olabilir. Paralarınız zincirde — tam geçmiş sunan bir düğümden yeniden tarayın. Kendi düğümünüzse ve korumalı geçmişi hâlâ dolduruyorsa, günlüğünde \"shielded history: VERIFIED\" yazmasını bekleyip yeniden tarayın."
+    "prunedRebuildFrom": "Bu düğüm eski geçmişi budadı (blok {{block}}'dan itibaren mevcut), bu nedenle yeniden oluşturulan bakiye <b>alt sınır</b> olabilir. Paralarınız zincirde — tam geçmiş sunan bir düğümden yeniden tarayın. Kendi düğümünüzse ve korumalı geçmişi hâlâ dolduruyorsa, günlüğünde \"shielded history: VERIFIED\" yazmasını bekleyip yeniden tarayın.",
+    "notUpdating": "son onaylanan bakiye"
   },
   "addAccountWallet": {
     "noPhrase": "Bu cüzdanın kurtarma ifadesi yok, bu nedenle ondan bir hesap türetilemez. “Ayrı cüzdan ekle”yi kullanın — kendi kurtarma ifadesini alır, onu yedeklemelisiniz.",
@@ -874,7 +883,9 @@
     "wordsSoFar": "Şu ana kadar 12 kelimeden {{n}}.",
     "wordsOddLength": "{{n}} kelime. Bir kurtarma ifadesi 12, 18 veya 24 kelime uzunluğundadır.",
     "connectingWhy": "Cüzdan hizmetiniz hâlâ zincire yetişiyor. Yeni bir cüzdan, mevcut bloğu bekler, böylece sahip olamayacağı yıllarca geçmişi taramaz.",
-    "usePublicInstead": "Bunun yerine genel cüzdan hizmetini kullan"
+    "usePublicInstead": "Bunun yerine genel cüzdan hizmetini kullan",
+    "birthdayAhead": "O blok zincirin ilerisinde (uç nokta {{tip}}). Oradan geri yüklenen bir cüzdan hiçbir şey taramaz ve bakiyeyi boş gösterir — yüksekliği kontrol edin.",
+    "accountsNotRestored": "Cüzdanınız geri yüklendi, ancak şu bağlı hesaplar eklenemedi: {{accounts}}. Bu hesapların parası kaybolmadı — «Hesap ekle» ile sırayla ekleyin, yeniden görünecekler."
   },
   "languagePicker": {
     "label": "Dil",
@@ -1833,7 +1844,8 @@
     "notResponding": "Cüzdan hizmeti yanıt vermiyor (zaman aşımı).",
     "cannotReachDaemon": "Cüzdan arka plan programına ulaşılamıyor. ({{detail}})",
     "invalidResponse": "Cüzdan hizmeti geçersiz yanıt döndürdü ({{status}}).",
-    "blockedByPrivacy": "Engellendi: {{host}} özel olarak erişilemez ve Tor açık. Tor'u kapatın veya bir onion hizmeti seçin."
+    "blockedByPrivacy": "Engellendi: {{host}} özel olarak erişilemez ve Tor açık. Tor'u kapatın veya bir onion hizmeti seçin.",
+    "tokenRejected": "Cüzdan hizmeti bu cüzdanın erişim belirtecini reddetti. Paranız kaybolmadı — anahtarlarınız bu cihazda. Kısa süre sonra yeniden deneyin; sürerse cüzdanı Ayarlar'dan yeniden bağlayın."
   },
   "noncustodial": {
     "fragmentedDefault": "Bu ödeme, bir işlemin harcayabileceğinden daha fazla jeton gerektiriyor.",

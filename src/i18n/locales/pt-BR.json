@@ -45,7 +45,10 @@
     "rescanHint": "Releia a blockchain para reconstruir este histórico e recuperar fundos perdidos.",
     "recoveredNote": "Recuperado da blockchain pela sua chave de visualização. Toque num pagamento para detalhes.",
     "exportFailed": "Não foi possível exportar o CSV neste dispositivo.",
-    "exportCsv": "Exportar CSV"
+    "exportCsv": "Exportar CSV",
+    "truncated": "Exibindo as {{shown}} transações mais recentes de {{total}}.",
+    "loadOlder": "Carregar transações mais antigas",
+    "loadingOlder": "Carregando…"
   },
   "send": {
     "scanAria": "Escanear QR",
@@ -117,7 +120,10 @@
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Ainda lendo a cadeia — você pode enviar assim que ela alcançar.",
     "unknownFailure": "O pagamento foi recusado e a carteira não conseguiu ler o motivo. Nada foi enviado — veja o Histórico antes de tentar de novo.",
-    "walletChanged": "A carteira ativa mudou enquanto este pagamento era feito, então nada foi enviado. Verifique em qual carteira você está e tente novamente."
+    "walletChanged": "A carteira ativa mudou enquanto este pagamento era feito, então nada foi enviado. Verifique em qual carteira você está e tente novamente.",
+    "submitOutcomeUnknown": "O serviço de carteira parou de responder enquanto este pagamento estava sendo transmitido, então a carteira não tem como saber se ele saiu. Confira o histórico antes de tentar de novo — enviar uma segunda vez pode pagar duas vezes.",
+    "feeExceedsAmount": "A taxa que você definiu ({{fee}} ZKAS) é maior que o valor que está enviando ({{amount}} ZKAS). Confira antes de confirmar.",
+    "networkNotSignable": "Esta carteira só assina pagamentos na mainnet, e o serviço de carteira está em {{network}}. Você pode receber aqui, mas não enviar."
   },
   "sign": {
     "title": "Assinar mensagem",
@@ -441,7 +447,8 @@
     "lastBalance": "Último saldo confirmado",
     "retry": "Tentar de novo",
     "advanced": "Conectar a outro serviço de carteira",
-    "restartEngine": "Reiniciar o mecanismo no dispositivo"
+    "restartEngine": "Reiniciar o mecanismo no dispositivo",
+    "titleTokenRejected": "O serviço de carteira rejeitou esta carteira"
   },
   "sendScene": {
     "warmEta": "cerca de {{n}} min restantes",
@@ -612,7 +619,8 @@
     "viewKeyTitle": "Chave de visualização",
     "viewKeySummary": "Somente leitura",
     "seedMoved": "Procurando sua semente de recuperação? Ela foi para <b>Configurações → Semente de recuperação</b>, atrás do bloqueio do app.",
-    "qrBuilding": "Preparando seu código…"
+    "qrBuilding": "Preparando seu código…",
+    "cannotSpendHere": "Este dispositivo não pode gastar deste endereço. Tudo que for enviado para cá está seguro, mas para movê-lo você precisará da frase de recuperação desta carteira neste dispositivo."
   },
   "revealSeedCard": {
     "wrongPin": "PIN incorreto.",
@@ -780,7 +788,8 @@
     "ariaSync": "Progresso da sincronização",
     "scanning": "Saldos aparecem enquanto a carteira escaneia a cadeia — seus fundos estão seguros.",
     "lowerBound": "Este saldo é um <b>limite inferior</b>: a visualização da carteira foi reconstruída por um nó que podou o histórico antigo, então moedas criadas há muito tempo podem estar faltando. Suas moedas estão seguras na cadeia — reescaneie apenas de um nó que sirva o histórico completo (reconstruir por este seria igualmente cego). Se este for seu próprio nó e ele ainda estiver preenchendo o histórico blindado, aguarde o log mostrar \"shielded history: VERIFIED\" e reescaneie então.",
-    "lowerBoundFrom": "Este saldo é um <b>limite inferior</b>: a visualização da carteira foi reconstruída por um nó que podou o histórico antigo (disponível a partir do bloco {{block}}), então moedas criadas há muito tempo podem estar faltando. Suas moedas estão seguras na cadeia — reescaneie apenas de um nó que sirva o histórico completo (reconstruir por este seria igualmente cego). Se este for seu próprio nó e ele ainda estiver preenchendo o histórico blindado, aguarde o log mostrar \"shielded history: VERIFIED\" e reescaneie então."
+    "lowerBoundFrom": "Este saldo é um <b>limite inferior</b>: a visualização da carteira foi reconstruída por um nó que podou o histórico antigo (disponível a partir do bloco {{block}}), então moedas criadas há muito tempo podem estar faltando. Suas moedas estão seguras na cadeia — reescaneie apenas de um nó que sirva o histórico completo (reconstruir por este seria igualmente cego). Se este for seu próprio nó e ele ainda estiver preenchendo o histórico blindado, aguarde o log mostrar \"shielded history: VERIFIED\" e reescaneie então.",
+    "notUpdating": "último saldo confirmado"
   },
   "addAccountWallet": {
     "noPhrase": "Esta carteira não tem frase de recuperação, então não é possível derivar uma conta. Use “Adicionar carteira separada” — ela tem sua própria frase, da qual você deve fazer backup.",
@@ -892,7 +901,9 @@
     "wordsSoFar": "{{n}} de 12 palavras até agora.",
     "wordsOddLength": "{{n}} palavras. Uma frase de recuperação tem 12, 18 ou 24 palavras.",
     "connectingWhy": "Seu serviço de carteira ainda está alcançando a cadeia. Uma carteira nova espera o bloco atual, para não escanear anos de histórico que não pode ter.",
-    "usePublicInstead": "Usar o serviço de carteira público"
+    "usePublicInstead": "Usar o serviço de carteira público",
+    "birthdayAhead": "Esse bloco está à frente da cadeia (o topo é {{tip}}). Uma carteira restaurada a partir dali não escanearia nada e mostraria saldo vazio — confira a altura.",
+    "accountsNotRestored": "Sua carteira foi restaurada, mas estas contas vinculadas não puderam ser adicionadas: {{accounts}}. Os fundos delas não foram perdidos — adicione-as com «Adicionar conta», em ordem, e elas reaparecerão."
   },
   "languagePicker": {
     "label": "Idioma",
@@ -1297,7 +1308,8 @@
     "notResponding": "O serviço de carteira não responde (expirou).",
     "cannotReachDaemon": "Não foi possível acessar o daemon da carteira. ({{detail}})",
     "invalidResponse": "O serviço de carteira retornou resposta inválida ({{status}}).",
-    "blockedByPrivacy": "Bloqueado: {{host}} não é acessível de forma privada, e o Tor está ligado. Desligue o Tor ou escolha um serviço onion."
+    "blockedByPrivacy": "Bloqueado: {{host}} não é acessível de forma privada, e o Tor está ligado. Desligue o Tor ou escolha um serviço onion.",
+    "tokenRejected": "O serviço de carteira rejeitou o token de acesso desta carteira. Ele não perdeu seus fundos — suas chaves estão neste dispositivo. Tente de novo em instantes; se persistir, reconecte a carteira em Configurações."
   },
   "noncustodial": {
     "fragmentedDefault": "Este pagamento precisa de mais moedas do que uma transação pode gastar.",

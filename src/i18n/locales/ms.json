@@ -45,7 +45,10 @@
     "rescanHint": "Baca semula rantai untuk bina semula sejarah dan pulihkan dana yang hilang.",
     "recoveredNote": "Dipulihkan daripada rantaian oleh kunci tontonan anda. Ketik bayaran untuk butiran.",
     "exportFailed": "Gagal eksport CSV pada peranti ini.",
-    "exportCsv": "Eksport CSV"
+    "exportCsv": "Eksport CSV",
+    "truncated": "Memaparkan {{shown}} transaksi terkini daripada {{total}}.",
+    "loadOlder": "Muatkan transaksi lebih lama",
+    "loadingOlder": "Memuatkan…"
   },
   "vaultSetting": {
     "title": "Keselamatan & sandaran",
@@ -134,7 +137,10 @@
     "reviewSend": "Semak hantaran",
     "waitingForSync": "Masih membaca rantaian — anda boleh hantar sebaik sahaja ia segerak.",
     "unknownFailure": "Bayaran ditolak dan dompet tidak dapat membaca sebabnya. Tiada apa-apa dihantar — semak Sejarah sebelum mencuba lagi.",
-    "walletChanged": "Dompet aktif bertukar semasa pembayaran ini dibuat, jadi tiada apa-apa dihantar. Periksa dompet anda dan cuba lagi."
+    "walletChanged": "Dompet aktif bertukar semasa pembayaran ini dibuat, jadi tiada apa-apa dihantar. Periksa dompet anda dan cuba lagi.",
+    "submitOutcomeUnknown": "Perkhidmatan dompet berhenti menjawab semasa pembayaran ini disiarkan, jadi dompet tidak dapat memastikan sama ada ia telah keluar. Periksa sejarah sebelum mencuba lagi — menghantar kali kedua boleh membayar dua kali.",
+    "feeExceedsAmount": "Fi yang anda tetapkan ({{fee}} ZKAS) lebih besar daripada jumlah yang anda hantar ({{amount}} ZKAS). Periksa dahulu sebelum mengesahkan.",
+    "networkNotSignable": "Dompet ini hanya boleh menandatangani pembayaran di mainnet, manakala perkhidmatan dompet berada di {{network}}. Anda boleh menerima di sini, tetapi tidak boleh menghantar."
   },
   "sign": {
     "title": "Tandatangan mesej",
@@ -479,7 +485,8 @@
     "lastBalance": "Baki terakhir disahkan",
     "retry": "Cuba lagi",
     "advanced": "Sambung ke perkhidmatan dompet lain",
-    "restartEngine": "Mulakan semula enjin peranti"
+    "restartEngine": "Mulakan semula enjin peranti",
+    "titleTokenRejected": "Perkhidmatan dompet menolak dompet ini"
   },
   "sendScene": {
     "warmEta": "lebih kurang {{n}} min lagi",
@@ -551,7 +558,8 @@
     "viewKeyTitle": "Kunci lihat dompet",
     "viewKeySummary": "Baca sahaja",
     "seedMoved": "Mencari benih pemulihan anda? Ia dipindahkan ke <b>Tetapan → Benih pemulihan</b>, di sebalik kunci aplikasi anda.",
-    "qrBuilding": "Menyediakan kod anda…"
+    "qrBuilding": "Menyediakan kod anda…",
+    "cannotSpendHere": "Peranti ini tidak boleh membelanjakan dari alamat ini. Apa-apa yang dihantar ke sini adalah selamat, tetapi untuk memindahkannya anda memerlukan frasa pemulihan dompet ini pada peranti ini."
   },
   "revealSeedCard": {
     "wrongPin": "PIN salah.",
@@ -780,7 +788,8 @@
     "ariaSync": "Kemajuan segerak dompet",
     "scanning": "Baki muncul semasa dompet mengimbas rantaian — dana anda selamat.",
     "lowerBound": "Baki ini adalah <b>batas bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama, jadi syiling yang dicipta lama dahulu mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (membina semula melalui yang ini akan sama butanya). Jika ini nod anda sendiri dan ia masih mengisi sejarah terlindung, tunggu lognya menyatakan \"shielded history: VERIFIED\" dan imbas semula kemudian.",
-    "lowerBoundFrom": "Baki ini adalah <b>batas bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama (tersedia dari blok {{block}}), jadi syiling yang dicipta lama dahulu mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (membina semula melalui yang ini akan sama butanya). Jika ini nod anda sendiri dan ia masih mengisi sejarah terlindung, tunggu lognya menyatakan \"shielded history: VERIFIED\" dan imbas semula kemudian."
+    "lowerBoundFrom": "Baki ini adalah <b>batas bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama (tersedia dari blok {{block}}), jadi syiling yang dicipta lama dahulu mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (membina semula melalui yang ini akan sama butanya). Jika ini nod anda sendiri dan ia masih mengisi sejarah terlindung, tunggu lognya menyatakan \"shielded history: VERIFIED\" dan imbas semula kemudian.",
+    "notUpdating": "baki disahkan terakhir"
   },
   "addAccountWallet": {
     "noPhrase": "Dompet ini tiada frasa pemulihan, jadi akaun tidak boleh diterbitkan daripadanya. Guna “Tambah dompet berasingan” — ia ada frasa pemulihan sendiri, yang mesti anda sandarkan.",
@@ -901,7 +910,9 @@
     "wordsSoFar": "{{n}} daripada 12 perkataan setakat ini.",
     "wordsOddLength": "{{n}} perkataan. Frasa pemulihan adalah 12, 18 atau 24 perkataan.",
     "connectingWhy": "Perkhidmatan dompet anda masih menyegerak dengan rantaian. Dompet baru menunggu blok semasa, supaya ia tidak mengimbas tahun sejarah yang mustahil ada.",
-    "usePublicInstead": "Gunakan perkhidmatan dompet awam sebaliknya"
+    "usePublicInstead": "Gunakan perkhidmatan dompet awam sebaliknya",
+    "birthdayAhead": "Blok itu berada di hadapan rantai (puncaknya ialah {{tip}}). Dompet yang dipulihkan dari situ tidak akan memindai apa-apa dan memaparkan baki kosong — periksa ketinggiannya.",
+    "accountsNotRestored": "Dompet anda telah dipulihkan, tetapi akaun berkaitan ini tidak dapat ditambah: {{accounts}}. Dananya tidak hilang — tambahkannya dengan «Tambah akaun», mengikut urutan, dan ia akan muncul kembali."
   },
   "languagePicker": {
     "label": "Bahasa",
@@ -1833,7 +1844,8 @@
     "notResponding": "Perkhidmatan dompet tidak bertindak balas (tamat masa).",
     "cannotReachDaemon": "Tidak dapat mencapai daemon dompet. ({{detail}})",
     "invalidResponse": "Perkhidmatan dompet mengembalikan respons tidak sah ({{status}}).",
-    "blockedByPrivacy": "Disekat: {{host}} tidak boleh dicapai secara peribadi, dan Tor dihidupkan. Matikan Tor atau pilih perkhidmatan onion."
+    "blockedByPrivacy": "Disekat: {{host}} tidak boleh dicapai secara peribadi, dan Tor dihidupkan. Matikan Tor atau pilih perkhidmatan onion.",
+    "tokenRejected": "Perkhidmatan dompet menolak token akses dompet ini. Dana anda tidak hilang — kunci anda ada pada peranti ini. Cuba lagi sebentar nanti; jika berterusan, sambungkan semula dompet dari Tetapan."
   },
   "noncustodial": {
     "fragmentedDefault": "Bayaran ini memerlukan lebih banyak syiling daripada yang boleh dibelanjakan dalam satu transaksi.",

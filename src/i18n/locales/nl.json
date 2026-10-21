@@ -45,7 +45,10 @@
     "rescanHint": "Lees de blockchain opnieuw om deze geschiedenis opnieuw op te bouwen en verloren fondsen te herstellen.",
     "recoveredNote": "Hersteld van de blockchain via je kijksleutel. Tik op een betaling voor details.",
     "exportFailed": "CSV-export mislukt op dit apparaat.",
-    "exportCsv": "Exporteer CSV"
+    "exportCsv": "Exporteer CSV",
+    "truncated": "De {{shown}} meest recente van {{total}} transacties worden weergegeven.",
+    "loadOlder": "Oudere transacties laden",
+    "loadingOlder": "Laden…"
   },
   "send": {
     "needSeed": "Dit apparaat heeft de sleutel van deze portemonnee nog niet. Voer je herstelzin eenmalig in om hier te kunnen verzenden.",
@@ -117,7 +120,10 @@
     "reviewSend": "Verzending bekijken",
     "waitingForSync": "Nog de keten aan het lezen — je kunt verzenden zodra hij bij is.",
     "unknownFailure": "De betaling werd geweigerd en de wallet kon niet lezen waarom. Er is niets verzonden — check de geschiedenis voor je het opnieuw probeert.",
-    "walletChanged": "De actieve wallet is gewijzigd tijdens het maken van deze betaling, dus er is niets verzonden. Controleer in welke wallet je zit en probeer het opnieuw."
+    "walletChanged": "De actieve wallet is gewijzigd tijdens het maken van deze betaling, dus er is niets verzonden. Controleer in welke wallet je zit en probeer het opnieuw.",
+    "submitOutcomeUnknown": "De walletservice gaf geen antwoord meer terwijl deze betaling werd uitgezonden, dus de wallet kan niet vaststellen of hij de deur uit is. Controleer de geschiedenis voordat je het opnieuw probeert — een tweede keer verzenden kan dubbel betalen.",
+    "feeExceedsAmount": "De netwerkkosten die je hebt ingesteld ({{fee}} ZKAS) zijn hoger dan het bedrag dat je verzendt ({{amount}} ZKAS). Controleer dit voordat je bevestigt.",
+    "networkNotSignable": "Deze wallet kan alleen betalingen op mainnet ondertekenen, en de walletservice staat op {{network}}. Je kunt hier ontvangen, maar niet verzenden."
   },
   "sign": {
     "title": "Bericht ondertekenen",
@@ -353,7 +359,8 @@
     "lastBalance": "Laatste bevestigde saldo",
     "retry": "Opnieuw",
     "advanced": "Verbind met een andere walletservice",
-    "restartEngine": "Herstart de engine op het apparaat"
+    "restartEngine": "Herstart de engine op het apparaat",
+    "titleTokenRejected": "De walletservice heeft deze wallet geweigerd"
   },
   "sendScene": {
     "warmEta": "ongeveer {{n}} min resterend",
@@ -612,7 +619,8 @@
     "viewKeyTitle": "Wallet-kijksleutel",
     "viewKeySummary": "Alleen lezen",
     "seedMoved": "Op zoek naar je herstel-seed? Die staat nu in <b>Instellingen → Herstel-seed</b>, achter je appvergrendeling.",
-    "qrBuilding": "Code voorbereiden…"
+    "qrBuilding": "Code voorbereiden…",
+    "cannotSpendHere": "Dit apparaat kan niet vanaf dit adres uitgeven. Alles wat hier naartoe wordt gestuurd is veilig, maar om het te verplaatsen heb je de herstelzin van deze wallet op dit apparaat nodig."
   },
   "revealSeedCard": {
     "wrongPin": "Verkeerde pincode.",
@@ -789,7 +797,8 @@
     "ariaSync": "Synchronisatievoortgang wallet",
     "scanning": "Saldo verschijnt tijdens scannen — uw geld is veilig.",
     "lowerBound": "Dit saldo is een <b>ondergrens</b>: het overzicht van de wallet is opnieuw opgebouwd via een node die oude geschiedenis heeft gesnoeid, dus lang geleden aangemaakte munten kunnen ontbreken. Je munten zijn veilig op de keten — scan alleen opnieuw vanaf een node die de volledige geschiedenis aanbiedt (opnieuw opbouwen via deze zou net zo blind uitkomen). Als dit je eigen node is en deze nog steeds de afgeschermde geschiedenis aanvult, wacht dan tot het logboek \"shielded history: VERIFIED\" zegt en scan dan opnieuw.",
-    "lowerBoundFrom": "Dit saldo is een <b>ondergrens</b>: het overzicht van de wallet is opnieuw opgebouwd via een node die oude geschiedenis heeft gesnoeid (beschikbaar vanaf blok {{block}}), dus lang geleden aangemaakte munten kunnen ontbreken. Je munten zijn veilig op de keten — scan alleen opnieuw vanaf een node die de volledige geschiedenis aanbiedt (opnieuw opbouwen via deze zou net zo blind uitkomen). Als dit je eigen node is en deze nog steeds de afgeschermde geschiedenis aanvult, wacht dan tot het logboek \"shielded history: VERIFIED\" zegt en scan dan opnieuw."
+    "lowerBoundFrom": "Dit saldo is een <b>ondergrens</b>: het overzicht van de wallet is opnieuw opgebouwd via een node die oude geschiedenis heeft gesnoeid (beschikbaar vanaf blok {{block}}), dus lang geleden aangemaakte munten kunnen ontbreken. Je munten zijn veilig op de keten — scan alleen opnieuw vanaf een node die de volledige geschiedenis aanbiedt (opnieuw opbouwen via deze zou net zo blind uitkomen). Als dit je eigen node is en deze nog steeds de afgeschermde geschiedenis aanvult, wacht dan tot het logboek \"shielded history: VERIFIED\" zegt en scan dan opnieuw.",
+    "notUpdating": "laatst bevestigde saldo"
   },
   "addAccountWallet": {
     "noPhrase": "Deze portemonnee heeft geen herstelzin, dus er kan geen account van worden afgeleid. Gebruik 'Aparte portemonnee toevoegen' — die krijgt een eigen herstelzin, die u moet back-uppen.",
@@ -908,7 +917,9 @@
     "wordsSoFar": "{{n}} van de 12 woorden tot nu toe.",
     "wordsOddLength": "{{n}} woorden. Een herstelzin is 12, 18 of 24 woorden lang.",
     "connectingWhy": "Je walletservice is nog bezig met de keten. Een nieuwe wallet wacht op het huidige blok, zodat hij geen jaren aan geschiedenis scant die hij niet kan hebben.",
-    "usePublicInstead": "Gebruik de openbare walletservice"
+    "usePublicInstead": "Gebruik de openbare walletservice",
+    "birthdayAhead": "Dat blok ligt vóór de chain (de tip is {{tip}}). Een wallet die daar vandaan wordt hersteld scant niets en laat een leeg saldo zien — controleer de hoogte.",
+    "accountsNotRestored": "Je wallet is hersteld, maar deze gekoppelde accounts konden niet worden toegevoegd: {{accounts}}. Hun geld is niet verloren — voeg ze op volgorde toe met „Account toevoegen”, dan verschijnen ze weer."
   },
   "languagePicker": {
     "label": "Taal",
@@ -933,7 +944,8 @@
     "notResponding": "De wallet-service reageert niet (time-out).",
     "cannotReachDaemon": "Kan de wallet-daemon niet bereiken. ({{detail}})",
     "invalidResponse": "De wallet-service gaf een ongeldig antwoord ({{status}}).",
-    "blockedByPrivacy": "Geblokkeerd: {{host}} is niet privé bereikbaar en Tor staat aan. Zet Tor uit of kies een onion-service."
+    "blockedByPrivacy": "Geblokkeerd: {{host}} is niet privé bereikbaar en Tor staat aan. Zet Tor uit of kies een onion-service.",
+    "tokenRejected": "De walletservice heeft de toegangstoken van deze wallet geweigerd. Je geld is niet verloren — je sleutels staan op dit apparaat. Probeer het straks opnieuw; blijft het zo, verbind de wallet dan opnieuw via Instellingen."
   },
   "noncustodial": {
     "fragmentedDefault": "Deze betaling vereist meer munten dan één transactie kan uitgeven.",

@@ -69,7 +69,10 @@
     "reviewSend": "检查发送",
     "waitingForSync": "正在读取链数据 — 同步完成后即可发送。",
     "unknownFailure": "支付被拒绝，钱包无法读取原因。未发送任何内容 — 重试前请查看历史。",
-    "walletChanged": "发送过程中活跃钱包已切换，因此未发送任何内容。请检查当前钱包后重试。"
+    "walletChanged": "发送过程中活跃钱包已切换，因此未发送任何内容。请检查当前钱包后重试。",
+    "submitOutcomeUnknown": "这笔付款在广播过程中钱包服务停止响应，因此钱包无法判断它是否已发出。请在重试前查看历史记录——再发一次可能会付两次款。",
+    "feeExceedsAmount": "你设置的手续费（{{fee}} ZKAS）高于你要发送的金额（{{amount}} ZKAS）。请在确认前核对。",
+    "networkNotSignable": "此钱包只能为主网付款签名，而钱包服务在 {{network}} 上。你可以在这里接收，但无法发送。"
   },
   "sign": {
     "title": "签名消息",
@@ -128,7 +131,10 @@
     "rescanHint": "重新读取链数据以重建历史记录，并找回本地视图丢失的资金。",
     "recoveredNote": "通过查看密钥从链上恢复。点击付款查看详情。",
     "exportFailed": "此设备无法导出 CSV。",
-    "exportCsv": "导出 CSV"
+    "exportCsv": "导出 CSV",
+    "truncated": "正在显示 {{total}} 笔交易中最近的 {{shown}} 笔。",
+    "loadOlder": "加载更早的交易",
+    "loadingOlder": "加载中…"
   },
   "vaultSetting": {
     "title": "安全与备份",
@@ -441,7 +447,8 @@
     "lastBalance": "上次已确认余额",
     "retry": "重试",
     "advanced": "连接到其他钱包服务",
-    "restartEngine": "重启设备引擎"
+    "restartEngine": "重启设备引擎",
+    "titleTokenRejected": "钱包服务拒绝了此钱包"
   },
   "sendScene": {
     "warmEta": "约 {{n}} 分钟剩余",
@@ -551,7 +558,8 @@
     "viewKeyTitle": "钱包查看密钥",
     "viewKeySummary": "只读",
     "seedMoved": "在找你的恢复种子？它已移至<b>设置 → 恢复种子</b>，受应用锁保护。",
-    "qrBuilding": "正在生成二维码…"
+    "qrBuilding": "正在生成二维码…",
+    "cannotSpendHere": "此设备无法从该地址花费。发到这里的资金是安全的，但要转出，需要在本设备上拥有此钱包的助记词。"
   },
   "revealSeedCard": {
     "wrongPin": "PIN 码错误。",
@@ -755,7 +763,8 @@
     "blockOf": "区块{{scanned}}/{{total}}",
     "keepsGoing": "可关闭后返回——同步仍在继续。",
     "prunedRebuild": "此节点已裁剪旧历史，重建余额可能为<b>下限</b>。你的币在链上——从提供完整历史的节点重新扫描即可查看全部。若这是你自己的节点且仍在填充屏蔽历史，请等待日志显示\"shielded history: VERIFIED\"后重新扫描。",
-    "prunedRebuildFrom": "此节点已裁剪旧历史（可用区块从{{block}}开始），重建余额可能为<b>下限</b>。你的币在链上——从提供完整历史的节点重新扫描即可查看全部。若这是你自己的节点且仍在填充屏蔽历史，请等待日志显示\"shielded history: VERIFIED\"后重新扫描。"
+    "prunedRebuildFrom": "此节点已裁剪旧历史（可用区块从{{block}}开始），重建余额可能为<b>下限</b>。你的币在链上——从提供完整历史的节点重新扫描即可查看全部。若这是你自己的节点且仍在填充屏蔽历史，请等待日志显示\"shielded history: VERIFIED\"后重新扫描。",
+    "notUpdating": "最后确认的余额"
   },
   "addAccountWallet": {
     "noPhrase": "此钱包无助记词，无法派生账户。请使用“添加独立钱包” — 它将生成自己的助记词，需备份。",
@@ -901,7 +910,9 @@
     "wordsSoFar": "已输入 {{n}}/12 个单词。",
     "wordsOddLength": "{{n}} 个单词。助记词长度为 12、18 或 24 个单词。",
     "connectingWhy": "您的钱包服务仍在同步链数据。新钱包会等待当前区块，以免扫描不可能存在的多年历史。",
-    "usePublicInstead": "改用公共钱包服务"
+    "usePublicInstead": "改用公共钱包服务",
+    "birthdayAhead": "该区块超出了链的高度（当前链顶为 {{tip}}）。从那里恢复的钱包什么都扫描不到，余额会显示为空——请核对高度。",
+    "accountsNotRestored": "你的钱包已恢复，但以下关联账户无法添加：{{accounts}}。它们的资金没有丢失——用「添加账户」按顺序添加，它们就会重新出现。"
   },
   "languagePicker": {
     "label": "语言",
@@ -933,7 +944,8 @@
     "notResponding": "钱包服务无响应（超时）。",
     "cannotReachDaemon": "无法连接钱包守护进程。（{{detail}}）",
     "invalidResponse": "钱包服务返回无效响应（{{status}}）。",
-    "blockedByPrivacy": "已屏蔽：{{host}} 无法通过隐私方式访问，且 Tor 已开启。请关闭 Tor 或选择洋葱服务。"
+    "blockedByPrivacy": "已屏蔽：{{host}} 无法通过隐私方式访问，且 Tor 已开启。请关闭 Tor 或选择洋葱服务。",
+    "tokenRejected": "钱包服务拒绝了此钱包的访问令牌。这并未导致资金丢失——你的密钥在本设备上。请稍后重试；若持续如此，请在设置中重新连接钱包。"
   },
   "noncustodial": {
     "fragmentedDefault": "这笔支付需要的币数超过单笔交易可花费的数量。",

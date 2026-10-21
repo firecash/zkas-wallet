@@ -45,7 +45,10 @@
     "rescanHint": "Rileggi la catena per ricostruire la cronologia e recuperare fondi persi.",
     "recoveredNote": "Recuperato dalla catena con la tua chiave di visualizzazione. Tocca per dettagli.",
     "exportFailed": "Impossibile esportare il CSV su questo dispositivo.",
-    "exportCsv": "Esporta CSV"
+    "exportCsv": "Esporta CSV",
+    "truncated": "Vengono mostrate le {{shown}} transazioni più recenti su {{total}}.",
+    "loadOlder": "Carica transazioni precedenti",
+    "loadingOlder": "Caricamento…"
   },
   "send": {
     "needSeed": "Questo dispositivo non ha ancora la chiave del portafoglio. Inserisci la frase di recupero per abilitare l'invio.",
@@ -117,7 +120,10 @@
     "reviewSend": "Rivedi invio",
     "waitingForSync": "Legge ancora la catena — puoi inviare appena recupera.",
     "unknownFailure": "Pagamento rifiutato e il portafoglio non capisce perché. Non è stato inviato nulla — controlla la Cronologia prima di riprovare.",
-    "walletChanged": "Il portafoglio attivo è cambiato mentre stavi effettuando il pagamento, quindi non è stato inviato nulla. Controlla in quale portafoglio ti trovi e riprova."
+    "walletChanged": "Il portafoglio attivo è cambiato mentre stavi effettuando il pagamento, quindi non è stato inviato nulla. Controlla in quale portafoglio ti trovi e riprova.",
+    "submitOutcomeUnknown": "Il servizio portafoglio ha smesso di rispondere mentre questo pagamento veniva trasmesso, quindi il portafoglio non può sapere se è partito. Controlla la cronologia prima di riprovare — inviarlo una seconda volta potrebbe pagare due volte.",
+    "feeExceedsAmount": "La commissione impostata ({{fee}} ZKAS) è superiore all'importo che stai inviando ({{amount}} ZKAS). Controllala prima di confermare.",
+    "networkNotSignable": "Questo portafoglio può firmare pagamenti solo su mainnet, mentre il servizio portafoglio è su {{network}}. Qui puoi ricevere, ma non inviare."
   },
   "sign": {
     "title": "Firma messaggio",
@@ -353,7 +359,8 @@
     "lastBalance": "Ultimo saldo confermato",
     "retry": "Riprova",
     "advanced": "Connettiti a un servizio portafoglio diverso",
-    "restartEngine": "Riavvia il motore del dispositivo"
+    "restartEngine": "Riavvia il motore del dispositivo",
+    "titleTokenRejected": "Il servizio portafoglio ha rifiutato questo portafoglio"
   },
   "sendScene": {
     "warmEta": "circa {{n}} min rimasti",
@@ -612,7 +619,8 @@
     "viewKeyTitle": "Chiave di sola lettura",
     "viewKeySummary": "Sola lettura",
     "seedMoved": "Cerchi la frase di recupero? È in <b>Impostazioni → Frase di recupero</b>, dietro il blocco app.",
-    "qrBuilding": "Preparo il codice…"
+    "qrBuilding": "Preparo il codice…",
+    "cannotSpendHere": "Questo dispositivo non può spendere da questo indirizzo. Tutto ciò che viene inviato qui è al sicuro, ma per spostarlo ti servirà la frase di recupero di questo portafoglio su questo dispositivo."
   },
   "revealSeedCard": {
     "wrongPin": "PIN errato.",
@@ -789,7 +797,8 @@
     "ariaSync": "Avanzamento sincronizzazione",
     "scanning": "I saldi compaiono mentre il portafoglio scansiona la catena — i fondi sono al sicuro.",
     "lowerBound": "Questo saldo è un <b>limite inferiore</b>: la vista del portafoglio è stata ricostruita tramite un nodo che ha potato la cronologia vecchia, quindi monete create molto tempo fa potrebbero mancare. I tuoi fondi sono al sicuro sulla catena — riscansiona solo da un nodo con cronologia completa (ricostruire da questo sarebbe altrettanto cieco). Se è il tuo nodo e sta ancora caricando la cronologia schermata, aspetta che il log dica \"shielded history: VERIFIED\" e poi riscansiona.",
-    "lowerBoundFrom": "Questo saldo è un <b>limite inferiore</b>: la vista del portafoglio è stata ricostruita tramite un nodo che ha potato la cronologia vecchia (disponibile dal blocco {{block}}), quindi monete create molto tempo fa potrebbero mancare. I tuoi fondi sono al sicuro sulla catena — riscansiona solo da un nodo con cronologia completa (ricostruire da questo sarebbe altrettanto cieco). Se è il tuo nodo e sta ancora caricando la cronologia schermata, aspetta che il log dica \"shielded history: VERIFIED\" e poi riscansiona."
+    "lowerBoundFrom": "Questo saldo è un <b>limite inferiore</b>: la vista del portafoglio è stata ricostruita tramite un nodo che ha potato la cronologia vecchia (disponibile dal blocco {{block}}), quindi monete create molto tempo fa potrebbero mancare. I tuoi fondi sono al sicuro sulla catena — riscansiona solo da un nodo con cronologia completa (ricostruire da questo sarebbe altrettanto cieco). Se è il tuo nodo e sta ancora caricando la cronologia schermata, aspetta che il log dica \"shielded history: VERIFIED\" e poi riscansiona.",
+    "notUpdating": "ultimo saldo confermato"
   },
   "addAccountWallet": {
     "noPhrase": "Questo portafoglio non ha una frase di recupero, quindi non si può derivare un account. Usa “Aggiungi portafoglio separato” — ha la sua frase di recupero, di cui fare backup.",
@@ -908,7 +917,9 @@
     "wordsSoFar": "{{n}} di 12 parole finora.",
     "wordsOddLength": "{{n}} parole. Una frase di recupero è lunga 12, 18 o 24 parole.",
     "connectingWhy": "Il tuo servizio portafoglio sta ancora recuperando la catena. Un portafoglio nuovo aspetta il blocco corrente, così non scansiona anni di cronologia che non può avere.",
-    "usePublicInstead": "Usa il servizio portafoglio pubblico"
+    "usePublicInstead": "Usa il servizio portafoglio pubblico",
+    "birthdayAhead": "Quel blocco è più avanti della catena (la punta è {{tip}}). Un portafoglio ripristinato da lì non scansionerebbe nulla e mostrerebbe un saldo vuoto — controlla l'altezza.",
+    "accountsNotRestored": "Il tuo portafoglio è stato ripristinato, ma questi account collegati non sono stati aggiunti: {{accounts}}. I loro fondi non sono persi — aggiungili con «Aggiungi account», in ordine, e ricompariranno."
   },
   "languagePicker": {
     "label": "Lingua",
@@ -1091,7 +1102,8 @@
     "notResponding": "Il servizio wallet non risponde (timeout).",
     "cannotReachDaemon": "Impossibile raggiungere il demone wallet. ({{detail}})",
     "invalidResponse": "Il servizio wallet ha restituito una risposta non valida ({{status}}).",
-    "blockedByPrivacy": "Bloccato: {{host}} non è raggiungibile privatamente e Tor è attivo. Disattiva Tor o scegli un servizio onion."
+    "blockedByPrivacy": "Bloccato: {{host}} non è raggiungibile privatamente e Tor è attivo. Disattiva Tor o scegli un servizio onion.",
+    "tokenRejected": "Il servizio portafoglio ha rifiutato il token di accesso di questo portafoglio. I tuoi fondi non sono persi — le tue chiavi sono su questo dispositivo. Riprova tra poco; se continua, ricollega il portafoglio dalle Impostazioni."
   },
   "noncustodial": {
     "fragmentedDefault": "Questo pagamento richiede più monete di quante una transazione possa spendere.",

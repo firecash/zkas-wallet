@@ -45,7 +45,10 @@
     "rescanHint": "Relire la chaîne pour reconstruire l'historique et récupérer les fonds perdus localement.",
     "recoveredNote": "Récupéré de la chaîne par votre clé de visualisation. Appuyez pour les détails.",
     "exportFailed": "Impossible d'exporter le CSV sur cet appareil.",
-    "exportCsv": "Exporter CSV"
+    "exportCsv": "Exporter CSV",
+    "truncated": "Affichage des {{shown}} transactions les plus récentes sur {{total}}.",
+    "loadOlder": "Charger les transactions plus anciennes",
+    "loadingOlder": "Chargement…"
   },
   "send": {
     "scanAria": "Scanner un QR",
@@ -117,7 +120,10 @@
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Lecture de la chaîne en cours — vous pourrez envoyer dès qu'elle sera à jour.",
     "unknownFailure": "Le paiement a été refusé sans explication. Rien n'a été envoyé — vérifiez l'historique avant de réessayer.",
-    "walletChanged": "Le portefeuille actif a changé pendant ce paiement, donc rien n'a été envoyé. Vérifiez dans quel portefeuille vous êtes et réessayez."
+    "walletChanged": "Le portefeuille actif a changé pendant ce paiement, donc rien n'a été envoyé. Vérifiez dans quel portefeuille vous êtes et réessayez.",
+    "submitOutcomeUnknown": "Le service de portefeuille a cessé de répondre pendant la diffusion de ce paiement, le portefeuille ne peut donc pas savoir s'il est parti. Vérifiez l'historique avant de réessayer — un second envoi risquerait de payer deux fois.",
+    "feeExceedsAmount": "Les frais que vous avez fixés ({{fee}} ZKAS) dépassent le montant que vous envoyez ({{amount}} ZKAS). Vérifiez-les avant de confirmer.",
+    "networkNotSignable": "Ce portefeuille ne peut signer des paiements que sur le mainnet, or le service de portefeuille est sur {{network}}. Vous pouvez recevoir ici, mais pas envoyer."
   },
   "sign": {
     "title": "Signer un message",
@@ -493,7 +499,8 @@
     "lastBalance": "Dernier solde confirmé",
     "retry": "Réessayer",
     "advanced": "Se connecter à un autre service de portefeuille",
-    "restartEngine": "Redémarrer le moteur local"
+    "restartEngine": "Redémarrer le moteur local",
+    "titleTokenRejected": "Le service de portefeuille a rejeté ce portefeuille"
   },
   "sendScene": {
     "warmEta": "environ {{n}} min restantes",
@@ -612,7 +619,8 @@
     "viewKeyTitle": "Clé de consultation",
     "viewKeySummary": "Lecture seule",
     "seedMoved": "Phrase de récupération ? Elle est dans <b>Paramètres → Phrase de récupération</b>, derrière le verrouillage de l'application.",
-    "qrBuilding": "Préparation du code…"
+    "qrBuilding": "Préparation du code…",
+    "cannotSpendHere": "Cet appareil ne peut pas dépenser depuis cette adresse. Tout ce qui y est envoyé reste en sécurité, mais pour le déplacer il vous faudra la phrase de récupération de ce portefeuille sur cet appareil."
   },
   "revealSeedCard": {
     "wrongPin": "Code PIN erroné.",
@@ -789,7 +797,8 @@
     "ariaSync": "Progression synchro wallet",
     "scanning": "Les soldes apparaissent pendant le scan de la chaîne — vos fonds sont en sécurité.",
     "lowerBound": "Ce solde est une <b>borne inférieure</b> : la vue du portefeuille a été reconstruite via un nœud qui a élagué l’historique ancien, donc des pièces créées il y a longtemps peuvent manquer. Vos fonds sont en sécurité sur la chaîne — réanalysez uniquement depuis un nœud qui sert l’historique complet (reconstruire via celui-ci donnerait le même résultat aveugle). Si c’est votre propre nœud et qu’il remplit encore l’historique protégé, attendez que son journal indique « shielded history: VERIFIED » puis réanalysez.",
-    "lowerBoundFrom": "Ce solde est une <b>borne inférieure</b> : la vue du portefeuille a été reconstruite via un nœud qui a élagué l’historique ancien (disponible à partir du bloc {{block}}), donc des pièces créées il y a longtemps peuvent manquer. Vos fonds sont en sécurité sur la chaîne — réanalysez uniquement depuis un nœud qui sert l’historique complet (reconstruire via celui-ci donnerait le même résultat aveugle). Si c’est votre propre nœud et qu’il remplit encore l’historique protégé, attendez que son journal indique « shielded history: VERIFIED » puis réanalysez."
+    "lowerBoundFrom": "Ce solde est une <b>borne inférieure</b> : la vue du portefeuille a été reconstruite via un nœud qui a élagué l’historique ancien (disponible à partir du bloc {{block}}), donc des pièces créées il y a longtemps peuvent manquer. Vos fonds sont en sécurité sur la chaîne — réanalysez uniquement depuis un nœud qui sert l’historique complet (reconstruire via celui-ci donnerait le même résultat aveugle). Si c’est votre propre nœud et qu’il remplit encore l’historique protégé, attendez que son journal indique « shielded history: VERIFIED » puis réanalysez.",
+    "notUpdating": "dernier solde confirmé"
   },
   "recoverWallet": {
     "watchIntro": "Affiche le solde et l'historique sans phrase de récupération. Impossible d'envoyer : une clé de visualisation n'autorise pas les dépenses.",
@@ -881,7 +890,9 @@
     "wordsSoFar": "{{n}} mots sur 12 pour l'instant.",
     "wordsOddLength": "{{n}} mots. Une phrase de récupération fait 12, 18 ou 24 mots.",
     "connectingWhy": "Votre service de portefeuille rattrape la chaîne. Un nouveau portefeuille attend le bloc actuel pour ne pas analyser des années d'historique qu'il ne peut pas avoir.",
-    "usePublicInstead": "Utiliser le service de portefeuille public"
+    "usePublicInstead": "Utiliser le service de portefeuille public",
+    "birthdayAhead": "Ce bloc est en avance sur la chaîne (la pointe est à {{tip}}). Un portefeuille restauré à partir de là n'analyserait rien et afficherait un solde vide — vérifiez la hauteur.",
+    "accountsNotRestored": "Votre portefeuille a été restauré, mais ces comptes liés n'ont pas pu être ajoutés : {{accounts}}. Leurs fonds ne sont pas perdus — ajoutez-les avec « Ajouter un compte », dans l'ordre, et ils réapparaîtront."
   },
   "addAccountWallet": {
     "noPhrase": "Ce portefeuille n'a pas de phrase de récupération, impossible d'en dériver un compte. Utilisez « Ajouter un portefeuille séparé » — il a sa propre phrase de récupération, à sauvegarder.",
@@ -1042,7 +1053,8 @@
     "notResponding": "Le service de portefeuille ne répond pas (délai dépassé).",
     "cannotReachDaemon": "Démon de portefeuille injoignable. ({{detail}})",
     "invalidResponse": "Le service de portefeuille a renvoyé une réponse invalide ({{status}}).",
-    "blockedByPrivacy": "Bloqué : {{host}} n'est pas accessible de manière privée, et Tor est activé. Désactivez Tor ou choisissez un service onion."
+    "blockedByPrivacy": "Bloqué : {{host}} n'est pas accessible de manière privée, et Tor est activé. Désactivez Tor ou choisissez un service onion.",
+    "tokenRejected": "Le service de portefeuille a rejeté le jeton d'accès de ce portefeuille. Vos fonds ne sont pas perdus — vos clés sont sur cet appareil. Réessayez dans un instant ; si cela persiste, reconnectez le portefeuille depuis les Paramètres."
   },
   "noncustodial": {
     "fragmentedDefault": "Ce paiement nécessite plus de pièces qu’une seule transaction ne peut en dépenser.",

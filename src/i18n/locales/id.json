@@ -45,7 +45,10 @@
     "rescanHint": "Baca ulang rantai untuk membangun ulang riwayat & pulihkan dana yang hilang.",
     "recoveredNote": "Dipulihkan dari rantai oleh kunci lihat Anda. Ketuk pembayaran untuk detail.",
     "exportFailed": "Gagal mengekspor CSV di perangkat ini.",
-    "exportCsv": "Ekspor CSV"
+    "exportCsv": "Ekspor CSV",
+    "truncated": "Menampilkan {{shown}} transaksi terbaru dari {{total}}.",
+    "loadOlder": "Muat transaksi lebih lama",
+    "loadingOlder": "Memuat…"
   },
   "send": {
     "needSeed": "Perangkat ini belum memiliki kunci dompet. Masukkan frasa pemulihan sekali untuk mengirim.",
@@ -117,7 +120,10 @@
     "reviewSend": "Tinjau kiriman",
     "waitingForSync": "Masih membaca rantai — Anda bisa kirim begitu sudah tersinkron.",
     "unknownFailure": "Pembayaran ditolak dan dompet tidak bisa membaca penyebabnya. Tidak ada yang terkirim — periksa Riwayat sebelum mencoba lagi.",
-    "walletChanged": "Dompet aktif berubah saat pembayaran ini dibuat, jadi tidak ada yang terkirim. Periksa dompet Anda dan coba lagi."
+    "walletChanged": "Dompet aktif berubah saat pembayaran ini dibuat, jadi tidak ada yang terkirim. Periksa dompet Anda dan coba lagi.",
+    "submitOutcomeUnknown": "Layanan dompet berhenti menjawab saat pembayaran ini disiarkan, jadi dompet tidak bisa memastikan apakah pembayaran sudah keluar. Periksa riwayat sebelum mencoba lagi — mengirim kedua kali bisa membayar dua kali.",
+    "feeExceedsAmount": "Biaya yang kamu tetapkan ({{fee}} ZKAS) lebih besar daripada jumlah yang kamu kirim ({{amount}} ZKAS). Periksa dulu sebelum mengonfirmasi.",
+    "networkNotSignable": "Dompet ini hanya bisa menandatangani pembayaran di mainnet, sedangkan layanan dompet ada di {{network}}. Kamu bisa menerima di sini, tapi tidak bisa mengirim."
   },
   "sign": {
     "title": "Tanda tangani pesan",
@@ -353,7 +359,8 @@
     "lastBalance": "Saldo terakhir terkonfirmasi",
     "retry": "Coba lagi",
     "advanced": "Hubungkan ke layanan dompet lain",
-    "restartEngine": "Mulai ulang mesin di perangkat"
+    "restartEngine": "Mulai ulang mesin di perangkat",
+    "titleTokenRejected": "Layanan dompet menolak dompet ini"
   },
   "sendScene": {
     "warmEta": "sekitar {{n}} mnt lagi",
@@ -612,7 +619,8 @@
     "viewKeyTitle": "Kunci lihat dompet",
     "viewKeySummary": "Hanya baca",
     "seedMoved": "Cari frasa pemulihan? Pindah ke <b>Pengaturan → Frasa pemulihan</b>, di balik kunci aplikasi.",
-    "qrBuilding": "Menyiapkan kode Anda…"
+    "qrBuilding": "Menyiapkan kode Anda…",
+    "cannotSpendHere": "Perangkat ini tidak bisa membelanjakan dari alamat ini. Apa pun yang dikirim ke sini tetap aman, tetapi untuk memindahkannya kamu perlu frasa pemulihan dompet ini di perangkat ini."
   },
   "revealSeedCard": {
     "wrongPin": "PIN salah.",
@@ -789,7 +797,8 @@
     "ariaSync": "Progres sinkron dompet",
     "scanning": "Saldo muncul saat dompet memindai rantai — dana Anda aman.",
     "lowerBound": "Saldo ini adalah <b>batas bawah</b>: tampilan dompet dibangun ulang melalui node yang telah memangkas riwayat lama, jadi koin yang dibuat lama mungkin hilang darinya. Koin Anda aman di rantai — pindai ulang hanya dari node yang menyajikan riwayat penuh (membangun ulang melalui yang ini akan sama butanya). Jika ini node Anda sendiri dan masih mengisi riwayat terlindungi, tunggu log-nya mengatakan \"shielded history: VERIFIED\" lalu pindai ulang.",
-    "lowerBoundFrom": "Saldo ini adalah <b>batas bawah</b>: tampilan dompet dibangun ulang melalui node yang telah memangkas riwayat lama (tersedia dari blok {{block}}), jadi koin yang dibuat lama mungkin hilang darinya. Koin Anda aman di rantai — pindai ulang hanya dari node yang menyajikan riwayat penuh (membangun ulang melalui yang ini akan sama butanya). Jika ini node Anda sendiri dan masih mengisi riwayat terlindungi, tunggu log-nya mengatakan \"shielded history: VERIFIED\" lalu pindai ulang."
+    "lowerBoundFrom": "Saldo ini adalah <b>batas bawah</b>: tampilan dompet dibangun ulang melalui node yang telah memangkas riwayat lama (tersedia dari blok {{block}}), jadi koin yang dibuat lama mungkin hilang darinya. Koin Anda aman di rantai — pindai ulang hanya dari node yang menyajikan riwayat penuh (membangun ulang melalui yang ini akan sama butanya). Jika ini node Anda sendiri dan masih mengisi riwayat terlindungi, tunggu log-nya mengatakan \"shielded history: VERIFIED\" lalu pindai ulang.",
+    "notUpdating": "saldo terkonfirmasi terakhir"
   },
   "addAccountWallet": {
     "noPhrase": "Dompet ini tidak punya frasa pemulihan, jadi akun tidak bisa diturunkan darinya. Gunakan “Tambah dompet terpisah” — dompet itu punya frasa pemulihan sendiri yang harus Anda cadangkan.",
@@ -901,7 +910,9 @@
     "wordsSoFar": "{{n}} dari 12 kata sejauh ini.",
     "wordsOddLength": "{{n}} kata. Frasa pemulihan terdiri dari 12, 18, atau 24 kata.",
     "connectingWhy": "Layanan dompet Anda masih mengejar rantai. Dompet baru menunggu blok saat ini, sehingga tidak memindai tahun-tahun riwayat yang tidak mungkin dimiliki.",
-    "usePublicInstead": "Gunakan layanan dompet publik saja"
+    "usePublicInstead": "Gunakan layanan dompet publik saja",
+    "birthdayAhead": "Blok itu berada di depan rantai (puncaknya {{tip}}). Dompet yang dipulihkan dari sana tidak akan memindai apa pun dan menampilkan saldo kosong — periksa ketinggiannya.",
+    "accountsNotRestored": "Dompetmu berhasil dipulihkan, tetapi akun tertaut ini tidak dapat ditambahkan: {{accounts}}. Dananya tidak hilang — tambahkan dengan «Tambah akun», berurutan, dan akun itu akan muncul kembali."
   },
   "languagePicker": {
     "label": "Bahasa",
@@ -1042,7 +1053,8 @@
     "notResponding": "Layanan dompet tidak merespons (habis waktu).",
     "cannotReachDaemon": "Tidak dapat menjangkau daemon dompet. ({{detail}})",
     "invalidResponse": "Layanan dompet mengembalikan respons tidak valid ({{status}}).",
-    "blockedByPrivacy": "Diblokir: {{host}} tidak dapat dijangkau secara pribadi, dan Tor aktif. Matikan Tor atau pilih layanan onion."
+    "blockedByPrivacy": "Diblokir: {{host}} tidak dapat dijangkau secara pribadi, dan Tor aktif. Matikan Tor atau pilih layanan onion.",
+    "tokenRejected": "Layanan dompet menolak token akses dompet ini. Danamu tidak hilang — kuncimu ada di perangkat ini. Coba lagi sebentar; jika terus terjadi, hubungkan ulang dompet dari Pengaturan."
   },
   "noncustodial": {
     "fragmentedDefault": "Pembayaran ini butuh lebih banyak koin daripada yang bisa dibelanjakan satu transaksi.",

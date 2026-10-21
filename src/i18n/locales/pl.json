@@ -69,7 +69,10 @@
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Wciąż czytam łańcuch — wyślesz, gdy dogoni.",
     "unknownFailure": "Płatność została odrzucona, a portfel nie odczytał przyczyny. Nic nie zostało wysłane — sprawdź historię przed ponowną próbą.",
-    "walletChanged": "Podczas dokonywania płatności zmienił się aktywny portfel, więc nic nie zostało wysłane. Sprawdź, w którym portfelu jesteś, i spróbuj ponownie."
+    "walletChanged": "Podczas dokonywania płatności zmienił się aktywny portfel, więc nic nie zostało wysłane. Sprawdź, w którym portfelu jesteś, i spróbuj ponownie.",
+    "submitOutcomeUnknown": "Usługa portfela przestała odpowiadać w trakcie rozgłaszania tej płatności, więc portfel nie może ustalić, czy została wysłana. Sprawdź historię przed kolejną próbą — wysłanie drugi raz może zapłacić dwukrotnie.",
+    "feeExceedsAmount": "Ustawiona opłata ({{fee}} ZKAS) jest większa niż wysyłana kwota ({{amount}} ZKAS). Sprawdź to przed zatwierdzeniem.",
+    "networkNotSignable": "Ten portfel potrafi podpisywać płatności tylko w mainnecie, a usługa portfela działa na {{network}}. Tutaj możesz odbierać, ale nie wysyłać."
   },
   "sign": {
     "title": "Podpisz wiadomość",
@@ -128,7 +131,10 @@
     "rescanHint": "Ponownie odczytaj łańcuch, by odbudować historię i odzyskać środki utracone lokalnie.",
     "recoveredNote": "Odzyskane z łańcucha przez klucz podglądu. Stuknij płatność po szczegóły.",
     "exportFailed": "Nie udało się wyeksportować CSV na tym urządzeniu.",
-    "exportCsv": "Eksportuj CSV"
+    "exportCsv": "Eksportuj CSV",
+    "truncated": "Wyświetlane są {{shown}} najnowsze z {{total}} transakcji.",
+    "loadOlder": "Wczytaj starsze transakcje",
+    "loadingOlder": "Wczytywanie…"
   },
   "vaultSetting": {
     "title": "Bezpieczeństwo i kopia",
@@ -281,7 +287,8 @@
     "lastBalance": "Ostatnie potwierdzone saldo",
     "retry": "Spróbuj ponownie",
     "advanced": "Połącz z inną usługą portfela",
-    "restartEngine": "Uruchom ponownie silnik urządzenia"
+    "restartEngine": "Uruchom ponownie silnik urządzenia",
+    "titleTokenRejected": "Usługa portfela odrzuciła ten portfel"
   },
   "sendScene": {
     "warmEta": "około {{n}} min do końca",
@@ -485,7 +492,8 @@
     "viewKeyTitle": "Klucz podglądu portfela",
     "viewKeySummary": "Tylko do odczytu",
     "seedMoved": "Szukasz frazy odzyskiwania? Przeniesiono do <b>Ustawienia → Fraza odzyskiwania</b>, za blokadą aplikacji.",
-    "qrBuilding": "Przygotowuję kod…"
+    "qrBuilding": "Przygotowuję kod…",
+    "cannotSpendHere": "To urządzenie nie może wydawać z tego adresu. Wszystko, co tu wpłynie, jest bezpieczne, ale do przeniesienia potrzebna będzie fraza odzyskiwania tego portfela na tym urządzeniu."
   },
   "revealSeedCard": {
     "wrongPin": "Zły PIN.",
@@ -755,7 +763,8 @@
     "blockOf": "blok {{scanned}} z {{total}}",
     "keepsGoing": "Możesz zamknąć i wrócić — proces trwa dalej.",
     "prunedRebuild": "Ten węzeł przyciął starszą historię, więc odbudowane saldo może być <b>dolnym ograniczeniem</b>. Twoje monety są w łańcuchu — przeskanuj ponownie z węzła udostępniającego pełną historię, aby zobaczyć wszystko. Jeśli to twój własny węzeł i wciąż uzupełnia historię chronioną, poczekaj, aż w logu pojawi się \"shielded history: VERIFIED\" i przeskanuj ponownie.",
-    "prunedRebuildFrom": "Ten węzeł przyciął starszą historię (dostępną od bloku {{block}}), więc odbudowane saldo może być <b>dolnym ograniczeniem</b>. Twoje monety są w łańcuchu — przeskanuj ponownie z węzła udostępniającego pełną historię, aby zobaczyć wszystko. Jeśli to twój własny węzeł i wciąż uzupełnia historię chronioną, poczekaj, aż w logu pojawi się \"shielded history: VERIFIED\" i przeskanuj ponownie."
+    "prunedRebuildFrom": "Ten węzeł przyciął starszą historię (dostępną od bloku {{block}}), więc odbudowane saldo może być <b>dolnym ograniczeniem</b>. Twoje monety są w łańcuchu — przeskanuj ponownie z węzła udostępniającego pełną historię, aby zobaczyć wszystko. Jeśli to twój własny węzeł i wciąż uzupełnia historię chronioną, poczekaj, aż w logu pojawi się \"shielded history: VERIFIED\" i przeskanuj ponownie.",
+    "notUpdating": "ostatnie potwierdzone saldo"
   },
   "addAccountWallet": {
     "noPhrase": "Ten portfel nie ma frazy odzyskiwania, więc nie można z niego wyprowadzić konta. Użyj „Dodaj osobny portfel” — ma własną frazę odzyskiwania, którą musisz utworzyć kopię zapasową.",
@@ -874,7 +883,9 @@
     "wordsSoFar": "{{n}} z 12 słów.",
     "wordsOddLength": "{{n}} słów. Fraza odzyskiwania ma 12, 18 lub 24 słowa.",
     "connectingWhy": "Twoja usługa portfela wciąż dogania łańcuch. Nowy portfel czeka na bieżący blok, aby nie skanować lat historii, których nie może mieć.",
-    "usePublicInstead": "Użyj publicznej usługi portfela"
+    "usePublicInstead": "Użyj publicznej usługi portfela",
+    "birthdayAhead": "Ten blok wyprzedza łańcuch (szczyt to {{tip}}). Portfel odtworzony od tego miejsca nie przeskanowałby nic i pokazałby puste saldo — sprawdź wysokość.",
+    "accountsNotRestored": "Twój portfel został odtworzony, ale tych powiązanych kont nie udało się dodać: {{accounts}}. Ich środki nie przepadły — dodaj je przez „Dodaj konto”, po kolei, i pojawią się ponownie."
   },
   "consolidateDialog": {
     "errEnterSeed": "Wprowadź 64-znakowe ziarno odzyskiwania tego portfela.",
@@ -933,7 +944,8 @@
     "notResponding": "Usługa portfela nie odpowiada (limit czasu).",
     "cannotReachDaemon": "Nie można połączyć się z demonem portfela. ({{detail}})",
     "invalidResponse": "Usługa portfela zwróciła nieprawidłową odpowiedź ({{status}}).",
-    "blockedByPrivacy": "Zablokowano: {{host}} jest nieosiągalny prywatnie, a Tor jest włączony. Wyłącz Tor lub wybierz usługę cebulową."
+    "blockedByPrivacy": "Zablokowano: {{host}} jest nieosiągalny prywatnie, a Tor jest włączony. Wyłącz Tor lub wybierz usługę cebulową.",
+    "tokenRejected": "Usługa portfela odrzuciła token dostępu tego portfela. Twoje środki nie przepadły — klucze są na tym urządzeniu. Spróbuj ponownie za chwilę; jeśli to się utrzyma, połącz portfel od nowa w Ustawieniach."
   },
   "noncustodial": {
     "fragmentedDefault": "Ta płatność wymaga więcej monet, niż jedna transakcja może wydać.",

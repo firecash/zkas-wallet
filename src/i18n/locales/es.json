@@ -45,7 +45,10 @@
     "rescanHint": "Relee la cadena para reconstruir este historial y recuperar fondos perdidos.",
     "recoveredNote": "Recuperado de la cadena con tu clave de visualización. Toca un pago para ver detalles.",
     "exportFailed": "No se pudo exportar el CSV en este dispositivo.",
-    "exportCsv": "Exportar CSV"
+    "exportCsv": "Exportar CSV",
+    "truncated": "Mostrando las {{shown}} transacciones más recientes de {{total}}.",
+    "loadOlder": "Cargar transacciones anteriores",
+    "loadingOlder": "Cargando…"
   },
   "send": {
     "scanAria": "Escanear QR",
@@ -117,7 +120,10 @@
     "addrPlaceholder": "zkas:…",
     "waitingForSync": "Leyendo la cadena — podrás enviar en cuanto se ponga al día.",
     "unknownFailure": "El pago fue rechazado y la billetera no pudo saber por qué. No se envió nada — revisa el historial antes de intentar de nuevo.",
-    "walletChanged": "La billetera activa cambió mientras se realizaba este pago, así que no se envió nada. Revisa en qué billetera estás e inténtalo de nuevo."
+    "walletChanged": "La billetera activa cambió mientras se realizaba este pago, así que no se envió nada. Revisa en qué billetera estás e inténtalo de nuevo.",
+    "submitOutcomeUnknown": "El servicio de billetera dejó de responder mientras se transmitía este pago, así que la billetera no puede saber si salió. Revisa el historial antes de volver a intentarlo — enviarlo por segunda vez podría pagar dos veces.",
+    "feeExceedsAmount": "La comisión que fijaste ({{fee}} ZKAS) es mayor que el monto que estás enviando ({{amount}} ZKAS). Revísala antes de confirmar.",
+    "networkNotSignable": "Esta billetera solo puede firmar pagos en mainnet, y el servicio de billetera está en {{network}}. Aquí puedes recibir, pero no enviar."
   },
   "sign": {
     "title": "Firmar mensaje",
@@ -479,7 +485,8 @@
     "lastBalance": "Último saldo confirmado",
     "retry": "Reintentar",
     "advanced": "Conectar a otro servicio de billetera",
-    "restartEngine": "Reiniciar el motor del dispositivo"
+    "restartEngine": "Reiniciar el motor del dispositivo",
+    "titleTokenRejected": "El servicio de billetera rechazó esta billetera"
   },
   "sendScene": {
     "warmEta": "aprox. {{n}} min restantes",
@@ -612,7 +619,8 @@
     "viewKeyTitle": "Clave de vista",
     "viewKeySummary": "Solo lectura",
     "seedMoved": "¿Buscas tu semilla de recuperación? Se movió a <b>Configuración → Semilla de recuperación</b>, detrás del bloqueo de la app.",
-    "qrBuilding": "Preparando tu código…"
+    "qrBuilding": "Preparando tu código…",
+    "cannotSpendHere": "Este dispositivo no puede gastar desde esta dirección. Todo lo que se envíe aquí está seguro, pero para moverlo necesitarás la frase de recuperación de esta billetera en este dispositivo."
   },
   "revealSeedCard": {
     "wrongPin": "PIN incorrecto.",
@@ -789,7 +797,8 @@
     "ariaSync": "Progreso de sincronización",
     "scanning": "Los saldos aparecen al escanear la cadena — tus fondos están seguros.",
     "lowerBound": "Este saldo es una <b>cota inferior</b>: la vista de la billetera se reconstruyó con un nodo que ha podado el historial antiguo, por lo que pueden faltar monedas creadas hace mucho. Tus fondos están seguros en la cadena — reescanea solo desde un nodo que sirva el historial completo (reconstruir con este daría el mismo resultado ciego). Si es tu propio nodo y aún está llenando el historial blindado, espera a que su registro diga \"shielded history: VERIFIED\" y reescanea entonces.",
-    "lowerBoundFrom": "Este saldo es una <b>cota inferior</b>: la vista de la billetera se reconstruyó con un nodo que ha podado el historial antiguo (disponible desde el bloque {{block}}), por lo que pueden faltar monedas creadas hace mucho. Tus fondos están seguros en la cadena — reescanea solo desde un nodo que sirva el historial completo (reconstruir con este daría el mismo resultado ciego). Si es tu propio nodo y aún está llenando el historial blindado, espera a que su registro diga \"shielded history: VERIFIED\" y reescanea entonces."
+    "lowerBoundFrom": "Este saldo es una <b>cota inferior</b>: la vista de la billetera se reconstruyó con un nodo que ha podado el historial antiguo (disponible desde el bloque {{block}}), por lo que pueden faltar monedas creadas hace mucho. Tus fondos están seguros en la cadena — reescanea solo desde un nodo que sirva el historial completo (reconstruir con este daría el mismo resultado ciego). Si es tu propio nodo y aún está llenando el historial blindado, espera a que su registro diga \"shielded history: VERIFIED\" y reescanea entonces.",
+    "notUpdating": "último saldo confirmado"
   },
   "onboard": {
     "pastedFromClipboard": "pegado del portapapeles",
@@ -845,7 +854,9 @@
     "wordsSoFar": "{{n}} de 12 palabras hasta ahora.",
     "wordsOddLength": "{{n}} palabras. Una frase de recuperación tiene 12, 18 o 24 palabras.",
     "connectingWhy": "Tu servicio de billetera aún se está poniendo al día con la cadena. Una billetera nueva espera al bloque actual para no escanear años de historial que no puede tener.",
-    "usePublicInstead": "Usar el servicio de billetera público"
+    "usePublicInstead": "Usar el servicio de billetera público",
+    "birthdayAhead": "Ese bloque está por delante de la cadena (la punta es {{tip}}). Una billetera restaurada desde ahí no escanearía nada y mostraría el saldo vacío — revisa la altura.",
+    "accountsNotRestored": "Tu billetera se restauró, pero estas cuentas vinculadas no se pudieron añadir: {{accounts}}. Sus fondos no están perdidos — añádelas con «Añadir cuenta», en orden, y volverán a aparecer."
   },
   "languagePicker": {
     "label": "Idioma",
@@ -1042,7 +1053,8 @@
     "notResponding": "El servicio de billetera no responde (tiempo agotado).",
     "cannotReachDaemon": "No se puede contactar el daemon de billetera. ({{detail}})",
     "invalidResponse": "El servicio de billetera devolvió una respuesta inválida ({{status}}).",
-    "blockedByPrivacy": "Bloqueado: {{host}} no es accesible de forma privada y Tor está activo. Desactiva Tor o elige un servicio onion."
+    "blockedByPrivacy": "Bloqueado: {{host}} no es accesible de forma privada y Tor está activo. Desactiva Tor o elige un servicio onion.",
+    "tokenRejected": "El servicio de billetera rechazó el token de acceso de esta billetera. No ha perdido tus fondos — tus claves están en este dispositivo. Vuelve a intentarlo en un momento; si persiste, reconecta la billetera desde Configuración."
   },
   "noncustodial": {
     "fragmentedDefault": "Este pago necesita más monedas de las que una transacción puede gastar.",
