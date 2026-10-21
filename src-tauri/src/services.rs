@@ -605,6 +605,76 @@ impl ServiceLogger {
     }
 }
 
+/// Bridge the `log` facade into the service log store.
+///
+/// The wallet engine is `zkas-walletd` linked INTO this process, not a subprocess, so there is
+/// no stdout to capture — everything it reports goes through the `log` crate. No logger was
+/// ever installed, so every `log::info!`/`warn!`/`error!` it emitted was discarded by the
+/// facade and the "Wallet engine logs" view showed only the few lines this app records
+/// explicitly. In practice that is ONE line ("starting wallet engine on …"), which says
+/// nothing about why a scan is not advancing — the question the view exists to answer.
+///
+/// Records land under the `wallet-engine` service so the existing filter and the log file pick
+/// them up unchanged, and the ring (`MAX_LOG_LINES`) plus the file rotation already bound the
+/// volume, which matters because the engine is chatty at INFO (page pipeline, scan cost).
+struct LogBridge {
+    logs: Arc<Mutex<VecDeque<ServiceLog>>>,
+}
+
+impl log::Log for LogBridge {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= log::max_level()
+    }
+
+    fn log(&self, record: &log::Record) {
+        if !self.enabled(record.metadata()) {
+            return;
+        }
+        // The target is kept (trimmed to its last path segment) because "which subsystem said
+        // this" is most of the value in an engine log: a page-fetch stall and a checkpoint
+        // rejection read very differently once you can see which one is talking.
+        let target = record.target().rsplit("::").next().unwrap_or("");
+        push_log(
+            &self.logs,
+            ServiceLog {
+                at_unix_ms: now_ms(),
+                service: "wallet-engine".into(),
+                stream: match record.level() {
+                    log::Level::Error => "err",
+                    log::Level::Warn => "warn",
+                    _ => "out",
+                }
+                .into(),
+                line: if target.is_empty() {
+                    format!("[{}] {}", record.level(), record.args())
+                } else {
+                    format!("[{} {target}] {}", record.level(), record.args())
+                },
+            },
+        );
+    }
+
+    fn flush(&self) {}
+}
+
+impl ServiceManager {
+    /// Install the bridge once. `set_boxed_logger` refuses a second logger, so a repeat call
+    /// is a no-op rather than an error — `serve` is re-callable and must not depend on this
+    /// having happened exactly once.
+    pub fn install_log_bridge(&self) {
+        let bridge = LogBridge { logs: Arc::clone(&self.logs) };
+        if log::set_boxed_logger(Box::new(bridge)).is_ok() {
+            log::set_max_level(log::LevelFilter::Info);
+        }
+    }
+
+    /// Raise or lower what the bridge keeps. DEBUG is genuinely verbose on the engine, so it
+    /// is opt-in from Settings rather than the default.
+    pub fn set_engine_log_level(verbose: bool) {
+        log::set_max_level(if verbose { log::LevelFilter::Debug } else { log::LevelFilter::Info });
+    }
+}
+
 impl Default for ServiceManager {
     fn default() -> Self {
         let mut existing = VecDeque::with_capacity(MAX_LOG_LINES);

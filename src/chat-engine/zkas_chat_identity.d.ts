@@ -1,5 +1,4 @@
 /* tslint:disable */
-/* eslint-disable */
 /**
  * `nsec1…` → 32-byte hex secret key. For importing an existing Nostr identity.
  */

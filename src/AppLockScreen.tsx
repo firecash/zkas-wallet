@@ -120,7 +120,6 @@ export function AppLockScreen({ onUnlocked }: { onUnlocked: () => void }) {
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const submit = async (e: React.FormEvent) => {

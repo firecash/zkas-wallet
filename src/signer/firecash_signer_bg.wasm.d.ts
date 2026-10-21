@@ -1,5 +1,4 @@
 /* tslint:disable */
-/* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const __wbg_get_mnemonicwallet_address: (a: number) => [number, number];
 export const __wbg_get_mnemonicwallet_mnemonic: (a: number) => [number, number];

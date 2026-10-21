@@ -178,6 +178,9 @@ export const desktopServices = {
   walletdStatus: () => invoke<WalletdStatus>("walletd_status"),
   miningStatus: () => invoke<MiningStatus>("mining_status"),
   logs: (service?: string, limit = 200) => invoke<ServiceLog[]>("service_logs", { service, limit }),
+  // Engine verbosity. The engine is zkas-walletd linked into the shell, so its own `log`
+  // output is the only account of what a scan is doing; DEBUG is opt-in because it is chatty.
+  setEngineLogLevel: (verbose: boolean) => invoke<void>("set_engine_log_level", { verbose }),
   install: (selection: { zkas: boolean; bridge: boolean; kaspa: boolean }) =>
     invoke("install_local_components", { selection }),
   startNode: (preset: "shielded" | "archival" | "mining", publicP2p: boolean) =>

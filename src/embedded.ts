@@ -12,6 +12,8 @@
 import { registerPlugin } from "@capacitor/core";
 import { elapsedSince } from "./lib/elapsed";
 import { isNative } from "./api";
+import { isDesktop } from "./desktop";
+import { desktopServices } from "./desktop-services";
 import { knownWalletTokens } from "./walletstate";
 import i18n from "./i18n";
 
@@ -413,7 +415,20 @@ export function scrubWalletTokens(text: string, tokens: string[]): string {
 }
 
 export async function engineLogs(): Promise<string> {
-  if (!embeddedAvailable()) return "";
+  // The desktop shell runs the SAME engine, in-process, and its lines are collected by the
+  // Tauri log bridge instead of the Capacitor plugin. They are read HERE rather than in the
+  // view so that both sources pass through the one scrubbing boundary below: walletd logs the
+  // wallet token on many lines, that token is the credential for the FVK view of the wallet,
+  // and this text exists to be pasted into a support channel. A second reader that skipped
+  // the scrub would leak it — which is exactly what `log-token-redaction.test.ts` guards.
+  if (!embeddedAvailable()) {
+    if (!isDesktop()) return "";
+    const rows = await desktopServices.logs("wallet-engine", 400).catch(() => []);
+    const text = rows
+      .map((row) => `${new Date(row.at_unix_ms).toISOString().slice(11, 19)} ${row.line}`)
+      .join("\n");
+    return scrubWalletTokens(text, knownWalletTokens());
+  }
   const r = await Native.logs().catch(() => ({ text: "" }));
   // The exit history leads, because it is the part that survives a crash: the ring
   // buffer below it only holds the run that is still going, so when the app died

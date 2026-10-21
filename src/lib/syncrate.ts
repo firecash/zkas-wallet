@@ -54,6 +54,8 @@ const MAX_SAMPLES = 120;
 const MIN_WINDOW_SECS = 20;
 
 const samples: SyncSample[] = [];
+/// The daemon the samples describe; see `recordSyncSample`.
+let lastBase = "";
 
 /// Record a reading. Call it wherever status arrives; it is cheap and allocation-free.
 ///
@@ -65,8 +67,16 @@ const samples: SyncSample[] = [];
 ///     and measurement starts again from here.
 ///   * a reading whose clock is unusable (`elapsedSince` answers `Infinity` for a timestamp in
 ///     the future). Keeping it would put a bogus span in the window.
-export function recordSyncSample(scanned: number, tip: number, now = Date.now()): void {
+export function recordSyncSample(scanned: number, tip: number, base = "", now = Date.now()): void {
   if (!Number.isFinite(scanned) || !Number.isFinite(tip) || scanned < 0) return;
+  // A change of daemon invalidates everything measured so far: progress against one service
+  // says nothing about another, and carrying it across would report a bogus rate or a stall
+  // that is really just a different starting point. The module owns this rather than asking
+  // every caller to remember it.
+  if (base !== lastBase) {
+    lastBase = base;
+    samples.length = 0;
+  }
   const last = samples[samples.length - 1];
   if (last && scanned < last.scanned) {
     samples.length = 0;
@@ -79,6 +89,7 @@ export function recordSyncSample(scanned: number, tip: number, now = Date.now())
 /// against one daemon says nothing about another.
 export function resetSyncSamples(): void {
   samples.length = 0;
+  lastBase = "";
 }
 
 export function syncRate(now = Date.now()): SyncRate {

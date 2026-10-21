@@ -1,6 +1,6 @@
 import { useTranslation, Trans } from "react-i18next";
 import { elapsedSince } from "./lib/elapsed";
-import { recordSyncSample, resetSyncSamples, syncRate, fmtCount, fmtDuration, fmtRate } from "./lib/syncrate";
+import { recordSyncSample, syncRate, fmtCount, fmtDuration, fmtRate } from "./lib/syncrate";
 import { NodeUpdateNotice } from "./components/NodeUpdateNotice";
 import i18n, { formatDate } from "./i18n";
 import { LanguagePicker, LanguageInline, LanguageNotice, LanguageButton } from "./LanguagePicker";
@@ -883,7 +883,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // accepted answer for the current token, so a status that belonged to a previous wallet
       // never lands in the history — and before the smoothing below, because the rate wants
       // the daemon's raw numbers, not the held ones.
-      recordSyncSample(s.scanned_blocks, Math.max(s.daa_score, s.chain_len));
+      recordSyncSample(s.scanned_blocks, Math.max(s.daa_score, s.chain_len), getBase());
       // Never let a transient poll un-render the wallet. While the daemon is reloading a
       // wallet (or a status call races a sync pass) it can answer has_wallet:false /
       // address:null for a beat. Rendering that verbatim unmounted the whole tab block —
@@ -1543,7 +1543,6 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         void refresh();
       });
     // Once, on mount: later revivals are the resume handler's and the poll's job.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -6670,7 +6669,6 @@ function Send({
       live = false;
     };
     // Only the opening of the screen starts one; the inputs cannot change while it is up.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirming]);
 
   const doSend = async (allowMultipleTransactions = false) => {
@@ -8122,7 +8120,9 @@ function DebugLogsCard({ status }: { status: Status | null }) {
     return () => globalThis.clearInterval(id);
   }, [shown]);
 
-  const engine = embeddedAvailable();
+  // The engine section is for ANY wallet running its own engine in-process — the desktop
+  // shell does, and that is the configuration whose log was a single startup line.
+  const engine = embeddedAvailable() || isDesktop();
   const rows = diagRows(status);
   const rate = syncRate();
   // The summary carries the one fact worth seeing without opening the card.
@@ -8135,8 +8135,18 @@ function DebugLogsCard({ status }: { status: Status | null }) {
         : `${fmtCount(rate.behind)} behind · ${fmtRate(rate.blocksPerSec)}`;
 
   const report = () => rows.map(([k, v]) => `${k.padEnd(24)} ${v}`).join("\n");
-  const toggle = async (v: boolean) => { setOn(v); setEmbeddedDebug(v); await setEngineDebugLogs(v); };
-  const show = async () => { setText(engine ? await engineLogs() : ""); setShown(true); };
+  const toggle = async (v: boolean) => {
+    setOn(v);
+    setEmbeddedDebug(v);
+    // Two different engines behind the same switch: the Android/iOS plugin, and the desktop
+    // shell's in-process walletd reached over a Tauri command.
+    if (embeddedAvailable()) await setEngineDebugLogs(v);
+    if (isDesktop()) await desktopServices.setEngineLogLevel(v).catch(() => {});
+  };
+  // One boundary for both engines: `engineLogs()` reads the mobile plugin or the desktop
+  // bridge and scrubs wallet tokens either way. The view must not read logs by any other
+  // route — see `log-token-redaction.test.ts`.
+  const show = async () => { setText(await engineLogs()); setShown(true); };
   const copyAll = () => void copyText(`${report()}\n\n${text || "(engine log not shown / not applicable)"}`);
 
   return (
@@ -8154,7 +8164,6 @@ function DebugLogsCard({ status }: { status: Status | null }) {
         </table>
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
           <button className="btn ghost small" onClick={() => void copyAll()}>{t("debugLogsCard.copy")}</button>
-          <button className="btn ghost small" onClick={() => { resetSyncSamples(); tick((n) => n + 1); }}>reset speed</button>
         </div>
       </div>
       {engine && <DebugLogsEngineSection on={on} toggle={toggle} show={show} shown={shown} text={text} />}

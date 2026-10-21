@@ -580,7 +580,7 @@ impl Engine {
             .build()
             .expect("tokio runtime");
         services::set_log_path(data_dir.join("logs/services.log"));
-        Self {
+        let engine = Self {
             rt,
             port: 0,
             token,
@@ -598,7 +598,13 @@ impl Engine {
             node_clients: NodeClientCache::default(),
             local_node_probe: None,
             secret: None,
-        }
+        };
+        // Route the engine's own `log` output into the service log store. The engine is
+        // zkas-walletd linked into THIS process, so nothing captures a subprocess's stdout:
+        // without a logger installed, the `log` facade silently dropped every line it emitted
+        // and the "Wallet engine logs" view showed a single startup message.
+        engine.services.install_log_bridge();
+        engine
     }
 
     /// The wallet token doubles as the wallet FILENAME on disk, so it must be
@@ -2842,6 +2848,15 @@ fn set_node_options(
     Ok(())
 }
 
+/// Raise or lower what the engine log keeps. The engine is chatty at DEBUG, so this is
+/// opt-in from Settings rather than the default — but when a scan is not advancing it is
+/// exactly the detail that says why, and before the log bridge existed there was no way
+/// to see any of it.
+#[tauri::command]
+fn set_engine_log_level(verbose: bool) {
+    ServiceManager::set_engine_log_level(verbose);
+}
+
 #[tauri::command]
 fn service_logs(
     state: tauri::State<'_, Mutex<Engine>>,
@@ -4099,6 +4114,7 @@ pub fn run() {
             stop_node,
             set_node_options,
             service_logs,
+            set_engine_log_level,
             start_solo_mining,
             start_dual_mining,
             stop_mining,

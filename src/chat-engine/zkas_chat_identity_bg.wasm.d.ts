@@ -1,5 +1,4 @@
 /* tslint:disable */
-/* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const event_difficulty: (a: number, b: number) => [number, number, number];
 export const hex_to_npub: (a: number, b: number) => [number, number, number, number];
