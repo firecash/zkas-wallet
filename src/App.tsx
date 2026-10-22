@@ -886,7 +886,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // accepted answer for the current token, so a status that belonged to a previous wallet
       // never lands in the history — and before the smoothing below, because the rate wants
       // the daemon's raw numbers, not the held ones.
-      recordSyncSample(s.scanned_blocks, Math.max(s.daa_score, s.chain_len), getBase());
+      // Not while the wallet is still LOADING: its scanned_blocks is then a placeholder 0, and
+      // the jump from 0 to the birthday once it loads read as ~86,000 blocks/s on the first
+      // real on-device run (Android, fresh wallet, 2026-10-22).
+      if (s.has_wallet && !s.loading) recordSyncSample(s.scanned_blocks, Math.max(s.daa_score, s.chain_len), getBase());
       // The diagnostic log's sync story (state changes, progress, stalls, time to synced),
       // from the same accepted, raw reading.
       observeStatus(s);
