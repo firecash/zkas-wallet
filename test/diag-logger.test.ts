@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTION_WINDOW_MS, beginAction, currentAction, event, flush, installSink, recent, resetForTests, selfStats, setLevel, span } from "../src/diag/log";
 import { setSalt } from "../src/diag/redact";
 import { claimSignal, flushNetSummary, installFetchWrapper, ipcCommand, recordRequest, uninstallFetchWrapper } from "../src/diag/net";
-import { ingestEngineText, observePollFailure, observeStatus, parseEngineMessage, resetSyncForTests, rustDurationMs, splitEngineLine } from "../src/diag/sync";
+import { engineLineTimeMs, ingestEngineText, observePollFailure, observeStatus, parseEngineMessage, resetSyncForTests, rustDurationMs, setEngineSessionStart, splitEngineLine } from "../src/diag/sync";
 import { resetScreensForTests, screenChanged } from "../src/diag/screens";
 import { summarize } from "../src/diag/summary";
 import type { Status } from "../src/api";
@@ -225,6 +225,35 @@ describe("engine lines", () => {
     expect(ingestEngineText([a, b, c].join("\n"), "android")).toBe(1);
     ingestEngineText(["9 [INFO] zkas_walletd: x", "10 [INFO] zkas_walletd: y"].join("\n"), "android");
     expect(evs("engine", "gap").length).toBe(1);
+  });
+
+  it("does not re-record the previous session's engine lines after a restart", () => {
+    // The desktop bridge replays services.log at startup, so the first read of a new session
+    // holds the last session's lines too — found in the macOS/Linux smoke runs, where run 2
+    // re-recorded run 1's scan-cost and page-pipeline figures with new timestamps.
+    const start = 1_792_700_000_000;
+    setEngineSessionStart(start);
+    const old1 = `${start - 60_000} [INFO zkas_walletd] ${SCAN}`;
+    const old2 = `${start - 59_000} [INFO zkas_walletd] ${PIPE}`;
+    const new1 = `${start + 1_500} [INFO zkas_walletd] ${PIPE}`;
+    expect(ingestEngineText([old1, old2, new1].join("\n"), "desktop")).toBe(1);
+    expect(evs("sync", "scan_cost").length).toBe(0);
+    expect(evs("sync", "page_pipeline").length).toBe(1);
+    expect(evs("engine", "previous_session_skipped")[0].lines).toBe(2);
+    // A later poll that still carries the old lines records nothing twice.
+    const new2 = `${start + 9_000} [INFO zkas_walletd] ${SCAN}`;
+    expect(ingestEngineText([old1, old2, new1, new2].join("\n"), "desktop")).toBe(1);
+    expect(evs("sync", "scan_cost").length).toBe(1);
+    // Android's ring is stamped in unix SECONDS: same cut.
+    expect(ingestEngineText([`${Math.floor(start / 1000) - 5} [INFO] zkas_walletd: ${SCAN}`, `${Math.floor(start / 1000) + 5} [INFO] zkas_walletd: ${SCAN}`].join("\n"), "android")).toBe(1);
+    expect(engineLineTimeMs("1792700000 [INFO] x: y")).toBe(1_792_700_000_000);
+    expect(engineLineTimeMs("1792700000123 [INFO x] y")).toBe(1_792_700_000_123);
+    expect(engineLineTimeMs("7 [INFO] x: y")).toBeUndefined();
+  });
+
+  it("keeps every line when the process start is unknown (web, or no native config)", () => {
+    expect(ingestEngineText(`1700000000000 [INFO zkas_walletd] ${SCAN}`, "desktop")).toBe(1);
+    expect(evs("engine", "previous_session_skipped").length).toBe(0);
   });
 
   it("emits structured sync events alongside the line", () => {

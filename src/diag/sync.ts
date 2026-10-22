@@ -108,6 +108,25 @@ let engineMinute = 0;
 let engineInMinute = 0;
 let engineSuppressed = 0;
 const lastSeen = new Map<string, string>();
+/// Wall-clock ms at which THIS app process started (0 = unknown). The engine runs in-process
+/// on desktop and Android, so an engine line stamped before it belongs to a previous session —
+/// and the desktop log bridge replays services.log at startup, which made run 2 of the smoke
+/// test re-record run 1's scan-cost and page-pipeline figures under its own session id.
+let engineSessionStartMs = 0;
+
+/// Set from the native config at install: Date.now() − process uptime.
+export function setEngineSessionStart(ms: number): void {
+  engineSessionStartMs = Number.isFinite(ms) && ms > 0 ? ms : 0;
+}
+
+/// The engine's own timestamp on a raw line, in ms: desktop rows start with unix ms, the
+/// Android ring with unix seconds. Undefined when the line has none (kept, then).
+export function engineLineTimeMs(raw: string): number | undefined {
+  const m = /^(\d{9,13}) /.exec(raw);
+  if (!m) return undefined;
+  const n = Number(m[1]);
+  return n >= 1e12 ? n : n * 1000;
+}
 
 /// Rust's `{:?}` for a Duration: "5.2s", "312.4ms", "17µs", "1.5m" isn't produced.
 export function rustDurationMs(s: string): number | undefined {
@@ -229,11 +248,19 @@ export function ingestEngineText(text: string, source: "desktop" | "android"): n
   }
   lastSeen.set(source, lines[lines.length - 1]);
   let n = 0;
+  let previous = 0;
   for (const raw of lines.slice(start)) {
     if (/^(how this app ended|last-exit history|\s{2}\d{4}-)/.test(raw)) continue; // the exit-history prefix
+    const at = engineSessionStartMs ? engineLineTimeMs(raw) : undefined;
+    if (at !== undefined && at < engineSessionStartMs) {
+      // Already in the previous session's own log, if logging was on then.
+      previous++;
+      continue;
+    }
     emitEngineLine(splitEngineLine(raw), source);
     n++;
   }
+  if (previous) event("engine", "previous_session_skipped", { source, lines: previous });
   return n;
 }
 
@@ -246,6 +273,7 @@ export function resetSyncForTests(): void {
   syncedOnce = false;
   failStreak = 0;
   lastSeen.clear();
+  engineSessionStartMs = 0;
   engineMinute = 0;
   engineInMinute = 0;
   engineSuppressed = 0;

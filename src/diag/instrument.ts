@@ -31,7 +31,7 @@ import { installFetchWrapper, installInvokeWrapper, startNetSummary, flushNetSum
 import { describeUrl, redactText, safeLabel, setKnownSecrets } from "./redact";
 import { activeScreen } from "./screens";
 import { connectSink, diagPlatform, type NativeDiagConfig } from "./sink";
-import { ingestEngineText } from "./sync";
+import { ingestEngineText, setEngineSessionStart } from "./sync";
 import { ingestNativeLine } from "./native";
 
 let installed = false;
@@ -556,7 +556,10 @@ export function installDiagnostics(): Promise<void> {
   return connectSink(ingestNativeLine)
     .then((cfg) => {
       nativeConfig = cfg;
-      if (cfg.procUptimeMs > 0 && diagPlatform() !== "web") procOffsetMs = cfg.procUptimeMs - performance.now();
+      if (cfg.procUptimeMs > 0 && diagPlatform() !== "web") {
+        procOffsetMs = cfg.procUptimeMs - performance.now();
+        setEngineSessionStart(Date.now() - cfg.procUptimeMs);
+      }
     })
     .catch((e) => {
       logError("diag", "sink_failed", e);
