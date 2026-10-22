@@ -1,0 +1,144 @@
+# TEMPORARY, branch-only: build the desktop app on Windows and macOS exactly as
+# desktop-all.yml does, then LAUNCH it with the scripted diagnostics tour, let it write
+# its diag files and exports, and check every exported line against the redactor.
+# No release, no tag, no upload anywhere but this run's own (1-day) artifacts.
+name: diag-smoke
+on:
+  push:
+    branches: ["ci/diag-smoke"]
+permissions:
+  contents: read
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, name: windows-x86_64, target: x86_64-pc-windows-msvc, bundles: "nsis" }
+          - { os: macos-14, name: macos-aarch64, target: aarch64-apple-darwin, bundles: "app" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: wallet
+      - uses: actions/checkout@v4
+        with:
+          repository: firecash/zkas-rusty
+          ref: 5069bb61244a7904e27c63ac37e34bc2ef5d30a0
+          path: rusty-kaspa
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: protoc (macos)
+        if: startsWith(matrix.os, 'macos')
+        run: brew install protobuf
+      - name: protoc (windows)
+        if: startsWith(matrix.os, 'windows')
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "27.3"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wallet/src-tauri
+          key: ${{ matrix.name }}
+      - name: Web bundle deps
+        working-directory: wallet
+        run: npm ci
+      - name: Rust diag tests (release profile)
+        working-directory: wallet
+        shell: bash
+        run: cargo test --release --target ${{ matrix.target }} --manifest-path src-tauri/Cargo.toml --lib diag::
+      - name: Build
+        working-directory: wallet
+        run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+      - name: DLL gate (windows)
+        if: startsWith(matrix.os, 'windows')
+        shell: pwsh
+        run: |
+          $exe = "wallet/src-tauri/target/${{ matrix.target }}/release/zkas-desktop.exe"
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dumpbin = Get-ChildItem -Recurse "$vs\VC\Tools\MSVC" -Filter dumpbin.exe | Where-Object { $_.FullName -match 'Hostx64\\x64' } | Select-Object -First 1
+          $deps = & $dumpbin.FullName /dependents $exe | Select-String '\.dll' | ForEach-Object { $_.ToString().Trim() }
+          $deps | Tee-Object -FilePath dlls.txt
+          if ($deps -match 'libstdc|libgcc|winpthread') { Write-Error "MinGW runtime DLL dependency"; exit 1 }
+
+      - name: Run with the diagnostics tour (windows)
+        if: startsWith(matrix.os, 'windows')
+        shell: pwsh
+        run: |
+          $env:ZKAS_DIAG_TOUR = "1"
+          $exe = (Resolve-Path "wallet/src-tauri/target/${{ matrix.target }}/release/zkas-desktop.exe").Path
+          New-Item -ItemType Directory -Force out | Out-Null
+          # Run 1: hard kill (TerminateProcess) — the next launch must report prev_unclean.
+          $p = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 300
+          Get-Process | Where-Object { $_.ProcessName -like 'zkas*' -or $_.ProcessName -like 'msedgewebview2*' } | Select-Object ProcessName,Id,WorkingSet64 | Format-Table | Out-String | Tee-Object out/procs-run1.txt
+          Stop-Process -Id $p.Id -Force
+          Start-Sleep -Seconds 10
+          # Run 2: closed through the window (WM_CLOSE) — the clean-exit path.
+          $p = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 180
+          $p.Refresh(); $closed = $p.CloseMainWindow(); "CloseMainWindow=$closed" | Tee-Object out/close.txt
+          if (-not $p.WaitForExit(30000)) { "did not exit in 30 s; forcing" | Tee-Object -Append out/close.txt; Stop-Process -Id $p.Id -Force }
+          else { "exit code $($p.ExitCode)" | Tee-Object -Append out/close.txt }
+          Start-Sleep -Seconds 5
+          foreach ($base in @($env:APPDATA, $env:LOCALAPPDATA)) {
+            $d = Join-Path $base "info.zkas.wallet"
+            if (Test-Path $d) {
+              Get-ChildItem -Recurse $d | Select-Object FullName,Length | Format-Table -AutoSize | Out-String -Width 300 | Out-File -Append out/datadir.txt
+              if (Test-Path "$d\logs\diag") { Copy-Item -Recurse "$d\logs\diag" out/diag-files }
+              if (Test-Path "$d\crash.log") { Copy-Item "$d\crash.log" out/crash.log }
+            }
+          }
+          Copy-Item "$env:USERPROFILE\Downloads\zkas-diagnostics-*.jsonl" out/ -ErrorAction SilentlyContinue
+          Get-ChildItem out -Recurse | Select-Object FullName,Length | Format-Table -AutoSize | Out-String -Width 300
+
+      - name: Run with the diagnostics tour (macos)
+        if: startsWith(matrix.os, 'macos')
+        shell: bash
+        run: |
+          export ZKAS_DIAG_TOUR=1
+          APP="wallet/src-tauri/target/${{ matrix.target }}/release/bundle/macos/ZKas Wallet.app"
+          codesign --force --deep -s - "$APP"
+          BIN="$APP/Contents/MacOS/zkas-desktop"
+          mkdir -p out
+          "$BIN" > out/run1.stderr.log 2>&1 &
+          P=$!; sleep 300
+          ps -o pid,rss,command -p $P | tee out/procs-run1.txt
+          kill -9 $P; sleep 10
+          "$BIN" > out/run2.stderr.log 2>&1 &
+          P=$!; sleep 180
+          kill -TERM $P; for i in $(seq 1 30); do kill -0 $P 2>/dev/null || break; sleep 1; done
+          kill -0 $P 2>/dev/null && { echo "did not exit on SIGTERM in 30 s" | tee out/close.txt; kill -9 $P; } || echo "exited after SIGTERM" | tee out/close.txt
+          D="$HOME/Library/Application Support/info.zkas.wallet"
+          ls -laR "$D" > out/datadir.txt 2>&1 || true
+          cp -R "$D/logs/diag" out/diag-files 2>/dev/null || true
+          cp "$D/crash.log" out/crash.log 2>/dev/null || true
+          cp "$HOME"/Downloads/zkas-diagnostics-*.jsonl out/ 2>/dev/null || true
+          ls -la out out/diag-files || true
+
+      - name: Check every export and diag file against the redactor
+        shell: bash
+        working-directory: wallet
+        run: |
+          shopt -s nullglob
+          n=0; rc=0
+          for f in ../out/zkas-diagnostics-*.jsonl ../out/diag-files/*.jsonl; do
+            n=$((n+1)); echo "== $f"; npx vite-node scripts/diag-check.mjs "$f" | tail -25 || rc=1
+          done
+          echo "checked $n files"
+          [ $n -gt 0 ] || { echo "no diag output at all"; exit 1; }
+          exit $rc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: diag-smoke-${{ matrix.name }}
+          path: |
+            out/
+            dlls.txt
+          retention-days: 1
