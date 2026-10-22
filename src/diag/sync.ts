@@ -178,7 +178,26 @@ const PARSERS: { re: RegExp; ev: string; map: (m: RegExpExecArray) => Record<str
   { re: /wallet sync page timed out after ([\d.]+\w+)/, ev: "page_timeout", map: (m) => ({ after_ms: rustDurationMs(m[1]) }) },
   { re: /checkpoint on request: saved (\d+)\/(\d+) wallet\(s\), preserving (\d+) block/, ev: "checkpoint", map: (m) => ({ saved: +m[1], total: +m[2], blocks: +m[3] }) },
   { re: /release_memory: dropped (\d+) decoded leaves/, ev: "release_memory", map: (m) => ({ leaves: +m[1] }) },
+  // walletd's structured per-wallet stage timings (zkas-rusty 0fb6f65): one `scan_stats` line
+  // per wallet per minute at most, and one `ckpt_load` per wallet load. Space-separated
+  // key=value, keys [a-z_]+, every value a number except `tok` (a SHA-256 pseudonym of the
+  // wallet token, never the token). Keys may be appended, never renamed; `v` bumps if a
+  // meaning changes. So one generic entry, not a regex per field: a key added later is
+  // recorded without an app release.
+  { re: /^(scan_stats|ckpt_load) (v=\d+(?: [a-z_]+=[^ ]+)*)$/, ev: "stage_stats", map: (m) => kvFields(m[1], m[2]) },
 ];
+
+function kvFields(kind: string, body: string): Record<string, unknown> {
+  const o: Record<string, unknown> = { kind };
+  for (const kv of body.split(" ")) {
+    const i = kv.indexOf("=");
+    const k = kv.slice(0, i);
+    const v = kv.slice(i + 1);
+    if (k === "tok") o.tok = v;
+    else if (Number.isFinite(Number(v))) o[k] = Number(v);
+  }
+  return o;
+}
 
 /// Parse one engine message into a structured sync event, if it is one of the known ones.
 export function parseEngineMessage(msg: string): { ev: string; fields: Record<string, unknown> } | null {

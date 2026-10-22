@@ -21,6 +21,10 @@ export interface DiagSummary {
     fetchPct?: number;
     fetchMsPerPage?: number;
     ingestMsPerPage?: number;
+    /// walletd's latest per-wallet `scan_stats` window: where a minute of syncing went.
+    stages?: Record<string, number>;
+    /// The latest `ckpt_load`: how long opening the wallet took, and from what.
+    lastLoad?: Record<string, number>;
   };
   screens: { screen: string; n: number; p50: number; p95: number; max: number }[];
   endpoints: { key: string; n: number; p50: number; p95: number; errors: number }[];
@@ -88,6 +92,14 @@ export function summarize(ring: readonly DiagEvent[]): DiagSummary {
       if (e.ev === "scan_cost") {
         out.sync.usPerAction = num(e.us_per_action);
         out.sync.usPerLeaf = num(e.us_per_leaf);
+      }
+      if (e.ev === "stage_stats") {
+        const nums: Record<string, number> = {};
+        for (const [k, v] of Object.entries(e)) if (num(v) !== undefined && !["m", "seq", "dur"].includes(k)) nums[k] = v as number;
+        if (e.kind === "scan_stats") {
+          out.sync.stages = nums;
+          if (num(e.decrypt_us_per_action) !== undefined) out.sync.usPerAction = e.decrypt_us_per_action as number;
+        } else if (e.kind === "ckpt_load") out.sync.lastLoad = nums;
       }
       if (e.ev === "page_pipeline") {
         out.sync.fetchPct = num(e.fetch_pct);
