@@ -27,6 +27,9 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "net",
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "socks"] }
 futures-util = "0.3"
 sha2 = "0.10"
+# The diagnostic log's redactor (diag.rs), a port of src/diag/redact.ts. Already in the
+# lock file through Tauri's own dependencies.
+regex = "1"
 hex = "0.4"
 sysinfo = { version = "0.31.2", default-features = false, features = ["system"] }
 local-ip-address = "0.6.13"

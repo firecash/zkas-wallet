@@ -23,6 +23,7 @@ use tauri::{
 };
 use tauri_plugin_autostart::ManagerExt;
 
+mod diag;
 mod services;
 use services::{InstallSelection, InstalledComponents, ProcessSpec, ServiceLog, ServiceManager};
 
@@ -62,6 +63,12 @@ fn log_crash(msg: &str) {
         }
     }
     eprintln!("[zkas-desktop] {msg}");
+    // Every crash.log line is also a structured event, so the diagnostic log carries the
+    // shell's lifecycle (engine start/stop, node supervision) in order with everything else.
+    // Scrubbed like any other line (see diag::emit).
+    let mut f = serde_json::Map::new();
+    f.insert("msg".into(), serde_json::json!(msg.chars().take(2_000).collect::<String>()));
+    diag::emit("shell", "crashlog", if msg.starts_with("panic") { "error" } else { "info" }, f);
 }
 
 /// Lock the engine, RECOVERING from poison. A panic anywhere while the lock was
@@ -3879,9 +3886,17 @@ pub fn run() {
     // back to this logger only if the bridge genuinely lost the race.
     // Any panic, on any thread, leaves a trace in crash.log before the default
     // hook runs. Without this, a Windows crash is a window that just vanishes.
+    // The diagnostic log first, so even a panic during start-up is on its record.
+    diag::init(crash_log_dir());
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         let bt = std::backtrace::Backtrace::force_capture();
+        // Written synchronously: the process may not live to drain the writer's channel.
+        let mut f = serde_json::Map::new();
+        f.insert("msg".into(), serde_json::json!(info.to_string()));
+        f.insert("thread".into(), serde_json::json!(std::thread::current().name().unwrap_or("?").to_string()));
+        f.insert("backtrace".into(), serde_json::json!(bt.to_string().chars().take(8_000).collect::<String>()));
+        diag::emit_sync("err", "panic", "error", f);
         log_crash(&format!("panic: {info}\n{bt}"));
         default_hook(info);
     }));
@@ -3907,6 +3922,11 @@ pub fn run() {
             std::fs::create_dir_all(&data_dir).ok();
             let mut app_engine = Engine::new(config_dir, data_dir);
             // Only if the bridge lost: without this a lost race means no logging at all.
+            // The diagnostic log: live lines to the WebView, the per-minute resource sample,
+            // and the two credentials this shell holds, scrubbed from every line by value.
+            diag::set_app(app.handle().clone());
+            diag::set_known_secrets(vec![app_engine.token.clone(), app_engine.wallet_access_token.clone()]);
+            diag::start_sampler();
             if !app_engine.log_bridge_installed {
                 kaspa_core::log::try_init_logger("info");
             }
@@ -4080,7 +4100,11 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             match event {
+                tauri::WindowEvent::Focused(focused) => {
+                    diag::emit("app", if *focused { "window_focus" } else { "window_blur" }, "info", serde_json::Map::new());
+                }
                 tauri::WindowEvent::CloseRequested { api, .. } => {
+                    diag::emit("app", "window_close", "info", serde_json::Map::new());
                     if let Some(state) = window.app_handle().try_state::<Mutex<Engine>>() {
                         let to_tray = engine(&state).services.any_background_running();
                         if to_tray {
@@ -4154,11 +4178,19 @@ pub fn run() {
             reveal_path,
             write_backup,
             read_backup_file,
-            forget_wallet
+            forget_wallet,
+            diag::diag_config,
+            diag::diag_append,
+            diag::diag_set_level,
+            diag::diag_export,
+            diag::diag_clear,
+            diag::diag_stats
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app, event| match event {
+        .run(|app, event| {
+            let exiting = matches!(event, tauri::RunEvent::Exit);
+            match event {
             // macOS: the Dock icon after close-to-tray. Nothing handled this, so
             // clicking it did nothing; the tray menu was the only way back.
             #[cfg(target_os = "macos")]
@@ -4175,6 +4207,11 @@ pub fn run() {
                 }
             }
             _ => {}
+            }
+            // Last: the clean-exit record and the end of the "session running" marker.
+            if exiting {
+                diag::clean_exit();
+            }
         });
 }
 
