@@ -186,12 +186,36 @@ object DiagStore {
         synchronized(lock) {
             FileOutputStream(out).use { o ->
                 o.write((safeHeader + "\n").toByteArray(Charsets.UTF_8))
+                var dropped = 0
                 for (i in FILES - 1 downTo 0) {
                     val f = file(i)
-                    if (f.exists()) f.inputStream().use { it.copyTo(o) }
+                    if (f.exists()) f.bufferedReader(Charsets.UTF_8).useLines { lines ->
+                        for (line in lines) {
+                            val clean = exportLine(line)
+                            if (clean == null) { if (line.isNotEmpty()) dropped++; continue }
+                            o.write((clean + "\n").toByteArray(Charsets.UTF_8))
+                        }
+                    }
                 }
+                if (dropped > 0) o.write("{\"src\":\"android\",\"cat\":\"diag\",\"ev\":\"export_dropped\",\"lines\":$dropped}\n".toByteArray(Charsets.UTF_8))
             }
         }
         return out
+    }
+
+    /**
+     * One stored line as it goes into an export, or null to leave it out.
+     *
+     * A power cut, a kernel panic or a crashed emulator loses what the page cache had not
+     * written yet, and the file system fills that span with NUL bytes: the first real
+     * on-device run (2026-10-22, the emulator's host process segfaulting) exported two
+     * lines that were 1-2 KB of NULs, one of them followed by a perfectly good event. The
+     * NULs are dropped and the event kept; a line torn mid-object is left out (and counted).
+     */
+    @JvmStatic
+    fun exportLine(line: String): String? {
+        val s = if (line.indexOf('\u0000') >= 0) line.replace("\u0000", "") else line
+        val t = s.trim()
+        return if (t.length >= 2 && t[0] == '{' && t[t.length - 1] == '}') t else null
     }
 }
