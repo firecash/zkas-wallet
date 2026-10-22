@@ -32,6 +32,7 @@ object DiagRedact {
     private val FAST = Pattern.compile("[\\d:@]")
     private val HEXLETTERS = Pattern.compile("[a-fA-F]{16}")
     private val DIGIT = Pattern.compile("\\d")
+    private val HEXLETTER = Pattern.compile("[a-fA-F]")
     private val LETTER = Pattern.compile("[A-Za-z]")
 
     @Volatile var salt: String = ""
@@ -79,8 +80,9 @@ object DiagRedact {
         s = replace(ADDRESS, s) { "addr:" + pseudonym(salt, "addr", it.group()) }
         s = replace(ONION, s) { if (PUBLIC_HOSTS.contains(it.group().lowercase())) it.group() else "onion:" + pseudonym(salt, "host", it.group()) }
         s = EMAIL.matcher(s).replaceAll("[email]")
-        s = replace(HEX64, s) { "h:" + pseudonym(salt, "hash", it.group()) }
-        s = replace(HEX, s) { "x:" + pseudonym(salt, "hex", it.group()) }
+        // A hex run counts only with a letter in it: digits alone are a number.
+        s = replace(HEX64, s) { if (HEXLETTER.matcher(it.group()).find()) "h:" + pseudonym(salt, "hash", it.group()) else it.group() }
+        s = replace(HEX, s) { if (HEXLETTER.matcher(it.group()).find()) "x:" + pseudonym(salt, "hex", it.group()) else it.group() }
         run {
             val whole = s
             s = replace(TOKEN, whole) { m ->

@@ -102,6 +102,12 @@ const HEX_RE = /[0-9a-fA-F]{16,}/g;
 // letters only is a word (or a CamelCase identifier), not a secret, so a digit AND a letter
 // are required — checked in `isToken`.
 const LONG_TOKEN_RE = /[A-Za-z0-9+_=-]{32,}/g;
+/// A hex run counts only if it has a letter: a run of digits alone is a NUMBER (a float's
+/// 17 significant digits, a timestamp), not a key — and mangling one inside a JSON line made
+/// the line invalid (found in a real run: `"cpu_pct":0.x:acbb9140`).
+function isHex(m: string): boolean {
+  return /[a-fA-F]/.test(m);
+}
 function isToken(m: string): boolean {
   return /\d/.test(m) && /[A-Za-z]/.test(m);
 }
@@ -133,8 +139,8 @@ export function redactText(input: string, max = 300): string {
   s = s.replace(ADDRESS_RE, (m) => `addr:${pseudonym("addr", m)}`);
   s = s.replace(ONION_RE, (m) => (PUBLIC_HOSTS.has(m.toLowerCase()) ? m : `onion:${pseudonym("host", m)}`));
   s = s.replace(EMAIL_RE, "[email]");
-  s = s.replace(HEX64_RE, (m) => `h:${pseudonym("hash", m)}`);
-  s = s.replace(HEX_RE, (m) => `x:${pseudonym("hex", m)}`);
+  s = s.replace(HEX64_RE, (m) => (isHex(m) ? `h:${pseudonym("hash", m)}` : m));
+  s = s.replace(HEX_RE, (m) => (isHex(m) ? `x:${pseudonym("hex", m)}` : m));
   s = s.replace(LONG_TOKEN_RE, (m: string, offset: number, whole: string) => {
     if (!isToken(m)) return m;
     // The project's own onion is public infrastructure, already let through above.
@@ -295,7 +301,7 @@ export function safeLabel(raw: string | null | undefined): string | undefined {
 /// and by scripts/diag-check.mjs on an exported log from a real run.
 export const FORBIDDEN: { name: string; test: (line: string) => boolean }[] = [
   { name: "address", test: (l) => /\b(?:zkas|zkastest|zkasdev|zkassim|firecash|kaspa|kaspatest):[a-z0-9]{20,}/i.test(l) },
-  { name: "hex16+", test: (l) => /[0-9a-fA-F]{16,}/.test(l) },
+  { name: "hex16+", test: (l) => (l.match(/[0-9a-fA-F]{16,}/g) ?? []).some(isHex) },
   {
     name: "long-token",
     test: (l) => [...l.matchAll(/[A-Za-z0-9+_=-]{32,}/g)].some((m) => isToken(m[0]) && !(l.startsWith(".onion", (m.index ?? 0) + m[0].length) && PUBLIC_HOSTS.has(`${m[0].toLowerCase()}.onion`))),

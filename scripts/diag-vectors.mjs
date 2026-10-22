@@ -34,6 +34,7 @@ const inputs = [
   "CamelCaseIdentifierThatIsVeryLongButHasNoDigits stays",
   "short abc123 and medium a1b2c3d4e5 ok",
   "mixed key_9f86d081884c7d659a2feaa0c55ad015 end",
+  "numbers stay: cpu 0.10000000149011612, at 1792686764009, big 12345678901234567890",
   "bare py82h42m9qjff0knpcmllzq3c7qhurje5auh4tq2ceagf69wjpf23djwwmqr26zhsua8rrglrwdltsh body",
 ];
 setSalt(SALT);

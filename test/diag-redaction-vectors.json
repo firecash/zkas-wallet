@@ -95,6 +95,10 @@
       "expect": "mixed key_x:8eee9c74 end"
     },
     {
+      "input": "numbers stay: cpu 0.10000000149011612, at 1792686764009, big 12345678901234567890",
+      "expect": "numbers stay: cpu 0.10000000149011612, at 1792686764009, big 12345678901234567890"
+    },
+    {
       "input": "bare py82h42m9qjff0knpcmllzq3c7qhurje5auh4tq2ceagf69wjpf23djwwmqr26zhsua8rrglrwdltsh body",
       "expect": "bare b:c44fac76 body"
     }

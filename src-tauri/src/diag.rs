@@ -402,16 +402,27 @@ pub fn scrub_salted(salt: &str, known: &[String], input: &str, max: usize) -> St
         })
         .into_owned();
     s = r.email.replace_all(&s, "[email]").into_owned();
+    // A hex run counts only if it has a letter: digits alone are a number (a float's 17
+    // significant digits), and mangling one made a JSON line invalid in a real run.
+    let has_hex_letter = |t: &str| t.bytes().any(|b| matches!(b, b'a'..=b'f' | b'A'..=b'F'));
     s = r
         .hex64
         .replace_all(&s, |c: &regex::Captures| {
-            format!("h:{}", pseudonym(salt, "hash", &c[0]))
+            if has_hex_letter(&c[0]) {
+                format!("h:{}", pseudonym(salt, "hash", &c[0]))
+            } else {
+                c[0].to_string()
+            }
         })
         .into_owned();
     s = r
         .hex
         .replace_all(&s, |c: &regex::Captures| {
-            format!("x:{}", pseudonym(salt, "hex", &c[0]))
+            if has_hex_letter(&c[0]) {
+                format!("x:{}", pseudonym(salt, "hex", &c[0]))
+            } else {
+                c[0].to_string()
+            }
         })
         .into_owned();
     {
@@ -504,11 +515,10 @@ pub fn start_sampler() {
                     continue;
                 }
                 sys.refresh_memory();
-                // Process CPU% is computed against the machine's CPU time, which only moves
-                // if the global figures are refreshed too (found: every sample read 0.0).
-                sys.refresh_cpu_usage();
+                // ALL, not Some(&[pid]): sysinfo 0.31 computes a process's CPU% only on a full
+                // refresh (found in a real run: every sample read 0.0). One /proc walk a minute.
                 sys.refresh_processes_specifics(
-                    ProcessesToUpdate::Some(&[pid]),
+                    ProcessesToUpdate::All,
                     ProcessRefreshKind::new().with_cpu().with_memory(),
                 );
                 let mut f = Map::new();
@@ -518,7 +528,8 @@ pub fn start_sampler() {
                     // sysinfo reports per-core percent summed over cores; normalise to the machine.
                     f.insert(
                         "cpu_pct".into(),
-                        json!(((p.cpu_usage() / cores) * 10.0).round() / 10.0),
+                        // f64, rounded: an f32 widened to f64 serialises as 17 digits.
+                        json!((((p.cpu_usage() / cores) as f64) * 10.0).round() / 10.0),
                     );
                 }
                 f.insert("sys_used_mb".into(), json!(sys.used_memory() / 1_048_576));
