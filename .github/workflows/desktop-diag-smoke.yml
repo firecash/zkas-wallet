@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: firecash/zkas-rusty
-          ref: 5069bb61244a7904e27c63ac37e34bc2ef5d30a0
+          ref: 0fb6f65f78264cd892156e607805100ae8f53984
           path: rusty-kaspa
       - uses: actions/setup-node@v4
         with:

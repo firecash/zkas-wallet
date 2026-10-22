@@ -43,6 +43,13 @@ kaspa-grpc-client = { path = "../../rusty-kaspa/rpc/grpc/client" }
 kaspa-rpc-core = { path = "../../rusty-kaspa/rpc/core" }
 kaspa-consensus-core = { path = "../../rusty-kaspa/consensus/core" }
 
+# zkas-rusty (since 0fb6f65) patches zakura-orchard 2.2.0 with one additive function,
+# `Note::from_parts_with_commitment`, that zkas-walletd calls. A [patch] applies only in
+# the workspace that declares it, so this one repeats it; without it the desktop build
+# compiles zkas-walletd against the registry crate and fails.
+[patch.crates-io]
+zakura-orchard = { path = "../../rusty-kaspa/patches/zakura-orchard-2.2.0" }
+
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 

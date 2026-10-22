@@ -13,7 +13,9 @@ const binding = readFileSync(BINDING, "utf8");
 
 function pins(): string[] {
   const out: string[] = [];
-  for (const f of ["desktop-all.yml", "desktop-macos.yml", "ios.yml"]) {
+  // Every workflow that checks the engine out, not a fixed list: desktop-diag-smoke.yml
+  // joined later and a list would have missed it.
+  for (const f of readdirSync(join(ROOT, ".github/workflows")).filter((n) => n.endsWith(".yml"))) {
     const y = readFileSync(join(ROOT, ".github/workflows", f), "utf8");
     for (const m of y.matchAll(/^\s*(?:ref|RK_SHA):\s*([0-9a-f]{40})\s*$/gm)) out.push(m[1]);
   }
