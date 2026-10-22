@@ -246,6 +246,25 @@ describe("the native ports are held to the same vectors", () => {
   });
 });
 
+describe("user agents", () => {
+  it("keeps browser and WebView versions, still pseudonymises real addresses", () => {
+    setSalt("11".repeat(16));
+    const ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.92 Safari/537.36 Edg/130.0.2849.80";
+    // Found in the Windows smoke run: app.env carried "Chrome/ip:b935fb6c … Edg/ip:b935fb6c".
+    expect(redactText(ua)).toBe(ua);
+    const out = redactText(`${ua} via 203.0.113.9 and 192.168.1.4`);
+    expect(out).toContain("Chrome/130.0.6723.92");
+    expect(out).toContain("Edg/130.0.2849.80");
+    expect(out).not.toContain("203.0.113.9");
+    expect(out).not.toContain("192.168.1.4");
+    // Only a product token directly before the slash counts: a path or a URL does not.
+    for (const s of ["proxy/203.0.113.9", "http://198.51.100.4:8080/x", "Chrome 203.0.113.10", "Chrome/ 203.0.113.11"]) {
+      expect(redactText(s), s).not.toMatch(/\b(?:203\.0\.113|198\.51\.100)\.\d+/);
+    }
+    expect(redactField("ua", ua)).toBe(ua);
+  });
+});
+
 describe("the log cannot phone home", () => {
   it("src/diag performs no network I/O of its own", () => {
     for (const f of readdirSync("src/diag")) {

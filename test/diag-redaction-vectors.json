@@ -101,6 +101,14 @@
     {
       "input": "bare py82h42m9qjff0knpcmllzq3c7qhurje5auh4tq2ceagf69wjpf23djwwmqr26zhsua8rrglrwdltsh body",
       "expect": "bare b:c44fac76 body"
+    },
+    {
+      "input": "ua Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.92 Safari/537.36 Edg/130.0.2849.80 via 203.0.113.9 and 10.0.0.5",
+      "expect": "ua Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.92 Safari/537.36 Edg/130.0.2849.80 via ip:384dfeee and lan:89749178"
+    },
+    {
+      "input": "not a ua: proxy/203.0.113.9 and http://198.51.100.4:8080/x and XChrome 203.0.113.10",
+      "expect": "not a ua: proxy/ip:384dfeee and http://ip:8e535a4e:8080/x and XChrome ip:b4a40451"
     }
   ]
 }

@@ -360,6 +360,18 @@ pub fn bucket_amount(zkas: f64) -> String {
     format!("{sign}>=1M")
 }
 
+/// Product tokens of a user agent: a dotted four-part number right after one of these is a
+/// browser/WebView version, not an address. Same list and rule as `UA_PRODUCTS` in
+/// src/diag/redact.ts, pinned by the shared vectors.
+const UA_PRODUCTS: &[&str] = &[
+    "Chrome", "Chromium", "CriOS", "Edg", "EdgA", "EdgiOS", "Edge", "Firefox", "FxiOS", "OPR", "Opera",
+    "Version", "Safari", "AppleWebKit", "SamsungBrowser", "YaBrowser", "Electron", "Gecko", "Mobile",
+];
+
+fn after_ua_product(before: &str) -> bool {
+    UA_PRODUCTS.iter().any(|p| before.strip_suffix('/').is_some_and(|b| b.ends_with(p)))
+}
+
 fn private_ipv4(a: u32, b: u32) -> bool {
     a == 10
         || a == 127
@@ -448,6 +460,9 @@ pub fn scrub_salted(salt: &str, known: &[String], input: &str, max: usize) -> St
         .replace_all(&s, |c: &regex::Captures| {
             let all = &c[0];
             if PUBLIC_HOSTS.contains(&all) {
+                return all.to_string();
+            }
+            if after_ua_product(&s[..c.get(0).map_or(0, |m| m.start())]) {
                 return all.to_string();
             }
             let a: u32 = c[1].parse().unwrap_or(999);

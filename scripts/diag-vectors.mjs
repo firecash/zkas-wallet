@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Regenerate test/diag-redaction-vectors.json from the canonical JS redactor.
 //
 //   npx vite-node scripts/diag-vectors.mjs
@@ -36,6 +35,8 @@ const inputs = [
   "mixed key_9f86d081884c7d659a2feaa0c55ad015 end",
   "numbers stay: cpu 0.10000000149011612, at 1792686764009, big 12345678901234567890",
   "bare py82h42m9qjff0knpcmllzq3c7qhurje5auh4tq2ceagf69wjpf23djwwmqr26zhsua8rrglrwdltsh body",
+  "ua Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.92 Safari/537.36 Edg/130.0.2849.80 via 203.0.113.9 and 10.0.0.5",
+  "not a ua: proxy/203.0.113.9 and http://198.51.100.4:8080/x and XChrome 203.0.113.10",
 ];
 setSalt(SALT);
 const cases = inputs.map((input) => ({ input, expect: redactText(input, 600) }));

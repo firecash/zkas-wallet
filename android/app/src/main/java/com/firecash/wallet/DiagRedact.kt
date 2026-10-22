@@ -67,6 +67,16 @@ object DiagRedact {
         return out.toString()
     }
 
+    /// Product tokens of a user agent: a dotted four-part number right after one of these is
+    /// a browser/WebView version, not an address. Same list and rule as UA_PRODUCTS in
+    /// src/diag/redact.ts, pinned by the shared vectors.
+    private val UA_PRODUCTS = listOf(
+        "Chrome", "Chromium", "CriOS", "Edg", "EdgA", "EdgiOS", "Edge", "Firefox", "FxiOS", "OPR", "Opera",
+        "Version", "Safari", "AppleWebKit", "SamsungBrowser", "YaBrowser", "Electron", "Gecko", "Mobile",
+    )
+
+    private fun afterUaProduct(before: String): Boolean = UA_PRODUCTS.any { before.endsWith("$it/") }
+
     private fun privateIpv4(a: Int, b: Int): Boolean =
         a == 10 || a == 127 || (a == 192 && b == 168) || (a == 172 && b in 16..31) || (a == 169 && b == 254)
 
@@ -91,15 +101,19 @@ object DiagRedact {
                 if (DIGIT.matcher(t).find() && LETTER.matcher(t).find() && !publicOnion) "b:" + pseudonym(salt, "tok", t) else t
             }
         }
-        s = replace(IPV4, s) { m ->
+        run {
+          val whole = s
+          s = replace(IPV4, whole) { m ->
             val all = m.group()
             val a = m.group(1)!!.toInt()
             val b = m.group(2)!!.toInt()
             when {
                 PUBLIC_HOSTS.contains(all) -> all
+                afterUaProduct(whole.substring(0, m.start())) -> all
                 a > 255 || b > 255 -> all
                 else -> (if (privateIpv4(a, b)) "lan:" else "ip:") + pseudonym(salt, "ip", all)
             }
+          }
         }
         s = replace(MONEY, s) { m ->
             val n = m.group(2)!!.replace(",", "").replace("_", "").toDoubleOrNull() ?: Double.NaN

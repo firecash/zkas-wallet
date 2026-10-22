@@ -122,6 +122,19 @@ const PHRASE_RE = /\b(?:[a-z]{3,8}[ \t]+){11,}[a-z]{3,8}\b/g;
 // which is also what makes this rule idempotent.
 const MONEY_RE = /(^|[^~\w.<>=-])(-?\d[\d,_]*(?:\.\d+)?)\s*(ZKAS|KAS|sompi|FC)\b/gi;
 
+/// Product tokens of a user agent. A dotted four-part number right after one of these
+/// ("Chrome/130.0.6723.92", "Edg/130.0.2849.80") is a browser or WebView version, not an
+/// address — and on Windows the WebView2 version is exactly what a crash report needs.
+/// Checked with endsWith on the text before the match (no lookbehind; see above). Ported
+/// verbatim to diag.rs and DiagRedact.kt and pinned by a shared vector.
+export const UA_PRODUCTS = [
+  "Chrome", "Chromium", "CriOS", "Edg", "EdgA", "EdgiOS", "Edge", "Firefox", "FxiOS", "OPR", "Opera",
+  "Version", "Safari", "AppleWebKit", "SamsungBrowser", "YaBrowser", "Electron", "Gecko", "Mobile",
+];
+function afterUaProduct(before: string): boolean {
+  return UA_PRODUCTS.some((p) => before.endsWith(`${p}/`));
+}
+
 function privateIpv4(a: number, b: number): boolean {
   return a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 169 && b === 254);
 }
@@ -147,8 +160,9 @@ export function redactText(input: string, max = 300): string {
     if (whole.startsWith(".onion", offset + m.length) && PUBLIC_HOSTS.has(`${m.toLowerCase()}.onion`)) return m;
     return `b:${pseudonym("tok", m)}`;
   });
-  s = s.replace(IPV4_RE, (m, a, b) => {
+  s = s.replace(IPV4_RE, (m: string, a: string, b: string, _c: string, _d: string, offset: number, whole: string) => {
     if (PUBLIC_HOSTS.has(m)) return m;
+    if (afterUaProduct(whole.slice(Math.max(0, offset - 20), offset))) return m;
     const na = Number(a), nb = Number(b);
     if ([a, b].some((x: string) => Number(x) > 255)) return m;
     return `${privateIpv4(na, nb) ? "lan" : "ip"}:${pseudonym("ip", m)}`;
