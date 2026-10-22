@@ -1,0 +1,102 @@
+{
+  "salt": "000102030405060708090a0b0c0d0e0f",
+  "max": 600,
+  "cases": [
+    {
+      "input": "plain words stay exactly as they are",
+      "expect": "plain words stay exactly as they are"
+    },
+    {
+      "input": "pay zkas:py82h42m9qjff0knpcmllzq3c7qhurje5auh4tq2ceagf69wjpf23djwwmqr26zhsua8rrglrwdltsh now",
+      "expect": "pay addr:cb4abc3f now"
+    },
+    {
+      "input": "ZKAS:PY82H42M9QJFF0KNPCMLLZQ3C7QHURJE5AUH4TQ2CEAGF69WJPF23DJWWMQR26ZHSUA8RRGLRWDLTSH",
+      "expect": "addr:cb4abc3f"
+    },
+    {
+      "input": "legacy firecash:py82h42m9qjff0knpcmllzq3c7qhurje5auh4tq2ceagf69wjpf23djwwmqr26zhsua8rrglrwdl",
+      "expect": "legacy addr:651ddb8d"
+    },
+    {
+      "input": "kaspa:qrap6w97jjpwrp59yj8fd3tfkz9jkxjd2spsjn4yxfpw60zzpdzsxnddcggqe merged",
+      "expect": "addr:bedb40d7 merged"
+    },
+    {
+      "input": "tx 35dd94a1d8d20d8b19e1b70531f105736071876945f04b2028d5b97fdeff43ff accepted",
+      "expect": "tx h:98855442 accepted"
+    },
+    {
+      "input": "wallet 'a1b2c3d4e5f60718293a4b5c6d7e8f90': rescan from DAA 1234",
+      "expect": "wallet 'x:1b74261a': rescan from DAA 1234"
+    },
+    {
+      "input": "token Ab3dE5gH7jK9mN1pQ3sT5vW7yZ9aB1cD rejected",
+      "expect": "token b:aafc6dbe rejected"
+    },
+    {
+      "input": "fvk 0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9",
+      "expect": "fvk h:40fafd25"
+    },
+    {
+      "input": "abandon ability able about above absent absorb abstract absurd abuse access accident",
+      "expect": "[phrase]"
+    },
+    {
+      "input": "sent 1234.5678 ZKAS and fee 3,000,000 sompi and 0.5 KAS",
+      "expect": "sent ~1k-10k ZKAS and fee ~0.01-0.1 ZKAS and ~0.1-1 KAS"
+    },
+    {
+      "input": "-2 ZKAS refund",
+      "expect": "~-1-10 ZKAS refund"
+    },
+    {
+      "input": "contact someone@example.org",
+      "expect": "contact [email]"
+    },
+    {
+      "input": "node 203.0.113.77:16110 and lan 192.168.1.23:8501 and 10.0.0.5",
+      "expect": "node ip:99d24457:16110 and lan lan:9b73073c:8501 and lan:89749178"
+    },
+    {
+      "input": "public 185.147.157.125:16110 and seed.zkas.info:16110 and 127.0.0.1:8501",
+      "expect": "public 185.147.157.125:16110 and seed.zkas.info:16110 and 127.0.0.1:8501"
+    },
+    {
+      "input": "via abcdefghijklmnopqrstuvwxyz234567abcdefghijklmnopqrstuvwx.onion",
+      "expect": "via onion:9c06b061"
+    },
+    {
+      "input": "known plqu6zzg5u6lkofv76m3pnnxzbaus6pgs4thced4wejdroi7z7exd6qd.onion stays",
+      "expect": "known plqu6zzg5u6lkofv76m3pnnxzbaus6pgs4thced4wejdroi7z7exd6qd.onion stays"
+    },
+    {
+      "input": "panicked at src/lib.rs:4123:9: called `Option::unwrap()` on a `None` value",
+      "expect": "panicked at src/lib.rs:4123:9: called `Option::unwrap()` on a `None` value"
+    },
+    {
+      "input": "page pipeline: fetch 90000 ms (1800 ms/page) | ingest 5000 ms (100 ms/page) | 50 pages",
+      "expect": "page pipeline: fetch 90000 ms (1800 ms/page) | ingest 5000 ms (100 ms/page) | 50 pages"
+    },
+    {
+      "input": "deadbeefdeadbeef inside",
+      "expect": "x:c2bd938a inside"
+    },
+    {
+      "input": "CamelCaseIdentifierThatIsVeryLongButHasNoDigits stays",
+      "expect": "CamelCaseIdentifierThatIsVeryLongButHasNoDigits stays"
+    },
+    {
+      "input": "short abc123 and medium a1b2c3d4e5 ok",
+      "expect": "short abc123 and medium a1b2c3d4e5 ok"
+    },
+    {
+      "input": "mixed key_9f86d081884c7d659a2feaa0c55ad015 end",
+      "expect": "mixed key_x:8eee9c74 end"
+    },
+    {
+      "input": "bare py82h42m9qjff0knpcmllzq3c7qhurje5auh4tq2ceagf69wjpf23djwwmqr26zhsua8rrglrwdltsh body",
+      "expect": "bare b:c44fac76 body"
+    }
+  ]
+}
