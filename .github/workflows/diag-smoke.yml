@@ -51,7 +51,7 @@ jobs:
       - name: Rust diag tests (release profile)
         working-directory: wallet
         shell: bash
-        run: cargo test --release --target ${{ matrix.target }} --manifest-path src-tauri/Cargo.toml --lib diag::
+        run: cargo test --release --target ${{ matrix.target }} --manifest-path src-tauri/Cargo.toml --lib "diag::"
       - name: Build
         working-directory: wallet
         run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
