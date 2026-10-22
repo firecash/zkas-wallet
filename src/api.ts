@@ -17,6 +17,17 @@ import { desktopRemoteBase } from "./desktop";
 import i18n from "./i18n";
 import { publicEndpoint, privacyMode, isOnionHost} from "./lib/privacy";
 import { clearTombstone } from "./wallets";
+// The diagnostic log's network observer. net.ts imports nothing from the app, so no cycle.
+import { claimSignal, recordRequest } from "./diag/net";
+import { hostClass, type HostClass } from "./diag/redact";
+
+function hostClassOf(base: string): HostClass {
+  try {
+    return hostClass(new URL(base).hostname);
+  } catch {
+    return "none";
+  }
+}
 
 /// Refuse to talk to a wallet service that a privacy mode does not permit.
 ///
@@ -639,7 +650,36 @@ export function abortInFlight(): void {
  * had never heard of. Naming the wallet explicitly lets it be created while the
  * user stays where they are.
  */
+/// What one wallet-API call did, for the diagnostic log (never its body or its token).
+interface ReqMeta {
+  status?: number;
+  bytes?: number;
+  route?: string;
+  host?: HostClass;
+}
+
 async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 10_000, asToken?: string): Promise<T> {
+  const t0 = performance.now();
+  const meta: ReqMeta = {};
+  try {
+    const out = await reqInner<T>(method, path, body, timeoutMs, asToken, meta);
+    recordRequest({ kind: "api", method, path, status: meta.status, bytes: meta.bytes, ms: performance.now() - t0, outcome: "ok", route: meta.route, host: meta.host, timeoutMs });
+    return out;
+  } catch (e) {
+    const m = e as { timedOut?: boolean; unreachable?: boolean; httpStatus?: number };
+    const outcome = m?.timedOut
+      ? "timeout"
+      : m?.unreachable || meta.status === undefined
+        ? "unreachable"
+        : meta.status >= 200 && meta.status < 300
+          ? "bad-body"
+          : "http";
+    recordRequest({ kind: "api", method, path, status: meta.status, bytes: meta.bytes, ms: performance.now() - t0, outcome, route: meta.route, host: meta.host, timeoutMs, err: (e as Error)?.name });
+    throw e;
+  }
+}
+
+async function reqInner<T>(method: string, path: string, body: unknown, timeoutMs: number, asToken: string | undefined, meta: ReqMeta): Promise<T> {
   let status: number;
   let statusText = "";
   let text: string;
@@ -670,6 +710,14 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
   const remoteChoice = desktopShell ? desktopRemoteBase() : "";
   const viaTor = !!remoteChoice && isOnionAddress(remoteChoice);
   if (desktopShell) {
+    meta.route = remoteChoice ? (viaTor ? "ipc-tor" : "ipc-direct") : "ipc-engine";
+    meta.host = remoteChoice ? (viaTor ? "onion" : hostClassOf(remoteChoice)) : "loopback";
+  } else {
+    const base = getBase();
+    meta.host = hostClassOf(base);
+    meta.route = meta.host === "loopback" ? "engine" : meta.host === "onion" ? "tor" : "clearnet";
+  }
+  if (desktopShell) {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const response = await invoke<{ status: number; body: string }>("wallet_api_request", {
@@ -683,6 +731,8 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
       });
       status = response.status;
       text = response.body;
+      meta.status = status;
+      meta.bytes = text?.length;
     } catch (e) {
       const detail = typeof e === "string" ? e : (e as Error)?.message || String(e);
       throw new Error(viaTor ? i18n.t("api.cannotReachTor", { detail }) : i18n.t("api.cannotReachEmbedded", { detail }));
@@ -702,6 +752,8 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
     // and another 10 after the network came back, because the dead request
     // still held the lock.
     inFlight.add(ctl);
+    // Reported by `req` itself, with the route; the generic fetch observer skips it.
+    claimSignal(ctl.signal);
     const timer = setTimeout(() => ctl.abort(), timeoutMs);
     try {
       assertBaseAllowed(getBase());
@@ -725,7 +777,9 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
     }
     status = res.status;
     statusText = res.statusText;
+    meta.status = status;
     text = await res.text();
+    meta.bytes = text.length;
   }
   // A proxy error page (nginx 502, captive portal) is HTML, not JSON — parsing it
   // raw threw `SyntaxError: Unexpected token '<'` straight at the user. Report the

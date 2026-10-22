@@ -441,6 +441,16 @@ export async function engineLogs(): Promise<string> {
   return scrubWalletTokens(history + (r.text || ""), knownWalletTokens());
 }
 
+/// The on-device engine's raw log ring (Android), for the diagnostic log's poller. NOT for
+/// display or copying: it is unscrubbed, and the poller passes every line through the
+/// diagnostic redactor (src/diag/redact.ts) before anything keeps it. Views use
+/// `engineLogs()`, which scrubs.
+export async function rawEngineLogText(): Promise<string> {
+  if (!embeddedAvailable() || !embeddedChosen()) return "";
+  const r = await Native.logs().catch(() => ({ text: "" }));
+  return r.text || "";
+}
+
 /** Turn engine debug-level logging on or off. */
 export async function setEngineDebugLogs(on: boolean): Promise<void> {
   if (!embeddedAvailable()) return;

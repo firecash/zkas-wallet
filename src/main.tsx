@@ -2,6 +2,10 @@
 // from the accessor itself, and one unguarded read anywhere took the whole
 // wallet down with an unrecoverable error screen.
 import "./lib/storage-shim";
+// SECOND: the diagnostic log, so the boot sequence below is on the record. Local only;
+// everything it keeps is redacted (src/diag/redact.ts). See src/diag/instrument.ts.
+import { error as diagError, event as diagEvent, installDiagnostics, markFirstRender, span as diagSpan, useScreenLog } from "./diag";
+import { templatePath } from "./diag/redact";
 // Installs a write-through copy of the few values whose loss costs money, and restores
 // any the system has evicted. iOS only; see securestore.ts for why localStorage alone is
 // not a safe home for a seed there.
@@ -49,6 +53,7 @@ const Mining = lazy(() => import("./pages/Mining").then((module) => ({ default: 
 const Explorer = lazy(() => import("./pages/Explorer").then((module) => ({ default: module.Explorer })));
 const Services = lazy(() => import("./pages/Services").then((module) => ({ default: module.Services })));
 const SelfHost = lazy(() => import("./pages/SelfHost").then((module) => ({ default: module.SelfHost })));
+const Diagnostics = lazy(() => import("./pages/Diagnostics").then((module) => ({ default: module.Diagnostics })));
 
 // On desktop the wallet is gated behind a passphrase: the embedded daemon does
 // not run (and the seed cannot be decrypted) until the user unlocks. So the boot
@@ -137,6 +142,7 @@ function Root({ locked, askNode, whatsNew, pendingWatch }: { locked: boolean; as
                 nowhere. */}
             <Route path="/tools" element={<Navigate to="/?tab=tools" replace />} />
             <Route path="/self-host" element={<SelfHost />} />
+            <Route path="/diagnostics" element={<Diagnostics />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -172,6 +178,10 @@ function AppShell() {
       : [{ path: "/settings", label: t("mainNav.settings"), icon: Settings }]),
   ], [android, desktop, t]);
   useHashRouterSync();
+  // Every top-level route is a screen in the diagnostic log. The wallet's own routes ("/" and
+  // "/settings") are logged by the wallet, per tab, so they are not double-counted here.
+  const routeScreen = location.pathname === "/" || location.pathname === "/settings" ? null : templatePath(location.pathname).replace(/^\//, "") || "root";
+  useScreenLog(routeScreen);
   // Reset scroll on every top-level route change (Wallet ↔ Explore ↔ Services ↔
   // Settings…) — a new screen otherwise keeps the previous one's scroll offset.
   useEffect(() => { try { window.scrollTo(0, 0); } catch { /* SSR */ } }, [location.pathname, location.search]);
@@ -227,6 +237,7 @@ class Boundary extends Component<{ children: ReactNode }, { err: Error | null }>
     return { err };
   }
   componentDidCatch(err: Error, info: { componentStack?: string | null }) {
+    diagError("err", "render", err, { component_stack: info.componentStack ?? undefined });
     console.error("wallet UI crashed:", err, info.componentStack);
   }
   render() {
@@ -299,6 +310,7 @@ function revealApp() {
     const root = document.getElementById("root");
     const mounted = (root && root.childElementCount > 0) && appCssReady(cssLinks);
     if (mounted || frames++ > 180) {
+      markFirstRender();
       // One more frame so the app's first paint lands before the fade starts.
       requestAnimationFrame(fade);
       return;
@@ -309,6 +321,9 @@ function revealApp() {
 }
 
 async function boot() {
+  // Not awaited: the native sink needs an IPC round trip, and boot must not wait on the
+  // log. Events recorded before it answers are queued and written once it does.
+  void installDiagnostics();
   let locked = false;
   if (isDesktop()) {
     try {
@@ -337,13 +352,16 @@ async function boot() {
   // engine may not even be on, surfacing as a raw transport error with nothing
   // to act on.
   if (!locked) {
+    const desktopBoot = isDesktop() ? diagSpan("app", "desktop_bootstrap") : null;
     try {
       await initDesktop();
+      desktopBoot?.end({ outcome: "ok" });
     } catch (first) {
       try {
         await initDesktop();
       } catch (second) {
         const reason = (second as Error)?.message || String(second) || String(first);
+        desktopBoot?.end({ outcome: "failed" }, { lvl: "error" });
         console.error("desktop bootstrap failed:", reason);
         try { localStorage.setItem("desktop_boot_error", reason); } catch { /* best effort */ }
       }
@@ -381,7 +399,9 @@ async function boot() {
       //
       // Attaching `.catch` does not hide it from the race — that still awaits this very
       // promise and still sees the rejection inside 20s. It only marks the late case handled.
+      const engineStart = diagSpan("engine", "start_at_boot");
       const engine = ensureEmbedded();
+      void engine.then(() => engineStart.end({ outcome: "ok" }), (e) => engineStart.end({ outcome: "failed", err: (e as Error)?.name }, { lvl: "error" }));
       void engine.catch(() => undefined);
       const url = await Promise.race([
         engine,
@@ -391,6 +411,7 @@ async function boot() {
       ]);
       setBase(url);
     } catch (e) {
+      diagEvent("engine", "boot_wait_gave_up", { msg: (e as Error)?.message }, { lvl: "warn" });
       console.error("on-device engine did not start:", (e as Error)?.message ?? e);
     }
   }

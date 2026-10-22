@@ -17,6 +17,7 @@
 // note/value commitment check, and the signature is over the sighash of the *checked*
 // bundle, which will not finalize any other bundle).
 
+import { error as diagError, event as diagEvent, span as diagSpan } from "./diag/log";
 import { api, type PrepareResp } from "./api";
 import { elapsedSince } from "./lib/elapsed";
 import { fvkHex, verifyAndSignPayment, type Network } from "./signer";
@@ -450,7 +451,17 @@ export async function sendNonCustodial(
   allowMultipleTransactions = false,
   ahead?: PreparedAhead | null,
 ): Promise<SendResult> {
+  // The diagnostic log's view of a payment: one span per stage, the stage a failure
+  // happened in, and how long proving took per spent note. Never the amount (a magnitude
+  // bucket), the recipient, the memo or anything the signer handles.
+  const whole = diagSpan("send", "done", { kind: "noncustodial" });
+  let stage = "fvk";
+  let spendsTotal = 0;
+  let proveMsTotal = 0;
+  diagEvent("send", "start", { kind: "noncustodial", multi: allowMultipleTransactions, amount_zkas: amountFc, adopted_ahead: !!ahead });
+  const fvkSpan = diagSpan("signer", "op", { op: "fvk" });
   const fvk = await fvkHex(seedHex);
+  fvkSpan.end();
   const sentParts: SendPart[] = [];
   const txids: string[] = [];
   let sent = 0n;
@@ -486,6 +497,8 @@ export async function sendNonCustodial(
         totalFc: amountFc,
       });
       onStage?.("proving", progress());
+      stage = "prepare";
+      const prepSpan = diagSpan("send", "prepare", { part: chunk + 1 });
       // The memo is sealed into the recipient's encrypted note by the prover; the
       // on-device verification below still checks recipient and amounts, which are
       // what a malicious prover could actually steal with.
@@ -515,6 +528,13 @@ export async function sendNonCustodial(
           (note, waitedSecs) => onStage?.("warming", { ...progress(), note: waitedSecs >= 5 ? i18n.t("noncustodial.noteWaited", { note, secs: waitedSecs }) : note }),
         );
       }
+      {
+        const spends = prep.spend_auth?.length ?? 0;
+        spendsTotal += spends;
+        const ms = prepSpan.end({ spends, fast_path: prep.fast_path, from_ahead: chunk === 0 && !!adopted });
+        proveMsTotal += ms;
+      }
+      stage = "check";
       // Exact integer figures; the plain-number fields are the fallback for a
       // daemon that predates the *_exact decimal strings.
       const chunkAmount = BigInt(prep.amount_sompi_exact ?? Math.round(prep.amount_sompi));
@@ -562,6 +582,8 @@ export async function sendNonCustodial(
         );
       }
       onStage?.("signing", progress());
+      stage = "sign";
+      const signSpan = diagSpan("send", "sign", { part: chunk + 1 });
 
       // Verify on-device that this bundle really pays `to` the amount asked — and no
       // more than `maxFee` of fee — then sign the sighash recomputed from the verified
@@ -581,13 +603,18 @@ export async function sendNonCustodial(
         JSON.stringify(prep.spend_auth),
       );
 
+      signSpan.end({ spends: prep.spend_auth?.length ?? 0 });
       onStage?.("broadcasting", progress());
+      stage = "submit";
+      const submitSpan = diagSpan("send", "submit", { part: chunk + 1 });
       // A submit that never got an answer is NOT a failed send — it is an unknown one.
       // Only this one call broadcasts, so this is the only place the distinction exists.
       let res;
       try {
         res = await api.submit(prep.session, sigs);
+        submitSpan.end({ outcome: "accepted" });
       } catch (e) {
+        submitSpan.end({ outcome: "failed", err: (e as Error)?.name }, { lvl: "warn" });
         const marked = e as { timedOut?: boolean; unreachable?: boolean };
         if (marked?.timedOut || marked?.unreachable) {
           throw new SubmitUnknownError(i18n.t("send.submitOutcomeUnknown"));
@@ -621,6 +648,7 @@ export async function sendNonCustodial(
       }
     }
   } catch (e) {
+    diagError("send", "error", e, { kind: "noncustodial", stage, parts_sent: sentParts.length });
     // A failure after ≥1 broadcast is NOT a plain failure: those chunks are real
     // money in flight. Hand the caller the parts so it can record them (History +
     // optimistic balance) before showing the error — otherwise the balance keeps
@@ -634,6 +662,7 @@ export async function sendNonCustodial(
     throw e;
   }
 
+  whole.end({ parts: txids.length, spends: spendsTotal, prove_ms_per_spend: spendsTotal ? Math.round(proveMsTotal / spendsTotal) : undefined, fee_sompi: Number(fees) });
   return { txid: txids[0], amount_sompi: Number(sent), fee_sompi: Number(fees), txids, parts: sentParts };
 }
 
@@ -689,7 +718,20 @@ export const MIN_NOTES_PER_MERGE = MIN_NOTES_PER_ROUND;
  * is the whole reason consolidation was not solving anybody's problem. Only the
  * final merged note has to mature before it can be spent.
  */
-export async function consolidateNonCustodial(
+/// Note merging, timed for the diagnostic log as one span (rounds and notes merged).
+export async function consolidateNonCustodial(...args: Parameters<typeof consolidateNonCustodialInner>): Promise<ConsolidationResult> {
+  const sp = diagSpan("send", "consolidate", { kind: "noncustodial" });
+  try {
+    const r = await consolidateNonCustodialInner(...args);
+    sp.end({ rounds: r.rounds, inputs: r.inputs, tx_count: r.txids.length });
+    return r;
+  } catch (e) {
+    diagError("send", "consolidate_error", e, { kind: "noncustodial" });
+    throw e;
+  }
+}
+
+async function consolidateNonCustodialInner(
   seedHex: string,
   network: Network,
   ownAddress: string,

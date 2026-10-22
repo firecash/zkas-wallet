@@ -1,6 +1,7 @@
 import { useTranslation, Trans } from "react-i18next";
 import { elapsedSince } from "./lib/elapsed";
 import { recordSyncSample, syncRate, fmtCount, fmtDuration, fmtRate } from "./lib/syncrate";
+import { markInteractive, observePollFailure, observeStatus, useScreenLog } from "./diag";
 import { NodeUpdateNotice } from "./components/NodeUpdateNotice";
 import i18n, { formatDate } from "./i18n";
 import { LanguagePicker, LanguageInline, LanguageNotice, LanguageButton } from "./LanguagePicker";
@@ -646,6 +647,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // the balance hero with the form below the fold. Skipped on first render so
   // opening the wallet still starts at the top with the balance visible.
   const firstTab = useRef(true);
+  // Every wallet tab is a screen in the diagnostic log: tap → commit → paint, per tab.
+  useScreenLog(`wallet.${tab}`);
   // A ?tab= quick action is consumed once applied, so Back cannot reopen it.
   //
   // /settings deliberately does NOT touch `tab`: it is its own screen, and the
@@ -884,6 +887,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // never lands in the history — and before the smoothing below, because the rate wants
       // the daemon's raw numbers, not the held ones.
       recordSyncSample(s.scanned_blocks, Math.max(s.daa_score, s.chain_len), getBase());
+      // The diagnostic log's sync story (state changes, progress, stalls, time to synced),
+      // from the same accepted, raw reading.
+      observeStatus(s);
+      markInteractive(s.has_wallet ? "wallet_status" : "no_wallet_status");
       // Never let a transient poll un-render the wallet. While the daemon is reloading a
       // wallet (or a status call races a sync pass) it can answer has_wallet:false /
       // address:null for a beat. Rendering that verbatim unmounted the whole tab block —
@@ -1295,6 +1302,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
         });
       }
     } catch (error) {
+      {
+        const m = error as { timedOut?: boolean; unreachable?: boolean; httpStatus?: number };
+        observePollFailure(m?.timedOut ? "timeout" : m?.unreachable ? "unreachable" : (error as Error)?.name === "WalletdUnauthorizedError" ? "unauthorized" : m?.httpStatus ? `http_${m.httpStatus}` : (error as Error)?.name || "error");
+      }
       // One failed poll (a flaky mobile hop, a proxy 502, a slow cold load) used
       // to flip the whole app to the "can't reach the wallet service" screen
       // INSTANTLY — unmounting the wallet (and a half-filled Send form) and
@@ -8164,7 +8175,9 @@ function DebugLogsCard({ status }: { status: Status | null }) {
         </table>
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
           <button className="btn ghost small" onClick={() => void copyAll()}>{t("debugLogsCard.copy")}</button>
+          <button className="btn small" data-diag="open-diagnostics" onClick={() => { location.hash = "#/diagnostics"; }}>{t("diagnostics.open")}</button>
         </div>
+        <p className="muted small" style={{ margin: 0 }}>{t("diagnostics.openHint")}</p>
       </div>
       {engine && <DebugLogsEngineSection on={on} toggle={toggle} show={show} shown={shown} text={text} />}
     </Collapsible>

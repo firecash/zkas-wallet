@@ -20,6 +20,7 @@ import init, {
   sign_spend_auth as _sign_spend_auth,
   verify_and_sign_payment as _verify_and_sign_payment,
 } from "./firecash_signer.js";
+import { error as diagError, event as diagEvent } from "../diag/log";
 
 export type Network = "mainnet" | "testnet";
 
@@ -47,10 +48,26 @@ function wasmBytes(b64: string): Uint8Array {
  * device must download+parse before first paint by more than half. It's only
  * needed once the user actually signs/derives something. */
 export function ensureSigner(): Promise<void> {
-  if (!ready)
-    ready = import("./wasm-base64.js").then(({ WASM_B64 }) =>
-      init({ module_or_path: wasmBytes(WASM_B64) }).then(() => undefined),
-    );
+  if (!ready) {
+    // Timed in three parts for the diagnostic log: fetching the chunk, decoding the base64,
+    // instantiating the module. The first payment of a session used to pay all three.
+    const t0 = performance.now();
+    ready = import("./wasm-base64.js").then(({ WASM_B64 }) => {
+      const t1 = performance.now();
+      const bytes = wasmBytes(WASM_B64);
+      const t2 = performance.now();
+      return init({ module_or_path: bytes }).then(
+        () => {
+          const t3 = performance.now();
+          diagEvent("signer", "load", { chunk_ms: Math.round(t1 - t0), decode_ms: Math.round(t2 - t1), instantiate_ms: Math.round(t3 - t2), kb: Math.round(bytes.length / 1024) }, { dur: t3 - t0, withAction: false });
+        },
+        (e: unknown) => {
+          diagError("signer", "load_failed", e);
+          throw e;
+        },
+      );
+    });
+  }
   return ready;
 }
 
