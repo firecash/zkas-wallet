@@ -41,11 +41,22 @@ class EmbeddedEnginePlugin : Plugin() {
         // process is allowed to hold.
         EngineControl.reportMemoryBudget(context)
         Thread {
+            val t0 = android.os.SystemClock.elapsedRealtime()
+            var failure: String? = null
             val port = try {
                 uniffi.zkas_walletd_mobile.start(node, walletDir(), secret, socks).toInt()
             } catch (e: Throwable) {
+                failure = e.javaClass.simpleName
                 0
             }
+            // How long the native engine took to bind, and whether it did: the first number
+            // to look at when "the app is stuck on opening".
+            DiagStore.emit("engine", "native_start", if (port == 0) "error" else "info", mapOf(
+                "ms" to (android.os.SystemClock.elapsedRealtime() - t0),
+                "ok" to (port != 0),
+                "via_socks" to (socks != null),
+                "failure" to failure,
+            ))
             if (port == 0) {
                 call.reject("The on-device wallet engine could not start.")
             } else {
@@ -73,7 +84,9 @@ class EmbeddedEnginePlugin : Plugin() {
     @PluginMethod
     fun stop(call: PluginCall) {
         Thread {
+            val t0 = android.os.SystemClock.elapsedRealtime()
             EngineControl.stopEngine(context)
+            DiagStore.emit("engine", "native_stop", "info", mapOf("ms" to (android.os.SystemClock.elapsedRealtime() - t0)))
             call.resolve()
         }.start()
     }

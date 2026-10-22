@@ -55,6 +55,29 @@ public class SyncWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
+        // The diagnostic log records every background wake: when, how long, how it ended.
+        // The worker may run in a process with no activity, so the store is opened here too.
+        DiagStore.init(getApplicationContext());
+        long t0 = android.os.SystemClock.elapsedRealtime();
+        DiagStore.emit("bg", "sync_start");
+        Result r;
+        try {
+            r = doWorkInner();
+        } catch (RuntimeException e) {
+            java.util.Map<String, Object> f = new java.util.HashMap<>();
+            f.put("err", e.getClass().getName());
+            f.put("ms", android.os.SystemClock.elapsedRealtime() - t0);
+            DiagStore.emit("bg", "sync_crash", "error", f);
+            throw e;
+        }
+        java.util.Map<String, Object> f = new java.util.HashMap<>();
+        f.put("ms", android.os.SystemClock.elapsedRealtime() - t0);
+        f.put("outcome", r.getClass().getSimpleName());
+        DiagStore.emit("bg", "sync_end", "info", f);
+        return r;
+    }
+
+    private Result doWorkInner() {
         SharedPreferences p = getApplicationContext().getSharedPreferences(BackgroundSyncPlugin.PREFS, Context.MODE_PRIVATE);
         if (!p.getBoolean("enabled", false)) return Result.success();
         String token = p.getString("token", "");

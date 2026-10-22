@@ -8,6 +8,9 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
+    // The diagnostic log's native collectors, BEFORE super.onCreate so this activity's own
+    // creation (cold vs warm start, time since the process began) is on the record.
+    DiagCollectors.install(getApplication());
     setIntent(normalizePaymentShare(getIntent()));
     // The opt-in background sync (Settings → Background sync): a WorkManager
     // periodic wake that keeps the daemon-side scan warm and announces incoming
@@ -15,6 +18,8 @@ public class MainActivity extends BridgeActivity {
     registerPlugin(BackgroundSyncPlugin.class);
     // The on-device wallet engine (Settings → Wallet service → Run on this phone).
     registerPlugin(EmbeddedEnginePlugin.class);
+    // The on-device diagnostic log (Settings -> Diagnostics).
+    registerPlugin(DiagnosticsPlugin.class);
     super.onCreate(savedInstanceState);
   }
 
@@ -55,9 +60,13 @@ public class MainActivity extends BridgeActivity {
   @Override
   public void onTrimMemory(int level) {
     super.onTrimMemory(level);
-    if (shouldReleaseCache(level, EngineForegroundService.isRunning())) {
-      EngineControl.releaseMemory();
-    }
+    boolean release = shouldReleaseCache(level, EngineForegroundService.isRunning());
+    long freed = release ? EngineControl.releaseMemory() : 0L;
+    java.util.Map<String, Object> f = new java.util.HashMap<>();
+    f.put("level", level);
+    f.put("released", release);
+    f.put("freed_leaves", freed);
+    DiagStore.emit("perf", "trim", release ? "warn" : "info", f);
   }
 
   /**
@@ -91,7 +100,10 @@ public class MainActivity extends BridgeActivity {
   @Override
   public void onLowMemory() {
     super.onLowMemory();
-    EngineControl.releaseMemory();
+    long freed = EngineControl.releaseMemory();
+    java.util.Map<String, Object> f = new java.util.HashMap<>();
+    f.put("freed_leaves", freed);
+    DiagStore.emit("perf", "low_memory", "warn", f);
   }
 
   @Override
