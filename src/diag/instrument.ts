@@ -82,7 +82,8 @@ export function describeElement(target: EventTarget | null): Record<string, unkn
   const textual = tag === "button" || tag === "a" || tag === "summary" || tag === "label" || !!role;
   const raw = el.getAttribute("aria-label") ?? el.getAttribute("title") ?? (textual ? (el.textContent ?? "").slice(0, 60) : null);
   const label = safeLabel(raw);
-  if (label) out.label = label;
+  // `ui_label`, not `label`: a field called `label` is a contact label and is dropped.
+  if (label) out.ui_label = label;
   const scope = el.closest("[data-diag-scope], [role=dialog]");
   if (scope) {
     const s = safeId(scope.getAttribute("data-diag-scope")) ?? safeLabel(scope.getAttribute("aria-label"));
@@ -453,32 +454,63 @@ function envFields(): Record<string, unknown> {
 }
 
 function maybeTour(): void {
-  // The scripted tour (desktop, ZKAS_DIAG_TOUR=1): taps every top-level page and every
-  // wallet tab in turn, the way a person would, so a headless run exercises the tap →
-  // screen → requests chain end to end. It only clicks navigation.
+  // The scripted tour (desktop, ZKAS_DIAG_TOUR=1): what a person would do on a first launch
+  // — accept the default node, then tap every top-level page and every wallet tab in turn,
+  // then open Diagnostics and press Export — so a headless run exercises the tap → screen →
+  // requests chain and the export path end to end. It only clicks; it types nothing.
   if (!nativeConfig?.tour) return;
+  const q = <T extends Element = HTMLElement>(sel: string) => document.querySelector<T>(sel);
   const steps: (() => void)[] = [];
   const clickAll = (selector: string) => {
     const n = document.querySelectorAll(selector).length;
-    for (let i = 0; i < n; i++) steps.push(() => (document.querySelectorAll<HTMLElement>(selector)[i])?.click());
+    for (let i = 0; i < n; i++) steps.push(() => document.querySelectorAll<HTMLElement>(selector)[i]?.click());
+  };
+  const plan = () => {
+    clickAll(".app-page-links button");
+    steps.push(() => q<HTMLElement>(".app-page-links button")?.click());
+    clickAll("[role=tab]");
+    steps.push(() => {
+      beginAction("script", "diagnostics");
+      location.hash = "#/diagnostics";
+    });
+    steps.push(() => q<HTMLElement>("[data-diag=diag-export]")?.click());
+    steps.push(() => {
+      event("diag", "tour", { phase: "round_end" });
+      // Go round again while the app runs, so screens, taps and exports keep being exercised
+      // through a long sync. Tour mode only.
+      setTimeout(() => {
+        location.hash = "#/";
+        setTimeout(() => {
+          plan();
+          next();
+        }, 3_000);
+      }, 60_000);
+    });
+  };
+  let i = 0;
+  const next = () => {
+    if (i >= steps.length) return;
+    try {
+      steps[i++]();
+    } catch {
+      /* keep going */
+    }
+    setTimeout(next, 2_500);
   };
   setTimeout(() => {
     event("diag", "tour", { phase: "start" });
-    clickAll(".app-page-links button");
-    steps.push(() => document.querySelector<HTMLElement>(".app-page-links button")?.click());
-    clickAll("[role=tab]");
-    steps.push(() => event("diag", "tour", { phase: "end" }));
-    let i = 0;
-    const next = () => {
-      if (i >= steps.length) return;
-      try {
-        steps[i++]();
-      } catch {
-        /* keep going */
-      }
-      setTimeout(next, 2_500);
-    };
-    next();
+    const firstRun = q<HTMLElement>("[data-diag=first-run-continue]");
+    if (firstRun) {
+      firstRun.click();
+      // The wallet mounts once the node choice settles.
+      setTimeout(() => {
+        plan();
+        next();
+      }, 12_000);
+    } else {
+      plan();
+      next();
+    }
   }, 15_000);
 }
 
@@ -487,23 +519,35 @@ function maybeTour(): void {
 export function installDiagnostics(): Promise<void> {
   if (installed) return Promise.resolve();
   installed = true;
-  try {
-    installErrorCapture();
-    installConsoleMirror();
-    installInteractionCapture();
-    installLifecycle();
-    installFetchWrapper();
-    installInvokeWrapper();
-    installPerf();
-    startNetSummary();
-  } catch (e) {
-    logError("diag", "install_failed", e);
+  // Each collector on its own: one that cannot install on this engine (WebKitGTK makes the
+  // Tauri internals read-only, for one) must not take the others down with it — found in
+  // the first real run, where a throw here silently skipped the performance collectors.
+  const parts: [string, () => void][] = [
+    ["errors", installErrorCapture],
+    ["console", installConsoleMirror],
+    ["interaction", installInteractionCapture],
+    ["lifecycle", installLifecycle],
+    ["fetch", installFetchWrapper],
+    ["ipc", installInvokeWrapper],
+    ["perf", installPerf],
+    ["net_summary", startNetSummary],
+  ];
+  for (const [name, install] of parts) {
+    try {
+      install();
+    } catch (e) {
+      // Recorded at info: on engines where the IPC observer cannot install, the fetch
+      // observer sees the same calls (Tauri's IPC travels over fetch).
+      event("diag", "collector_unavailable", { collector: name, err: (e as Error)?.name, msg: (e as Error)?.message }, { lvl: name === "ipc" ? "info" : "error" });
+    }
   }
   const navEntry = (() => {
     try {
       const n = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+      // Zero means "has not happened yet" (boot runs before load), not "took no time".
+      const pos = (v: number) => (v > 0 ? Math.round(v) : undefined);
       return n
-        ? { dom_interactive_ms: Math.round(n.domInteractive), dcl_ms: Math.round(n.domContentLoadedEventEnd), load_ms: Math.round(n.loadEventEnd), nav_type: n.type }
+        ? { dom_interactive_ms: pos(n.domInteractive), dcl_ms: pos(n.domContentLoadedEventEnd), load_ms: pos(n.loadEventEnd), nav_type: n.type }
         : {};
     } catch {
       return {};

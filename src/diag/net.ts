@@ -160,7 +160,19 @@ export function installFetchWrapper(): void {
     } catch {
       url = "";
     }
+    // Tauri's IPC travels over fetch (ipc://localhost/<command>, or http://ipc.localhost on
+    // Windows). Those are commands, not network: named, timed as IPC, and the log's own
+    // plumbing (diag_append...) never recorded — otherwise every flush would log itself.
+    const ipcCmd = ipcCommand(url);
+    if (ipcCmd !== null && (NEVER.has(ipcCmd) || ipcCmd === "wallet_api_request")) return inner.call(globalThis, input, init);
     const p = inner.call(globalThis, input, init);
+    if (ipcCmd !== null) {
+      p.then(
+        (res) => recordIpc(ipcCmd, performance.now() - t0, res.ok ? "ok" : "error", Number(res.headers.get("content-length") ?? "") || undefined),
+        () => recordIpc(ipcCmd, performance.now() - t0, "error"),
+      );
+      return p;
+    }
     p.then(
       (res) => {
         try {
@@ -206,6 +218,31 @@ export function uninstallFetchWrapper(): void {
   originalFetch = null;
   aggs.clear();
   seen.clear();
+}
+
+// ---- Tauri IPC ------------------------------------------------------------------------
+
+/// The command name when `url` is a Tauri IPC request, else null.
+export function ipcCommand(url: string): string | null {
+  const m = /^(?:ipc:\/\/localhost|https?:\/\/ipc\.localhost)\/([^?#]+)/.exec(url);
+  if (!m) return null;
+  try {
+    return decodeURIComponent(m[1]);
+  } catch {
+    return m[1];
+  }
+}
+
+function recordIpc(cmd: string, ms: number, outcome: "ok" | "error", bytes?: number): void {
+  try {
+    if (CHATTY.has(cmd) && !isVerbose()) {
+      recordRequest({ kind: "ipc", method: "IPC", path: `/${cmd}`, host: "ipc", route: "ipc", ms, outcome: outcome === "ok" ? "ok" : "error" });
+      return;
+    }
+    event("net", "ipc", { cmd, outcome, bytes }, { dur: ms, lvl: outcome === "ok" ? "info" : "warn" });
+  } catch {
+    /* never fail the call */
+  }
 }
 
 // ---- the Tauri IPC wrapper ----------------------------------------------------------

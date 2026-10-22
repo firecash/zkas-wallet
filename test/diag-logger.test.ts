@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTION_WINDOW_MS, beginAction, currentAction, event, flush, installSink, recent, resetForTests, selfStats, setLevel, span } from "../src/diag/log";
 import { setSalt } from "../src/diag/redact";
-import { claimSignal, flushNetSummary, installFetchWrapper, recordRequest, uninstallFetchWrapper } from "../src/diag/net";
+import { claimSignal, flushNetSummary, installFetchWrapper, ipcCommand, recordRequest, uninstallFetchWrapper } from "../src/diag/net";
 import { ingestEngineText, observePollFailure, observeStatus, parseEngineMessage, resetSyncForTests, rustDurationMs, splitEngineLine } from "../src/diag/sync";
 import { resetScreensForTests, screenChanged } from "../src/diag/screens";
 import { summarize } from "../src/diag/summary";
@@ -157,6 +157,23 @@ describe("network observer", () => {
     expect(evs("net").length).toBe(0);
   });
 
+  it("Tauri IPC over fetch is recorded as IPC, and the log's own plumbing never records itself", async () => {
+    // Found in the first real desktop run: WebKitGTK routes IPC through fetch, so every
+    // diag_append flush logged a request, which the next flush wrote, forever.
+    globalThis.fetch = vi.fn(async () => new Response("{}")) as unknown as typeof fetch;
+    installFetchWrapper();
+    await fetch("ipc://localhost/diag_append", { method: "POST" });
+    await fetch("http://ipc.localhost/wallet_api_request", { method: "POST" });
+    await fetch("ipc://localhost/vault_status", { method: "POST" });
+    await fetch("ipc://localhost/plugin%3Aevent%7Clisten", { method: "POST" });
+    await new Promise((r) => setTimeout(r, 0));
+    const ipc = evs("net", "ipc");
+    expect(ipc.map((e) => e.cmd)).toEqual(["vault_status"]);
+    expect(evs("net", "req").length).toBe(0);
+    expect(ipcCommand("ipc://localhost/plugin%3Aevent%7Clisten")).toBe("plugin:event|listen");
+    expect(ipcCommand("https://wallet.zkas.info/x")).toBeNull();
+  });
+
   it("polls fold into a per-minute summary at normal level", () => {
     for (let i = 0; i < 30; i++) recordRequest({ kind: "api", method: "GET", path: "/api/status", status: 200, ms: 10 + i, outcome: "ok", host: "loopback" });
     // The first of its kind is recorded individually, the rest are summarised.
@@ -251,6 +268,25 @@ describe("sync story", () => {
     expect(evs("sync", "state").pop()?.state).toBe("unreachable");
     observeStatus(base);
     expect(evs("sync", "poll_recovered")[0].failures).toBe(5);
+  });
+});
+
+describe("taps", () => {
+  it("a plain-word button keeps its label through the redactor (found blanked in a real run)", async () => {
+    const { describeElement } = await import("../src/diag/instrument");
+    const b = document.createElement("button");
+    b.textContent = "Send";
+    b.setAttribute("data-diag", "tab-send");
+    document.body.appendChild(b);
+    event("ui", "tap", { ...(describeElement(b) ?? {}) });
+    const e = evs("ui", "tap")[0];
+    expect(e.ui_label).toBe("Send");
+    expect(e.id).toBe("tab-send");
+  });
+
+  it("the synced record keeps its block count (once hashed by the session rule)", () => {
+    event("sync", "synced", { blocks_scanned: 30000, since_boot_ms: 1 });
+    expect(evs("sync", "synced")[0].blocks_scanned).toBe(30000);
   });
 });
 

@@ -127,35 +127,35 @@ export function FirstRunNode({ onDone }: { onDone: () => void }) {
   return (
     <div className="lockwrap">
       <LanguageButton compact />
-      <form className="card lockcard" onSubmit={submit}>
+      <form className="card lockcard" onSubmit={submit} data-diag="first-run-node">
         <h2 style={{ marginTop: 0 }}>{t("firstRunNode.title")}</h2>
         <p className="muted small">
           {t("firstRunNode.intro")}
         </p>
 
         <label className="choice">
-          <input type="radio" checked={mode === "remote"} onChange={() => setMode("remote")} disabled={busy} />
+          <input type="radio" data-diag="first-run-remote" checked={mode === "remote"} onChange={() => setMode("remote")} disabled={busy} />
           <span>
             <Trans i18nKey="firstRunNode.optRemote" components={{ b: <b /> }} />
           </span>
         </label>
 
         <label className="choice">
-          <input type="radio" checked={mode === "hosted"} onChange={() => setMode("hosted")} disabled={busy} />
+          <input type="radio" data-diag="first-run-hosted" checked={mode === "hosted"} onChange={() => setMode("hosted")} disabled={busy} />
           <span>
             <Trans i18nKey="firstRunNode.optHosted" components={{ b: <b /> }} />
           </span>
         </label>
 
         <label className="choice">
-          <input type="radio" checked={mode === "tor"} onChange={() => setMode("tor")} disabled={busy} />
+          <input type="radio" data-diag="first-run-tor" checked={mode === "tor"} onChange={() => setMode("tor")} disabled={busy} />
           <span>
             <Trans i18nKey="firstRunNode.optTor" components={{ b: <b /> }} />
           </span>
         </label>
 
         <label className="choice">
-          <input type="radio" checked={mode === "custom"} onChange={() => setMode("custom")} disabled={busy} />
+          <input type="radio" data-diag="first-run-custom" checked={mode === "custom"} onChange={() => setMode("custom")} disabled={busy} />
           <span>
             <Trans i18nKey="firstRunNode.optCustom" components={{ b: <b /> }} />
           </span>
@@ -171,7 +171,7 @@ export function FirstRunNode({ onDone }: { onDone: () => void }) {
         {err && <div className="msg err">{err}</div>}
         {torFailed && <OrbotHelp />}
 
-        <button className="btn" type="submit" disabled={busy}>
+        <button className="btn" type="submit" disabled={busy} data-diag="first-run-continue">
           {busy ? t("firstRunNode.connecting") : t("firstRunNode.continue")}
         </button>
 

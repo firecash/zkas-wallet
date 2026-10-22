@@ -86,7 +86,7 @@ export function observeStatus(s: Status): void {
     event("sync", "synced", {
       since_boot_ms: Math.round(now),
       since_first_progress_ms: firstProgress ? Math.round(now - firstProgress.at) : undefined,
-      blocks_this_session: firstProgress ? Math.max(0, s.scanned_blocks - firstProgress.scanned) : undefined,
+      blocks_scanned: firstProgress ? Math.max(0, s.scanned_blocks - firstProgress.scanned) : undefined,
     });
   }
 }

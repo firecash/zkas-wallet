@@ -217,7 +217,7 @@ function AppShell() {
             {pages.map((page, index) => {
               const active = location.pathname === page.path || (page.path === "/explore" && location.pathname.startsWith("/explore/"));
               const Icon = page.icon;
-              return <button key={page.path} title={desktop ? t("mainNav.tabShortcut", { label: page.label, n: index + 1 }) : page.label} aria-current={active ? "page" : undefined} className={active ? "active" : ""} onClick={() => navigate(page.path)}><Icon aria-hidden="true" size={18} strokeWidth={1.8} /><span className="app-nav-label">{page.label}</span></button>;
+              return <button key={page.path} data-diag={`nav-${page.path.replace(/^\//, "") || "wallet"}`} title={desktop ? t("mainNav.tabShortcut", { label: page.label, n: index + 1 }) : page.label} aria-current={active ? "page" : undefined} className={active ? "active" : ""} onClick={() => navigate(page.path)}><Icon aria-hidden="true" size={18} strokeWidth={1.8} /><span className="app-nav-label">{page.label}</span></button>;
             })}
           </div>
         </div>

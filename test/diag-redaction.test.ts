@@ -103,6 +103,13 @@ describe("redaction rules", () => {
     }
   });
 
+  it("does not over-redact ordinary diagnostic fields", () => {
+    // `priv` once matched `privacy_mode` and blanked the one field saying whether Tor was on.
+    for (const [k, v] of [["privacy_mode", "onion"], ["route", "ipc-engine"], ["status", 200], ["screen", "wallet.send"], ["since_tap", 120]] as const) {
+      expect(redactField(k, v), k).toBe(v);
+    }
+  });
+
   it("hashes identifier-named fields", () => {
     expect(redactField("address", ADDR)).toMatch(/^#[0-9a-f]{8}$/);
     expect(redactField("txid", TXID)).toMatch(/^#[0-9a-f]{8}$/);

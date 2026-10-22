@@ -1818,6 +1818,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               <button
                 key={t}
                 role="tab"
+                data-diag={`tab-${t}`}
                 aria-selected={tab === t}
                 aria-label={TAB_LABEL[t]()}
                 title={TAB_LABEL[t]()}

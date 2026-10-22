@@ -219,9 +219,9 @@ export function describeUrl(raw: string): { host: HostClass; hostName?: string; 
 // ---- structured fields ---------------------------------------------------------
 
 /// Field names whose VALUE is never written, whatever its type.
-const DROP_KEY = /(seed|mnemonic|phrase|passphrase|password|passwd|^pin$|^pin_|_pin$|secret|fvk|view_?key|viewing|priv|spend_?key|memo|^sigs?$|signature|alpha|bundle|disclosure|spend_auth|sighash|^body$|cookie|authorization|bearer|credential|^text$|^value_text$|contact|^label$|^note$)/i;
+const DROP_KEY = /(seed|mnemonic|phrase|passphrase|password|passwd|^pin$|^pin_|_pin$|secret|fvk|view_?key|viewing|privkey|priv_key|private_key|spend_?key|memo|^sigs?$|signature|alpha|bundle|disclosure|spend_auth|sighash|^body$|cookie|authorization|bearer|credential|^text$|^value_text$|contact|^label$|^note$)/i;
 /// Field names that identify something: written as a pseudonym.
-const HASH_KEY = /(address|^addr|^to$|recipient|payee|txid|^tx$|^txs$|hash|token|session|^wallet$|wallet_id|nullifier|commitment|cmx|^host$|^url$|^base$)/i;
+const HASH_KEY = /(address|^addr|^to$|recipient|payee|txid|^tx$|^txs$|hash|token|^session|^wallet$|wallet_id|nullifier|commitment|cmx|^host$|^url$|^base$)/i;
 /// Field names that carry money: written as a magnitude bucket.
 const MONEY_KEY = /(amount|balance|^value$|_value$|fee|sompi|spendable|maturing|pending_in|pending_out|pending_change|zkas$|_fc$|^fc$|price|paid|owed)/i;
 
