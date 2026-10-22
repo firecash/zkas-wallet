@@ -2059,6 +2059,7 @@
     "syncSpeed": "Szybkość synchronizacji",
     "bps": "{{now}} bloków/s teraz, średnio {{avg}}",
     "behind": "Bloki do nadrobienia",
+    "behindValue": "{{behind}} (opóźnienie {{lag}}; ostatnie ~{{margin}} są wstrzymywane do utrwalenia i widoczne jako oczekujące)",
     "timeToSynced": "Czas do synchronizacji",
     "decrypt": "Koszt skanowania",
     "pages": "Potok stron",

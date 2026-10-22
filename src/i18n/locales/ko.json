@@ -2059,6 +2059,7 @@
     "syncSpeed": "동기화 속도",
     "bps": "현재 {{now}} 블록/초, 평균 {{avg}}",
     "behind": "뒤처진 블록 수",
+    "behindValue": "{{behind}} (지연 {{lag}}; 마지막 약 {{margin}}개 블록은 확정될 때까지 보류되며 대기 중으로 표시됩니다)",
     "timeToSynced": "동기화 완료까지 시간",
     "decrypt": "스캔 비용",
     "pages": "페이지 파이프라인",

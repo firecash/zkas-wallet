@@ -2059,6 +2059,7 @@
     "syncSpeed": "Sync-Tempo",
     "bps": "{{now}} Blöcke/s aktuell, {{avg}} im Schnitt",
     "behind": "Blöcke im Rückstand",
+    "behindValue": "{{behind}} (Rückstand {{lag}}; die letzten ~{{margin}} werden bis zur Bestätigung zurückgehalten und als ausstehend angezeigt)",
     "timeToSynced": "Zeit bis synchronisiert",
     "decrypt": "Scan-Aufwand",
     "pages": "Seiten-Pipeline",

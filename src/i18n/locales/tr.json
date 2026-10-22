@@ -2059,6 +2059,7 @@
     "syncSpeed": "Eşitleme hızı",
     "bps": "şu an {{now}} blok/sn, ortalama {{avg}}",
     "behind": "Geride kalan blok",
+    "behindValue": "{{behind}} (gecikme {{lag}}; son ~{{margin}} blok kesinleşene kadar bekletilir ve beklemede görünür)",
     "timeToSynced": "Eşitlenme süresi",
     "decrypt": "Tarama maliyeti",
     "pages": "Sayfa hattı",

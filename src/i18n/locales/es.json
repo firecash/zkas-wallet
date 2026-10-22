@@ -2059,6 +2059,7 @@
     "syncSpeed": "Velocidad de sincronización",
     "bps": "{{now}} bloques/s ahora, {{avg}} de media",
     "behind": "Bloques de atraso",
+    "behindValue": "{{behind}} (retraso {{lag}}; los últimos ~{{margin}} se retienen hasta asentarse y aparecen como pendientes)",
     "timeToSynced": "Tiempo hasta sincronizado",
     "decrypt": "Coste del escaneo",
     "pages": "Canal de páginas",

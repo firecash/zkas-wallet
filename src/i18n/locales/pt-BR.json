@@ -2059,6 +2059,7 @@
     "syncSpeed": "Velocidade de sincronização",
     "bps": "{{now}} blocos/s agora, {{avg}} em média",
     "behind": "Blocos atrasados",
+    "behindValue": "{{behind}} (atraso {{lag}}; os últimos ~{{margin}} ficam retidos até se firmarem e aparecem como pendentes)",
     "timeToSynced": "Tempo até sincronizado",
     "decrypt": "Custo da varredura",
     "pages": "Pipeline de páginas",

@@ -2059,6 +2059,7 @@
     "syncSpeed": "Tốc độ đồng bộ",
     "bps": "{{now}} khối/giây hiện tại, trung bình {{avg}}",
     "behind": "Số khối còn thiếu",
+    "behindValue": "{{behind}} (trễ {{lag}}; ~{{margin}} khối cuối được giữ lại đến khi ổn định và hiển thị là đang chờ)",
     "timeToSynced": "Thời gian đến khi đồng bộ",
     "decrypt": "Chi phí quét",
     "pages": "Luồng trang",

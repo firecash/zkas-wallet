@@ -27,13 +27,28 @@ export interface SyncSample {
   tip: number;
 }
 
+/// Blocks walletd deliberately holds back from the tip: it never appends a block to the
+/// wallet's (append-only) tree until it is `SYNC_TIP_MARGIN` = 200 blue score below the
+/// sink, so a routine reorg cannot corrupt it. Payments inside that window are not lost —
+/// walletd trial-decrypts them as a 0-conf "preview" and they show as pending within a
+/// second of being mined. Mirrors zkas-walletd's `SYNC_TIP_MARGIN`.
+export const SETTLE_MARGIN = 200;
+/// On top of the margin: `scanned` and the tip are DAA scores while the margin is blue
+/// score (DAA runs ahead of blue on a DAG), and a caught-up wallet ingests in passes, not
+/// per block. Measured on a real device on 2026-10-22: a caught-up wallet rested 203-254
+/// DAA behind. Lag inside margin + slack is the design, not a delay.
+export const TIP_SLACK = 64;
+
 export interface SyncRate {
-  /// `tip - scanned`, floored at 0. A wallet never ingests the newest blocks, so a small
-  /// number here is normal.
+  /// `tip - scanned`, floored at 0. Includes the settlement margin, so a caught-up wallet
+  /// reads ~200-260 here; see `lag` for how far it is from where it should be.
   behind: number;
+  /// Blocks behind beyond the settlement margin and slack: real catching up still to do.
+  /// 0 for a wallet that is as current as walletd will ever make it.
+  lag: number;
   /// Blocks per second across the window, or `null` until there are two usable samples.
   blocksPerSec: number | null;
-  /// Seconds until `behind` reaches 0 at the current rate, or `null` when unknowable —
+  /// Seconds until `lag` reaches 0 at the current rate, or `null` when unknowable —
   /// no rate yet, not moving, or already caught up.
   etaSecs: number | null;
   /// Seconds spanned by the samples the rate was computed from.
@@ -95,8 +110,10 @@ export function resetSyncSamples(): void {
 export function syncRate(now = Date.now()): SyncRate {
   const newest = samples[samples.length - 1];
   const behind = newest ? Math.max(0, newest.tip - newest.scanned) : 0;
+  const lag = lagOf(behind);
   const base: SyncRate = {
     behind,
+    lag,
     blocksPerSec: null,
     etaSecs: null,
     windowSecs: 0,
@@ -118,13 +135,24 @@ export function syncRate(now = Date.now()): SyncRate {
   // "Not moving" is only meaningful over a long enough window, and only while there is
   // something left to do: a caught-up wallet advances at the chain's own rate and dips to zero
   // between blocks, which is not a stall.
-  const stalled = windowSecs >= MIN_WINDOW_SECS && advanced <= 0 && behind > 0;
+  //
+  // Measured against `lag`, not `behind`: a wallet resting at the settlement margin does
+  // not move between ingest passes, and a fresh wallet sits at its birthday until 200
+  // blocks have settled past it (~4 minutes). Both read as "STALLED" when the margin was
+  // counted as work left (seen on a real device, 2026-10-22).
+  const stalled = windowSecs >= MIN_WINDOW_SECS && advanced <= 0 && lag > 0;
 
   // ETA needs real forward progress. A rate at or below zero gives no arrival time, and
-  // saying "0s" or "-4s" would be worse than saying nothing.
-  const etaSecs = behind > 0 && blocksPerSec > 0 ? behind / blocksPerSec : null;
+  // saying "0s" or "-4s" would be worse than saying nothing. The destination is the
+  // settled point, not the tip walletd never ingests.
+  const etaSecs = lag > 0 && blocksPerSec > 0 ? lag / blocksPerSec : null;
 
-  return { behind, blocksPerSec, etaSecs, windowSecs, samples: samples.length, stalled };
+  return { behind, lag, blocksPerSec, etaSecs, windowSecs, samples: samples.length, stalled };
+}
+
+/// Blocks behind beyond what walletd holds back by design.
+export function lagOf(behind: number): number {
+  return Math.max(0, behind - SETTLE_MARGIN - TIP_SLACK);
 }
 
 /// `1,234` — thousands separated, because these are six- and seven-digit block heights and

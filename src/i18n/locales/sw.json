@@ -2059,6 +2059,7 @@
     "syncSpeed": "Kasi ya kusawazisha",
     "bps": "bloku {{now}}/s sasa, wastani {{avg}}",
     "behind": "Bloku zilizobaki nyuma",
+    "behindValue": "{{behind}} (kuchelewa {{lag}}; vitalu ~{{margin}} vya mwisho vinashikiliwa hadi vitulie na vinaonekana kama vinasubiri)",
     "timeToSynced": "Muda hadi kusawazishwa",
     "decrypt": "Gharama ya kuchanganua",
     "pages": "Mfumo wa kurasa",

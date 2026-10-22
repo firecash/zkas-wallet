@@ -2059,6 +2059,7 @@
     "syncSpeed": "同期速度",
     "bps": "現在 {{now}} ブロック/秒、平均 {{avg}}",
     "behind": "遅れているブロック数",
+    "behindValue": "{{behind}}（遅れ {{lag}}。直近の約 {{margin}} ブロックは確定まで保留され、保留中として表示されます）",
     "timeToSynced": "同期完了までの時間",
     "decrypt": "スキャンコスト",
     "pages": "ページ処理",

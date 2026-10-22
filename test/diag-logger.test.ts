@@ -288,6 +288,9 @@ describe("sync story", () => {
     expect(states).toEqual(["loading", "syncing", "synced"]);
     expect(evs("sync", "synced").length).toBe(1);
     expect(evs("sync", "progress").length).toBeGreaterThanOrEqual(1);
+    // Progress says how much of `behind` is the settlement margin walletd holds back.
+    expect(evs("sync", "progress")[0]).toMatchObject({ settle_margin: 200 });
+    expect(evs("sync", "progress")[0]).toHaveProperty("lag");
     // No balance in the progress record.
     expect(JSON.stringify(evs("sync"))).not.toMatch(/balance/);
   });

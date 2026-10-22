@@ -15,6 +15,7 @@ import {
   type DiagLevel,
 } from "../diag";
 import type { DiagEvent } from "../diag/log";
+import { SETTLE_MARGIN } from "../lib/syncrate";
 
 const ENVELOPE = new Set(["t", "m", "src", "sid", "seq", "lvl", "cat", "ev", "dur", "aid"]);
 
@@ -160,7 +161,7 @@ export function Diagnostics() {
           <tbody>
             <Row k={t("diagnostics.syncState")} v={summary.sync.state ?? "—"} />
             <Row k={t("diagnostics.syncSpeed")} v={summary.sync.bps !== undefined ? t("diagnostics.bps", { now: summary.sync.bps, avg: summary.sync.avgBps ?? "—" }) : "—"} />
-            <Row k={t("diagnostics.behind")} v={summary.sync.behind !== undefined ? String(summary.sync.behind) : "—"} />
+            <Row k={t("diagnostics.behind")} v={summary.sync.behind !== undefined ? t("diagnostics.behindValue", { behind: summary.sync.behind, lag: summary.sync.lag ?? "—", margin: SETTLE_MARGIN }) : "—"} />
             <Row k={t("diagnostics.timeToSynced")} v={fmtMs(summary.sync.timeToSyncedMs)} />
             <Row k={t("diagnostics.decrypt")} v={summary.sync.usPerAction !== undefined ? `${summary.sync.usPerAction} µs/action · ${summary.sync.usPerLeaf ?? "—"} µs/leaf` : "—"} />
             <Row k={t("diagnostics.pages")} v={summary.sync.fetchMsPerPage !== undefined ? t("diagnostics.pagesValue", { fetch: summary.sync.fetchMsPerPage, ingest: summary.sync.ingestMsPerPage ?? "—", pct: summary.sync.fetchPct ?? "—" }) : "—"} />

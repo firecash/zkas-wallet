@@ -2059,6 +2059,7 @@
     "syncSpeed": "同步速度",
     "bps": "当前 {{now}} 区块/秒，平均 {{avg}}",
     "behind": "落后区块数",
+    "behindValue": "{{behind}}（落后 {{lag}}；最近约 {{margin}} 个区块在确认前暂缓处理，显示为待定）",
     "timeToSynced": "完成同步用时",
     "decrypt": "扫描开销",
     "pages": "分页流水线",

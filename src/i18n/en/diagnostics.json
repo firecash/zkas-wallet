@@ -30,6 +30,7 @@
     "syncSpeed": "Sync speed",
     "bps": "{{now}} blocks/s now, {{avg}} average",
     "behind": "Blocks behind",
+    "behindValue": "{{behind}} (lag {{lag}}; the last ~{{margin}} are held back until settled and show as pending)",
     "timeToSynced": "Time to synced",
     "decrypt": "Scan cost",
     "pages": "Page pipeline",

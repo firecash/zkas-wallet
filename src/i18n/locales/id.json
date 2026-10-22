@@ -2059,6 +2059,7 @@
     "syncSpeed": "Kecepatan sinkron",
     "bps": "{{now}} blok/dtk sekarang, rata-rata {{avg}}",
     "behind": "Blok tertinggal",
+    "behindValue": "{{behind}} (tertinggal {{lag}}; ~{{margin}} blok terakhir ditahan sampai mapan dan tampil sebagai tertunda)",
     "timeToSynced": "Waktu hingga tersinkron",
     "decrypt": "Biaya pemindaian",
     "pages": "Alur halaman",

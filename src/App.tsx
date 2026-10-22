@@ -1,6 +1,6 @@
 import { useTranslation, Trans } from "react-i18next";
 import { elapsedSince } from "./lib/elapsed";
-import { recordSyncSample, syncRate, fmtCount, fmtDuration, fmtRate } from "./lib/syncrate";
+import { recordSyncSample, syncRate, fmtCount, fmtDuration, fmtRate, SETTLE_MARGIN } from "./lib/syncrate";
 import { markInteractive, observePollFailure, observeStatus, useScreenLog } from "./diag";
 import { NodeUpdateNotice } from "./components/NodeUpdateNotice";
 import i18n, { formatDate } from "./i18n";
@@ -8088,7 +8088,10 @@ function diagRows(status: Status | null): [string, string][] {
     const tip = Math.max(status.daa_score, status.chain_len);
     rows.push(["chain tip (daemon)", fmtCount(tip)]);
     rows.push(["scanned", fmtCount(status.scanned_blocks)]);
-    rows.push(["behind", `${fmtCount(r.behind)} blocks`]);
+    // `behind` counts the ~200 blocks walletd never ingests until they settle (payments in
+    // them show as pending at once); `lag` is the catching up actually left to do.
+    rows.push(["behind", `${fmtCount(r.behind)} blocks (${fmtCount(Math.min(r.behind, SETTLE_MARGIN))} held back until settled)`]);
+    rows.push(["lag beyond that", `${fmtCount(r.lag)} blocks`]);
     // The three numbers the old view was missing entirely, and the reason it was useless
     // against a hosted daemon: whether this is moving, how fast, and when it lands.
     rows.push(["speed", r.stalled ? "STALLED (no progress)" : fmtRate(r.blocksPerSec)]);
@@ -8145,9 +8148,9 @@ function DebugLogsCard({ status }: { status: Status | null }) {
     ? t("debugLogsCard.normal")
     : rate.stalled
       ? "stalled"
-      : rate.behind === 0 && status.synced
+      : rate.lag === 0 && status.synced
         ? "up to date"
-        : `${fmtCount(rate.behind)} behind · ${fmtRate(rate.blocksPerSec)}`;
+        : `${fmtCount(rate.lag)} behind · ${fmtRate(rate.blocksPerSec)}`;
 
   const report = () => rows.map(([k, v]) => `${k.padEnd(24)} ${v}`).join("\n");
   const toggle = async (v: boolean) => {

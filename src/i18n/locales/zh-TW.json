@@ -2059,6 +2059,7 @@
     "syncSpeed": "同步速度",
     "bps": "目前 {{now}} 區塊/秒，平均 {{avg}}",
     "behind": "落後區塊數",
+    "behindValue": "{{behind}}（落後 {{lag}}；最近約 {{margin}} 個區塊在確認前暫緩處理，顯示為待定）",
     "timeToSynced": "完成同步用時",
     "decrypt": "掃描成本",
     "pages": "分頁管線",

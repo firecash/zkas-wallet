@@ -2059,6 +2059,7 @@
     "syncSpeed": "Synchronisatiesnelheid",
     "bps": "{{now}} blokken/s nu, {{avg}} gemiddeld",
     "behind": "Blokken achter",
+    "behindValue": "{{behind}} (achterstand {{lag}}; de laatste ~{{margin}} worden vastgehouden tot ze vaststaan en tonen als in behandeling)",
     "timeToSynced": "Tijd tot gesynchroniseerd",
     "decrypt": "Scankosten",
     "pages": "Paginapijplijn",

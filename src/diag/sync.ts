@@ -10,7 +10,7 @@
 //      charted and summarised, and kept (redacted) as lines so nothing is lost.
 
 import type { Status } from "../api";
-import { syncRate } from "../lib/syncrate";
+import { SETTLE_MARGIN, syncRate } from "../lib/syncrate";
 import { event, isVerbose, safeText } from "./log";
 
 export type SyncState = "no_wallet" | "loading" | "node_down" | "syncing" | "stalled" | "warming" | "synced" | "unreachable";
@@ -54,7 +54,7 @@ export function observeStatus(s: Status): void {
   const r = syncRate();
   const tip = Math.max(s.daa_score || 0, s.chain_len || 0);
   const next = stateOf(s, r.stalled);
-  transition(next, { scanned: s.scanned_blocks, tip, behind: r.behind });
+  transition(next, { scanned: s.scanned_blocks, tip, behind: r.behind, lag: r.lag });
 
   if (!firstProgress && s.has_wallet && !s.loading) firstProgress = { at: now, scanned: s.scanned_blocks };
   const due = isVerbose() || now - lastProgressAt >= PROGRESS_MS;
@@ -67,6 +67,10 @@ export function observeStatus(s: Status): void {
         scanned: s.scanned_blocks,
         tip,
         behind: r.behind,
+        // `behind` includes the ~200 blocks walletd holds back until they settle (payments in
+        // them show as pending); `lag` is what is left beyond that margin.
+        lag: r.lag,
+        settle_margin: SETTLE_MARGIN,
         bps: r.blocksPerSec === null ? undefined : Math.round(r.blocksPerSec * 10) / 10,
         eta_s: r.etaSecs === null ? undefined : Math.round(r.etaSecs),
         window_s: Math.round(r.windowSecs),

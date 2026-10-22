@@ -13,6 +13,8 @@ export interface DiagSummary {
     bps?: number;
     avgBps?: number;
     behind?: number;
+    /// Behind beyond the settlement margin walletd holds back by design.
+    lag?: number;
     timeToSyncedMs?: number;
     usPerAction?: number;
     usPerLeaf?: number;
@@ -80,6 +82,7 @@ export function summarize(ring: readonly DiagEvent[]): DiagSummary {
           bps.push(e.bps as number);
         }
         out.sync.behind = num(e.behind);
+        out.sync.lag = num(e.lag);
       }
       if (e.ev === "synced") out.sync.timeToSyncedMs = num(e.since_boot_ms);
       if (e.ev === "scan_cost") {
