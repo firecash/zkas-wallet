@@ -133,7 +133,7 @@ jobs:
           # timeout, so the load was cancelled and restarted on every poll and the wallet
           # could never finish opening — "reopened the wallet and it sits at 0% and never
           # advances". The load now runs detached from the request.
-          ref: bbeb90d51874858d09e9d7976998bbe8da7c3a55
+          ref: 03a01749b8fe21c7db44afc873579f7ad8ad0293
           path: rusty-kaspa
 
       - uses: actions/setup-node@v4

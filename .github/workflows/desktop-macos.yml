@@ -49,7 +49,7 @@ jobs:
           # (consensus and p2p hardening, several unauthenticated node kills, the h2/rustls
           # RUSTSEC bumps); the head commit is the walletd fix for "I was at 8%, updated,
           # and it reset to 0" — see desktop-all.yml for why that happened.
-          ref: bbeb90d51874858d09e9d7976998bbe8da7c3a55
+          ref: 03a01749b8fe21c7db44afc873579f7ad8ad0293
           path: rusty-kaspa
       - uses: actions/setup-node@v4
         with:
