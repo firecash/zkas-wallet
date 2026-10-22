@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Check an exported diagnostic log against the redaction rules, and summarise it.
 //
 //   npx vite-node scripts/diag-check.mjs zkas-diagnostics-<stamp>.jsonl [--secrets file]
@@ -15,8 +14,9 @@ if (!file) {
   process.exit(2);
 }
 const si = process.argv.indexOf("--secrets");
-const secrets = si > 0 ? readFileSync(process.argv[si + 1], "utf8").split("\n").map((s) => s.trim()).filter(Boolean) : [];
-const lines = readFileSync(file, "utf8").split("\n").filter((l) => l.trim());
+const secrets = si > 0 ? readFileSync(process.argv[si + 1], "utf8").split(/\r?\n/).map((s) => s.trim()).filter(Boolean) : [];
+// CRLF-tolerant: an export opened and re-saved on Windows, or checked out with autocrlf.
+const lines = readFileSync(file, "utf8").replace(/^\uFEFF/, "").split(/\r?\n/).filter((l) => l.trim());
 let bad = 0;
 let unparsable = 0;
 const counts = new Map();
