@@ -3900,7 +3900,7 @@ pub fn run() {
         log_crash(&format!("panic: {info}\n{bt}"));
         default_hook(info);
     }));
-    log_crash(&format!("app start v{}", env!("CARGO_PKG_VERSION")));
+    log_crash(&format!("app start v{}", env!("ZKAS_APP_VERSION")));
     tauri::Builder::default()
         // Single instance MUST be first: a second launch (Windows double-click
         // races make this routine) would otherwise start a second embedded

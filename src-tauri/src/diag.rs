@@ -184,7 +184,7 @@ pub fn init(app_data: Option<PathBuf>) {
         known: Mutex::new(Vec::new()),
     });
     let mut f = Map::new();
-    f.insert("version".into(), json!(env!("CARGO_PKG_VERSION")));
+    f.insert("version".into(), json!(env!("ZKAS_APP_VERSION")));
     f.insert("pid".into(), json!(std::process::id()));
     emit("app", "process_start", "info", f);
     if prev_unclean {
@@ -583,7 +583,7 @@ pub fn diag_config() -> Result<DiagConfig, String> {
             "kernel": System::kernel_version(),
             "cpus": std::thread::available_parallelism().map(|n| n.get()).unwrap_or(0),
             "total_mem_mb": sys.total_memory() / 1_048_576,
-            "shell_version": env!("CARGO_PKG_VERSION"),
+            "shell_version": env!("ZKAS_APP_VERSION"),
         }),
         dir: d.dir.to_string_lossy().into_owned(),
         prev_unclean: d.prev_unclean && !reload,
