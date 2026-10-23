@@ -36,7 +36,7 @@ describe("services directory", () => {
       services: [{
         id: "core-source", name: "Core Source", description: "Source for node, consensus and wallet.",
         categories: ["build"], status: "Live", tags: ["Rust"], action: "View repository",
-        href: "https://github.com/firecash/zkas-rusty", icon: "git",
+        href: "https://gitlab.com/zkas-group/zkas-rusty", icon: "git",
       }],
     }));
     try {

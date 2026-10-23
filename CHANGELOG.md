@@ -252,7 +252,7 @@ mid-send; two tabs fighting over one wallet; a browser with site data blocked.
 - Removing a wallet left its private messages on the device.
 
 Full detail in
-[CHANGELOG.md](https://github.com/firecash/zkas-wallet/blob/main/CHANGELOG.md).
+[CHANGELOG.md](https://gitlab.com/zkas-group/zkas-wallet/-/blob/main/CHANGELOG.md).
 
 ### Everything else
 
@@ -291,7 +291,7 @@ Full detail in
 - The release script had been deleting the on-device engine before every build.
 
 Full detail below, and in
-[CHANGELOG.md](https://github.com/firecash/zkas-wallet/blob/main/CHANGELOG.md).
+[CHANGELOG.md](https://gitlab.com/zkas-group/zkas-wallet/-/blob/main/CHANGELOG.md).
 
 ### Everything else
 

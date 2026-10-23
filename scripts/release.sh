@@ -243,7 +243,7 @@ if idx is not None:
         # Ahead of everything else on the page, including this version's own notes.
         out.insert(0, f"> **Still ahead, announced in {v}:**\n>\n> " + plead.replace("\n", "\n> "))
     if prior:
-        out.append("Full history: [CHANGELOG.md](https://github.com/firecash/zkas-wallet/blob/main/CHANGELOG.md)")
+        out.append("Full history: [CHANGELOG.md](https://gitlab.com/zkas-group/zkas-wallet/-/blob/main/CHANGELOG.md)")
     print("\n\n".join(out))
 PYEOF
 )"

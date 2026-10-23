@@ -7,7 +7,7 @@
   "homepage": "https://wallet.zkas.info",
   "repository": {
     "type": "git",
-    "url": "https://github.com/firecash/zkas-wallet.git"
+    "url": "https://gitlab.com/zkas-group/zkas-wallet.git"
   },
   "type": "module",
   "scripts": {

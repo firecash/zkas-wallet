@@ -9,9 +9,9 @@ You do not implement any cryptography. You pull in three ready-made pieces:
 
 | Piece | Role | Where |
 |---|---|---|
-| **`zkas-signer`** (WASM) | on-device keys: derive address, derive viewing key, **verify + sign** a payment | [`firecash/zkas-signer`](https://github.com/firecash/zkas-signer) · prebuilt in this repo at [`src/signer/`](../src/signer) |
-| **`@zkas/sdk`** (npm) | typed client for the whole send flow, with progress + auto-chunking | [`firecash/zkas-sdk`](https://github.com/firecash/zkas-sdk) |
-| **`zkas-walletd`** | keyless daemon that scans + proves + broadcasts (hosted, or run your own) | [`zkas-rusty`](https://github.com/firecash/zkas-rusty) |
+| **`zkas-signer`** (WASM) | on-device keys: derive address, derive viewing key, **verify + sign** a payment | [`firecash/zkas-signer`](https://gitlab.com/zkas-group/zkas-signer) · prebuilt in this repo at [`src/signer/`](../src/signer) |
+| **`@zkas/sdk`** (npm) | typed client for the whole send flow, with progress + auto-chunking | [`firecash/zkas-sdk`](https://gitlab.com/zkas-group/zkas-sdk) |
+| **`zkas-walletd`** | keyless daemon that scans + proves + broadcasts (hosted, or run your own) | [`zkas-rusty`](https://gitlab.com/zkas-group/zkas-rusty) |
 
 **Trust model in one line:** you send the daemon a **viewing key** (it can watch), never
 the seed (only the seed can spend), and the device **re-checks and signs every payment**
@@ -30,7 +30,7 @@ shape when you cannot ship a native library.
 
 ```bash
 npm install @zkas/sdk
-# build the signer WASM from github.com/firecash/zkas-signer (wasm-bindgen, no circuit),
+# build the signer WASM from https://gitlab.com/zkas-group/zkas-signer (wasm-bindgen, no circuit),
 # or copy the prebuilt src/signer/ from this repo.
 ```
 
@@ -366,7 +366,7 @@ and full field docs are in `zkas-rusty/docs/WALLETD.md`.
 
 ## Repos
 
-- **[zkas-signer](https://github.com/firecash/zkas-signer)** — the WASM signer
-- **[zkas-sdk](https://github.com/firecash/zkas-sdk)** — `@zkas/sdk` + `docs/ARCHITECTURE.md`, `docs/USAGE.md`
-- **[zkas-rusty](https://github.com/firecash/zkas-rusty)** — node, `zkas-walletd`, Rust SDK crates, `shielded-pay`; `docs/WALLETD.md`, `docs/NON_CUSTODIAL_WALLET.md`
-- **[zkas-wallet](https://github.com/firecash/zkas-wallet)** — this repo: the full reference wallet (web + desktop + mobile) built on exactly these pieces
+- **[zkas-signer](https://gitlab.com/zkas-group/zkas-signer)** — the WASM signer
+- **[zkas-sdk](https://gitlab.com/zkas-group/zkas-sdk)** — `@zkas/sdk` + `docs/ARCHITECTURE.md`, `docs/USAGE.md`
+- **[zkas-rusty](https://gitlab.com/zkas-group/zkas-rusty)** — node, `zkas-walletd`, Rust SDK crates, `shielded-pay`; `docs/WALLETD.md`, `docs/NON_CUSTODIAL_WALLET.md`
+- **[zkas-wallet](https://gitlab.com/zkas-group/zkas-wallet)** — this repo: the full reference wallet (web + desktop + mobile) built on exactly these pieces

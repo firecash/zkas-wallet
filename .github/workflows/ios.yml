@@ -35,10 +35,10 @@ jobs:
           RK_SHA: 03a01749b8fe21c7db44afc873579f7ad8ad0293
         run: |
           # The engine crate lives in zkas-signer and builds against the node workspace.
-          git clone -q --depth 1 https://github.com/firecash/zkas-signer.git ../zkas-signer
+          git clone -q --depth 1 https://gitlab.com/zkas-group/zkas-signer.git ../zkas-signer
           mkdir -p ../rusty-kaspa && cd ../rusty-kaspa
           git init -q
-          git remote add origin https://github.com/firecash/zkas-rusty.git
+          git remote add origin https://gitlab.com/zkas-group/zkas-rusty.git
           git fetch -q --depth 1 origin "$RK_SHA"
           git checkout -q FETCH_HEAD
           echo "engine crate: $(git -C ../zkas-signer rev-parse --short HEAD)"

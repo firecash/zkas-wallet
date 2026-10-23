@@ -1,7 +1,7 @@
 # zkas-wallet
 
 A lightweight web **and mobile** wallet for
-**[ZKas](https://github.com/firecash/zkas-rusty)** — the private-by-default network
+**[ZKas](https://gitlab.com/zkas-group/zkas-rusty)** — the private-by-default network
 combining GHOSTDAG/kHeavyHash with Orchard/Halo 2. Create a wallet, receive to a shielded
 address, and send private payments straight from the browser, the desktop app, or the
 native Android app.
@@ -22,7 +22,7 @@ native Android app.
 > (cold). See [Custody model](#custody-model).
 
 This is a static React + Vite single-page app. It is a thin UI over a
-**[`zkas-walletd`](https://github.com/firecash/zkas-rusty)** daemon, which scans the
+**[`zkas-walletd`](https://gitlab.com/zkas-group/zkas-rusty)** daemon, which scans the
 chain, builds Orchard proofs, and submits transactions. Where that daemon runs is the
 whole trust model: on our server (hosted web, hosted mobile), on your own server
 (self-hosted), or **inside the app on your own device** (desktop, and Android with
@@ -67,7 +67,7 @@ never authorize a spend. The modes differ only in **who can watch**: with the da
 your own device, nobody.
 
 To go self-hosted, run `zkas-walletd` locally (see the
-[core repo](https://github.com/firecash/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet))
+[core repo](https://gitlab.com/zkas-group/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet))
 and select it from the connection control. Use HTTPS from the web wallet; the installed
 mobile app may use `http://<LAN-IP>:8501`. Desktop already runs walletd over private loopback HTTP
 and accepts custom chain-node endpoints as `host:port`.
@@ -135,7 +135,7 @@ launch; the release is what you verify, not the signature:
 - **Linux** — `.AppImage`: `chmod +x` it and run; `.deb`: `sudo apt install ./<file>.deb`.
   No prompt, but nothing is verified either.
 
-Download only from the [GitHub release page](https://github.com/firecash/zkas-wallet/releases);
+Download only from the [GitHub release page](https://gitlab.com/zkas-group/zkas-wallet/-/releases);
 with no notarization or Authenticode, the download origin is the only provenance a
 desktop build has today.
 
@@ -223,10 +223,10 @@ device. See the developer guide:
 
 ## Related repositories
 
-- **[zkas-rusty](https://github.com/firecash/zkas-rusty)** — node, miner,
+- **[zkas-rusty](https://gitlab.com/zkas-group/zkas-rusty)** — node, miner,
   `zkas-walletd`, explorer API
-- **[firecash-explorer](https://github.com/firecash/zkas-explorer)** — block explorer SPA
-- **[firecash-pool](https://github.com/firecash/zkas-pool)** — stratum mining pool
+- **[firecash-explorer](https://gitlab.com/zkas-group/zkas-explorer)** — block explorer SPA
+- **firecash-pool** — stratum mining pool (source not published)
 
 ## Tech
 
