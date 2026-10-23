@@ -78,8 +78,8 @@ Important: release `kaspad` has no `--nolisten` flag. Private P2P mode therefore
 
 ## Real components
 
-- ZKas node and diagnostic CPU miner: `firecash/zkas-rusty`, pinned `zkas-v1.0.6`.
-- Merged-mining Stratum bridge: `firecash/solo-dual-mode`, pinned `v1.0.6`.
+- ZKas node and diagnostic CPU miner: `zkas-group/zkas-rusty`, pinned `zkas-v1.0.6`.
+- Merged-mining Stratum bridge: `zkas-group/solo-dual-mode`, pinned `v1.0.6`.
 - Kaspa parent node: `kaspanet/rusty-kaspa`, pinned `v2.0.1`.
 
 Linux x86-64 and Windows x86-64 have verified dual-mining bridge assets. The published macOS ZKas release includes a ZKAS-only bridge, so macOS can run the wallet/node/solo flow but dual mining is explicitly disabled until a verified merged-mining macOS artifact is published. The app does not silently label ZKAS-only work as dual mining.

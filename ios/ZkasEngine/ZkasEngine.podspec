@@ -6,7 +6,7 @@
 # modulemap defines, and this pod compiles it into a module called ZkasEngine — which is
 # what EmbeddedEnginePlugin.swift imports.
 #
-# Both are produced by the `ios-engine` job in firecash/zkas-signer and dropped in here
+# Both are produced by the `ios-engine` job in zkas-group/zkas-signer and dropped in here
 # by CI before `pod install`. They are not committed: the XCFramework is ~300 MB.
 Pod::Spec.new do |s|
   s.name             = 'ZkasEngine'

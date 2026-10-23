@@ -1,6 +1,6 @@
 > **STATUS 2026-08-31 — shipped.** This document was the plan; the libraries exist.
-> `firecash/zkas-signer` `mobile/` publishes `mobile-v0.1.3` (Zakura stack): signed AAR,
-> `ZkasMobile.xcframework.zip`, a Maven package (`info.zkas:zkas-mobile`, registry moving to GitLab), SwiftPM
+> `zkas-group/zkas-signer` `mobile/` publishes `mobile-v0.1.3` (Zakura stack): signed AAR,
+> `ZkasMobile.xcframework.zip`, a Maven package (`info.zkas:zkas-mobile`) and SwiftPM
 > pin in the root `Package.swift`; CI gates every release on test + android + ios + a real
 > emulator run. Consumption instructions: `mobile/README.md` in that repo.
 > Still open from the list below: Maven Central (needs a Sonatype account — user's call),

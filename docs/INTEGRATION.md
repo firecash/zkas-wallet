@@ -9,8 +9,8 @@ You do not implement any cryptography. You pull in three ready-made pieces:
 
 | Piece | Role | Where |
 |---|---|---|
-| **`zkas-signer`** (WASM) | on-device keys: derive address, derive viewing key, **verify + sign** a payment | [`firecash/zkas-signer`](https://gitlab.com/zkas-group/zkas-signer) · prebuilt in this repo at [`src/signer/`](../src/signer) |
-| **`@zkas/sdk`** (npm) | typed client for the whole send flow, with progress + auto-chunking | [`firecash/zkas-sdk`](https://gitlab.com/zkas-group/zkas-sdk) |
+| **`zkas-signer`** (WASM) | on-device keys: derive address, derive viewing key, **verify + sign** a payment | [`zkas-group/zkas-signer`](https://gitlab.com/zkas-group/zkas-signer) · prebuilt in this repo at [`src/signer/`](../src/signer) |
+| **`@zkas/sdk`** (npm) | typed client for the whole send flow, with progress + auto-chunking | [`zkas-group/zkas-sdk`](https://gitlab.com/zkas-group/zkas-sdk) |
 | **`zkas-walletd`** | keyless daemon that scans + proves + broadcasts (hosted, or run your own) | [`zkas-rusty`](https://gitlab.com/zkas-group/zkas-rusty) |
 
 **Trust model in one line:** you send the daemon a **viewing key** (it can watch), never
@@ -169,7 +169,7 @@ await z.send(seedHex, "zkas:…", 5_000_000_000n, 10_000_000n); // 50 ZKAS, ≤0
 
 ## Run the daemon on the device
 
-The daemon is packaged as a library, **`zkas-walletd-mobile`** (in `firecash/zkas-signer`,
+The daemon is packaged as a library, **`zkas-walletd-mobile`** (in `zkas-group/zkas-signer`,
 alongside `mobile/`). It runs **the same `zkas-walletd`** in your process, bound to a
 loopback port, and hands you the port. Everything after that — the REST calls, the SDK,
 the send flow above — is byte-for-byte what you would write against a hosted daemon.

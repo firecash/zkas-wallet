@@ -1264,6 +1264,25 @@ fn file_sha256(path: &Path) -> Result<String, String> {
     Ok(hex::encode(hash.finalize()))
 }
 
+// BROKEN SINCE 2026-10-23, AND NOT FIXABLE BY EDITING THESE URLS.
+//
+// The `firecash` GitHub account was suspended, so every `github.com/firecash/...` URL
+// below answers 404. That makes "install the node" and "install the merged-mining
+// bridge" fail for every desktop user, on every platform — the one path in the app that
+// downloads something instead of merely linking to it.
+//
+// The repos are on gitlab.com/zkas-group under the same names, but the RELEASE ASSETS
+// are not: asked on 2026-10-23, the GitLab releases API answered `[]` for both
+// zkas-group/zkas-rusty and zkas-group/solo-dual-mode. The tags are there
+// (`zkas-v1.0.10`, `v1.0.11`), the built zips are not, so there is no URL to point at
+// yet and guessing one would only move the 404.
+//
+// Re-publishing the same bytes is what unblocks it: the sha256 below is checked after
+// the download, so a new host serving the identical archive needs nothing changed here
+// but the host. If the archives are rebuilt instead, these hashes must be recomputed.
+//
+// The kaspanet/rusty-kaspa URLs further down are a third party's and still live.
+
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
     Ok(ArchiveSpec {

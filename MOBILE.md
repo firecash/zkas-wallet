@@ -59,7 +59,7 @@ under *All-in-one desktop → First launch*.
 ## Run on this phone: the local engine
 
 `src/embedded.ts` + `android/.../EmbeddedEnginePlugin.kt` start `zkas-walletd` **in the app
-process** (the `zkas-walletd-mobile` UniFFI library from `firecash/zkas-signer`, the same
+process** (the `zkas-walletd-mobile` UniFFI library from `zkas-group/zkas-signer`, the same
 daemon the desktop app embeds) bound to a loopback port; the WebView then talks to
 `http://127.0.0.1:<port>` exactly as it would to a server. What that changes:
 

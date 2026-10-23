@@ -67,7 +67,7 @@ never authorize a spend. The modes differ only in **who can watch**: with the da
 your own device, nobody.
 
 To go self-hosted, run `zkas-walletd` locally (see the
-[core repo](https://gitlab.com/zkas-group/zkas-rusty#zkas-walletd--wallet-daemon-rest-powers-the-web-wallet))
+[core repo](https://gitlab.com/zkas-group/zkas-rusty#run-a-wallet))
 and select it from the connection control. Use HTTPS from the web wallet; the installed
 mobile app may use `http://<LAN-IP>:8501`. Desktop already runs walletd over private loopback HTTP
 and accepts custom chain-node endpoints as `host:port`.
@@ -135,7 +135,7 @@ launch; the release is what you verify, not the signature:
 - **Linux** — `.AppImage`: `chmod +x` it and run; `.deb`: `sudo apt install ./<file>.deb`.
   No prompt, but nothing is verified either.
 
-Download only from the [GitHub release page](https://gitlab.com/zkas-group/zkas-wallet/-/releases);
+Download only from the [GitLab release page](https://gitlab.com/zkas-group/zkas-wallet/-/releases);
 with no notarization or Authenticode, the download origin is the only provenance a
 desktop build has today.
 
@@ -225,8 +225,8 @@ device. See the developer guide:
 
 - **[zkas-rusty](https://gitlab.com/zkas-group/zkas-rusty)** — node, miner,
   `zkas-walletd`, explorer API
-- **[firecash-explorer](https://gitlab.com/zkas-group/zkas-explorer)** — block explorer SPA
-- **firecash-pool** — stratum mining pool (source not published)
+- **[zkas-explorer](https://gitlab.com/zkas-group/zkas-explorer)** — block explorer SPA
+- **zkas-pool** — stratum mining pool (source not published publicly)
 
 ## Tech
 
