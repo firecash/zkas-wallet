@@ -110,6 +110,21 @@ describe("redaction rules", () => {
     }
   });
 
+  it("redacts a field NAME that is itself a secret", () => {
+    // The daemon's second token leak was the token inside a PATH, where a guard that only
+    // inspected token-named values never looked. The same blind spot here is a field keyed BY
+    // the token: `{"<token>": {...}}` puts it in the line as a name. The value rules only ever
+    // see values, and on the web (and in the live tail and its Copy button on every platform)
+    // there is no native second pass over the whole line to catch it.
+    for (const t of [TOKEN_HEX, TOKEN_ALNUM, SEED_HEX]) {
+      const out = JSON.stringify(redactField("wallets", { [t]: { scanned: 1234 } }));
+      expect(out, out).not.toContain(t);
+    }
+    // Ordinary field names, including the long ones, are untouched.
+    const plain = redactField("perf", { js_heap_limit_mb: 4096, overhead_pct: 0.02, settle_margin: 200 });
+    expect(Object.keys(plain as Record<string, unknown>)).toEqual(["js_heap_limit_mb", "overhead_pct", "settle_margin"]);
+  });
+
   it("hashes identifier-named fields", () => {
     expect(redactField("address", ADDR)).toMatch(/^#[0-9a-f]{8}$/);
     expect(redactField("txid", TXID)).toMatch(/^#[0-9a-f]{8}$/);
@@ -234,6 +249,53 @@ describe("every entry point into the log is redacted", () => {
     window.dispatchEvent(new ErrorEvent("error", { error: new Error(`boom ${TXID} ${MNEMONIC}`), message: "boom" }));
     expectClean(allLines().filter((l) => l.includes('"cat":"err"')));
     expect(allLines().some((l) => l.includes('"ev":"console"'))).toBe(true);
+  });
+});
+
+describe("the desktop shell's wallet token", () => {
+  /**
+   * The one credential this log is most dangerous with, in the shape the DESKTOP mints it:
+   * 32 ASCII alphanumerics (`valid_wallet_token`), not 32 hex. Two things have to hold, or a
+   * token with no digit in it (about one install in 280) is written out verbatim:
+   *
+   *   1. `pollEngineNow()` registers the tokens this device holds as known secrets, which
+   *      means `knownWalletTokens()` has to return the desktop one (see
+   *      test/log-token-redaction.test.ts), and
+   *   2. the redaction is an exact-string replacement, so the case has to match.
+   *
+   * The shape rules alone do not cover it: `LONG_TOKEN_RE` only counts a run as a token when
+   * it holds a digit AND a letter, because a letters-only run is a word or a CamelCase
+   * identifier.
+   */
+  const DESKTOP_TOKEN = "AbcdEfghIjklMnopQrstUvwxYzabCdef";
+  const sunk: string[] = [];
+
+  beforeEach(() => {
+    resetForTests();
+    resetSyncForTests();
+    setSalt("55".repeat(16));
+    setKnownSecrets([]);
+    localStorage.clear();
+    sunk.length = 0;
+    installSink({ append: async (lines) => { sunk.push(...lines); } });
+    setLevel("verbose");
+  });
+  afterEach(() => {
+    setKnownSecrets([]);
+    localStorage.clear();
+  });
+
+  it("never reaches a stored line, even with no digit for the shape rule to find", async () => {
+    localStorage.setItem("wallet_token", DESKTOP_TOKEN);
+    const { pollEngineNow } = await import("../src/diag/instrument");
+    await pollEngineNow();
+    ingestEngineText(`1729600004000 [INFO zkas_walletd] wallet '${DESKTOP_TOKEN}': load did not complete, rescanning`, "desktop");
+    event("app", "token_in_free_text", { detail: `opened wallet ${DESKTOP_TOKEN}` });
+    await flush();
+    const lines = [...allLines(), ...sunk];
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) expect(line, line.slice(0, 300)).not.toContain(DESKTOP_TOKEN);
+    expect(lines.join("\n")).toContain("rescanning");
   });
 });
 

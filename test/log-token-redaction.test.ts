@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { scrubWalletTokens } from "../src/embedded";
+import { knownWalletTokens } from "../src/walletstate";
 
 /**
  * walletd names the wallet token on a great many lines:
@@ -99,5 +100,50 @@ describe("a shared log cannot carry the wallet credential", () => {
     // Both paths must go through output(), or one of them bypasses the redaction.
     expect(sl).toContain("writeText(output(visible))");
     expect(sl).toContain("new Blob([output(visible)]");
+  });
+});
+
+/**
+ * The list that DRIVES all of that redaction — and, since the diagnostics feature,
+ * `setKnownSecrets()` in the diagnostic log too (src/diag/instrument.ts).
+ *
+ * The browser mints a 32-hex wallet token, but the desktop shell mints a 32-character ASCII
+ * *alphanumeric* one (`valid_wallet_token` in src-tauri/src/lib.rs), and desktop.ts writes
+ * that into the same localStorage key. `parsePairingUri` already learned this the hard way —
+ * "32 random alphanumerics are hex only by astronomical accident" — so a hex-only,
+ * lowercasing filter here returns an EMPTY list on every desktop install, and then the Copy
+ * button and the diagnostic log have nothing to redact by value at all.
+ */
+describe("the tokens this device holds", () => {
+  const DESKTOP = "AbcdEfghIjklMnopQrstUvwxYzabCdef"; // 32 alphanumerics, as the shell mints them
+  const BROWSER = "a1b2c3d4e5f60718293a4b5c6d7e8f90"; // 32 hex, as getToken() mints them
+
+  beforeEach(() => localStorage.clear());
+
+  it("includes the desktop shell's alphanumeric token, with its case intact", () => {
+    localStorage.setItem("wallet_token", DESKTOP);
+    expect(knownWalletTokens()).toContain(DESKTOP);
+  });
+
+  it("so an engine line naming it cannot reach the Copy button", () => {
+    localStorage.setItem("wallet_token", DESKTOP);
+    const out = scrubWalletTokens(`wallet '${DESKTOP}': load did not complete`, knownWalletTokens());
+    expect(out).not.toContain(DESKTOP);
+  });
+
+  it("includes the registry's tokens as well as the active one", () => {
+    localStorage.setItem("wallet_token", BROWSER);
+    localStorage.setItem("wallets_v1", JSON.stringify([{ token: DESKTOP }, { token: BROWSER }]));
+    expect(knownWalletTokens()).toContain(DESKTOP);
+    expect(knownWalletTokens()).toContain(BROWSER);
+  });
+
+  it("still keeps the browser's hex token, and still ignores junk", () => {
+    localStorage.setItem("wallet_token", BROWSER);
+    expect(knownWalletTokens()).toContain(BROWSER);
+    for (const junk of ["", "default", "short", "a1b2c3d4", "has spaces in it and is long enough"]) {
+      localStorage.setItem("wallet_token", junk);
+      expect(knownWalletTokens(), junk).toEqual([]);
+    }
   });
 });

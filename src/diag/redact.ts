@@ -21,11 +21,31 @@
 
 import { sha256Hex } from "./sha256";
 
-let salt = "";
+/// A random salt from the moment this module loads, replaced by this device's own as soon as
+/// the platform answers. It is never empty: `installDiagnostics` installs every synchronous
+/// collector and only then awaits `connectSink`, which is an IPC round trip on desktop and on
+/// Android, and everything recorded in that window is queued and does reach the file. With no
+/// salt a pseudonym is a bare SHA-256 of its value, which anybody holding the export can
+/// CONFIRM against a candidate address or txid by hashing it — the opposite of what the
+/// export's own header promises.
+let salt = bootSalt();
 const knownSecrets = new Set<string>();
+
+function bootSalt(): string {
+  const a = new Uint8Array(16);
+  try {
+    crypto.getRandomValues(a);
+  } catch {
+    for (let i = 0; i < a.length; i++) a[i] = Math.floor(Math.random() * 256);
+  }
+  return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 /// Install this device's salt. Pseudonyms are stable for as long as it is.
 export function setSalt(hex: string): void {
+  // Never back to nothing: the web stand-in config carries an empty salt, and a native one
+  // that failed to read its salt file would too.
+  if (!hex.trim()) return;
   salt = hex;
 }
 
@@ -276,7 +296,12 @@ export function redactFields(fields: Record<string, unknown>, depth = 0): Record
   let n = 0;
   for (const [k, v] of Object.entries(fields)) {
     if (n++ >= 60) break;
-    out[k] = redactField(k, v, depth);
+    // The NAME too, not just the value: a call site that keyed an object by wallet token
+    // ({"<token>": {…}}) wrote the token into the line as a key, where the value rules never
+    // look. Only names long enough to BE a secret are checked, so the hot path (every event,
+    // every field) keeps paying nothing for `state`, `screen`, `bps`. The original key still
+    // drives `redactField`, so which rule applies to the value does not change.
+    out[k.length >= 16 ? redactText(k, 80) : k] = redactField(k, v, depth);
   }
   return out;
 }

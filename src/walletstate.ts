@@ -127,15 +127,32 @@ function registry(): { token: string; address?: string }[] {
 /// embedded engine IS walletd, and its buffer is surfaced behind a Copy button whose whole
 /// purpose is pasting into a support channel. A token authenticates the FVK view of a wallet:
 /// every balance, every payment, every memo. Redaction has to happen before the text reaches
-/// the screen, and it has to be driven by the tokens this device actually holds — a token is
-/// 16-128 lowercase hex, which is also the shape of a block hash, and the hashes are the part
-/// of a log that makes it worth sending.
+/// the screen, and it has to be driven by the tokens this device actually holds — by VALUE,
+/// because a token's shape is a block hash's too, and the hashes are the part of a log that
+/// makes it worth sending.
+///
+/// The two ends mint one DIFFERENTLY: the browser makes 32 hex characters (`getToken`), while
+/// the desktop shell makes 32 ASCII ALPHANUMERICS (`valid_wallet_token` in
+/// src-tauri/src/lib.rs) and desktop.ts writes that into this same key. `parsePairingUri`
+/// already learned what a hex-only rule costs here — "32 random alphanumerics are hex only by
+/// astronomical accident" — and in this function it cost more: lowercasing a mixed-case token
+/// and then dropping everything non-hex left the list EMPTY on every desktop install, so the
+/// Copy button and the diagnostic log's known-secret pass (src/diag/instrument.ts) had nothing
+/// to redact by value at all. Each token therefore goes in as the daemon knows it, and the
+/// lowercase form this used to return goes in beside it, so nothing that was redacted before
+/// stops being redacted now.
 export function knownWalletTokens(): string[] {
   const out = new Set<string>();
+  const add = (raw: string) => {
+    const t = raw.trim();
+    if (!t) return;
+    out.add(t);
+    out.add(t.toLowerCase());
+  };
   const active = readLocal("wallet_token");
-  if (active) out.add(active.toLowerCase());
-  for (const w of registry()) if (w.token) out.add(String(w.token).toLowerCase());
-  return [...out].filter((t) => /^[0-9a-f]{16,128}$/.test(t));
+  if (active) add(active);
+  for (const w of registry()) if (w.token) add(String(w.token));
+  return [...out].filter((t) => /^[0-9a-z]{16,128}$/i.test(t));
 }
 
 /**
