@@ -165,7 +165,7 @@ export function SelfHost() {
     return (
       <main className="control-page">
         <div className="control-heading"><div><span className="eyebrow">{t("selfHost.webEyebrow")}</span><h1>{t("selfHost.webTitle")}</h1><p>{t("selfHost.webIntro")}</p></div></div>
-        <section className="control-card"><h2>{t("selfHost.webUse")}</h2><p>{t("selfHost.webNote")}</p><a className="btn" href="https://github.com/firecash/zkas-wallet/releases" target="_blank" rel="noreferrer">{t("selfHost.webDownload")}</a></section>
+        <section className="control-card"><h2>{t("selfHost.webUse")}</h2><p>{t("selfHost.webNote")}</p><a className="btn" href="https://gitlab.com/zkas-group/zkas-wallet/-/releases" target="_blank" rel="noreferrer">{t("selfHost.webDownload")}</a></section>
       </main>
     );
   }

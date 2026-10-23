@@ -220,7 +220,14 @@ export function readBackupFile(path: string): Promise<string> {
 }
 
 /// Where the desktop builds are published (the same repo `scripts/release.sh` tags).
-const RELEASES_REPO = "firecash/zkas-wallet";
+///
+/// GitLab since 2026-10-23: the GitHub account was suspended, so every
+/// `api.github.com` and `github.com/firecash/...` URL answers 403/404. An installed
+/// desktop app checks this on every launch, so a stale host here is not cosmetic — it is
+/// every existing user silently never hearing about an update again.
+const RELEASES_PROJECT = "zkas-group/zkas-wallet";
+/// The project path, URL-encoded for GitLab's API (`zkas-group%2Fzkas-wallet`).
+const RELEASES_PROJECT_API = encodeURIComponent(RELEASES_PROJECT);
 
 export interface DesktopUpdate {
   /// The newer release, e.g. "1.0.36".
@@ -255,13 +262,21 @@ export function isNewerVersion(candidate: string, current: string): boolean {
 let updateCheck: Promise<DesktopUpdate | null> | null = null;
 
 /**
- * A newer desktop release than this build, if GitHub lists one. Desktop only,
+ * A newer desktop release than this build, if GitLab lists one. Desktop only,
  * asked once per launch and remembered; the desktop app has no updater and no
- * other way of learning a version exists. Fetched from the WebView: GitHub's API
- * answers with `Access-Control-Allow-Origin: *` and the shell's CSP allows
- * `https:` connects, so no Rust relay is needed and nothing of the wallet's is
- * sent — a bare, anonymous GET. Any failure (offline, rate-limited) is "no
+ * other way of learning a version exists. Fetched from the WebView: GitLab's API
+ * answers with `Access-Control-Allow-Origin: *` (verified for both the
+ * `https://localhost` and `tauri://localhost` origins the shell runs under) and the
+ * shell's CSP allows `https:` connects, so no Rust relay is needed and nothing of the
+ * wallet's is sent — a bare, anonymous GET. Any failure (offline, rate-limited) is "no
  * update", never an error on screen.
+ *
+ * STABLE RELEASES ONLY, and that has to be done by hand here. GitHub's
+ * `/releases/latest` excluded pre-releases for us, so this only ever offered finished
+ * builds. GitLab has no such endpoint — `/releases/permalink/latest` returns the newest
+ * release of any kind (asked while writing this, it answered `v1.0.52-rc8`), so pointing
+ * at the obvious equivalent would start pushing release candidates at everyone. The list
+ * is fetched instead and anything with a pre-release suffix is dropped.
  */
 export function checkForDesktopUpdate(currentVersion: string): Promise<DesktopUpdate | null> {
   if (!isDesktop()) return Promise.resolve(null);
@@ -277,19 +292,31 @@ export function checkForDesktopUpdate(currentVersion: string): Promise<DesktopUp
       try {
         const ctl = new AbortController();
         const timer = setTimeout(() => ctl.abort(), 8_000);
-        const res = await fetch(`https://api.github.com/repos/${RELEASES_REPO}/releases/latest`, {
-          headers: { Accept: "application/vnd.github+json" },
-          signal: ctl.signal,
-        }).finally(() => clearTimeout(timer));
+        const res = await fetch(
+          `https://gitlab.com/api/v4/projects/${RELEASES_PROJECT_API}/releases?per_page=20`,
+          { headers: { Accept: "application/json" }, signal: ctl.signal },
+        ).finally(() => clearTimeout(timer));
         if (!res.ok) return null;
-        const data = (await res.json()) as { tag_name?: unknown; html_url?: unknown };
-        const tag = typeof data.tag_name === "string" ? data.tag_name : "";
-        const version = tag.replace(/^v/, "");
-        if (!version || !isNewerVersion(version, currentVersion)) return null;
-        const url = typeof data.html_url === "string" && data.html_url.startsWith("https://github.com/")
-          ? data.html_url
-          : `https://github.com/${RELEASES_REPO}/releases/latest`;
-        return { version, url };
+        const data = (await res.json()) as unknown;
+        if (!Array.isArray(data)) return null;
+        let best: DesktopUpdate | null = null;
+        for (const entry of data) {
+          const rel = entry as { tag_name?: unknown; _links?: { self?: unknown } };
+          const tag = typeof rel.tag_name === "string" ? rel.tag_name : "";
+          // Stable only: `v1.2.3`, never `v1.2.3-rc4`. See the note above.
+          if (!/^v?\d+\.\d+\.\d+$/.test(tag.trim())) continue;
+          const version = tag.trim().replace(/^v/, "");
+          if (!isNewerVersion(version, currentVersion)) continue;
+          // Newest wins if the list is not ordered the way we assume.
+          if (best && !isNewerVersion(version, best.version)) continue;
+          const self = rel._links?.self;
+          const url =
+            typeof self === "string" && self.startsWith(`https://gitlab.com/${RELEASES_PROJECT}/`)
+              ? self
+              : `https://gitlab.com/${RELEASES_PROJECT}/-/releases`;
+          best = { version, url };
+        }
+        return best;
       } catch {
         return null;
       }

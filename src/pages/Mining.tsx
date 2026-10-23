@@ -331,7 +331,7 @@ export function Mining() {
     return (
       <main className="control-page mining-page">
         <header className="control-heading"><div><span className="eyebrow">{t("mining.webEyebrow")}</span><h1>{t("mining.webTitle")}</h1><p>{t("mining.webIntro")}</p></div></header>
-        <section className="control-card empty-state"><Server size={28} /><h2>{t("mining.webGetApp")}</h2><p>{t("mining.webNoBackground")}</p><a className="btn" href="https://github.com/firecash/zkas-wallet/releases" target="_blank" rel="noreferrer">{t("mining.webDownload")}</a></section>
+        <section className="control-card empty-state"><Server size={28} /><h2>{t("mining.webGetApp")}</h2><p>{t("mining.webNoBackground")}</p><a className="btn" href="https://gitlab.com/zkas-group/zkas-wallet/-/releases" target="_blank" rel="noreferrer">{t("mining.webDownload")}</a></section>
       </main>
     );
   }
