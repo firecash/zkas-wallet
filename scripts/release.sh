@@ -267,7 +267,17 @@ for mm in re.finditer(r"^## (\d+\.\d+\.\d+)\s*$(.*?)(?=^## |\Z)", text, re.S | r
     # attached to it — 1.0.46 opened with "upgrade before 14 October, about 13:40 UTC",
     # and taking only the bullets published a mandatory security upgrade with no sign
     # that it was either.
-    entries.append((mm.group(1), sec[: hh.start()].strip() if hh else "", hh.group(1).strip() if hh else sec))
+    # "### Known issues" rides along with the highlights. The rule above — bullets, not the
+    # whole changelog — is right for detail, but a known issue is not detail: it is a caveat
+    # about the build being downloaded on the page it is downloaded from. 1.0.52 ships with
+    # the in-app node and bridge installers broken (their archives died with the suspended
+    # GitHub account), and a download page that does not say so sends people to debug a
+    # failure that is already known.
+    ki = re.search(r"^### Known issues\s*$(.*?)(?=^### |\Z)", sec, re.S | re.M)
+    hl = hh.group(1).strip() if hh else sec
+    if ki and hh:
+        hl = hl + "\n\n### Known issues\n" + ki.group(1).rstrip()
+    entries.append((mm.group(1), sec[: hh.start()].strip() if hh else "", hl))
 
 idx = next((i for i, e in enumerate(entries) if e[0] == version), None)
 if idx is not None:
