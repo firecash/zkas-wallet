@@ -391,8 +391,22 @@ export function walletdTransportError(url: string): string | null {
  * paired token is what makes the phone show the SAME wallet as the computer serving
  * it, rather than a blank one that reads as lost funds. */
 export function setToken(token: string) {
-  const clean = token.trim().toLowerCase();
-  if (!/^[0-9a-f]{16,128}$/.test(clean)) return;
+  // Accept what `parsePairingUri` accepts, and DO NOT lowercase a token that is not hex.
+  //
+  // This used to be `trim().toLowerCase()` gated on `/^[0-9a-f]{16,128}$/`, i.e. hex only.
+  // The desktop shell mints a 32-character ASCII ALPHANUMERIC token
+  // (`valid_wallet_token`, src-tauri/src/lib.rs), and `pairing.ts` accepts exactly that
+  // (`TOKEN_RE = /^[0-9a-z]{16,128}$/i`). So a desktop pairing code parsed fine and was then
+  // silently dropped here — `return` with no error — and the phone kept its own token. Per
+  // the note above that is not a blank screen: it opens a real, authenticated, EMPTY wallet,
+  // which reads as lost funds. It is the precise failure pairing exists to prevent.
+  //
+  // Hex is still lowercased, because that is the form already written to storage and the
+  // daemon treats hex case-insensitively. Anything else is kept byte-for-byte: a
+  // mixed-case token IS case-sensitive, and lowercasing it selects a different wallet.
+  const trimmed = token.trim();
+  const clean = /^[0-9a-f]{16,128}$/i.test(trimmed) ? trimmed.toLowerCase() : trimmed;
+  if (!/^[0-9a-z]{16,128}$/i.test(clean)) return;
   writeLocal("wallet_token", clean);
   // Adopting a token DELIBERATELY — pairing, or a desktop shell handing one back — is the
   // one case where a previously removed wallet legitimately returns, so its removal
