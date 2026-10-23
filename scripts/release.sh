@@ -6,6 +6,7 @@
 #   ./scripts/release.sh 1.0.15          # full release
 #   ./scripts/release.sh --build 1.0.15  # skip bump/tag; (re)build+deploy+upload an existing tag
 #   ./scripts/release.sh --no-deploy 1.0.15   # build + upload, but don't touch the live web host
+#   ./scripts/release.sh --build --force-notes 1.0.15  # rewrite the release notes this script generated
 #
 # HOST: GitLab, not GitHub. The `firecash` GitHub account was suspended on
 # 2026-10-23, so api.github.com/repos/firecash/* and uploads.github.com answer
@@ -57,12 +58,13 @@ log() { printf '\n\033[1;36m== %s\033[0m\n' "$*"; }
 die() { printf '\033[1;31mERROR: %s\033[0m\n' "$*" >&2; exit 1; }
 
 # ---- args ----
-DO_BUMP=1; DO_DEPLOY=1; DO_PRE=0; VERSION=""
+DO_BUMP=1; DO_DEPLOY=1; DO_PRE=0; FORCE_NOTES=0; VERSION=""
 for a in "$@"; do
   case "$a" in
     --build|--build-only) DO_BUMP=0 ;;
     --no-deploy)          DO_DEPLOY=0 ;;
     --pre|--prerelease)   DO_PRE=1 ;;
+    --force-notes)        FORCE_NOTES=1 ;;
     -*)                   die "unknown flag: $a" ;;
     *)                    VERSION="$a" ;;
   esac
@@ -388,7 +390,12 @@ elif [ "$rel_http" = "200" ]; then
   # naming a build.
   placeholder=0
   if [ "$(printf '%s' "$cur_body" | wc -l)" -le 1 ] && [ "${#cur_body}" -lt 120 ]; then placeholder=1; fi
-  if [ -z "$cur_body" ] || [ "$placeholder" = 1 ]; then
+  # `--force-notes` overwrites notes this script generated. Needed when the GENERATOR
+  # improves after a release is published: 1.0.52-rc9 went out before "### Known issues"
+  # was carried onto the page, and its own 6,371-character body then looked hand-written to
+  # the test above, so re-running could not correct it. Opt-in, because the default must
+  # keep protecting notes a person actually wrote.
+  if [ -z "$cur_body" ] || [ "$placeholder" = 1 ] || [ "$FORCE_NOTES" = 1 ]; then
     # PUT, not PATCH: GitLab's update-release verb is PUT. There is no PATCH route at
     # all — a PATCH of a release that exists answers 404, which reads like a wrong tag.
     printf '{"name":%s,"description":%s}' "$rel_name_json" "$release_desc_json" > /tmp/rel-upd.json
