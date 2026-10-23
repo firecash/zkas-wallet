@@ -1,0 +1,395 @@
+# Desktop wallet CI on GitLab, replacing .github/workflows/desktop-all.yml.
+#
+# WHY THIS FILE EXISTS
+# The `firecash` GitHub account was suspended on 2026-10-23. GitHub Actions is
+# therefore gone, and with it every desktop binary: a new tag produced five
+# desktop builds and now produces none. This is the replacement, and it is
+# deliberately NOT a five-target matrix, because GitLab cannot run three of them.
+#
+# WHAT THIS FILE BUILDS, AND WHAT IT DOES NOT
+#
+#   target            runner tag                 tier         here?
+#   ----------------  -------------------------  -----------  ---------------------------
+#   linux-x86_64      saas-linux-small-amd64     Free         yes, on by default
+#   linux-aarch64     saas-linux-small-arm64     Free         yes, on by default
+#   windows-x86_64    saas-windows-medium-amd64  Free (beta)  written, OFF by default
+#   macos-x86_64      saas-macos-medium-m1       Premium+     written, OFF by default
+#   macos-aarch64     saas-macos-medium-m1       Premium+     written, OFF by default
+#
+# The tiers above are GitLab's own, from docs.gitlab.com/ci/runners/hosted_runners/:
+# Linux "Tier: Free, Premium, Ultimate", Windows "Tier: Free, Premium, Ultimate"
+# (beta), macOS "Tier: Premium, Ultimate" (beta). So macOS genuinely cannot run on
+# a Free namespace. Windows is documented as Free — but it has never been run for
+# this project, and neither has macOS, so both are behind a variable and default to
+# off rather than being presented as working. Turn one on for a single pipeline to
+# find out, without risking the Linux builds:
+#
+#   DESKTOP_WINDOWS=1   (Run pipeline → variable, or CI/CD settings)
+#   DESKTOP_MACOS=1
+#
+# COMPUTE BUDGET — READ BEFORE ENABLING ANYTHING
+# A Free namespace gets 400 compute minutes a month, and usage is
+# (job seconds / 60) x cost factor. Cost factors: Linux small amd64 and arm64 = 1,
+# Windows medium = 1, macOS M1 medium = 6. These jobs compile the whole shielded
+# engine (zkas-walletd, halo2, pasta_curves, the kaspa gRPC stack) on a 2-vCPU
+# runner, which is multiple hours, not minutes. One linux-x86_64 build can plausibly
+# consume the entire monthly quota on its own, and a macOS build bills six minutes
+# per minute. The group is currently on an `ultimate_trial`, which hides this until
+# the trial ends and the 400-minute Free quota applies.
+#
+# The honest alternative, if the quota bites: the project already owns a 12-core
+# build box that builds the Android engine and the web bundle in scripts/release.sh.
+# A Linux desktop bundle can be built there in the same pass for no CI minutes at
+# all. This file is the right thing for the two Linux targets that GitLab can
+# actually do unattended; it is not a reason to keep paying for CPU twice.
+#
+# WHAT IS LOST VERSUS GITHUB ACTIONS
+#   - Windows MSI/NSIS: unverified here (see above).
+#   - macOS .app/.dmg and the ad-hoc codesign step: needs Premium or Ultimate, and
+#     Apple's toolchain only exists on an Apple host, so no Linux runner can stand in.
+#     Until then the only routes are a paid GitLab tier or a self-hosted macOS runner
+#     (a Mac on the network running gitlab-runner, registered to this project).
+#   - The release notes that scripts/release.sh writes are unchanged; this file only
+#     ever creates a release if one does not exist yet, and never overwrites a
+#     description, so whichever of the two runs first does not clobber the other.
+
+stages: [test, prepare, build]
+
+variables:
+  # The two Linux targets, as a comma-separated list — the GitLab-native stand-in
+  # for the `platforms` dispatch input the GitHub workflow had. A job-level `rules`
+  # test reads this directly, so unlike the Actions version there is no matrix-picking
+  # job and an unwanted target costs nothing instead of queueing a runner.
+  DESKTOP_PLATFORMS: "linux-x86_64,linux-aarch64"
+  DESKTOP_WINDOWS: "0"
+  DESKTOP_MACOS: "0"
+  # The engine lives in a sibling checkout, because src-tauri/Cargo.toml path-deps
+  # point at ../../rusty-kaspa/*.
+  ENGINE_REPO: "https://gitlab.com/zkas-group/zkas-rusty.git"
+  ENGINE_DIR: "$CI_PROJECT_DIR/../rusty-kaspa"
+  PKG_NAME: "zkas-wallet"
+  CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+  CARGO_INCREMENTAL: "0"
+  CARGO_NET_RETRY: "5"
+  CARGO_TERM_COLOR: "always"
+  GIT_DEPTH: "1"
+
+# Do not run on every branch push: a pipeline nobody asked for is quota spent.
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v[0-9]/
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+# `npm test` is eslint + i18n-audit + vitest, 400+ suites including the privacy
+# gate, desktop routing and the wallet-state wipe. The desktop builds wait on it:
+# `beforeBuildCommand` is `npm run build`, which does not run any of it.
+test:
+  stage: test
+  image: node:20-bookworm
+  cache:
+    key:
+      files: [package-lock.json]
+    paths: [.npm]
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm test
+
+# Create the release up front, once, so the desktop jobs only ever ADD their own
+# asset links. GitHub had five runners racing to `gh release create` and swallowing
+# the 422; GitLab releases are keyed by tag and links are separate objects, so one
+# job doing this removes the race entirely.
+#
+# The description is a PLACEHOLDER on purpose. scripts/release.sh writes the real
+# notes (CHANGELOG section + first-launch instructions) and recognises a one-line
+# short body as a placeholder it may replace; anything longer it leaves alone as
+# hand-written. Keep this one line and under 120 characters or release.sh will
+# treat it as real notes and the release page will say only this.
+prepare:release:
+  stage: prepare
+  image: curlimages/curl:8.11.1
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v[0-9]/
+  script:
+    - |
+      set -eu
+      code=$(curl -sS -o /dev/null -w '%{http_code}' \
+        -H "JOB-TOKEN: $CI_JOB_TOKEN" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases/$CI_COMMIT_TAG")
+      if [ "$code" = "200" ]; then
+        echo "release $CI_COMMIT_TAG already exists; leaving its notes alone"
+      elif [ "$code" = "404" ]; then
+        curl -fsS -X POST -H "JOB-TOKEN: $CI_JOB_TOKEN" \
+          -H 'Content-Type: application/json' \
+          -d "{\"tag_name\":\"$CI_COMMIT_TAG\",\"name\":\"ZKas Wallet $CI_COMMIT_TAG\",\"description\":\"Desktop builds.\"}" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" >/dev/null
+        echo "created release $CI_COMMIT_TAG"
+      else
+        echo "unexpected HTTP $code from the releases API" >&2; exit 1
+      fi
+
+.desktop-linux:
+  stage: build
+  image: ubuntu:22.04
+  # The same image the GitHub matrix used (`ubuntu-22.04`). Not a newer one on
+  # purpose: Tauri's Linux bundler links against the host's glibc and webkit, so a
+  # bundle built on a newer distro refuses to start on an older one, and 22.04 is
+  # the oldest base these builds are known good on.
+  #
+  # 3h is GitLab.com's maximum job timeout and this needs most of it: the job
+  # compiles the shielded engine from scratch on 2 vCPUs. The project default of 1h
+  # kills it partway through with nothing to show.
+  timeout: 3h
+  variables:
+    DEBIAN_FRONTEND: noninteractive
+  cache:
+    # The crate registry and git checkouts only — NOT target/. A release target dir
+    # for this workspace is several GB, and on shared runners the cache round-trip
+    # for that is billed as job time and routinely costs more minutes than the
+    # recompile it saves.
+    key:
+      files: [src-tauri/Cargo.lock]
+      prefix: "cargo-$CI_JOB_NAME_SLUG"
+    paths:
+      - .cargo/registry/index
+      - .cargo/registry/cache
+      - .cargo/git/db
+  before_script:
+    - |
+      set -eu
+      apt-get update
+      # protobuf-compiler: the kaspa gRPC crates generate their client at build time.
+      # xdg-utils: the opener plugin makes the AppImage bundler look for
+      # /usr/bin/xdg-open on the BUILD machine, and a bare image has no such file —
+      # v1.0.35-rc7 failed on exactly this on the arm64 runner.
+      apt-get install -y --no-install-recommends \
+        ca-certificates curl git file build-essential pkg-config \
+        protobuf-compiler patchelf xdg-utils \
+        libssl-dev libxdo-dev librsvg2-dev libappindicator3-dev \
+        libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+      curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+      apt-get install -y --no-install-recommends nodejs
+      curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+      . "$CARGO_HOME/env"
+      rustc -V && node -v
+    - |
+      set -eu
+      # THE ENGINE PIN IS READ FROM .github/workflows/desktop-all.yml, NOT COPIED.
+      #
+      # That file can no longer run, but it is still the single declared source of
+      # the engine revision, and two live things read it as a plain file:
+      # scripts/build-engine.sh (exits 3 rather than build an Android engine with no
+      # pin) and test/engine-binding.test.ts (asserts every 40-hex pin under
+      # .github/workflows agrees on exactly ONE sha, and that the committed UniFFI
+      # Kotlin binding is stamped with it). Writing the sha here as well would be a
+      # second copy to drift, and the test does not scan this file, so the drift
+      # would be silent. Same sed as build-engine.sh uses.
+      PIN="$(sed -nE 's/^[[:space:]]*ref:[[:space:]]*([0-9a-f]{40})[[:space:]]*$/\1/p' \
+        .github/workflows/desktop-all.yml | head -1)"
+      [ -n "$PIN" ] || { echo "no engine pin in .github/workflows/desktop-all.yml" >&2; exit 3; }
+      echo "engine pin $PIN"
+      # Fetching the bare sha at depth 1 (verified against gitlab.com: 8.8 MB, and
+      # all seven path-dep directories present) instead of cloning the whole node
+      # repo the way actions/checkout did.
+      rm -rf "$ENGINE_DIR"
+      mkdir -p "$ENGINE_DIR"
+      git -C "$ENGINE_DIR" init -q
+      git -C "$ENGINE_DIR" remote add origin "$ENGINE_REPO"
+      git -C "$ENGINE_DIR" fetch -q --depth 1 origin "$PIN"
+      git -C "$ENGINE_DIR" checkout -q FETCH_HEAD
+      test -d "$ENGINE_DIR/zkas-walletd" || { echo "engine checkout is missing zkas-walletd" >&2; exit 3; }
+  script:
+    - . "$CARGO_HOME/env"
+    - npm ci
+    - npx tauri build --target "$RUST_TARGET" --bundles deb,appimage
+    - |
+      set -eu
+      mkdir -p out
+      B="src-tauri/target/$RUST_TARGET/release/bundle"
+      # Name every file after its platform+arch. Tauri's own names collide across
+      # targets ("ZKas Wallet_1.0.52_amd64.deb" from two runners) and a user cannot
+      # tell which build they downloaded from the filename alone.
+      find "$B" -type f \( -name '*.deb' -o -name '*.AppImage' \) -print0 |
+        while IFS= read -r -d '' f; do
+          cp "$f" "out/ZKas-Wallet-$TARGET_NAME.${f##*.}"
+        done
+      ls -la out
+      test -n "$(ls -A out)" || { echo "no bundles were produced" >&2; exit 1; }
+    - |
+      set -eu
+      # Attach to the release. GitLab has no uploads.github.com and a release's
+      # assets.links only POINT at a file that is already hosted — creating one
+      # uploads nothing. So the bytes go into the project's generic package registry
+      # (permanent, Free tier, and served anonymously for a public project, unlike
+      # job artifacts which expire) and the link points there. Same coordinates
+      # scripts/release.sh uses for the APK/AAB, so one release holds one set.
+      [ -n "${CI_COMMIT_TAG:-}" ] || { echo "not a tag pipeline; skipping release upload"; exit 0; }
+      VER="${CI_COMMIT_TAG#v}"
+      BASE="$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/$PKG_NAME/$VER"
+      for f in out/*; do
+        n="$(basename "$f")"
+        curl -fsS -H "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file "$f" "$BASE/$n" >/dev/null
+        # A link whose name or url already exists is rejected 400 ("Url has already
+        # been taken"), so a re-run must drop the old one first.
+        curl -fsS -H "JOB-TOKEN: $CI_JOB_TOKEN" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases/$CI_COMMIT_TAG/assets/links" \
+          | tr ',' '\n' | grep -B2 "\"name\":\"$n\"" | sed -nE 's/.*"id":([0-9]+).*/\1/p' \
+          | while read -r id; do
+              curl -fsS -X DELETE -H "JOB-TOKEN: $CI_JOB_TOKEN" \
+                "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases/$CI_COMMIT_TAG/assets/links/$id" >/dev/null || true
+            done
+        curl -fsS -X POST -H "JOB-TOKEN: $CI_JOB_TOKEN" -H 'Content-Type: application/json' \
+          -d "{\"name\":\"$n\",\"url\":\"$BASE/$n\",\"link_type\":\"package\"}" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases/$CI_COMMIT_TAG/assets/links" >/dev/null
+        echo "attached $n"
+      done
+  artifacts:
+    name: "zkas-wallet-$TARGET_NAME"
+    paths: [out/]
+    expire_in: 30 days
+  # One platform failing must not deny the others a release: a missing arm64 build
+  # is bad, withholding the x86_64 one too is worse. This is `fail-fast: false`.
+  allow_failure: true
+
+desktop:linux-x86_64:
+  extends: .desktop-linux
+  tags: [saas-linux-small-amd64]
+  variables:
+    TARGET_NAME: linux-x86_64
+    RUST_TARGET: x86_64-unknown-linux-gnu
+  rules:
+    - if: $DESKTOP_PLATFORMS =~ /linux-x86_64/
+
+# NATIVE arm64, not a cross-build: Tauri cannot cross-compile a bundle, because the
+# installer format is produced by the host (dpkg/AppImage here), which is the whole
+# reason the GitHub version was a matrix of runners and not a loop.
+desktop:linux-aarch64:
+  extends: .desktop-linux
+  tags: [saas-linux-small-arm64]
+  variables:
+    TARGET_NAME: linux-aarch64
+    RUST_TARGET: aarch64-unknown-linux-gnu
+  rules:
+    - if: $DESKTOP_PLATFORMS =~ /linux-aarch64/
+
+# ---------------------------------------------------------------------------
+# UNVERIFIED BELOW. Neither of the next two jobs has ever run for this project.
+# They are a faithful translation of the GitHub steps so that turning one on is a
+# one-variable experiment, not a day's writing — they are NOT a claim that the
+# target works. Leave them off unless you are deliberately testing them, and treat
+# the first green pipeline, not this file, as the evidence.
+# ---------------------------------------------------------------------------
+
+# Windows is documented as available on Free (beta), runner tag
+# saas-windows-medium-amd64, 2 vCPU / 7.5 GB / 75 GB, Windows 2022, cost factor 1.
+# It is a SHELL runner, not Docker: `image:` is ignored and the script is PowerShell.
+# VS Build Tools and Chocolatey are preinstalled; protoc is not, and chocolatey's
+# community feed once 504'd mid-release and took out every Windows bundle, which is
+# why the GitHub version pulled protoc straight from its own release tarball. Same
+# here. Tauri's WiX/MSI target also rejects a non-numeric pre-release identifier,
+# which is why release.sh feeds tauri.conf.json a numeric-safe version.
+desktop:windows-x86_64:
+  stage: build
+  tags: [saas-windows-medium-amd64]
+  timeout: 3h
+  rules:
+    - if: $DESKTOP_WINDOWS == "1"
+  allow_failure: true
+  variables:
+    TARGET_NAME: windows-x86_64
+    RUST_TARGET: x86_64-pc-windows-msvc
+  script:
+    - |
+      $ErrorActionPreference = "Stop"
+      Invoke-WebRequest -Uri "https://github.com/protocolbuffers/protobuf/releases/download/v27.3/protoc-27.3-win64.zip" -OutFile protoc.zip
+      Expand-Archive protoc.zip -DestinationPath "$PWD\protoc" -Force
+      $env:PATH = "$PWD\protoc\bin;" + $env:PATH
+      Invoke-WebRequest -Uri "https://win.rustup.rs/x86_64" -OutFile rustup-init.exe
+      .\rustup-init.exe -y --profile minimal --default-toolchain stable --target $env:RUST_TARGET
+      $env:PATH = "$env:USERPROFILE\.cargo\bin;" + $env:PATH
+      $pin = (Select-String -Path ".github/workflows/desktop-all.yml" -Pattern '^\s*ref:\s*([0-9a-f]{40})\s*$' |
+              ForEach-Object { $_.Matches[0].Groups[1].Value } | Select-Object -First 1)
+      if (-not $pin) { throw "no engine pin in .github/workflows/desktop-all.yml" }
+      $engine = Join-Path (Split-Path $PWD -Parent) "rusty-kaspa"
+      if (Test-Path $engine) { Remove-Item -Recurse -Force $engine }
+      git init -q $engine
+      git -C $engine remote add origin "https://gitlab.com/zkas-group/zkas-rusty.git"
+      git -C $engine fetch -q --depth 1 origin $pin
+      git -C $engine checkout -q FETCH_HEAD
+      npm ci
+      npx tauri build --target $env:RUST_TARGET --bundles msi,nsis
+      New-Item -ItemType Directory -Force out | Out-Null
+      Get-ChildItem "src-tauri/target/$env:RUST_TARGET/release/bundle" -Recurse -Include *.msi,*.exe |
+        ForEach-Object { Copy-Item $_.FullName "out/ZKas-Wallet-$env:TARGET_NAME$($_.Extension)" }
+      Get-ChildItem out
+  artifacts:
+    name: "zkas-wallet-windows-x86_64"
+    paths: [out/]
+    expire_in: 30 days
+
+# macOS needs Premium or Ultimate — Free cannot schedule saas-macos-* at all, and
+# no Linux runner can substitute because the .app/.dmg bundlers and codesign are
+# Apple-only. Cost factor 6 on the M1 medium, so it bills six compute minutes per
+# wall minute. Both Apple targets build on the same arm64 host; x86_64 is produced
+# by cross-compiling to the Intel triple, which Tauri can do for macOS bundles
+# because both formats are made by the same host tooling.
+.desktop-macos:
+  stage: build
+  tags: [saas-macos-medium-m1]
+  image: macos-15-xcode-16
+  timeout: 3h
+  rules:
+    - if: $DESKTOP_MACOS == "1"
+  allow_failure: true
+  before_script:
+    - |
+      set -eu
+      brew install protobuf
+      curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+      . "$HOME/.cargo/env"
+      rustup target add "$RUST_TARGET"
+      PIN="$(sed -nE 's/^[[:space:]]*ref:[[:space:]]*([0-9a-f]{40})[[:space:]]*$/\1/p' \
+        .github/workflows/desktop-all.yml | head -1)"
+      [ -n "$PIN" ] || { echo "no engine pin in .github/workflows/desktop-all.yml" >&2; exit 3; }
+      rm -rf "$ENGINE_DIR"; mkdir -p "$ENGINE_DIR"
+      git -C "$ENGINE_DIR" init -q
+      git -C "$ENGINE_DIR" remote add origin "$ENGINE_REPO"
+      git -C "$ENGINE_DIR" fetch -q --depth 1 origin "$PIN"
+      git -C "$ENGINE_DIR" checkout -q FETCH_HEAD
+  script:
+    - . "$HOME/.cargo/env"
+    - npm ci
+    - npx tauri build --target "$RUST_TARGET" --bundles app,dmg
+    - |
+      set -eu
+      # Ad-hoc signing so Gatekeeper lets the user through the "Open Anyway" route.
+      # Real notarization needs an Apple Developer account, which is why the release
+      # notes tell macOS users what warning to expect.
+      cd "src-tauri/target/$RUST_TARGET/release/bundle/macos"
+      codesign --force --deep -s - "ZKas Wallet.app"
+      codesign --verify --verbose "ZKas Wallet.app"
+      ditto -c -k --keepParent "ZKas Wallet.app" "$CI_PROJECT_DIR/out-zip/ZKas-Wallet-$TARGET_NAME.zip"
+    - |
+      set -eu
+      mkdir -p out
+      find "src-tauri/target/$RUST_TARGET/release/bundle" -type f -name '*.dmg' -print0 |
+        while IFS= read -r -d '' f; do cp "$f" "out/ZKas-Wallet-$TARGET_NAME.dmg"; done
+      cp out-zip/*.zip out/ 2>/dev/null || true
+      ls -la out
+  artifacts:
+    name: "zkas-wallet-$TARGET_NAME"
+    paths: [out/]
+    expire_in: 30 days
+
+desktop:macos-aarch64:
+  extends: .desktop-macos
+  variables:
+    TARGET_NAME: macos-aarch64
+    RUST_TARGET: aarch64-apple-darwin
+
+desktop:macos-x86_64:
+  extends: .desktop-macos
+  variables:
+    TARGET_NAME: macos-x86_64
+    RUST_TARGET: x86_64-apple-darwin
