@@ -4,6 +4,65 @@ Entries describe what changed for the person using the wallet. Where a fix was
 caused by an earlier change in this same list, it says so — the sequence is
 more useful than the tidy version.
 
+## 1.0.52
+
+Fixes a wallet that stopped making progress and never recovered, and sending
+being refused by the network. Both were server-side; this build is the half that
+had to change with them. Also moves everything off GitHub, whose account was
+suspended on 23 October.
+
+### Highlights
+
+- **A wallet that stopped at "99.9%" and never moved again now catches up.** The
+  wallet service loaded a wallet inside the request that asked for it, and this
+  app gives a request 10 seconds. A wallet with a long history takes longer than
+  that to open — measured up to 208 seconds for one with 276,000 notes — so the
+  app gave up, the service threw the half-finished work away, and the next check
+  started over. A wallet in that state could never finish opening, and a wallet
+  that is not open is not scanned, so it sat at the same number indefinitely.
+  Opening now runs to completion whether or not the app is still waiting. Of the
+  wallet loads measured after the fix, 28% took longer than 10 seconds — every
+  one of those would previously have been lost.
+- **"99.9%" was also never going to read 100%.** A fully caught-up wallet
+  deliberately rests about 200 blocks behind the tip, so that figure is what
+  healthy looks like. The number not *advancing* was the fault; the number itself
+  was not.
+- **Sending works again.** The network began requiring every payment to name the
+  block its proof is anchored to, and refused anything that did not with "anchor
+  not final". This build's signer produces that, which is why it is required
+  rather than optional: an older build cannot have a payment accepted.
+- **A payment is no longer refused only after the proof is built.** The wallet
+  checked that its anchor was not too old but never that it was too new, so a
+  too-recent anchor was proved — seconds of work on your own machine — and then
+  rejected by the network with the same unhelpful message either way.
+- **Updating no longer resets your scan.** On a version change the service could
+  decide a perfectly good scan disagreed with the chain and start it again from
+  scratch; reported as "I was at 8%, updated, and it reset to 0". It no longer
+  treats "the node cannot confirm this yet" as "this is wrong".
+- **Progress now says something useful.** Speed, an estimate of time remaining,
+  and how far behind you are, with the service's own settlement margin kept
+  separate from real lag so a caught-up wallet does not read as behind.
+- **A new Diagnostics screen** with a live log, a summary and an export, for when
+  something needs reporting. Secrets are removed before anything is written or
+  exported — your recovery phrase, the wallet's access token and its viewing key
+  never appear, including inside file names and paths.
+- **Engine logs are no longer empty.** The desktop app runs the wallet service
+  inside itself, and nothing was collecting what it said, so the log view showed
+  a single startup line. It now shows the real thing.
+- **A node update is shown in the wallet**, not only on the Node page. On this
+  chain a node that has not taken an upgrade stops accepting payments, so it is
+  not something to find only if you happen to look.
+- **Translations** for twelve messages that had been appearing in English on
+  every non-English device, including what the wallet says when a payment's
+  outcome is genuinely unknown, and for the new Diagnostics screen.
+
+### Known issues
+
+- **Installing the node or the merged-mining bridge from the desktop app fails.**
+  Those archives were published on GitHub and did not survive the account
+  suspension. Everything else works; only those two downloads are affected.
+- Desktop builds for Windows and macOS are not published for this version.
+
 ## 1.0.51
 
 Fixes the light wallet calling a working daemon unreachable — reported as the
