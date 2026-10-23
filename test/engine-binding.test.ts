@@ -12,13 +12,12 @@ const BINDING = join(ROOT, "android/app/src/main/java/uniffi/zkas_walletd_mobile
 const binding = readFileSync(BINDING, "utf8");
 
 function pins(): string[] {
-  const out: string[] = [];
-  // Every workflow that checks the engine out, not a fixed list: desktop-diag-smoke.yml
-  // joined later and a list would have missed it.
-  for (const f of readdirSync(join(ROOT, ".github/workflows")).filter((n) => n.endsWith(".yml"))) {
-    const y = readFileSync(join(ROOT, ".github/workflows", f), "utf8");
-    for (const m of y.matchAll(/^\s*(?:ref|RK_SHA):\s*([0-9a-f]{40})\s*$/gm)) out.push(m[1]);
-  }
+  // ENGINE_PIN is the single declared engine revision; CI (.gitlab-ci.yml) and
+  // scripts/build-engine.sh read it. A 40-hex `ref:`/`RK_SHA:` hard-coded in the CI
+  // file would be a second copy that can drift, so any such line counts as a pin too.
+  const out = [readFileSync(join(ROOT, "ENGINE_PIN"), "utf8").trim()];
+  const ci = readFileSync(join(ROOT, ".gitlab-ci.yml"), "utf8");
+  for (const m of ci.matchAll(/^\s*(?:ref|RK_SHA|ENGINE_REF):\s*"?([0-9a-f]{40})"?\s*$/gm)) out.push(m[1]);
   return out;
 }
 
@@ -38,7 +37,7 @@ describe("committed UniFFI engine binding", () => {
 
   it("was generated from the engine revision the builds pin", () => {
     const declared = new Set(pins());
-    expect(declared.size).toBe(1); // the three workflows agree on one engine
+    expect(declared.size).toBe(1); // one engine revision, declared once
     const rev = /zkas-rusty=([0-9a-f]{40})/.exec(stamp)?.[1];
     expect(rev).toBe([...declared][0]);
   });

@@ -65,7 +65,7 @@ export function setDeviceSeed(seed: string) {
   // spendable key after reload, and the coins already sent to it were
   // unrecoverable. The plaintext-with-flag copy is the deliberate lesser evil —
   // it is self-healing: `resealFallbacks()` (applock.ts) re-seals it and deletes
-  // the cleartext on the very next unlock. See GitHub issue #4 and PR #8, whose
+  // the cleartext on the very next unlock. See issue #4 and PR #8 on the former GitHub repository (now offline), whose
   // "write nothing / throw SEED_REQUIRED" proposal would reintroduce the loss.
   if (isLockEnabled()) {
     const token = readLocal("wallet_token") || "default";

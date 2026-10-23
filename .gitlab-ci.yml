@@ -1,4 +1,4 @@
-# Desktop wallet CI on GitLab, replacing .github/workflows/desktop-all.yml.
+# Desktop wallet CI on GitLab, replacing the GitHub Actions workflows (the GitHub account is suspended).
 #
 # WHY THIS FILE EXISTS
 # The `firecash` GitHub account was suspended on 2026-10-23. GitHub Actions is
@@ -175,19 +175,15 @@ prepare:release:
       rustc -V && node -v
     - |
       set -eu
-      # THE ENGINE PIN IS READ FROM .github/workflows/desktop-all.yml, NOT COPIED.
+      # THE ENGINE PIN IS READ FROM ./ENGINE_PIN, NOT COPIED.
       #
-      # That file can no longer run, but it is still the single declared source of
-      # the engine revision, and two live things read it as a plain file:
-      # scripts/build-engine.sh (exits 3 rather than build an Android engine with no
-      # pin) and test/engine-binding.test.ts (asserts every 40-hex pin under
-      # .github/workflows agrees on exactly ONE sha, and that the committed UniFFI
-      # Kotlin binding is stamped with it). Writing the sha here as well would be a
-      # second copy to drift, and the test does not scan this file, so the drift
-      # would be silent. Same sed as build-engine.sh uses.
-      PIN="$(sed -nE 's/^[[:space:]]*ref:[[:space:]]*([0-9a-f]{40})[[:space:]]*$/\1/p' \
-        .github/workflows/desktop-all.yml | head -1)"
-      [ -n "$PIN" ] || { echo "no engine pin in .github/workflows/desktop-all.yml" >&2; exit 3; }
+      # ENGINE_PIN is the single declared source of the engine revision (one 40-hex
+      # zkas-rusty sha). scripts/build-engine.sh reads it too (exits 3 rather than
+      # build an Android engine with no pin), and test/engine-binding.test.ts asserts
+      # it is well-formed and equals the stamp in the committed UniFFI Kotlin binding.
+      # Writing the sha here as well would be a second copy to drift.
+      PIN="$(tr -d '[:space:]' < ENGINE_PIN)"
+      printf '%s' "$PIN" | grep -qE '^[0-9a-f]{40}$' || { echo "no valid engine pin in ENGINE_PIN" >&2; exit 3; }
       echo "engine pin $PIN"
       # Fetching the bare sha at depth 1 (verified against gitlab.com: 8.8 MB, and
       # all seven path-dep directories present) instead of cloning the whole node
@@ -308,9 +304,8 @@ desktop:windows-x86_64:
       Invoke-WebRequest -Uri "https://win.rustup.rs/x86_64" -OutFile rustup-init.exe
       .\rustup-init.exe -y --profile minimal --default-toolchain stable --target $env:RUST_TARGET
       $env:PATH = "$env:USERPROFILE\.cargo\bin;" + $env:PATH
-      $pin = (Select-String -Path ".github/workflows/desktop-all.yml" -Pattern '^\s*ref:\s*([0-9a-f]{40})\s*$' |
-              ForEach-Object { $_.Matches[0].Groups[1].Value } | Select-Object -First 1)
-      if (-not $pin) { throw "no engine pin in .github/workflows/desktop-all.yml" }
+      $pin = (Get-Content ENGINE_PIN -Raw).Trim()
+      if ($pin -notmatch '^[0-9a-f]{40}$') { throw "no valid engine pin in ENGINE_PIN" }
       $engine = Join-Path (Split-Path $PWD -Parent) "rusty-kaspa"
       if (Test-Path $engine) { Remove-Item -Recurse -Force $engine }
       git init -q $engine
@@ -349,9 +344,8 @@ desktop:windows-x86_64:
       curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
       . "$HOME/.cargo/env"
       rustup target add "$RUST_TARGET"
-      PIN="$(sed -nE 's/^[[:space:]]*ref:[[:space:]]*([0-9a-f]{40})[[:space:]]*$/\1/p' \
-        .github/workflows/desktop-all.yml | head -1)"
-      [ -n "$PIN" ] || { echo "no engine pin in .github/workflows/desktop-all.yml" >&2; exit 3; }
+      PIN="$(tr -d '[:space:]' < ENGINE_PIN)"
+      printf '%s' "$PIN" | grep -qE '^[0-9a-f]{40}$' || { echo "no valid engine pin in ENGINE_PIN" >&2; exit 3; }
       rm -rf "$ENGINE_DIR"; mkdir -p "$ENGINE_DIR"
       git -C "$ENGINE_DIR" init -q
       git -C "$ENGINE_DIR" remote add origin "$ENGINE_REPO"

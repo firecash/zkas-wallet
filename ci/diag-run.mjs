@@ -1,4 +1,4 @@
-// Used by .github/workflows/desktop-diag-smoke.yml: launch the built desktop app with the scripted
+// Used by the diag-smoke CI job: launch the built desktop app with the scripted
 // diagnostics tour, optionally register a throwaway watch-only wallet so the engine really
 // syncs, let it run, then stop it. Run with vite-node (the FVK comes from the real signer).
 //

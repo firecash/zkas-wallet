@@ -210,7 +210,7 @@ val client = ZKasClient(baseUrl = "http://127.0.0.1:$port", network = "mainnet")
 > REST API on loopback. You build it into your app yourself; nothing is published.
 > **`zkas-mobile`** (`mobile/`, `mobile-v0.1.3`) is the *device half only* — keys, viewing
 > key, `verifyAndSignPayment` — and **deliberately does not prove**. That one *is*
-> published for both platforms: a signed AAR (`info.zkas:zkas-mobile` on GitHub Packages)
+> published for both platforms: a signed AAR (`info.zkas:zkas-mobile` in zkas-signer's GitLab Maven registry)
 > and `ZkasMobile.xcframework` via SwiftPM. Consumption instructions: `mobile/README.md`.
 > Use `zkas-mobile` when a daemon proves for you; use `zkas-walletd-mobile` when you want
 > no daemon at all.

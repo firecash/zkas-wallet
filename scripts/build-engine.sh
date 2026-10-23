@@ -45,11 +45,11 @@ fi
 if [ "${ENGINE_PIN_SKIP:-0}" != "1" ]; then
   PIN="${ENGINE_PIN:-}"
   if [ -z "$PIN" ]; then
-    PIN="$(sed -nE 's/^[[:space:]]*ref:[[:space:]]*([0-9a-f]{40})[[:space:]]*$/\1/p' "$ROOT/.github/workflows/desktop-all.yml" | head -1)"
+    PIN="$(tr -d '[:space:]' < "$ROOT/ENGINE_PIN" 2>/dev/null || true)"
   fi
   # Fail closed on both sides: no declared pin means the check would pass vacuously, which
   # is the state this guard exists to end.
-  [ -n "$PIN" ] || { echo "no engine pin found in .github/workflows/desktop-all.yml (set ENGINE_PIN, or ENGINE_PIN_SKIP=1)"; exit 3; }
+  [ -n "$PIN" ] || { echo "no engine pin found in ./ENGINE_PIN (set ENGINE_PIN, or ENGINE_PIN_SKIP=1)"; exit 3; }
   HAVE="$(git -C "$NODE_SRC" rev-parse HEAD 2>/dev/null || true)"
   [ -n "$HAVE" ] || { echo "cannot read the engine revision at $NODE_SRC (set NODE_SRC, or ENGINE_PIN_SKIP=1)"; exit 3; }
   if [ "$HAVE" != "$PIN" ]; then

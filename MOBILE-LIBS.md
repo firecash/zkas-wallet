@@ -157,7 +157,7 @@ learns (the viewing key: every amount and memo, forever), what it cannot do
 - *HTTP client*: **not included** — the library is signing/verification only; the
   `verify_and_sign_payment` API forces the verify step no matter who writes the HTTP calls.
 - *First target*: **both shipped at once** (`mobile-v0.1.x`: AAR + XCFramework from one CI run).
-- *Published where*: **GitHub Packages (Maven) + SwiftPM pin**, released by `mobile.yml`;
+- *Published where*: **zkas-signer's GitLab Maven registry + SwiftPM pin**, released by its `.gitlab-ci.yml` publish job;
   Maven Central still needs a Sonatype account.
 
 The original questions, for the record:
