@@ -85,14 +85,21 @@ workflow:
 # `npm test` is eslint + i18n-audit + vitest, 400+ suites including the privacy
 # gate, desktop routing and the wallet-state wipe. The desktop builds wait on it:
 # `beforeBuildCommand` is `npm run build`, which does not run any of it.
+# Runs on the SELF-HOSTED runner (tag `zkas142`), not a GitLab shared runner.
+#
+# Shared runners bill compute minutes against the namespace quota, and that quota is
+# spent. A self-managed runner consumes none, on any plan, so this suite can run on
+# every push again. The executor there is `shell`, not docker, so `image:` would be
+# ignored -- the box has Node 20 and the toolchain the build already uses.
 test:
   stage: test
-  image: node:20-bookworm
+  tags: [zkas142]
   cache:
     key:
       files: [package-lock.json]
     paths: [.npm]
   script:
+    - node --version
     - npm ci --cache .npm --prefer-offline
     - npm test
 
