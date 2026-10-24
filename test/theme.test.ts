@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ACCENTS, applyStoredTheme, currentAccent, currentTheme, setAccent, setTheme } from "../src/theme";
+import { ACCENTS, DEFAULT_ACCENT, applyStoredTheme, currentAccent, currentTheme, setAccent, setTheme } from "../src/theme";
 
 describe("accent theme", () => {
   beforeEach(() => {
@@ -7,13 +7,31 @@ describe("accent theme", () => {
     document.documentElement.removeAttribute("style");
   });
 
-  it("defaults to teal — the ZKas identity — and stores nothing for it", () => {
-    expect(currentAccent()).toBe("teal");
-    setAccent("teal");
+  it("defaults to the identity accent — storing nothing and overriding nothing", () => {
+    expect(currentAccent()).toBe(DEFAULT_ACCENT);
+    setAccent(DEFAULT_ACCENT);
     expect(localStorage.getItem("accent")).toBeNull();
-    // Teal defers to the stylesheet, so no inline override is written — this is what
-    // keeps the light theme's contrast-tuned teal from being clobbered.
-    expect(document.documentElement.style.getPropertyValue("--ember")).toBe("");
+    // The default defers to the stylesheet, so NOT ONE inline override is written.
+    // This is the property that keeps light mode readable: light ships its own
+    // darker shade of the identity accent, and the dark-mode shade measures 1.70:1
+    // on white. An inline override here would force the bright one onto both themes.
+    //
+    // Asserted across every property applyAccent can set, not just --ember: the
+    // override that broke this also wrote --ember-ink, which --ember alone would miss.
+    for (const prop of ["--ember", "--ember-hover", "--ember-ink", "--ember-soft", "--ember-rgb", "--glow-1", "--glow-2"]) {
+      expect(document.documentElement.style.getPropertyValue(prop)).toBe("");
+    }
+  });
+
+  it("clears a previous accent's overrides when switching back to the default", () => {
+    setAccent("violet");
+    expect(document.documentElement.style.getPropertyValue("--ember")).toBe(ACCENTS.violet.base);
+    setAccent(DEFAULT_ACCENT);
+    // Switching back must REMOVE them, not overwrite them with the dark-mode shade —
+    // otherwise light mode keeps a hardcoded accent for the rest of the session.
+    for (const prop of ["--ember", "--ember-ink", "--ember-rgb"]) {
+      expect(document.documentElement.style.getPropertyValue(prop)).toBe("");
+    }
   });
 
   it("a chosen accent persists and drives the CSS variables", () => {
@@ -26,11 +44,24 @@ describe("accent theme", () => {
     expect(document.documentElement.style.getPropertyValue("--ember-soft")).toContain("rgba(");
   });
 
-  it("switching back to teal clears the inline overrides", () => {
+  it("teal is now an ordinary chosen accent, and is PERSISTED like one", () => {
+    // Teal used to be the identity, so it stored nothing and cleared its overrides.
+    // It is now a choice like any other, and that distinction protects existing
+    // users: someone who deliberately picked teal must keep teal once the default
+    // moves to green. That only holds if teal is written down and applied.
     setAccent("amber");
     expect(document.documentElement.style.getPropertyValue("--ember")).toBe(ACCENTS.amber.base);
     setAccent("teal");
-    expect(document.documentElement.style.getPropertyValue("--ember")).toBe("");
+    expect(localStorage.getItem("accent")).toBe("teal");
+    expect(document.documentElement.style.getPropertyValue("--ember")).toBe(ACCENTS.teal.base);
+    expect(document.documentElement.style.getPropertyValue("--ember-ink")).toBe(ACCENTS.teal.ink);
+  });
+
+  it("a stored teal survives a reload, rather than falling back to the new default", () => {
+    localStorage.setItem("accent", "teal");
+    applyStoredTheme();
+    expect(currentAccent()).toBe("teal");
+    expect(document.documentElement.style.getPropertyValue("--ember")).toBe(ACCENTS.teal.base);
   });
 
   it("applyStoredTheme restores a persisted accent on load", () => {
@@ -41,7 +72,7 @@ describe("accent theme", () => {
 
   it("ignores a garbage stored accent", () => {
     localStorage.setItem("accent", "chartreuse");
-    expect(currentAccent()).toBe("teal");
+    expect(currentAccent()).toBe(DEFAULT_ACCENT);
   });
 });
 

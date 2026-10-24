@@ -24,9 +24,9 @@
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(62% 46% at 16% 10%, rgba(23, 214, 190, 0.11), transparent 70%),
-    radial-gradient(58% 42% at 86% 90%, rgba(62, 230, 209, 0.08), transparent 70%),
-    var(--bg, #08080c);
+    radial-gradient(62% 46% at 16% 10%, rgba(25, 227, 125, 0.11), transparent 70%),
+    radial-gradient(58% 42% at 86% 90%, rgba(75, 255, 157, 0.08), transparent 70%),
+    var(--bg, #050806);
   /* No fade-in. This screen exists because something is already slow; easing it
      in only delays the moment the user sees the brand. */
 }
@@ -94,7 +94,7 @@
   width: 40%;
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, rgba(23, 214, 190, 0), #17d6be, rgba(23, 214, 190, 0));
+  background: linear-gradient(90deg, rgba(25, 227, 125, 0), #19e37d, rgba(25, 227, 125, 0));
   animation: bl-slide 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 

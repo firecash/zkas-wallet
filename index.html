@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#08080c" />
+    <meta name="theme-color" content="#050806" />
     <title>ZKas Wallet</title>
     <!-- Installable PWA: on iPhone this is THE app channel (Safari → Share →
          Add to Home Screen gives a full-screen, home-icon wallet; Apple allows
@@ -35,7 +35,7 @@
          no second copy of the splash rendered by React). The boot guards below
          and in main.tsx still find it by .boot and write their message into it. -->
     <style>
-      html, body { background: #08080c; margin: 0; }
+      html, body { background: #050806; margin: 0; }
       .boot {
         position: fixed; inset: 0; z-index: 2147483000;
         display: flex; align-items: center; justify-content: center;
@@ -43,9 +43,9 @@
            for the compositor on exactly the weak phones this screen exists for,
            and it would be paid before the first paint. This looks the same. */
         background:
-          radial-gradient(62% 46% at 16% 10%, rgba(23, 214, 190, 0.11), transparent 70%),
-          radial-gradient(58% 42% at 86% 90%, rgba(62, 230, 209, 0.08), transparent 70%),
-          #08080c;
+          radial-gradient(62% 46% at 16% 10%, rgba(25, 227, 125, 0.11), transparent 70%),
+          radial-gradient(58% 42% at 86% 90%, rgba(75, 255, 157, 0.08), transparent 70%),
+          #050806;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         opacity: 1;
         transition: opacity 240ms ease;
@@ -79,7 +79,7 @@
       }
       .boot-bar span {
         display: block; width: 40%; height: 100%; border-radius: 2px;
-        background: linear-gradient(90deg, rgba(23, 214, 190, 0), #17d6be, rgba(23, 214, 190, 0));
+        background: linear-gradient(90deg, rgba(25, 227, 125, 0), #19e37d, rgba(25, 227, 125, 0));
         animation: boot-slide 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
       }
       @keyframes boot-slide {
@@ -142,7 +142,7 @@
           if (el) {
             el.innerHTML =
               '<div style="max-width:420px;padding:24px;text-align:center;color:#f6f6f8;">' +
-              '<div style="font-size:24px;font-weight:700;margin-bottom:12px;"><span style="color:#17d6be;">Z</span>Kas</div>' +
+              '<div style="font-size:24px;font-weight:700;margin-bottom:12px;"><span style="color:#19e37d;">Z</span>Kas</div>' +
               '<p style="color:#b9b9c6;line-height:1.5;">This device’s web engine is too old to run the wallet’s cryptography.</p>' +
               '<p style="color:#b9b9c6;line-height:1.5;">On Android, update <b>Android System WebView</b> (and Chrome) in the Play Store, then reopen the app. In a browser, please update it or try another one.</p>' +
               "</div>";

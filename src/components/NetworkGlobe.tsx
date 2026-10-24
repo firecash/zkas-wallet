@@ -19,8 +19,8 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import i18n from "../i18n";
 
-const TEAL = "#17d6be";
-const BRIGHT = "#7ef7e4";
+const TEAL = "#19e37d";
+const BRIGHT = "#8affc4";
 /** Minimum vertical distance between two overlapping country labels, in px. */
 const LABEL_GAP = 17;
 /** How far the declutter pass may push a label from its country before the label
@@ -476,12 +476,12 @@ export default function NodeGlobe({ nodes, labels, activeId, onHover, onSelect, 
         };
         if (labelsCompact) {
           el.appendChild(mkSpan(flagOf(c.code)));
-          el.appendChild(mkSpan(String(c.count), "color:#17d6be;margin-left:4px;font-size:12px;font-weight:600"));
+          el.appendChild(mkSpan(String(c.count), "color:#19e37d;margin-left:4px;font-size:12px;font-weight:600"));
         } else {
           el.appendChild(mkSpan(flagOf(c.code), "opacity:.95"));
           el.appendChild(document.createTextNode(" "));
           el.appendChild(mkSpan(c.name));
-          el.appendChild(mkSpan(String(c.count), "color:#17d6be;margin-left:6px"));
+          el.appendChild(mkSpan(String(c.count), "color:#19e37d;margin-left:6px"));
         }
         el.title = `${c.name} · ${c.count}`;
         labelLayer.appendChild(el);

@@ -13,6 +13,19 @@ suspended on 23 October.
 
 ### Highlights
 
+- **A black-and-green wallet.** The app now shares the palette of the ZKas pool
+  site: a near-black, green-tinted ground, green section labels, and hairline
+  borders that actually show where one block ends and the next begins. The old
+  cards sat barely a shade above the page, so they read as grey slabs floating
+  in the dark; the structure now comes from the edges and the labels rather than
+  from the fill. Numbers are set in a monospace face with aligned digits, so a
+  column of amounts lines up. KAS keeps a blue of its own, so a merge-mined
+  payout is not mistaken for a ZKAS one at a glance.
+  - If you had deliberately chosen an accent colour, it is kept. Green is the
+    new default only for people who never changed it, and **Teal** is still in
+    the list, next to the new **Green**.
+  - Light mode gets its own darker green: the bright one is unreadable on white
+    (it measures 1.70:1, where 4.5:1 is the readable minimum).
 - **A wallet that stopped at "99.9%" and never moved again now catches up.** The
   wallet service loaded a wallet inside the request that asked for it, and this
   app gives a request 10 seconds. A wallet with a long history takes longer than

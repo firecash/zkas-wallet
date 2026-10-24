@@ -8,19 +8,29 @@ import { readLocal, removeLocal, writeLocal } from "./lib/safestore";
 //
 // The accent is the one color the user gets to make their own — the balance glow,
 // the primary button, the active tab, every highlight derive from it. It is a
-// personalization, not a rebrand: teal is the default and the identity.
+// personalization, not a rebrand: green is the default and the identity.
 
 // "system" is an explicit, opt-in choice — the wallet still never follows the OS
 // on its own (dark is the default identity). Only a user who picks "system" gets
 // OS-tracking, and then it is honest: switching the OS palette updates the app.
 export type Theme = "dark" | "light" | "system";
 
-export type Accent = "teal" | "violet" | "amber" | "rose" | "ice";
+export type Accent = "green" | "teal" | "violet" | "amber" | "rose" | "ice";
+
+/// The identity accent: the one the stylesheet already paints, in BOTH themes.
+///
+/// Everything that used to test for the literal "teal" means "is this the default?",
+/// so it reads this instead. Getting that wrong is not cosmetic: the default accent
+/// is the one case that must write NO inline override, because light mode ships its
+/// own contrast-tuned shade of it (#0b7a46 -- the dark-mode green measures 1.70:1 on
+/// white and cannot be read). An inline override would clobber that.
+export const DEFAULT_ACCENT: Accent = "green";
 
 /// The accents, with everything the palette needs derived per color. `ink` is the
 /// text that sits ON the accent (buttons, active tab) — always the darkest tone of
 /// that hue so it reads at AA on the bright fill.
 export const ACCENTS: Record<Accent, { label: string; base: string; hover: string; ink: string }> = {
+  green: { label: "Green", base: "#19e37d", hover: "#4bff9d", ink: "#032013" },
   teal: { label: "Teal", base: "#17d6be", hover: "#3ee6d1", ink: "#04211c" },
   violet: { label: "Violet", base: "#9d8bff", hover: "#b4a6ff", ink: "#140a2e" },
   amber: { label: "Amber", base: "#ffb020", hover: "#ffc44d", ink: "#2e1c00" },
@@ -61,9 +71,11 @@ export function currentAccent(): Accent {
   try {
     a = readLocal(ACCENT_KEY);
   } catch {
-    /* storage unavailable — teal */
+    /* storage unavailable — the identity accent */
   }
-  return a && a in ACCENTS ? (a as Accent) : "teal";
+  // Unset means the user never opened the picker, so they follow the identity and
+  // get green. An explicit "teal" is a choice and is kept.
+  return a && a in ACCENTS ? (a as Accent) : DEFAULT_ACCENT;
 }
 
 export function applyStoredTheme(): void {
@@ -108,7 +120,7 @@ function installSystemThemeWatcher(): void {
 export function setAccent(a: Accent): void {
   // Same as setTheme: paint first, persist after, and never throw out of the handler.
   applyAccent(a);
-  if (a === "teal") removeLocal(ACCENT_KEY);
+  if (a === DEFAULT_ACCENT) removeLocal(ACCENT_KEY);
   else writeLocal(ACCENT_KEY, a);
 }
 
@@ -118,8 +130,8 @@ export function setAccent(a: Accent): void {
 /// static (dark) in index.html and never followed a light choice, leaving dark
 /// chrome over a white page.
 const CHROME = {
-  dark: { color: "#08080c", statusBar: "black-translucent" },
-  light: { color: "#f7f7fa", statusBar: "default" },
+  dark: { color: "#050806", statusBar: "black-translucent" },
+  light: { color: "#f5f8f6", statusBar: "default" },
 } as const;
 
 function apply(t: Theme): void {
@@ -140,14 +152,14 @@ function apply(t: Theme): void {
 /// The soft/glow tints are the base at low alpha, derived here so a new accent
 /// needs only its three hex values above.
 ///
-/// Teal is the identity and the CSS default — including a darker, contrast-tuned
-/// teal for light mode. For teal we therefore CLEAR the inline overrides and let
-/// the stylesheet decide, rather than force one teal across both themes. Only a
-/// deliberately chosen non-default accent overrides the stylesheet.
+/// The identity accent is the CSS default — including a darker, contrast-tuned shade
+/// for light mode. For it we therefore CLEAR the inline overrides and let the stylesheet
+/// decide, rather than force one shade across both themes. Only a deliberately chosen
+/// non-default accent overrides the stylesheet.
 const ACCENT_PROPS = ["--ember", "--ember-hover", "--ember-ink", "--ember-soft", "--ember-rgb", "--glow-1", "--glow-2"];
 function applyAccent(a: Accent): void {
   const s = document.documentElement.style;
-  if (a === "teal") {
+  if (a === DEFAULT_ACCENT) {
     for (const p of ACCENT_PROPS) s.removeProperty(p);
     return;
   }

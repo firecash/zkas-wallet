@@ -4,22 +4,30 @@
    in Appearance; nothing else may switch it. */
 :root {
   color-scheme: dark; /* native controls (scrollbars, pickers) follow the theme */
-  --bg: #08080c;
-  --surface: #15151d;
-  --surface-2: #1d1d27;
-  --border: #2e2e3b;
-  --ink: #f7f7fa;
+  --bg: #050806;
+  --surface: #0b120d;
+  --surface-2: #111a14;
+  --border: #1b2c21;
+  /* A SECOND border tone, and a dim text tone. The ground is near-black now, so a
+     card no longer separates by fill (#0b120d on #050806 is 1.06:1) -- the hairline
+     does that work, and it has to be visible to do it. */
+  --border-2: #26402f;
+  --dim: #6f8a79;
+  /* Assets differ by hue, not just by sign: ZKAS green, KAS blue. */
+  --kas: #4aa8ff;
+  --warn: #f0c04b;
+  --ink: #e9f4ec;
   /* Was #9090a0 — a touch under 4.5:1 on the card surface, which is where most
      explanatory copy in this app lives. Lifted to clear it. */
-  --muted: #a2a2b4;
-  --ember: #17d6be;
-  --ember-hover: #3ee6d1;
-  --ember-soft: rgba(23, 214, 190, 0.12);
+  --muted: #9fb8a8;
+  --ember: #19e37d;
+  --ember-hover: #4bff9d;
+  --ember-soft: rgba(25, 227, 125, 0.12);
   /* Raw accent channels. Every accent tint below is built from these as
      rgb(var(--ember-rgb) / <a>), so choosing a non-teal accent (theme.ts sets
      --ember-rgb to match) recolors the balance aurora, glows, shadows, pills and
      badges too — not just the solid controls. Teal is the identity default. */
-  --ember-rgb: 23 214 190;
+  --ember-rgb: 25 227 125;
   /* Accent used as FOREGROUND text/icons (links, eyebrows, badge labels). In dark
      mode it is just the accent; the light theme darkens whatever accent is active
      so a bright accent (violet/ice/rose) stays readable on a white ground. */
@@ -27,23 +35,23 @@
   /* Text that sits ON the accent fill (buttons, active tab). Overridden per accent
      by theme.ts; this default matches the teal identity so the first paint is
      correct before the script runs. */
-  --ember-ink: #04211c;
-  --good: #35c46a;
-  --bad: #f2604a;
+  --ember-ink: #032013;
+  --good: #19e37d;
+  --bad: #ff6b81;
   /* A lighter error tone for small text on a dark surface. --bad is tuned for
      fills and borders and measures 3.42:1 as 11px text on a chat bubble; this
      clears 4.5:1 at 12px. */
-  --bad-text: #ff9182;
-  --radius: 18px;
-  --radius-sm: 12px;
+  --bad-text: #ffa39b;
+  --radius: 14px;
+  --radius-sm: 10px;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   /* System stacks, honestly. Rubik and Roboto Mono used to head these but were
      never shipped (no @font-face, no files, and the desktop CSP allows no font
      host), so every platform already rendered its OS face — just not on purpose. */
   --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  --glow-1: rgba(23, 214, 190, 0.08);
-  --glow-2: rgba(23, 214, 190, 0.05);
+  --glow-1: rgba(25, 227, 125, 0.08);
+  --glow-2: rgba(25, 227, 125, 0.05);
 }
 
 /* Dark is the theme. It is not a preference the OS gets to override.
@@ -54,22 +62,29 @@
    it in Appearance, where the whole page changes together. */
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #f7f7fa;
+  --bg: #f5f8f6;
   --surface: #ffffff;
-  --surface-2: #f1f1f6;
-  --border: #e0e0e8;
-  --ink: #15151c;
-  --muted: #6a6a7a;
-  --ember: #0a9d8b;
-  --ember-hover: #0bb8a2;
-  --ember-soft: rgba(10, 157, 139, 0.1);
-  --ember-rgb: 10 157 139;
+  --surface-2: #eef3f0;
+  --border: #dbe5de;
+  --border-2: #c6d6cc;
+  --dim: #55665c;
+  --ink: #0d1510;
+  --muted: #55665c;
+  /* Light mode needs its OWN green. The brand green as text on white measures
+     1.70:1 -- unreadable -- so light darkens it to a shade that clears AA (5.40:1). */
+  --ember: #0b7a46;
+  --ember-hover: #0e9557;
+  --ember-soft: rgba(11, 122, 70, 0.1);
+  --ember-rgb: 11 122 70;
+  /* White on the dark light-mode green: 5.40:1. The dark theme's near-black ink
+     would be unreadable on it. */
+  --ember-ink: #ffffff;
   /* Darken whatever accent is live (theme.ts may have set --ember to a bright
      violet/ice/rose) toward near-black so accent text clears contrast on white. */
   --ember-text: color-mix(in srgb, var(--ember) 58%, #05130f);
   --shadow: 0 10px 30px rgba(20, 20, 40, 0.08);
-  --glow-1: rgba(10, 157, 139, 0.07);
-  --glow-2: rgba(10, 157, 139, 0.04);
+  --glow-1: rgba(11, 122, 70, 0.07);
+  --glow-2: rgba(11, 122, 70, 0.04);
 }
 
 * { box-sizing: border-box; }
@@ -149,7 +164,10 @@ a { color: var(--ember-text); }
   padding: 20px;
   margin-top: 16px;
 }
-.card h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 14px; font-weight: 600; }
+/* The section eyebrow. Near-black ground gives no separation by fill, so the
+   hierarchy comes from a small, wide-tracked label in the accent over a hairline
+   -- the device that makes the pool page read as structured rather than flat. */
+.card h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ember-text); margin: 0 0 14px; font-weight: 700; }
 
 /* Balance hero.
    The one thing the user opens the wallet to see, so it gets the strongest
@@ -553,10 +571,14 @@ a { color: var(--ember-text); }
 /* Links styled as buttons keep the UA underline unless it is cleared here. */
 .btn { text-decoration: none; }
 .copybtn { transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease; }
-/* On the FILLED button the label has to stay ink-on-teal: --good (#35c46a) on
-   --ember (#17d6be) measures 1.24:1, so the confirmation of the most-tapped
-   action in the app could not be read at all. The green belongs to the outline
-   variants, where it sits on the surface colour. */
+/* On the FILLED button the label has to stay ink-on-accent. --good used to be a
+   separate green (#35c46a) that measured 1.24:1 on the teal accent, so the
+   confirmation of the most-tapped action could not be read at all; the green was
+   confined to the outline variants, where it sits on the surface colour.
+   --good is now the brand green itself, which makes that 1.00:1 -- the same rule
+   holds, and more strictly. The border-color below is a no-op on the filled
+   variant anyway (`.btn` sets `border: none`); it is the outline variants that
+   show it. */
 .copybtn.copied { border-color: var(--good); }
 .btn.ghost.copybtn.copied, .linkbtn.copybtn.copied { color: var(--good); }
 
@@ -568,7 +590,7 @@ a { color: var(--ember-text); }
   border-radius: 999px;
   padding: 3px 10px;
 }
-.conf-pill.done { color: var(--good); background: rgba(53, 196, 106, 0.12); border: 1px solid rgba(53, 196, 106, 0.4); }
+.conf-pill.done { color: var(--good); background: rgba(25, 227, 125, 0.12); border: 1px solid rgba(25, 227, 125, 0.4); }
 .conf-pill.wait { color: var(--ember-text); background: var(--ember-soft); border: 1px solid rgb(var(--ember-rgb) / 0.4); }
 
 /* First-open connecting state. Shows the SAME mark as the boot splash and the
@@ -912,7 +934,7 @@ select { appearance: none; cursor: pointer; }
 /* Messages */
 .msg { border-radius: 12px; padding: 12px 14px; margin-top: 16px; font-size: 13px; line-height: 1.5; }
 .msg.err { background: rgba(242, 96, 74, 0.12); border: 1px solid rgba(242, 96, 74, 0.4); color: #ffb3a6; }
-.msg.ok { background: rgba(53, 196, 106, 0.12); border: 1px solid rgba(53, 196, 106, 0.4); color: #96e9b4; }
+.msg.ok { background: rgba(25, 227, 125, 0.12); border: 1px solid rgba(25, 227, 125, 0.4); color: #96e9b4; }
 .msg.warn { background: rgba(255, 107, 53, 0.1); border: 1px solid rgba(255, 107, 53, 0.4); color: #ffc0a6; }
 
 .qr { display: flex; justify-content: center; margin: 16px 0; }
@@ -943,7 +965,7 @@ select { appearance: none; cursor: pointer; }
 }
 .syncbar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--ember-hover, #3ee6d1), var(--ember, #17d6be));
+  background: linear-gradient(90deg, var(--ember-hover, #4bff9d), var(--ember, #19e37d));
   border-radius: 999px;
   transition: width 0.6s ease;
 }
@@ -1340,7 +1362,7 @@ select { appearance: none; cursor: pointer; }
   padding: 3px 9px;
 }
 .txrow-badge.pending { color: var(--ember-text); border: 1px solid rgb(var(--ember-rgb) / 0.45); background: rgb(var(--ember-rgb) / 0.1); }
-.txrow-badge.done { color: var(--good); border: 1px solid rgba(53, 196, 106, 0.4); background: rgba(53, 196, 106, 0.1); }
+.txrow-badge.done { color: var(--good); border: 1px solid rgba(25, 227, 125, 0.4); background: rgba(25, 227, 125, 0.1); }
 .txrow-badge.recv { color: var(--ember-text); border: 1px solid rgb(var(--ember-rgb) / 0.35); background: rgb(var(--ember-rgb) / 0.08); }
 .txrow-sub .memo { font-style: italic; opacity: 0.85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }
 .txrow-sub {
@@ -1385,9 +1407,9 @@ select { appearance: none; cursor: pointer; }
   gap: 12px;
   padding: 12px 14px;
   margin-bottom: 12px;
-  border: 1px solid rgba(53, 196, 106, 0.4);
+  border: 1px solid rgba(25, 227, 125, 0.4);
   border-radius: 12px;
-  background: rgba(53, 196, 106, 0.1);
+  background: rgba(25, 227, 125, 0.1);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -1395,12 +1417,12 @@ select { appearance: none; cursor: pointer; }
 
 /* The just-sent row glows green until its confirmations arrive. */
 .txrow.fresh {
-  border-color: rgba(53, 196, 106, 0.6);
+  border-color: rgba(25, 227, 125, 0.6);
   animation: freshglow 1.6s ease-in-out 4;
 }
 @keyframes freshglow {
   0%, 100% { box-shadow: none; }
-  50% { box-shadow: 0 0 0 3px rgba(53, 196, 106, 0.15); }
+  50% { box-shadow: 0 0 0 3px rgba(25, 227, 125, 0.15); }
 }
 @keyframes pop {
   from { opacity: 0; transform: scale(0.4); }
@@ -2388,10 +2410,10 @@ select { appearance: none; cursor: pointer; }
 .service-console { margin-top: 14px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--border) 80%, transparent); border-radius: var(--radius-sm); background: #090a0d; }
 .service-console-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px; border-bottom: 1px solid #292b32; background: #111218; }
 .service-console-tools button, .service-console-tools select { display: inline-flex; min-height: 32px; align-items: center; gap: 5px; padding: 6px 9px; border: 1px solid #30323a; border-radius: 7px; background: #181a20; color: #c5c7ce; font: 650 11px var(--sans); cursor: pointer; }
-.service-console-tools button:hover, .service-console-tools button.active { border-color: #7bd8c6; color: #ecfffb; background: #1a2928; }
+.service-console-tools button:hover, .service-console-tools button.active { border-color: #4bff9d; color: #eafff3; background: #16271d; }
 .service-console-tools button:disabled { opacity: .35; cursor: default; }
 .service-log-search { display: flex; min-width: 160px; flex: 1 1 220px; min-height: 32px; align-items: center; gap: 7px; padding: 0 9px; border: 1px solid #30323a; border-radius: 7px; color: #7e828e; background: #0d0e12; }
-.service-log-search:focus-within { border-color: #7bd8c6; }
+.service-log-search:focus-within { border-color: #4bff9d; }
 .service-log-search input { width: 100%; min-width: 0; border: 0; outline: 0; color: #e8e9ed; background: transparent; font: 11px var(--mono); }
 .service-log-view { max-height: min(52vh, 520px); padding: 5px 0; border-radius: 0; background: #090a0d; }
 .service-log-line { display: grid; grid-template-columns: 72px 112px minmax(0, 1fr); gap: 8px; padding: 2px 10px; border-inline-start: 2px solid transparent; }
@@ -2536,11 +2558,11 @@ select { appearance: none; cursor: pointer; }
 .explorer-node-tip { position: absolute; inset-inline-end: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 2px; max-width: min(240px, 65%); padding: 8px 10px; border: 1px solid rgba(126, 247, 228, .24); border-radius: 9px; background: rgba(7, 12, 17, .9); color: #f3fbfa; pointer-events: none; }
 .explorer-node-tip b { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .explorer-node-tip span { color: #83a19d; font-size: 10px; }
-.meshtags { position: absolute; z-index: 15; inset: 0; overflow: hidden; pointer-events: none; color: #7ef7e4; font: 10px/1 var(--mono); }
+.meshtags { position: absolute; z-index: 15; inset: 0; overflow: hidden; pointer-events: none; color: #8affc4; font: 10px/1 var(--mono); }
 .meshtag, .meshtag--dim, .meshtag--block { position: absolute; display: inline-block; max-width: 56%; overflow: hidden; color: #5ff2df; text-overflow: ellipsis; text-shadow: 0 0 8px rgba(23, 214, 190, .45); white-space: nowrap; animation: meshtag-float 2.6s ease-out forwards; }
 .meshtag--dim { color: #76848a; text-shadow: none; animation-name: meshtag-ambient; }
-.meshtag--block { color: #17d6be; font-size: 11px; text-shadow: none; animation-name: meshtag-ambient; }
-.meshtag--link { padding: 4px 8px; border: 1px solid rgba(23, 214, 190, .25); border-radius: 9px; background: rgba(10, 17, 22, .92); color: #7ef7e4; text-decoration: none; pointer-events: auto; cursor: pointer; }
+.meshtag--block { color: #19e37d; font-size: 11px; text-shadow: none; animation-name: meshtag-ambient; }
+.meshtag--link { padding: 4px 8px; border: 1px solid rgba(25, 227, 125, .25); border-radius: 9px; background: rgba(5, 12, 8, .92); color: #8affc4; text-decoration: none; pointer-events: auto; cursor: pointer; }
 .meshtag--link:hover { opacity: 1 !important; border-color: rgba(126, 247, 228, .7); animation-play-state: paused; }
 .meshtag--link::after { content: attr(data-info); display: block; max-width: 0; overflow: hidden; margin-top: 3px; color: #87959a; font-size: 9px; opacity: 0; white-space: nowrap; }
 .meshtag--link:hover::after { max-width: none; opacity: 1; }
@@ -2575,16 +2597,16 @@ select { appearance: none; cursor: pointer; }
   --border: #21352f;
   --ink: #f3f8f6;
   --muted: #92a69f;
-  --ember: #17d6be;
-  --ember-hover: #3ee6d1;
-  --ember-soft: rgba(23, 214, 190, .12);
-  --ember-ink: #06110e;
+  --ember: #19e37d;
+  --ember-hover: #4bff9d;
+  --ember-soft: rgba(25, 227, 125, .12);
+  --ember-ink: #032013;
   /* This page is dark whatever the theme, so its accent TEXT must be the bright
      accent too. Without these the light theme's --ember-text (accent darkened
      toward black for white surfaces) leaked in and the active nav item, links
      and the wordmark's "Z" sat near-invisible on the dark-green surfaces. */
   --ember-text: var(--ember);
-  --ember-rgb: 23 214 190;
+  --ember-rgb: 25 227 125;
   --glow-1: rgba(23, 214, 190, .08);
   --glow-2: rgba(23, 214, 190, .05);
   min-height: 100vh;
@@ -3031,7 +3053,7 @@ input.mono, .host-token { font-size: 16px; }
   padding: 6px 11px; border-radius: 999px;
   text-decoration: none; backdrop-filter: blur(6px);
 }
-.explorer-live-full:hover { border-color: var(--teal, #17d6be); color: var(--teal, #17d6be); }
+.explorer-live-full:hover { border-color: var(--teal, #19e37d); color: var(--teal, #19e37d); }
 @media (max-width: 560px) { .explorer-live-frame { height: clamp(260px, 40vh, 380px); } }
 
 /* Language: inline switcher on the welcome screen, one-time "showing in …" bar. */
