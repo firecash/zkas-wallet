@@ -50,7 +50,7 @@
   position: absolute;
   inset: -30%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(23, 214, 190, 0.3), rgba(23, 214, 190, 0) 68%);
+  background: radial-gradient(circle, rgba(25, 227, 125, 0.3), rgba(25, 227, 125, 0) 68%);
   animation: bl-halo 2.8s ease-in-out infinite;
 }
 

@@ -2,6 +2,47 @@
    Dark IS the wallet — these are the defaults and the only palette anything gets
    without being asked for. A light set exists further down for users who pick it
    in Appearance; nothing else may switch it. */
+/* Typefaces, shipped INSIDE the bundle.
+ *
+ * Self-hosting is a privacy decision before it is a design one: a webfont served from a
+ * CDN is a third-party request on every cold load, carrying the user's IP and which page
+ * they are on, from a wallet whose whole point is that nobody gets to watch. These files
+ * are in the bundle and in the APK, so the wallet makes NO font request at all and looks
+ * the same with the network off.
+ *
+ * Inter for the interface, JetBrains Mono for anything the user has to read digit by digit
+ * -- amounts, addresses, hashes -- where a zero must never be an O and columns must line
+ * up. Both are SIL Open Font License; the texts ship beside them in public/fonts/.
+ *
+ * unicode-range is what keeps this honest: these files cover Latin and Cyrillic only, so
+ * Japanese, Chinese, Arabic and the rest fall THROUGH to the system face instead of
+ * rendering as tofu. That is also why every stack below still ends in a system family.
+ */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/inter-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/inter-cyr.woff2") format("woff2");
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("./fonts/jbmono-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
 :root {
   color-scheme: dark; /* native controls (scrollbars, pickers) follow the theme */
   --bg: #050806;
@@ -45,11 +86,12 @@
   --radius: 14px;
   --radius-sm: 10px;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  /* System stacks, honestly. Rubik and Roboto Mono used to head these but were
-     never shipped (no @font-face, no files, and the desktop CSP allows no font
-     host), so every platform already rendered its OS face — just not on purpose. */
-  --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Shipped for real this time: the @font-face blocks above bundle these, so the
+     stacks lead with them and fall back to the OS face for scripts the files do
+     not cover. (Rubik and Roboto Mono used to head these while no font file was
+     ever shipped, so every platform quietly rendered its own face instead.) */
+  --sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --glow-1: rgba(25, 227, 125, 0.08);
   --glow-2: rgba(25, 227, 125, 0.05);
 }
@@ -603,13 +645,6 @@ a { color: var(--ember-text); }
   flex-direction: column;
   align-items: center;
   gap: 6px;
-}
-  45%  { stroke-dashoffset: 0; }
-  85%  { stroke-dashoffset: 0; opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 0.55; }
-}
-  70%      { stroke-dashoffset: 0; }
-  100%     { stroke-dashoffset: 0; }
 }
 .connect-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
 .connect-sub { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
@@ -2555,15 +2590,15 @@ select { appearance: none; cursor: pointer; }
 .network-globe-canvas { position: relative; width: 100%; height: 100%; cursor: grab; touch-action: pan-y; }
 .network-globe-canvas:active { cursor: grabbing; }
 .explorer-globe-loading { display: grid; height: 100%; place-items: center; color: #8b959f; font-size: 12px; }
-.explorer-node-tip { position: absolute; inset-inline-end: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 2px; max-width: min(240px, 65%); padding: 8px 10px; border: 1px solid rgba(126, 247, 228, .24); border-radius: 9px; background: rgba(7, 12, 17, .9); color: #f3fbfa; pointer-events: none; }
+.explorer-node-tip { position: absolute; inset-inline-end: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 2px; max-width: min(240px, 65%); padding: 8px 10px; border: 1px solid rgba(138, 255, 196, .24); border-radius: 9px; background: rgba(7, 12, 17, .9); color: #f3fbfa; pointer-events: none; }
 .explorer-node-tip b { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .explorer-node-tip span { color: #83a19d; font-size: 10px; }
 .meshtags { position: absolute; z-index: 15; inset: 0; overflow: hidden; pointer-events: none; color: #8affc4; font: 10px/1 var(--mono); }
-.meshtag, .meshtag--dim, .meshtag--block { position: absolute; display: inline-block; max-width: 56%; overflow: hidden; color: #5ff2df; text-overflow: ellipsis; text-shadow: 0 0 8px rgba(23, 214, 190, .45); white-space: nowrap; animation: meshtag-float 2.6s ease-out forwards; }
+.meshtag, .meshtag--dim, .meshtag--block { position: absolute; display: inline-block; max-width: 56%; overflow: hidden; color: #5ff2b0; text-overflow: ellipsis; text-shadow: 0 0 8px rgba(25, 227, 125, .45); white-space: nowrap; animation: meshtag-float 2.6s ease-out forwards; }
 .meshtag--dim { color: #76848a; text-shadow: none; animation-name: meshtag-ambient; }
 .meshtag--block { color: #19e37d; font-size: 11px; text-shadow: none; animation-name: meshtag-ambient; }
 .meshtag--link { padding: 4px 8px; border: 1px solid rgba(25, 227, 125, .25); border-radius: 9px; background: rgba(5, 12, 8, .92); color: #8affc4; text-decoration: none; pointer-events: auto; cursor: pointer; }
-.meshtag--link:hover { opacity: 1 !important; border-color: rgba(126, 247, 228, .7); animation-play-state: paused; }
+.meshtag--link:hover { opacity: 1 !important; border-color: rgba(138, 255, 196, .7); animation-play-state: paused; }
 .meshtag--link::after { content: attr(data-info); display: block; max-width: 0; overflow: hidden; margin-top: 3px; color: #87959a; font-size: 9px; opacity: 0; white-space: nowrap; }
 .meshtag--link:hover::after { max-width: none; opacity: 1; }
 @keyframes meshtag-float { 0% { opacity: 0; translate: 0 8px; } 12% { opacity: 1; } 75% { opacity: .9; } 100% { opacity: 0; translate: 0 -14px; } }
@@ -2607,13 +2642,13 @@ select { appearance: none; cursor: pointer; }
      and the wordmark's "Z" sat near-invisible on the dark-green surfaces. */
   --ember-text: var(--ember);
   --ember-rgb: 25 227 125;
-  --glow-1: rgba(23, 214, 190, .08);
-  --glow-2: rgba(23, 214, 190, .05);
+  --glow-1: rgba(25, 227, 125, .08);
+  --glow-2: rgba(25, 227, 125, .05);
   min-height: 100vh;
   min-height: 100dvh;
   background:
-    radial-gradient(900px 500px at 75% -120px, rgba(23, 214, 190, .12), transparent 70%),
-    radial-gradient(650px 400px at -180px 48%, rgba(23, 214, 190, .05), transparent 70%),
+    radial-gradient(900px 500px at 75% -120px, rgba(25, 227, 125, .12), transparent 70%),
+    radial-gradient(650px 400px at -180px 48%, rgba(25, 227, 125, .05), transparent 70%),
     var(--bg);
   color: var(--ink);
 }

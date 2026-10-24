@@ -40,6 +40,28 @@ export const ACCENTS: Record<Accent, { label: string; base: string; hover: strin
 
 const KEY = "theme";
 const ACCENT_KEY = "accent";
+/// One-time, for the green rebrand.
+///
+/// An accent stored before the rebrand was chosen against the OLD teal identity — it is
+/// a preference for "not teal", not a vote against green, and the person has never seen
+/// green. Leaving it in place means the rebrand is invisible to every existing user:
+/// the ground changes but every highlight, button, tab and glow keeps the old colour,
+/// which reads as "nothing happened" (it is how this was first reported).
+///
+/// So the stored accent is cleared ONCE and everyone lands on the new identity. Anything
+/// chosen AFTER this marker exists is a deliberate choice made with green in front of
+/// them, and is kept for good.
+const ACCENT_REBRAND_KEY = "accent.rebrand.green";
+
+function migrateAccentForRebrand(): void {
+  try {
+    if (readLocal(ACCENT_REBRAND_KEY)) return;
+    writeLocal(ACCENT_REBRAND_KEY, "1");
+    removeLocal(ACCENT_KEY);
+  } catch {
+    /* storage blocked: there is no stored accent to migrate, and nothing to remember */
+  }
+}
 
 export function currentTheme(): Theme {
   // Dark unless the user explicitly chose otherwise. Never derived from the OS on
@@ -79,6 +101,8 @@ export function currentAccent(): Accent {
 }
 
 export function applyStoredTheme(): void {
+  // Before anything reads the stored accent.
+  migrateAccentForRebrand();
   apply(currentTheme());
   applyAccent(currentAccent());
   installSystemThemeWatcher();

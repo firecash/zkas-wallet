@@ -21,9 +21,11 @@ suspended on 23 October.
   from the fill. Numbers are set in a monospace face with aligned digits, so a
   column of amounts lines up. KAS keeps a blue of its own, so a merge-mined
   payout is not mistaken for a ZKAS one at a glance.
-  - If you had deliberately chosen an accent colour, it is kept. Green is the
-    new default only for people who never changed it, and **Teal** is still in
-    the list, next to the new **Green**.
+  - Everyone lands on the new green once, including people who had picked
+    another accent colour — an accent chosen before this existed was a choice
+    against the old teal, not against a green nobody had seen, and leaving it
+    in place made the change invisible. Pick any accent after updating and it
+    is kept for good; **Teal** is still in the list, next to the new **Green**.
   - Light mode gets its own darker green: the bright one is unreadable on white
     (it measures 1.70:1, where 4.5:1 is the readable minimum).
 - **A wallet that stopped at "99.9%" and never moved again now catches up.** The

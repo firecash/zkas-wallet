@@ -58,6 +58,8 @@ describe("accent theme", () => {
   });
 
   it("a stored teal survives a reload, rather than falling back to the new default", () => {
+    // Post-rebrand: the marker is set, so this teal was chosen WITH green on screen.
+    localStorage.setItem("accent.rebrand.green", "1");
     localStorage.setItem("accent", "teal");
     applyStoredTheme();
     expect(currentAccent()).toBe("teal");
@@ -65,9 +67,30 @@ describe("accent theme", () => {
   });
 
   it("applyStoredTheme restores a persisted accent on load", () => {
+    localStorage.setItem("accent.rebrand.green", "1");
     localStorage.setItem("accent", "rose");
     applyStoredTheme();
     expect(document.documentElement.style.getPropertyValue("--ember")).toBe(ACCENTS.rose.base);
+  });
+
+  it("the rebrand clears a pre-rebrand accent ONCE, so the new identity is actually seen", () => {
+    // Reported as "0 done": the ground changed but every highlight stayed the old
+    // colour, because an accent chosen against the previous identity was still stored.
+    localStorage.setItem("accent", "ice");
+    applyStoredTheme();
+    expect(currentAccent()).toBe(DEFAULT_ACCENT);
+    expect(localStorage.getItem("accent")).toBeNull();
+    expect(localStorage.getItem("accent.rebrand.green")).toBe("1");
+  });
+
+  it("but a choice made AFTER the rebrand is kept for good", () => {
+    localStorage.setItem("accent.rebrand.green", "1");
+    setAccent("ice");
+    applyStoredTheme();
+    expect(currentAccent()).toBe("ice");
+    expect(localStorage.getItem("accent")).toBe("ice");
+    // And it must still be APPLIED, not just remembered.
+    expect(document.documentElement.style.getPropertyValue("--ember")).toBe(ACCENTS.ice.base);
   });
 
   it("ignores a garbage stored accent", () => {
