@@ -60,7 +60,12 @@ variables:
   # for the `platforms` dispatch input the GitHub workflow had. A job-level `rules`
   # test reads this directly, so unlike the Actions version there is no matrix-picking
   # job and an unwanted target costs nothing instead of queueing a runner.
-  DESKTOP_PLATFORMS: "linux-x86_64,linux-aarch64"
+  # x86_64 only. The self-hosted runner is an x86_64 box, and Tauri cannot
+  # cross-compile a Linux bundle -- dpkg/AppImage are produced by the HOST -- so an
+  # arm64 build needs an arm64 machine, which there is not one of. Listing it anyway
+  # just queued a job no runner could take, which then showed as a red "failed" with
+  # a 0s duration on every pipeline. Add it back the day an arm64 runner exists.
+  DESKTOP_PLATFORMS: "linux-x86_64"
   DESKTOP_WINDOWS: "0"
   DESKTOP_MACOS: "0"
   # The engine lives in a sibling checkout, because src-tauri/Cargo.toml path-deps
@@ -257,7 +262,10 @@ prepare:release:
 
 desktop:linux-x86_64:
   extends: .desktop-linux
-  tags: [saas-linux-small-amd64]
+  # The self-hosted box, not a shared runner: 12 cores and 62 GB against the shared
+  # small instance's 2 vCPU, and no compute minutes billed for a job that spends most
+  # of its time compiling the shielded engine.
+  tags: [zkas142]
   variables:
     TARGET_NAME: linux-x86_64
     RUST_TARGET: x86_64-unknown-linux-gnu
