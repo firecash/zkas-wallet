@@ -186,24 +186,44 @@ prepare:release:
       # xdg-utils: the opener plugin makes the AppImage bundler look for
       # /usr/bin/xdg-open on the BUILD machine, and a bare image has no such file —
       # v1.0.35-rc7 failed on exactly this on the arm64 runner.
-      NEED=""
+      # DO NOT INSTALL SYSTEM PACKAGES FROM CI.
+      #
+      # This runs on a shared, long-lived machine, and the first time it did apt work
+      # it cost the box its /boot: installing xdg-utils fired an initramfs trigger,
+      # the rebuild ran out of space mid-write, and dpkg was left with
+      # initramfs-tools half-configured. Nothing on that machine needed apt before CI
+      # existed; the build had been working for months. A CI job must not be able to
+      # put a host into that state, so it now VERIFIES and refuses instead.
+      #
+      # protobuf-compiler: the kaspa gRPC crates generate their client at build time.
+      # xdg-utils: the opener plugin makes the AppImage bundler look for
+      # /usr/bin/xdg-open on the BUILD machine, and a bare image has no such file —
+      # v1.0.35-rc7 failed on exactly this on the arm64 runner.
+      MISSING=""
       for pkg in ca-certificates curl git file build-essential pkg-config \
                  protobuf-compiler patchelf xdg-utils \
                  libssl-dev libxdo-dev librsvg2-dev libayatana-appindicator3-dev \
                  libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev; do
-        dpkg -s "$pkg" >/dev/null 2>&1 || NEED="$NEED $pkg"
+        dpkg -s "$pkg" >/dev/null 2>&1 || MISSING="$MISSING $pkg"
       done
-      if [ -n "$NEED" ]; then
-        echo "installing:$NEED"
-        apt-get update
-        apt-get install -y --no-install-recommends $NEED
+      if [ -n "$MISSING" ]; then
+        if [ "${CI_ALLOW_APT:-0}" = "1" ]; then
+          # Only for a throwaway container, where installing is the point.
+          apt-get update
+          apt-get install -y --no-install-recommends $MISSING
+        else
+          echo "missing build dependencies:$MISSING" >&2
+          echo "install them on the runner host, deliberately, then re-run:" >&2
+          echo "  apt-get install -y --no-install-recommends$MISSING" >&2
+          echo "(set CI_ALLOW_APT=1 only when this job runs in a disposable image)" >&2
+          exit 3
+        fi
       else
-        echo "build dependencies already present"
+        echo "build dependencies present"
       fi
       case "$(node -v 2>/dev/null || echo none)" in
-        v20.*) echo "node $(node -v) already present" ;;
-        *) curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-           apt-get install -y --no-install-recommends nodejs ;;
+        v20.*) echo "node $(node -v)" ;;
+        *) echo "node 20 is required on the runner host; found $(node -v 2>/dev/null || echo none)" >&2; exit 3 ;;
       esac
       if [ -x "$CARGO_HOME/bin/cargo" ]; then
         . "$CARGO_HOME/env"
