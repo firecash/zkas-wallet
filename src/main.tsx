@@ -310,7 +310,14 @@ function revealApp() {
     const root = document.getElementById("root");
     const mounted = (root && root.childElementCount > 0) && appCssReady(cssLinks);
     if (mounted || frames++ > 180) {
-      markFirstRender();
+      // Guarded for the same reason, and it matters more here: this sits between "the app
+      // has mounted" and the call that REMOVES the splash. A throw on this line leaves the
+      // splash covering a working wallet for ever, with no error and no way out.
+      try {
+        markFirstRender();
+      } catch {
+        /* a timing measurement must never cost the user the screen */
+      }
       // One more frame so the app's first paint lands before the fade starts.
       requestAnimationFrame(fade);
       return;
@@ -323,7 +330,16 @@ function revealApp() {
 async function boot() {
   // Not awaited: the native sink needs an IPC round trip, and boot must not wait on the
   // log. Events recorded before it answers are queued and written once it does.
-  void installDiagnostics();
+  //
+  // Guarded on BOTH paths, because `void` only discards the promise — it does not catch a
+  // SYNCHRONOUS throw, and a throw here rejects boot(), which replaces the splash with the
+  // "could not start" screen. The diagnostic log is an observer: it must never be able to
+  // stop the wallet starting. Nothing downstream depends on it having installed.
+  try {
+    void installDiagnostics().catch(() => undefined);
+  } catch {
+    /* the log is optional; the wallet is not */
+  }
   let locked = false;
   if (isDesktop()) {
     try {
