@@ -3491,7 +3491,10 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
           grid -- a full-size target for something most people never touch. */}
       {onManageNotes && (status.note_count ?? 0) > 0 && (
         <button className="balance-notes" onClick={onManageNotes} aria-label={t("app.notesAria")}>
-          {t("app.notesManage", { n: status.note_count ?? 0 })}
+          {/* `count` drives the plural form ("1 note" / "2 notes"); `n` is passed too so
+              the non-plural base key still interpolates in locales that have no plural
+              forms yet and resolve to it, keeping their own translation. */}
+          {t("app.notesManage", { count: status.note_count ?? 0, n: status.note_count ?? 0 })}
         </button>
       )}
       {/* Fixed height, deliberately. This line's content changes as the wallet

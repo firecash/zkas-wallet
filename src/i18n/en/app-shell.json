@@ -36,7 +36,9 @@
     "loading": "Loading…",
     "close": "Close",
     "receivedToastHidden": "A payment arrived",
-    "receivedNotifBodyHidden": "A payment arrived in your wallet."
+    "receivedNotifBodyHidden": "A payment arrived in your wallet.",
+    "notesManage_one": "{{count}} note · manage",
+    "notesManage_other": "{{count}} notes · manage"
   },
   "hostedNotice": {
     "browserWallet": "Browser wallet. <b><a>Get the safer app</a></b>."
