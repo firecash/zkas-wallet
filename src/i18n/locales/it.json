@@ -2085,5 +2085,9 @@
     "resume": "Riprendi",
     "empty": "Ancora nulla registrato.",
     "offNote": "Il registro diagnostico è disattivato."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Aggiorna il software di mining",
+    "note": "{{release}} è disponibile. Un bridge vecchio invia lavoro che la rete rifiuta, quindi mina senza guadagnare."
   }
 }

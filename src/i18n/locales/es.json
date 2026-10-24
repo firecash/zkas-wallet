@@ -2085,5 +2085,9 @@
     "resume": "Reanudar",
     "empty": "Aún no hay nada registrado.",
     "offNote": "El registro de diagnóstico está desactivado."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Actualizar el software de minería",
+    "note": "{{release}} está disponible. Un puente antiguo envía trabajo que la red rechaza, así que mina sin ganar nada."
   }
 }

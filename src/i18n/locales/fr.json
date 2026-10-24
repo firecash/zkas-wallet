@@ -2085,5 +2085,9 @@
     "resume": "Reprendre",
     "empty": "Rien d'enregistré pour l'instant.",
     "offNote": "Le journal de diagnostic est désactivé."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Mettre à jour le logiciel de minage",
+    "note": "{{release}} est disponible. Un pont ancien envoie un travail que le réseau rejette : il mine sans rien gagner."
   }
 }

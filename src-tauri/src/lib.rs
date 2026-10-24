@@ -4276,14 +4276,30 @@ mod control_tests {
             "/api/wallet/prepare",
             "/api/wallet/submit",
             "/api/verify",
+            // Allowed, and this test used to assert the opposite. `/health` is what
+            // api.ts probes FIRST to decide whether a service is reachable at all (it
+            // is the one endpoint no bearer gate covers), so on desktop -- where every
+            // call is proxied through this command -- refusing it makes the wallet
+            // unable to tell a working service from a missing one. The rule this
+            // function enforces is "endpoints the compiled UI actually calls", and the
+            // UI calls this one.
+            "/health",
         ] {
-            assert!(allowed_wallet_api_path(path));
+            assert!(allowed_wallet_api_path(path), "{path} should be allowed");
         }
-        assert!(!allowed_wallet_api_path("/health"));
-        assert!(!allowed_wallet_api_path("/api/admin"));
-        assert!(!allowed_wallet_api_path(
-            "/api/status?redirect=http://example.com"
-        ));
+        // The rule that matters: nothing the UI does not call, and nothing that is a
+        // path plus something else.
+        for path in [
+            "/api/admin",
+            "/api/status?redirect=http://example.com",
+            "/api/status/",
+            "/api/wallet/send?to=attacker",
+            "/api/../admin",
+            "/",
+            "",
+        ] {
+            assert!(!allowed_wallet_api_path(path), "{path} should be refused");
+        }
     }
 
     fn one_shot_http(status: &str) -> (std::net::SocketAddr, std::thread::JoinHandle<()>) {

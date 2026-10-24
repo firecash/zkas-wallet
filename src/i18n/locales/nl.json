@@ -2085,5 +2085,9 @@
     "resume": "Hervatten",
     "empty": "Nog niets vastgelegd.",
     "offNote": "Het diagnoselogboek staat uit."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Mining-software bijwerken",
+    "note": "{{release}} is beschikbaar. Een oude bridge stuurt werk dat het netwerk weigert, dus mijnt zonder opbrengst."
   }
 }

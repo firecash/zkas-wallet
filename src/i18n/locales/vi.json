@@ -2085,5 +2085,9 @@
     "resume": "Tiếp tục",
     "empty": "Chưa ghi lại gì.",
     "offNote": "Nhật ký chẩn đoán đang tắt."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Cập nhật phần mềm đào",
+    "note": "Đã có {{release}}. Cầu nối cũ gửi công việc bị mạng từ chối, nên đào mà không có thưởng."
   }
 }

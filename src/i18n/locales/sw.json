@@ -2085,5 +2085,9 @@
     "resume": "Endelea",
     "empty": "Bado hakuna kilichorekodiwa.",
     "offNote": "Kumbukumbu za uchunguzi zimezimwa."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Sasisha programu ya uchimbaji",
+    "note": "{{release}} inapatikana. Daraja la zamani hutuma kazi ambayo mtandao hukataa, hivyo huchimba bila malipo."
   }
 }

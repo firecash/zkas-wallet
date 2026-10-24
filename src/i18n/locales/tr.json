@@ -2085,5 +2085,9 @@
     "resume": "Sürdür",
     "empty": "Henüz kaydedilen bir şey yok.",
     "offNote": "Tanılama kaydı kapalı."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Madencilik yazılımını güncelle",
+    "note": "{{release}} yayında. Eski köprü ağın reddettiği iş gönderir, bu yüzden kazanç olmadan madencilik yapar."
   }
 }

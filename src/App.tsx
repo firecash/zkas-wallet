@@ -3,6 +3,7 @@ import { elapsedSince } from "./lib/elapsed";
 import { recordSyncSample, syncRate, fmtCount, fmtDuration, fmtRate, SETTLE_MARGIN } from "./lib/syncrate";
 import { markInteractive, observePollFailure, observeStatus, useScreenLog } from "./diag";
 import { NodeUpdateNotice } from "./components/NodeUpdateNotice";
+import { BridgeUpdateNotice } from "./components/BridgeUpdateNotice";
 import i18n, { formatDate } from "./i18n";
 import { LanguagePicker, LanguageInline, LanguageNotice, LanguageButton } from "./LanguagePicker";
 import { ProvePayment } from "./PaymentProof";
@@ -1721,6 +1722,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 has stopped moving, which reaches the user as a stale balance and a refused send.
                 Renders nothing on web, in the mobile shell, or when no update is pending. */}
             <NodeUpdateNotice />
+            <BridgeUpdateNotice />
             <BalanceHero
               status={status}
               txs={txs}

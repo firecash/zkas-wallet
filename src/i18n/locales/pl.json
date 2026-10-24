@@ -2085,5 +2085,9 @@
     "resume": "Wznów",
     "empty": "Jeszcze nic nie zapisano.",
     "offNote": "Logi diagnostyczne są wyłączone."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Zaktualizuj oprogramowanie do kopania",
+    "note": "Dostępna jest wersja {{release}}. Stary most wysyła pracę odrzucaną przez sieć, więc kopie bez zarobku."
   }
 }

@@ -2085,5 +2085,9 @@
     "resume": "Fortsetzen",
     "empty": "Noch nichts aufgezeichnet.",
     "offNote": "Das Diagnoseprotokoll ist aus."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Mining-Software aktualisieren",
+    "note": "{{release}} ist verfügbar. Eine ältere Bridge sendet Arbeit, die das Netzwerk ablehnt — sie mint ohne Ertrag."
   }
 }

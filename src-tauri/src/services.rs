@@ -23,7 +23,7 @@ const HEALTHY_RUN: Duration = Duration::from_secs(60);
 const MAX_RESTART_DELAY: u64 = 30;
 const MAX_RESTART_ATTEMPTS: u32 = 5;
 pub const ZKAS_RELEASE: &str = "zkas-v1.0.10";
-pub const BRIDGE_RELEASE: &str = "v1.0.11";
+pub const BRIDGE_RELEASE: &str = "v1.0.12";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ServiceLog {
@@ -1264,22 +1264,30 @@ fn file_sha256(path: &Path) -> Result<String, String> {
     Ok(hex::encode(hash.finalize()))
 }
 
-// BROKEN SINCE 2026-10-23, AND NOT FIXABLE BY EDITING THESE URLS.
+// Hosted on GitLab since the `firecash` GitHub account was suspended on 2026-10-23.
 //
-// The `firecash` GitHub account was suspended, so every `github.com/firecash/...` URL
-// below answers 404. That makes "install the node" and "install the merged-mining
-// bridge" fail for every desktop user, on every platform — the one path in the app that
-// downloads something instead of merely linking to it.
+// Every `github.com/firecash/...` URL here answered 404, which broke "install the node"
+// and "install the merged-mining bridge" for every desktop user on every platform. The
+// assets are now published as GitLab generic packages and these point at them.
 //
-// The repos are on gitlab.com/zkas-group under the same names, but the RELEASE ASSETS
-// are not: asked on 2026-10-23, the GitLab releases API answered `[]` for both
-// zkas-group/zkas-rusty and zkas-group/solo-dual-mode. The tags are there
-// (`zkas-v1.0.10`, `v1.0.11`), the built zips are not, so there is no URL to point at
-// yet and guessing one would only move the 404.
+// Two things changed with the move, and both matter:
 //
-// Re-publishing the same bytes is what unblocks it: the sha256 below is checked after
-// the download, so a new host serving the identical archive needs nothing changed here
-// but the host. If the archives are rebuilt instead, these hashes must be recomputed.
+//  * The BRIDGE is v1.0.12, not v1.0.11. v1.0.11 predates the ZKM1 fork: it submits work
+//    the node rejects as invalid PoW, so it finds no ZKAS blocks and pays nobody. Shipping
+//    v1.0.11 is worse than shipping no bridge, because it looks like it is working.
+//  * The NODE archive was REBUILT rather than re-uploaded byte for byte, so its hash is
+//    not the one the GitHub asset had. The sha256 below is the rebuilt archive's, checked
+//    against the `.sha256` the same release publishes beside it.
+//
+// Every hash below was taken from the bytes GitLab actually serves, by downloading them.
+// They are verified after download (see `install_archive`), so a wrong one fails the
+// install closed rather than running an unverified binary.
+//
+// Platforms NOT covered, deliberately rather than by oversight:
+//  * zkas-node publishes only linux-amd64 on GitLab today. Windows and macOS return a
+//    plain "not published" error instead of a dead URL, so the UI can say so.
+//  * solo-dual-mode v1.0.12 publishes no windows-arm64 build. Windows on ARM runs x64
+//    binaries under emulation, so that target is served the x64 archive on purpose.
 //
 // The kaspanet/rusty-kaspa URLs further down are a third party's and still live.
 
@@ -1287,36 +1295,32 @@ fn file_sha256(path: &Path) -> Result<String, String> {
 fn zkas_archive() -> Result<ArchiveSpec, String> {
     Ok(ArchiveSpec {
         component: "zkas-v1.0.10-linux-x64",
-        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.10/zkas-zkas-v1.0.10-linux-amd64.zip",
-        sha256: "09277ff72dafa91a49ec5b5f32c86fc7936ca9e354cbea36005c1dbcc97eccac",
+        url: "https://gitlab.com/api/v4/projects/zkas-group%2Fzkas-rusty/packages/generic/zkas-node/1.0.10/zkas-zkas-v1.0.10-linux-amd64.zip",
+        // The REBUILT archive's hash, matching the .sha256 published beside it. The old
+        // GitHub asset hashed 09277ff72d...; these are different bytes, not a typo.
+        sha256: "634466079b26d3dbb134a951c76875d34349e8f47a2287f0729fab009d2263f3",
     })
 }
 
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    Ok(ArchiveSpec {
-        component: "zkas-v1.0.10-windows-x64",
-        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.10/zkas-zkas-v1.0.10-win64.zip",
-        sha256: "c9be94f528712335fad90b662e9fbfe1060120e67fb7986e9c624c15ebd0f652",
-    })
+    // zkas-node publishes only linux-amd64 on GitLab so far. A dead GitHub URL here
+    // failed as a download error; this fails as a plain, true sentence.
+    Err("no verified ZKas node release is published for this platform yet".into())
 }
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    Ok(ArchiveSpec {
-        component: "zkas-v1.0.10-macos-arm64",
-        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.10/zkas-zkas-v1.0.10-osx-arm64.zip",
-        sha256: "95b61826af650b1bdf072537f5b34e744d2bd02a5b80358039d6a4dc4f038ed4",
-    })
+    // zkas-node publishes only linux-amd64 on GitLab so far. A dead GitHub URL here
+    // failed as a download error; this fails as a plain, true sentence.
+    Err("no verified ZKas node release is published for this platform yet".into())
 }
 
 #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    Ok(ArchiveSpec {
-        component: "zkas-v1.0.10-macos-x64",
-        url: "https://github.com/firecash/zkas-rusty/releases/download/zkas-v1.0.10/zkas-zkas-v1.0.10-osx-x86_64.zip",
-        sha256: "a115267b5c1c9622477c37945fc8e27320b26c152a479e26359607aff5fab7fa",
-    })
+    // zkas-node publishes only linux-amd64 on GitLab so far. A dead GitHub URL here
+    // failed as a download error; this fails as a plain, true sentence.
+    Err("no verified ZKas node release is published for this platform yet".into())
 }
 
 #[cfg(not(any(
@@ -1332,34 +1336,34 @@ fn zkas_archive() -> Result<ArchiveSpec, String> {
 fn bridge_archive_for(os: &str, arch: &str) -> Result<ArchiveSpec, String> {
     let (component, url, sha256) = match (os, arch) {
         ("linux", "x86_64") => (
-            "solo-dual-bridge-v1.0.11-linux-x64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.11/solo-dual-mode-linux-x64.zip",
-            "1fceb570308f6f66b6d4920fd8794ebb93953362a572149b29023469a3c7fb50",
+            "solo-dual-bridge-v1.0.12-linux-x64",
+            "https://gitlab.com/api/v4/projects/88003637/packages/generic/solo-dual-mode/v1.0.12/solo-dual-mode-linux-x64.zip",
+            "2d08bb558641445ef8ae601e59f535d402d3cfa59ddc18e335841697f6d7d641",
         ),
         ("linux", "aarch64") => (
-            "solo-dual-bridge-v1.0.11-linux-arm64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.11/solo-dual-mode-linux-arm64.zip",
-            "6459976f5ce69354bf238154844b37132511d2c03b883c31e0af458ad2adff40",
+            "solo-dual-bridge-v1.0.12-linux-arm64",
+            "https://gitlab.com/api/v4/projects/88003637/packages/generic/solo-dual-mode/v1.0.12/solo-dual-mode-linux-arm64.zip",
+            "4cd75996bd38fcede4c8c7b7fe7cdf1f3caf2c44a1d5135d05c3b24c74e73e1b",
         ),
         ("macos", "x86_64") => (
-            "solo-dual-bridge-v1.0.11-macos-x64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.11/solo-dual-mode-macos-x64.zip",
-            "190753f318600e779a2957e155032c0319df8e3715656807bfe9a24170f14660",
+            "solo-dual-bridge-v1.0.12-macos-x64",
+            "https://gitlab.com/api/v4/projects/88003637/packages/generic/solo-dual-mode/v1.0.12/solo-dual-mode-macos-x64.zip",
+            "4a6e685d0a63a13b90d0a212293ddec3a8ed6d3463ad3254b13b5dd5fa91a17f",
         ),
         ("macos", "aarch64") => (
-            "solo-dual-bridge-v1.0.11-macos-arm64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.11/solo-dual-mode-macos-arm64.zip",
-            "939bfbbc11561e25d0436c6c3f0418d3a86e4dc1f931ccde711ddd1531319edf",
+            "solo-dual-bridge-v1.0.12-macos-arm64",
+            "https://gitlab.com/api/v4/projects/88003637/packages/generic/solo-dual-mode/v1.0.12/solo-dual-mode-macos-arm64.zip",
+            "6b1450ccae7e70dfb326f8f8c60c261279104e4b706ccd4aac00e59abc0bf681",
         ),
-        ("windows", "x86_64") => (
-            "solo-dual-bridge-v1.0.11-windows-x64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.11/solo-dual-mode-windows-x64.zip",
-            "f3ab6de48ae0da79c1f22073444e7d5a3a4caf047dbdf9fb0f68b772d2416610",
-        ),
-        ("windows", "aarch64") => (
-            "solo-dual-bridge-v1.0.11-windows-arm64",
-            "https://github.com/firecash/solo-dual-mode/releases/download/v1.0.11/solo-dual-mode-windows-arm64.zip",
-            "639f3f79bd1ffc1efb1ca9771d25c119e56b3907e45c6a319aa2e6ce80055044",
+        // Windows x64, and Windows on ARM. v1.0.12 ships no arm64 Windows build, and
+        // Windows on ARM runs x64 binaries under emulation -- a stratum bridge relays
+        // shares rather than hashing, so emulation costs it nothing that matters. Serving
+        // the x64 archive keeps merged mining working there; the alternative is removing
+        // the feature from those machines entirely.
+        ("windows", "x86_64") | ("windows", "aarch64") => (
+            "solo-dual-bridge-v1.0.12-windows-x64",
+            "https://gitlab.com/api/v4/projects/88003637/packages/generic/solo-dual-mode/v1.0.12/solo-dual-mode-windows-x64.zip",
+            "97691d1f093c4fff5fe8ef88934893a062081bd99335ff7c243523ec0a81a00d",
         ),
         _ => {
             return Err(format!(
@@ -1373,7 +1377,6 @@ fn bridge_archive_for(os: &str, arch: &str) -> Result<ArchiveSpec, String> {
         sha256,
     })
 }
-
 fn bridge_archive() -> Result<ArchiveSpec, String> {
     bridge_archive_for(std::env::consts::OS, std::env::consts::ARCH)
 }
@@ -1438,18 +1441,47 @@ mod tests {
         ));
     }
 
+    /// What actually has to be true of anything this app downloads and then executes:
+    /// it comes over TLS, from a host we publish to (or, for rusty-kaspa, the upstream
+    /// project's own), and carries a full sha256 that `install_archive` checks.
+    ///
+    /// This used to assert `starts_with("https://github.com/")`, which stopped being
+    /// the rule when the GitHub account was suspended and our assets moved to GitLab.
+    /// Matching on the HOST rather than a URL prefix is also what makes the check
+    /// meaningful: "https://github.com.evil.example/..." passes a prefix test and fails
+    /// this one.
     fn assert_verified_release(spec: ArchiveSpec) {
-        assert!(spec.url.starts_with("https://github.com/"));
-        assert_eq!(spec.sha256.len(), 64);
+        let rest = spec
+            .url
+            .strip_prefix("https://")
+            .unwrap_or_else(|| panic!("not https: {}", spec.url));
+        let host = rest.split('/').next().unwrap_or("");
+        assert!(
+            host == "gitlab.com" || host == "github.com",
+            "unexpected download host {host:?} in {}",
+            spec.url
+        );
+        assert_eq!(spec.sha256.len(), 64, "short sha256 for {}", spec.url);
         assert!(spec.sha256.bytes().all(|byte| byte.is_ascii_hexdigit()));
     }
 
     #[test]
     fn platform_release_metadata_is_complete() {
-        let zkas = zkas_archive().unwrap();
-        assert!(zkas.component.contains(ZKAS_RELEASE));
-        assert!(zkas.url.contains(ZKAS_RELEASE));
-        assert_verified_release(zkas);
+        // The node is published for linux-x64 only so far; every other target returns a
+        // plain "not published" error on purpose, and a test that unwrapped it would fail
+        // the moment this crate is built for macOS or Windows. When a spec IS offered it
+        // still has to be complete.
+        match zkas_archive() {
+            Ok(zkas) => {
+                assert!(zkas.component.contains(ZKAS_RELEASE));
+                assert!(zkas.url.contains(ZKAS_RELEASE));
+                assert_verified_release(zkas);
+            }
+            Err(message) => assert!(
+                message.contains("not published"),
+                "an unpublished platform must say so plainly, got {message:?}"
+            ),
+        }
         assert_verified_release(kaspa_archive().unwrap());
         assert_verified_release(bridge_archive().unwrap());
     }
@@ -1462,7 +1494,10 @@ mod tests {
             ("macos", "x86_64", "macos-x64"),
             ("macos", "aarch64", "macos-arm64"),
             ("windows", "x86_64", "windows-x64"),
-            ("windows", "aarch64", "windows-arm64"),
+            // Deliberate: v1.0.12 publishes no arm64 Windows build, and Windows on ARM
+            // runs the x64 one under emulation. Asserted so the mapping is a decision
+            // on the record, not a silent fallback someone later "fixes" into a 404.
+            ("windows", "aarch64", "windows-x64"),
         ];
         for (os, arch, asset) in targets {
             let spec = bridge_archive_for(os, arch).unwrap();

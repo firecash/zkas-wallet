@@ -2085,5 +2085,9 @@
     "resume": "Lanjutkan",
     "empty": "Belum ada yang dicatat.",
     "offNote": "Log diagnostik mati."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Perbarui perangkat lunak penambangan",
+    "note": "{{release}} tersedia. Bridge lama mengirim pekerjaan yang ditolak jaringan, jadi menambang tanpa penghasilan."
   }
 }

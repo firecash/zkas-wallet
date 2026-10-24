@@ -109,5 +109,9 @@
   "iosPermission": {
     "camera": "ZKas Wallet uses the camera only to scan payment QR codes. Frames are decoded on this device and never sent anywhere.",
     "faceId": "ZKas Wallet uses Face ID to unlock the app and to protect your recovery phrase on this device."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Update mining software",
+    "note": "{{release}} is available. An older bridge sends work the network rejects, so it mines without earning."
   }
 }

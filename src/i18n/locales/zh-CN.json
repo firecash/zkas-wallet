@@ -2085,5 +2085,9 @@
     "resume": "继续",
     "empty": "尚无记录。",
     "offNote": "诊断日志已关闭。"
+  },
+  "bridgeUpdateNotice": {
+    "title": "更新挖矿软件",
+    "note": "{{release}} 已发布。旧版桥接提交的工作会被网络拒绝，挖矿也拿不到收益。"
   }
 }

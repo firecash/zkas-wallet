@@ -2085,5 +2085,9 @@
     "resume": "Retomar",
     "empty": "Nada registrado ainda.",
     "offNote": "O registro de diagnóstico está desligado."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Atualizar o software de mineração",
+    "note": "{{release}} está disponível. Uma ponte antiga envia trabalho que a rede rejeita, então minera sem ganhar."
   }
 }

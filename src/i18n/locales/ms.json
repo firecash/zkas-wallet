@@ -2085,5 +2085,9 @@
     "resume": "Sambung",
     "empty": "Belum ada apa-apa direkodkan.",
     "offNote": "Log diagnostik dimatikan."
+  },
+  "bridgeUpdateNotice": {
+    "title": "Kemas kini perisian perlombongan",
+    "note": "{{release}} tersedia. Bridge lama menghantar kerja yang ditolak rangkaian, jadi melombong tanpa pendapatan."
   }
 }
