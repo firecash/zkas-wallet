@@ -1,0 +1,130 @@
+# Desktop binaries for Windows and macOS.
+#
+# These two targets, and only these two. Linux and Android build on the self-hosted
+# GitLab runner, which costs no CI quota anywhere and has 12 cores and 62 GB; what
+# cannot be self-hosted is Apple hardware and a Windows image, which is the entire
+# reason this file exists.
+#
+# The build steps are a port of the `desktop:windows-x86_64` and `.desktop-macos`
+# jobs in .gitlab-ci.yml, which were written and reviewed but could never run: GitLab
+# Free cannot schedule a saas-macos-* runner at all, and the shared-runner minutes are
+# spent. Keep the two in step if either changes.
+#
+# AppVeyor's free tier for public projects is capped by CONCURRENCY (one job at a
+# time), not by minutes, so jobs queue rather than stop. That is why this builds tags
+# only: a push-triggered build of every commit would keep the single lane busy and
+# make a release wait behind it. Use "New build" in the UI for an off-tag build.
+
+version: '{build}'
+skip_non_tags: true
+clone_depth: 1
+
+image:
+  - Visual Studio 2022
+  # If AppVeyor retires this image name, the current one is in their docs under
+  # "Build worker images"; nothing else here depends on the macOS version.
+  - macos-sonoma
+
+environment:
+  # Fetched by commit, so the desktop binaries embed exactly the engine the Android
+  # and Linux builds pin. ENGINE_PIN is the single declared revision.
+  ENGINE_REPO: https://gitlab.com/zkas-group/zkas-rusty.git
+
+matrix:
+  fast_finish: false
+
+# ---------------------------------------------------------------- Windows
+for:
+  - matrix:
+      only:
+        - image: Visual Studio 2022
+    environment:
+      TARGET_NAME: windows-x86_64
+      RUST_TARGET: x86_64-pc-windows-msvc
+    install:
+      - ps: |
+          $ErrorActionPreference = "Stop"
+          Install-Product node 20
+          Invoke-WebRequest -Uri "https://github.com/protocolbuffers/protobuf/releases/download/v27.3/protoc-27.3-win64.zip" -OutFile protoc.zip
+          Expand-Archive protoc.zip -DestinationPath "$PWD\protoc" -Force
+          $env:PATH = "$PWD\protoc\bin;" + $env:PATH
+          Invoke-WebRequest -Uri "https://win.rustup.rs/x86_64" -OutFile rustup-init.exe
+          .\rustup-init.exe -y --profile minimal --default-toolchain stable --target $env:RUST_TARGET
+          $env:PATH = "$env:USERPROFILE\.cargo\bin;" + $env:PATH
+          # The engine, by pinned commit. A shallow fetch of one revision, not a clone.
+          $pin = (Get-Content ENGINE_PIN -Raw).Trim()
+          if ($pin -notmatch '^[0-9a-f]{40}$') { throw "no valid engine pin in ENGINE_PIN" }
+          $engine = Join-Path (Split-Path $PWD -Parent) "rusty-kaspa"
+          if (Test-Path $engine) { Remove-Item -Recurse -Force $engine }
+          git init -q $engine
+          git -C $engine remote add origin $env:ENGINE_REPO
+          git -C $engine fetch -q --depth 1 origin $pin
+          git -C $engine checkout -q FETCH_HEAD
+    build_script:
+      - ps: |
+          $ErrorActionPreference = "Stop"
+          $env:PATH = "$env:USERPROFILE\.cargo\bin;$PWD\protoc\bin;" + $env:PATH
+          npm ci
+          npx tauri build --target $env:RUST_TARGET --bundles msi,nsis
+          New-Item -ItemType Directory -Force out | Out-Null
+          Get-ChildItem "src-tauri/target/$env:RUST_TARGET/release/bundle" -Recurse -Include *.msi,*.exe |
+            ForEach-Object { Copy-Item $_.FullName "out/ZKas-Wallet-$env:TARGET_NAME$($_.Extension)" }
+          Get-ChildItem out
+
+# ---------------------------------------------------------------- macOS
+  - matrix:
+      only:
+        - image: macos-sonoma
+    environment:
+      ENGINE_DIR: $(APPVEYOR_BUILD_FOLDER)/../rusty-kaspa
+    install:
+      - sh: |
+          set -eu
+          brew install protobuf || true
+          curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+          . "$HOME/.cargo/env"
+          # Both Apple targets come off this one host: Tauri can bundle the Intel
+          # triple from an arm64 machine because the .app/.dmg tooling is the same.
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          PIN="$(tr -d '[:space:]' < ENGINE_PIN)"
+          printf '%s' "$PIN" | grep -qE '^[0-9a-f]{40}$' || { echo "no valid engine pin in ENGINE_PIN" >&2; exit 3; }
+          rm -rf "$ENGINE_DIR"; mkdir -p "$ENGINE_DIR"
+          git -C "$ENGINE_DIR" init -q
+          git -C "$ENGINE_DIR" remote add origin "$ENGINE_REPO"
+          git -C "$ENGINE_DIR" fetch -q --depth 1 origin "$PIN"
+          git -C "$ENGINE_DIR" checkout -q FETCH_HEAD
+    build_script:
+      - sh: |
+          set -eu
+          . "$HOME/.cargo/env"
+          npm ci
+          mkdir -p out
+          # One job builds both architectures: the free tier runs a single job at a
+          # time, so two jobs would serialise anyway and pay the setup cost twice.
+          for pair in "macos-aarch64:aarch64-apple-darwin" "macos-x86_64:x86_64-apple-darwin"; do
+            NAME="${pair%%:*}"; TRIPLE="${pair##*:}"
+            npx tauri build --target "$TRIPLE" --bundles app,dmg
+            BUNDLE="src-tauri/target/$TRIPLE/release/bundle"
+            # Ad-hoc signing, so Gatekeeper allows the "Open Anyway" route. Real
+            # notarization needs an Apple Developer account; the release notes tell
+            # macOS users which warning to expect.
+            ( cd "$BUNDLE/macos" \
+              && codesign --force --deep -s - "ZKas Wallet.app" \
+              && codesign --verify --verbose "ZKas Wallet.app" \
+              && ditto -c -k --keepParent "ZKas Wallet.app" "$APPVEYOR_BUILD_FOLDER/out/ZKas-Wallet-$NAME.zip" )
+            find "$BUNDLE" -type f -name '*.dmg' -print0 |
+              while IFS= read -r -d '' f; do cp "$f" "out/ZKas-Wallet-$NAME.dmg"; done
+          done
+          ls -la out
+
+# ---------------------------------------------------------------- artifacts
+artifacts:
+  - path: out/*
+    name: zkas-wallet-desktop
+
+# Nothing is deployed from here on purpose. The GitLab release is cut by
+# scripts/release.sh, which owns the version, the tag and the notes; a second
+# uploader writing into the same release is how two sources of truth start.
+# Download the artifacts from the build page and attach them, or extend
+# release.sh to pull them by build id.
+deploy: off
