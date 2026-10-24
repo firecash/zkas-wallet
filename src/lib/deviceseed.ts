@@ -4,6 +4,7 @@ import { addressFromSeed, accountAddress, accountSeedHex, type Network } from ".
 import { unlockedDeviceSeed, isLockEnabled, sealNewSeed, allUnlockedSeeds } from "../applock";
 import { masterMnemonic, setAccountOf, clearAccountOf, adoptExistingPhrase } from "../accounts";
 import { listWallets } from "../wallets";
+import { storageIsEphemeral } from "./storage-shim";
 
 /// Cheap shape test for a stored wallet secret: a legacy 64-hex seed, or a
 /// recovery phrase (BIP-39 words are lowercase letters separated by spaces).
@@ -411,7 +412,13 @@ export async function deviceCanSign(address: string): Promise<boolean | null> {
   // The same candidates findOrphanedSeed considers — every secret stored under any token,
   // plus any held unlocked in memory — read without writing any of them back.
   const candidates = new Set(heldSecrets().keys());
-  if (candidates.size === 0) return false;
+  // Nothing found is only an ANSWER if we were allowed to look. When the browser blocks
+  // site storage the shim substitutes an in-memory store, so every read succeeds and
+  // returns nothing — indistinguishable here from a device that genuinely holds no key.
+  // Reporting that as a definite "cannot sign" puts "this device can't spend from this
+  // address" over a wallet whose key is on disk and simply unreachable this session, which
+  // is exactly the wrong-way-round warning the contract above forbids.
+  if (candidates.size === 0) return storageIsEphemeral() ? null : false;
   let undecided = false;
   for (const secret of candidates) {
     const owns = await secretOwnsAddress(secret, address);

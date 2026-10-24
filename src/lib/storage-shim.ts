@@ -18,6 +18,18 @@
 /// be — the browser was never going to persist it.
 ///
 /// Imported for its side effect, FIRST, before any module that reads storage.
+/// True once the in-memory substitute is in place, i.e. storage is EPHEMERAL this session.
+///
+/// Exported because an empty store then means "this browser refused to let us look", not
+/// "this device holds nothing" — and code that treats the second as proven draws a wrong
+/// conclusion from a blocked read. `deviceCanSign` is the case that matters: it reports
+/// whether a key is present, and a false "no key here" is shown to the user as a warning
+/// about funds.
+let ephemeral = false;
+export function storageIsEphemeral(): boolean {
+  return ephemeral;
+}
+
 function install(): void {
   try {
     // Touching both halves: a browser can allow the getter and refuse writes.
@@ -28,6 +40,7 @@ function install(): void {
   } catch {
     /* fall through and substitute */
   }
+  ephemeral = true;
   const mem = new Map<string, string>();
   const shim: Storage = {
     get length() {
