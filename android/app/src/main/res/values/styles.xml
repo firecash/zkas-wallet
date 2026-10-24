@@ -32,7 +32,7 @@
          Theme.SplashScreen (androidx core-splashscreen) is a LAUNCH theme: it is meant to
          be replaced the moment the app draws. The replacement is named by
          `postSplashScreenTheme`, and that item was missing. Without it the Activity keeps
-         this theme for the whole session -- including its default title bar, which renders
+         this theme for the whole session, including its default title bar, which renders
          android:label ("ZKas Wallet") truncated to "ZKas..." beside the app icon, in the
          system's own bar colour rather than ours. That is the strip reported on Android,
          with @drawable/splash still painted behind it because `android:background` is not
