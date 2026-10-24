@@ -170,20 +170,49 @@ prepare:release:
   before_script:
     - |
       set -eu
-      apt-get update
+      # Idempotent, because this runs on a SHARED, long-lived box as well as in a
+      # throwaway container. Three things follow from that:
+      #
+      #  * libappindicator3-dev CONFLICTS with libayatana-appindicator3-1, which the
+      #    build box already has, and apt refuses the whole transaction ("Conflicts:
+      #    libappindicator3-1", exit 100). Tauri v2 wants ayatana regardless, so ask
+      #    for ayatana by name -- correct in a clean image too.
+      #  * Reinstalling nodejs from nodesource on every run would replace the host
+      #    toolchain underneath every other job on that machine.
+      #  * Rust is only downloaded when the job has none; on the box the host
+      #    toolchain is used instead of pulling ~200 MB per build.
+      #
       # protobuf-compiler: the kaspa gRPC crates generate their client at build time.
       # xdg-utils: the opener plugin makes the AppImage bundler look for
       # /usr/bin/xdg-open on the BUILD machine, and a bare image has no such file —
       # v1.0.35-rc7 failed on exactly this on the arm64 runner.
-      apt-get install -y --no-install-recommends \
-        ca-certificates curl git file build-essential pkg-config \
-        protobuf-compiler patchelf xdg-utils \
-        libssl-dev libxdo-dev librsvg2-dev libappindicator3-dev \
-        libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
-      curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-      apt-get install -y --no-install-recommends nodejs
-      curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
-      . "$CARGO_HOME/env"
+      NEED=""
+      for pkg in ca-certificates curl git file build-essential pkg-config \
+                 protobuf-compiler patchelf xdg-utils \
+                 libssl-dev libxdo-dev librsvg2-dev libayatana-appindicator3-dev \
+                 libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev; do
+        dpkg -s "$pkg" >/dev/null 2>&1 || NEED="$NEED $pkg"
+      done
+      if [ -n "$NEED" ]; then
+        echo "installing:$NEED"
+        apt-get update
+        apt-get install -y --no-install-recommends $NEED
+      else
+        echo "build dependencies already present"
+      fi
+      case "$(node -v 2>/dev/null || echo none)" in
+        v20.*) echo "node $(node -v) already present" ;;
+        *) curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+           apt-get install -y --no-install-recommends nodejs ;;
+      esac
+      if [ -x "$CARGO_HOME/bin/cargo" ]; then
+        . "$CARGO_HOME/env"
+      elif [ -x "$HOME/.cargo/bin/cargo" ]; then
+        export PATH="$HOME/.cargo/bin:$PATH"
+      else
+        curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+        . "$CARGO_HOME/env"
+      fi
       rustc -V && node -v
     - |
       set -eu
@@ -208,7 +237,9 @@ prepare:release:
       git -C "$ENGINE_DIR" checkout -q FETCH_HEAD
       test -d "$ENGINE_DIR/zkas-walletd" || { echo "engine checkout is missing zkas-walletd" >&2; exit 3; }
   script:
-    - . "$CARGO_HOME/env"
+    # May not exist: when the box already has a toolchain, before_script put it on
+    # PATH instead of installing a job-local one. Both are already on PATH by here.
+    - if [ -f "$CARGO_HOME/env" ]; then . "$CARGO_HOME/env"; else export PATH="$HOME/.cargo/bin:$PATH"; fi
     - npm ci
     - npx tauri build --target "$RUST_TARGET" --bundles deb,appimage
     - |
