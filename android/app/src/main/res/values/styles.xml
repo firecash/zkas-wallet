@@ -28,19 +28,25 @@
     </style>
 
 
-    <!-- The launch theme, and the ONE item that makes it hand over.
-         Theme.SplashScreen (androidx core-splashscreen) is a LAUNCH theme: it is meant to
-         be replaced the moment the app draws. The replacement is named by
-         `postSplashScreenTheme`, and that item was missing. Without it the Activity keeps
-         this theme for the whole session, including its default title bar, which renders
-         android:label ("ZKas Wallet") truncated to "ZKas..." beside the app icon, in the
-         system's own bar colour rather than ours. That is the strip reported on Android,
-         with @drawable/splash still painted behind it because `android:background` is not
-         the property this theme draws from either.
-         The splash image and colour belong in the windowSplashScreen* items. -->
-    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#050806</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash</item>
-        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+    <!-- The launch theme.
+         It inherits from AppTheme.NoActionBar, and that inheritance IS the fix.
+
+         This used to be parent="Theme.SplashScreen" (androidx core-splashscreen). That
+         theme only stops being the activity's theme when installSplashScreen() runs and
+         swaps in postSplashScreenTheme — and nothing in this app calls it, because
+         BridgeActivity does not. So the activity kept a DeviceDefault-based theme for the
+         whole session, action bar and all, which drew android:label ("ZKas Wallet") in a
+         bar across the top of the wallet in the system's colours. Adding
+         postSplashScreenTheme alone did not help: there was still no call to apply it.
+
+         Inheriting from the real theme needs no library and no call. windowNoTitle and
+         windowActionBar=false are inherited, so there is no bar to draw at any point in
+         the launch, and the splash art is simply the window background until the WebView
+         paints over it. -->
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
     </style>
 </resources>

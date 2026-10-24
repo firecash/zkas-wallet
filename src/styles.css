@@ -306,6 +306,20 @@ a { color: var(--ember-text); }
 .balance .sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
 /* Fiat value of the holdings, under the ZKAS figure (Kaspium-style). Quiet — the
    ZKAS amount is the truth, this is the estimate. */
+/* The note count, demoted from a grid button to a chip under the figure. */
+.balance-notes {
+  margin-top: 8px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.balance-notes:hover { border-color: var(--ember); color: var(--ember-text); }
 .balance-fiat { color: var(--muted); font-size: 15px; font-weight: 600; margin-top: 3px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .fiat-sub { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
 /* The eye: hide every amount (balance, fiat, spendable, history) for shoulder
@@ -777,6 +791,10 @@ a { color: var(--ember-text); }
    pill, at a size that eases down on narrow screens. The horizontal scroll stays as
    the last resort should a bar ever still not fit; the scrollbar is hidden and the
    pills snap, so it still reads as a segmented control rather than a scroll area. */
+/* Empty on a phone: walletTabs() returns no pills there, because History is the
+   pane underneath it and Settings is a route on the bottom bar. An empty flex row
+   still reserves its gap and margin, so it is removed outright. */
+.tabs:empty { display: none; }
 .tabs {
   display: flex;
   gap: 4px;
@@ -901,7 +919,9 @@ select { appearance: none; cursor: pointer; }
   background: var(--ember);
   color: var(--ember-ink);
   border: none;
-  border-radius: 999px;
+  /* Was 999px -- a full pill. See .qa: the wallet reads as an instrument now, and a
+     pill is the one shape that cannot. */
+  border-radius: 12px;
   padding: 13px 18px;
   font-size: 15px;
   font-weight: 600;
@@ -2081,10 +2101,13 @@ select { appearance: none; cursor: pointer; }
   align-items: center;
   justify-content: center;
   gap: 9px;
-  min-height: 56px;                 /* comfortably above the 44px touch minimum */
+  min-height: 50px;                 /* still above the 44px touch minimum */
   min-width: 0;
   padding: 8px 10px;
-  border-radius: 16px;
+  /* Square-ish, not a lozenge. A 16px radius on a 56px-tall button is nearly a
+     pill, which reads as a consumer toy; the instrument look the rest of this
+     palette is going for wants a corner you can see. */
+  border-radius: 11px;
   font-family: inherit;
   /* "Получить" / "Recevoir" beside an icon in half a 360px screen: ease the size
      down a step before letting the word wrap. */
@@ -2761,6 +2784,12 @@ select { appearance: none; cursor: pointer; }
   }
   .app-shell:not(.desktop-shell) .app-nav-bar { width: 100%; gap: 0; }
   .app-shell:not(.desktop-shell) .app-wordmark { display: none; }
+  /* The wallet's own tab row, hidden for the same reason the wordmark is: on a phone
+     it duplicates what is already on screen. Its pills are History -- whose pane is
+     the content directly beneath it -- and a settings gear, while the bottom bar
+     already carries Settings as a full route to the same SettingsPane. That is a
+     whole row of chrome above the balance, for two things the user already has. */
+  .app-shell:not(.desktop-shell) .tabs { display: none; }
   .app-shell:not(.desktop-shell) .app-page-links { width: 100%; justify-content: stretch; gap: 0; overflow: visible; }
   .app-shell:not(.desktop-shell) .app-page-links > button { display: flex; min-width: 0; min-height: 52px; flex: 1 1 0; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 5px 2px; border-radius: 11px; font-size: 10px; white-space: normal; }
   .app-shell:not(.desktop-shell) .app-page-links > button svg { width: 18px; height: 18px; margin: 0; }

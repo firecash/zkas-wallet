@@ -282,6 +282,12 @@ function useRoomy(): boolean {
 // batch entry) and was never offered on Android — gated on the platform, not on
 // the width, so a landscape phone does not grow it.
 function walletTabs(roomy: boolean): Tab[] {
+  // The row still EXISTS on a phone, but CSS hides it there (see `.tabs` in the
+  // mobile block of styles.css, the same way `.app-wordmark` is hidden). On a phone
+  // it is pure duplication: History, whose pane is the thing already filling the
+  // screen underneath it, and a settings gear, when the bottom bar carries Settings
+  // as a full route rendering the same SettingsPane. Keeping the markup keeps the
+  // tab state machine and its keyboard handling in one shape on every platform.
   if (!roomy) return ["history", "settings"];
   return isNative() ? ["history", "signatures", "settings"] : ["history", "signatures", "tools", "settings"];
 }
@@ -636,7 +642,8 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   // A pill that just left the row (rotate to portrait while on Signatures) must not
   // leave the pane showing a section with no tab to name it.
   useEffect(() => {
-    if (tab !== "send" && tab !== "receive" && !tabs.includes(tab)) setTab("history");
+    // An empty row (phone) is not a reason to reset: History IS the pane shown there.
+    if (tabs.length && tab !== "send" && tab !== "receive" && !tabs.includes(tab)) setTab("history");
   }, [tabs, tab]);
   // This device holds a viewing key and no seed. It cannot sign a spend at all —
   // the UI simply must not offer what would fail, and must not imply the balance
@@ -1714,7 +1721,19 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 has stopped moving, which reaches the user as a stale balance and a refused send.
                 Renders nothing on web, in the mobile shell, or when no update is pending. */}
             <NodeUpdateNotice />
-            <BalanceHero status={status} txs={txs} stalled={pollStalled} />
+            <BalanceHero
+              status={status}
+              txs={txs}
+              stalled={pollStalled}
+              // Notes left the action grid, where it was a full-size target for
+              // something most people never touch. It is not GONE: it is a chip on
+              // the hero, next to the figure it actually explains.
+              onManageNotes={
+                viewOnly || !walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready, network: status?.network })
+                  ? undefined
+                  : () => setShowConsolidate(true)
+              }
+            />
           {/* The two things people open a wallet to DO, as the two biggest targets on
               the screen.
               Before this they were tabs — 13px text in a 9px-padded pill, the same
@@ -1749,15 +1768,6 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
               >
                 <ArrowUpRight className="qa-icon" aria-hidden="true" size={19} strokeWidth={2.2} />
                 <span className="qa-label">{t("app.send")}</span>
-              </button>}
-              {!viewOnly && <button
-                className="qa qa-consolidate"
-                onClick={() => setShowConsolidate(true)}
-                disabled={!walletCanSpend({ online: true, synced: status.synced, spendReady: status.spend_ready , network: status?.network })}
-                aria-label={t("app.notesAria")}
-              >
-                <span className="qa-label">{t("app.notes")}</span>
-                <span className="qa-detail">{t("app.notesManage", { n: status.note_count ?? 0 })}</span>
               </button>}
               {/* Chat sits beside Notes rather than in the tab bar: it is a
                   place you go, not a view of your wallet. A viewer gets it too —
@@ -3246,7 +3256,7 @@ function friendlyDaemonError(msg: string): string {
   return i18n.t("daemonError.generic");
 }
 
-function BalanceHero({ status, txs, stalled }: { status: Status; txs: LocalTx[]; stalled?: boolean }) {
+function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; txs: LocalTx[]; stalled?: boolean; onManageNotes?: () => void }) {
   // NB: every hook here runs BEFORE the `restoring` early return below. That
   // return comes and goes with the daemon's scan state, so a hook placed after
   // it would change hook order between renders — React's "rendered fewer hooks
@@ -3476,6 +3486,14 @@ function BalanceHero({ status, txs, stalled }: { status: Status; txs: LocalTx[];
       <div className="balance-fiat" aria-hidden={hide || !fmtFiat(shownBal, price) ? true : undefined}>
         {!hide && fmtFiat(shownBal, price) ? `≈ ${fmtFiat(shownBal, price)}` : "\u00a0"}
       </div>
+      {/* The note count, where it belongs: small, beside the amount it explains, and
+          only when there is something to manage. It used to be a quarter of the action
+          grid -- a full-size target for something most people never touch. */}
+      {onManageNotes && (status.note_count ?? 0) > 0 && (
+        <button className="balance-notes" onClick={onManageNotes} aria-label={t("app.notesAria")}>
+          {t("app.notesManage", { n: status.note_count ?? 0 })}
+        </button>
+      )}
       {/* Fixed height, deliberately. This line's content changes as the wallet
           works — "Ready" one second, "Setting up 44% · about 5 minutes left" the
           next — and with height driven by content the whole card grew and shrank
