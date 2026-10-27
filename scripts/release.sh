@@ -331,7 +331,7 @@ if idx is not None:
         out.insert(0, f"> **Still ahead, announced in {v}:**\n>\n> " + plead.replace("\n", "\n> "))
     if prior:
         # GitLab's blob path is `/-/blob/<ref>/<path>`, not GitHub's `/blob/<ref>/<path>`.
-        out.append("Full history: [CHANGELOG.md](https://gitlab.com/zkas-group/zkas-wallet/-/blob/main/CHANGELOG.md)")
+        out.append("Full history: CHANGELOG.md in the source, https://zkas.info/code/wallet")
     print("\n\n".join(out))
 PYEOF
 )"
