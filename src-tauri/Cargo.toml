@@ -53,6 +53,13 @@ zakura-orchard = { path = "../../rusty-kaspa/patches/zakura-orchard-2.2.0" }
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+[target.'cfg(all(windows, target_env = "msvc"))'.dependencies]
+# Pure-Rust keccak on Windows/MSVC. kaspa-hashes otherwise assembles a MASM file,
+# which needs Microsoft's ml64.exe -- absent when the Windows build is cross-compiled
+# on Linux (scripts/build-windows-142.sh). The wallet does no PoW hashing, so the
+# speed difference is irrelevant here.
+kaspa-hashes = { path = "../../rusty-kaspa/crypto/hashes", features = ["no-asm"] }
+
 [features]
 custom-protocol = ["tauri/custom-protocol"]
 
