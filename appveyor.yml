@@ -1,22 +1,25 @@
 # Desktop binaries for Windows and macOS.
 #
-# These two targets, and only these two. Linux and Android build on the self-hosted
-# GitLab runner, which costs no CI quota anywhere and has 12 cores and 62 GB; what
-# cannot be self-hosted is Apple hardware and a Windows image, which is the entire
-# reason this file exists.
+# These two targets, and only these two. Linux builds on the 142 box with
+# scripts/build-linux-142.sh, Android and web with scripts/release.sh; what cannot be
+# self-hosted is Apple hardware and a Windows image, which is the entire reason this
+# file exists.
+#
+# Source: the project is added in AppVeyor as a generic Git repository,
+# https://zkas.info/code/wallet.git (our Radicle node; GitHub and GitLab both
+# blocked the account in October 2026). A generic repository sends no webhooks, so
+# builds start from "New build" in the UI or from the AppVeyor API.
 #
 # The build steps are a port of the `desktop:windows-x86_64` and `.desktop-macos`
-# jobs in .gitlab-ci.yml, which were written and reviewed but could never run: GitLab
-# Free cannot schedule a saas-macos-* runner at all, and the shared-runner minutes are
-# spent. Keep the two in step if either changes.
+# jobs in .gitlab-ci.yml. Keep them in step if either changes.
 #
 # AppVeyor's free tier for public projects is capped by CONCURRENCY (one job at a
-# time), not by minutes, so jobs queue rather than stop. That is why this builds tags
-# only: a push-triggered build of every commit would keep the single lane busy and
-# make a release wait behind it. Use "New build" in the UI for an off-tag build.
+# time), not by minutes, so the two images queue one after the other.
 
 version: '{build}'
-skip_non_tags: true
+branches:
+  only:
+    - main
 clone_depth: 1
 
 image:
@@ -28,7 +31,7 @@ image:
 environment:
   # Fetched by commit, so the desktop binaries embed exactly the engine the Android
   # and Linux builds pin. ENGINE_PIN is the single declared revision.
-  ENGINE_REPO: https://gitlab.com/zkas-group/zkas-rusty.git
+  ENGINE_REPO: https://zkas.info/code/rusty.git
 
 matrix:
   fast_finish: false
@@ -122,9 +125,7 @@ artifacts:
   - path: out/*
     name: zkas-wallet-desktop
 
-# Nothing is deployed from here on purpose. The GitLab release is cut by
-# scripts/release.sh, which owns the version, the tag and the notes; a second
-# uploader writing into the same release is how two sources of truth start.
-# Download the artifacts from the build page and attach them, or extend
-# release.sh to pull them by build id.
+# Nothing is deployed from here on purpose: the release is assembled from the
+# artifacts of this build, the 142 Linux build and release.sh's Android/web build,
+# so there is one place that owns the version and the published files.
 deploy: off
