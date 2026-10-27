@@ -1,0 +1,71 @@
+# macOS desktop builds (Apple Silicon + Intel) on Codemagic.
+#
+# Codemagic is the one hosted CI we found that adds a repository by plain git URL
+# (Add application -> Other -> https://zkas.info/code/wallet.git, our Radicle node)
+# and gives free macOS minutes (500 M2 minutes a month on a personal account).
+# GitHub and GitLab both blocked the account in October 2026.
+#
+# A repository added by URL sends no webhooks: start a build from the Codemagic UI
+# ("Start new build", workflow "macOS desktop", branch main or a v* tag).
+#
+# Linux, Android and web build on the 142 box (scripts/build-linux-142.sh,
+# scripts/release.sh); Windows is cross-built there too.
+
+workflows:
+  macos-desktop:
+    name: macOS desktop
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      node: 20
+      vars:
+        ENGINE_REPO: https://zkas.info/code/rusty.git
+    scripts:
+      - name: Toolchain
+        script: |
+          set -eu
+          brew list protobuf >/dev/null 2>&1 || brew install protobuf
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+          fi
+          . "$HOME/.cargo/env"
+          # Both Apple targets come off this one arm64 host.
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          rustc -V; node -v; protoc --version
+      - name: Engine at the pinned commit
+        script: |
+          set -eu
+          # src-tauri/Cargo.toml expects the engine as the sibling ../rusty-kaspa.
+          ENGINE_DIR="$CM_BUILD_DIR/../rusty-kaspa"
+          PIN="$(tr -d '[:space:]' < ENGINE_PIN)"
+          printf '%s' "$PIN" | grep -qE '^[0-9a-f]{40}$' || { echo "no valid engine pin in ENGINE_PIN" >&2; exit 3; }
+          rm -rf "$ENGINE_DIR"; mkdir -p "$ENGINE_DIR"
+          git -C "$ENGINE_DIR" init -q
+          git -C "$ENGINE_DIR" remote add origin "$ENGINE_REPO"
+          git -C "$ENGINE_DIR" fetch -q --depth 1 origin "$PIN"
+          git -C "$ENGINE_DIR" checkout -q FETCH_HEAD
+          test -d "$ENGINE_DIR/zkas-walletd" || { echo "engine checkout is missing zkas-walletd" >&2; exit 3; }
+          echo "engine $PIN"
+      - name: Build both architectures
+        script: |
+          set -eu
+          . "$HOME/.cargo/env"
+          npm ci --no-audit --no-fund
+          VER="$(node -p "require('./package.json').version")"
+          mkdir -p out
+          for pair in "macos-aarch64:aarch64-apple-darwin" "macos-x86_64:x86_64-apple-darwin"; do
+            NAME="${pair%%:*}"; TRIPLE="${pair##*:}"
+            npx tauri build --target "$TRIPLE" --bundles app,dmg
+            BUNDLE="src-tauri/target/$TRIPLE/release/bundle"
+            # Ad-hoc signature, so Gatekeeper offers "Open Anyway". Notarization needs
+            # an Apple Developer account.
+            ( cd "$BUNDLE/macos" \
+              && codesign --force --deep -s - "ZKas Wallet.app" \
+              && codesign --verify --verbose "ZKas Wallet.app" \
+              && ditto -c -k --keepParent "ZKas Wallet.app" "$CM_BUILD_DIR/out/ZKas-Wallet-$VER-$NAME.zip" )
+            find "$BUNDLE" -type f -name '*.dmg' -print0 |
+              while IFS= read -r -d '' f; do cp "$f" "out/ZKas-Wallet-$VER-$NAME.dmg"; done
+          done
+          ( cd out && shasum -a 256 * | tee SHA256SUMS-macos )
+    artifacts:
+      - out/*
