@@ -22,7 +22,7 @@ const MAX_LOG_LINES: usize = 2_000;
 const HEALTHY_RUN: Duration = Duration::from_secs(60);
 const MAX_RESTART_DELAY: u64 = 30;
 const MAX_RESTART_ATTEMPTS: u32 = 5;
-pub const ZKAS_RELEASE: &str = "zkas-v1.0.10";
+pub const ZKAS_RELEASE: &str = "zkas-v1.0.12";
 pub const BRIDGE_RELEASE: &str = "v1.0.12";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -1294,32 +1294,33 @@ fn file_sha256(path: &Path) -> Result<String, String> {
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
     Ok(ArchiveSpec {
-        component: "zkas-v1.0.10-linux-x64",
-        url: "https://zkas.info/downloads/node/1.0.10/zkas-zkas-v1.0.10-linux-amd64.zip",
-        // The REBUILT archive's hash, matching the .sha256 published beside it. The old
-        // GitHub asset hashed 09277ff72d...; these are different bytes, not a typo.
-        sha256: "634466079b26d3dbb134a951c76875d34349e8f47a2287f0729fab009d2263f3",
+        component: "zkas-v1.0.12-linux-x64",
+        // zkas-rusty d2c97763 (tag zkas-v1.0.12): the mainnet security-fork rules
+        // (DAA 6,983,500) plus the post-v1.0.11 fixes for remote node kills. v1.0.10 predated
+        // the fork and could not follow mainnet past it.
+        url: "https://zkas.info/downloads/node/1.0.12/zkas-zkas-v1.0.12-linux-amd64.zip",
+        sha256: "720e3c52e5969a7980bc4d6da5107b8f939aaabcc514c24e906b72fdcec3847e",
     })
 }
 
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    // zkas-node publishes only linux-amd64 on GitLab so far. A dead GitHub URL here
-    // failed as a download error; this fails as a plain, true sentence.
+    // The node is published for linux-amd64 only so far (zkas.info/downloads/node). Saying
+    // so plainly beats a dead download URL.
     Err("no verified ZKas node release is published for this platform yet".into())
 }
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    // zkas-node publishes only linux-amd64 on GitLab so far. A dead GitHub URL here
-    // failed as a download error; this fails as a plain, true sentence.
+    // The node is published for linux-amd64 only so far (zkas.info/downloads/node). Saying
+    // so plainly beats a dead download URL.
     Err("no verified ZKas node release is published for this platform yet".into())
 }
 
 #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    // zkas-node publishes only linux-amd64 on GitLab so far. A dead GitHub URL here
-    // failed as a download error; this fails as a plain, true sentence.
+    // The node is published for linux-amd64 only so far (zkas.info/downloads/node). Saying
+    // so plainly beats a dead download URL.
     Err("no verified ZKas node release is published for this platform yet".into())
 }
 
