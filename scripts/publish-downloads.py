@@ -21,11 +21,15 @@ import json
 import os
 import re
 import sys
+import urllib.request
 from datetime import datetime, timezone
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else "/var/www/zkas.info/html/downloads/wallet"
 BASE_URL = "https://zkas.info/downloads/wallet/"
 SOURCE_URL = "https://zkas.info/code/wallet"
+# Signed Radicle release records (rad-artifact), looked up by tag on our seed node.
+RADICLE_API = "https://207-241-172-71.sslip.io/api/v1/repos/zkas-wallet/releases"
+RADICLE_RELEASES = "https://radicle.network/nodes/207-241-172-71.sslip.io/zkas-wallet/releases"
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.]+))?$")
 
 # (filename suffix, platform label), in display order.
@@ -105,7 +109,19 @@ def page(title, body):
     )
 
 
+def radicle_release_ids():
+    """tag name -> Radicle release id; empty if the node cannot be reached."""
+    try:
+        with urllib.request.urlopen(RADICLE_API, timeout=15) as r:
+            data = json.load(r)
+        return {x["tagName"]: x.get("id") or x.get("releaseId") for x in data if x.get("tagName") and (x.get("id") or x.get("releaseId"))}
+    except Exception as e:  # the pages must still publish when the seed is down
+        print(f"note: no Radicle release ids ({e})")
+        return {}
+
+
 def main():
+    rad_ids = radicle_release_ids()
     releases = []
     for v in sorted((d for d in os.listdir(ROOT) if VERSION_RE.match(d) and os.path.isdir(os.path.join(ROOT, d))),
                     key=version_key, reverse=True):
@@ -122,7 +138,10 @@ def main():
             f.writelines(f"{x['sha256']}  {x['name']}\n" for x in files)
         date = datetime.fromtimestamp(max(os.path.getmtime(os.path.join(d, n)) for n in names), timezone.utc)
         pre = bool(VERSION_RE.match(v).group(4))
+        rad_id = rad_ids.get(f"v{v}")
+        rad_url = f"{RADICLE_RELEASES}/{rad_id}" if rad_id else None
         rel = {"version": v, "url": f"{BASE_URL}{v}/", "prerelease": pre, "date": date.strftime("%Y-%m-%d"),
+               "radicle": rad_url,
                "files": [{k: x[k] for k in ("name", "size", "sha256", "url")} for x in files]}
         releases.append(rel)
 
@@ -134,7 +153,9 @@ def main():
         body = (
             f"<h1>ZKas Wallet {html.escape(v)}{tag}</h1>"
             f"<p>Released {rel['date']} · <a href=\"SHA256SUMS\">SHA256SUMS</a> · "
-            f"<a href=\"{SOURCE_URL}\">source code</a> · <a href=\"../\">all releases</a></p>"
+            f"<a href=\"{SOURCE_URL}\">source code</a> · "
+            + (f"<a href=\"{rad_url}\">signed release on Radicle</a> · " if rad_url else "")
+            + "<a href=\"../\">all releases</a></p>"
             f"<div class=wrap><table><tr><th>Platform</th><th>File</th><th>Size</th></tr>{rows}</table></div>"
             + ("<div class=note>macOS: the app is not notarized yet. On first launch macOS refuses it; open "
                "System Settings → Privacy &amp; Security and click <b>Open Anyway</b>.</div>" if mac else "")
@@ -148,7 +169,8 @@ def main():
         f"<tr><td><a href=\"{r['version']}/\">{r['version']}</a>{'<span class=tag>pre-release</span>' if r['prerelease'] else ''}"
         f"</td><td>{r['date']}</td><td>{len(r['files'])} files</td></tr>" for r in releases)
     body = ("<h1>ZKas Wallet downloads</h1>"
-            f"<p>Every release, newest first. Source: <a href=\"{SOURCE_URL}\">zkas.info/code/wallet</a>.</p>"
+            f"<p>Every release, newest first. Source: <a href=\"{SOURCE_URL}\">zkas.info/code/wallet</a> · "
+            f"<a href=\"{RADICLE_RELEASES}\">signed releases on Radicle</a>.</p>"
             f"<div class=wrap><table><tr><th>Version</th><th>Date</th><th>Files</th></tr>{rows}</table></div>")
     with open(os.path.join(ROOT, "index.html"), "w") as f:
         f.write(page("ZKas Wallet downloads", body))
