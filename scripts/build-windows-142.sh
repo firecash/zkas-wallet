@@ -86,7 +86,7 @@ find "$B" -type f -name '*-setup.exe' -newer "$WORK/zkas-wallet/package.json" -p
 EXE="$(find "$CARGO_TARGET_DIR/$RUST_TARGET/release" -maxdepth 1 -name '*.exe' | head -1)"
 DLLS="$(llvm-readobj --coff-imports "$EXE" | sed -n 's/^ *Name: //p' | sort -u)"
 echo "imports of $(basename "$EXE"):"; echo "$DLLS" | sed 's/^/  /'
-BAD="$(echo "$DLLS" | grep -i -v -E '^(kernel32|user32|gdi32|advapi32|shell32|ole32|oleaut32|ws2_32|ntdll|bcrypt|crypt32|secur32|userenv|dwmapi|uxtheme|comctl32|comdlg32|shlwapi|version|winmm|imm32|iphlpapi|setupapi|cfgmgr32|dbghelp|powrprof|propsys|rpcrt4|wininet|winhttp|dnsapi|ncrypt|msimg32|psapi|d3d11|dxgi|dcomp|oleacc|uiautomationcore|windowscodecs|api-ms-win-[a-z0-9-]+|vcruntime140(_1)?|msvcp140|ucrtbase)\.dll$' || true)"
+BAD="$(echo "$DLLS" | grep -i -v -E '^(kernel32|user32|gdi32|advapi32|shell32|ole32|oleaut32|ws2_32|ntdll|bcrypt|bcryptprimitives|pdh|crypt32|secur32|userenv|dwmapi|uxtheme|comctl32|comdlg32|shlwapi|version|winmm|imm32|iphlpapi|setupapi|cfgmgr32|dbghelp|powrprof|propsys|rpcrt4|wininet|winhttp|dnsapi|ncrypt|msimg32|psapi|d3d11|dxgi|dcomp|oleacc|uiautomationcore|windowscodecs|api-ms-win-[a-z0-9-]+|vcruntime140(_1)?|msvcp140|ucrtbase)\.dll$' || true)"
 [ -z "$BAD" ] || { echo "UNEXPECTED DLL imports:"; echo "$BAD"; exit 4; }
 ls "$OUT"/ZKas-Wallet-$TARGET_NAME* >/dev/null 2>&1 || { echo "no bundles were produced" >&2; exit 1; }
 ( cd "$OUT" && sha256sum ZKas-Wallet-$TARGET_NAME* | tee "SHA256SUMS-$TARGET_NAME" )
