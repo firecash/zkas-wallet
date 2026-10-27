@@ -1295,7 +1295,7 @@ fn file_sha256(path: &Path) -> Result<String, String> {
 fn zkas_archive() -> Result<ArchiveSpec, String> {
     Ok(ArchiveSpec {
         component: "zkas-v1.0.10-linux-x64",
-        url: "https://gitlab.com/api/v4/projects/zkas-group%2Fzkas-rusty/packages/generic/zkas-node/1.0.10/zkas-zkas-v1.0.10-linux-amd64.zip",
+        url: "https://zkas.info/downloads/node/1.0.10/zkas-zkas-v1.0.10-linux-amd64.zip",
         // The REBUILT archive's hash, matching the .sha256 published beside it. The old
         // GitHub asset hashed 09277ff72d...; these are different bytes, not a typo.
         sha256: "634466079b26d3dbb134a951c76875d34349e8f47a2287f0729fab009d2263f3",
@@ -1337,22 +1337,22 @@ fn bridge_archive_for(os: &str, arch: &str) -> Result<ArchiveSpec, String> {
     let (component, url, sha256) = match (os, arch) {
         ("linux", "x86_64") => (
             "solo-dual-bridge-v1.0.12-linux-x64",
-            "https://gitlab.com/api/v4/projects/88003637/packages/generic/solo-dual-mode/v1.0.12/solo-dual-mode-linux-x64.zip",
+            "https://zkas.info/downloads/bridge/v1.0.12/solo-dual-mode-linux-x64.zip",
             "2d08bb558641445ef8ae601e59f535d402d3cfa59ddc18e335841697f6d7d641",
         ),
         ("linux", "aarch64") => (
             "solo-dual-bridge-v1.0.12-linux-arm64",
-            "https://gitlab.com/api/v4/projects/88003637/packages/generic/solo-dual-mode/v1.0.12/solo-dual-mode-linux-arm64.zip",
+            "https://zkas.info/downloads/bridge/v1.0.12/solo-dual-mode-linux-arm64.zip",
             "4cd75996bd38fcede4c8c7b7fe7cdf1f3caf2c44a1d5135d05c3b24c74e73e1b",
         ),
         ("macos", "x86_64") => (
             "solo-dual-bridge-v1.0.12-macos-x64",
-            "https://gitlab.com/api/v4/projects/88003637/packages/generic/solo-dual-mode/v1.0.12/solo-dual-mode-macos-x64.zip",
+            "https://zkas.info/downloads/bridge/v1.0.12/solo-dual-mode-macos-x64.zip",
             "4a6e685d0a63a13b90d0a212293ddec3a8ed6d3463ad3254b13b5dd5fa91a17f",
         ),
         ("macos", "aarch64") => (
             "solo-dual-bridge-v1.0.12-macos-arm64",
-            "https://gitlab.com/api/v4/projects/88003637/packages/generic/solo-dual-mode/v1.0.12/solo-dual-mode-macos-arm64.zip",
+            "https://zkas.info/downloads/bridge/v1.0.12/solo-dual-mode-macos-arm64.zip",
             "6b1450ccae7e70dfb326f8f8c60c261279104e4b706ccd4aac00e59abc0bf681",
         ),
         // Windows x64, and Windows on ARM. v1.0.12 ships no arm64 Windows build, and
@@ -1362,7 +1362,7 @@ fn bridge_archive_for(os: &str, arch: &str) -> Result<ArchiveSpec, String> {
         // the feature from those machines entirely.
         ("windows", "x86_64") | ("windows", "aarch64") => (
             "solo-dual-bridge-v1.0.12-windows-x64",
-            "https://gitlab.com/api/v4/projects/88003637/packages/generic/solo-dual-mode/v1.0.12/solo-dual-mode-windows-x64.zip",
+            "https://zkas.info/downloads/bridge/v1.0.12/solo-dual-mode-windows-x64.zip",
             "97691d1f093c4fff5fe8ef88934893a062081bd99335ff7c243523ec0a81a00d",
         ),
         _ => {
@@ -1445,8 +1445,9 @@ mod tests {
     /// it comes over TLS, from a host we publish to (or, for rusty-kaspa, the upstream
     /// project's own), and carries a full sha256 that `install_archive` checks.
     ///
-    /// This used to assert `starts_with("https://github.com/")`, which stopped being
-    /// the rule when the GitHub account was suspended and our assets moved to GitLab.
+    /// Ours are served from zkas.info since GitHub and then GitLab blocked the account
+    /// (October 2026); github.com remains only for the upstream kaspanet/rusty-kaspa
+    /// release.
     /// Matching on the HOST rather than a URL prefix is also what makes the check
     /// meaningful: "https://github.com.evil.example/..." passes a prefix test and fails
     /// this one.
@@ -1457,7 +1458,7 @@ mod tests {
             .unwrap_or_else(|| panic!("not https: {}", spec.url));
         let host = rest.split('/').next().unwrap_or("");
         assert!(
-            host == "gitlab.com" || host == "github.com",
+            host == "zkas.info" || host == "github.com",
             "unexpected download host {host:?} in {}",
             spec.url
         );

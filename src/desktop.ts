@@ -219,15 +219,16 @@ export function readBackupFile(path: string): Promise<string> {
   return invoke<string>("read_backup_file", { path });
 }
 
-/// Where the desktop builds are published (the same repo `scripts/release.sh` tags).
+/// Where the desktop builds are published: our own site. GitHub (2026-10-23) and then
+/// GitLab (2026-10-24) blocked the account, so any forge release API can vanish
+/// overnight. An installed desktop app checks this on every launch, so a dead host here
+/// is not cosmetic — it is every existing user silently never hearing about an update.
 ///
-/// GitLab since 2026-10-23: the GitHub account was suspended, so every
-/// `api.github.com` and `github.com/firecash/...` URL answers 403/404. An installed
-/// desktop app checks this on every launch, so a stale host here is not cosmetic — it is
-/// every existing user silently never hearing about an update again.
-const RELEASES_PROJECT = "zkas-group/zkas-wallet";
-/// The project path, URL-encoded for GitLab's API (`zkas-group%2Fzkas-wallet`).
-const RELEASES_PROJECT_API = encodeURIComponent(RELEASES_PROJECT);
+/// The feed is `{"releases":[{"version","url","prerelease","files"}...]}`, newest first,
+/// written next to each release's folder when it is published.
+const RELEASES_FEED = "https://zkas.info/downloads/wallet/releases.json";
+/// Every release lives in a folder under this; a feed entry pointing anywhere else is ignored.
+const RELEASES_BASE = "https://zkas.info/downloads/wallet/";
 
 export interface DesktopUpdate {
   /// The newer release, e.g. "1.0.36".
@@ -262,21 +263,17 @@ export function isNewerVersion(candidate: string, current: string): boolean {
 let updateCheck: Promise<DesktopUpdate | null> | null = null;
 
 /**
- * A newer desktop release than this build, if GitLab lists one. Desktop only,
- * asked once per launch and remembered; the desktop app has no updater and no
- * other way of learning a version exists. Fetched from the WebView: GitLab's API
- * answers with `Access-Control-Allow-Origin: *` (verified for both the
- * `https://localhost` and `tauri://localhost` origins the shell runs under) and the
- * shell's CSP allows `https:` connects, so no Rust relay is needed and nothing of the
- * wallet's is sent — a bare, anonymous GET. Any failure (offline, rate-limited) is "no
- * update", never an error on screen.
+ * A newer desktop release than this build, if the zkas.info feed lists one. Desktop
+ * only, asked once per launch and remembered; the desktop app has no updater and no
+ * other way of learning a version exists. Fetched from the WebView: the feed is served
+ * with `Access-Control-Allow-Origin: *` and the shell's CSP allows `https:` connects, so
+ * no Rust relay is needed and nothing of the wallet's is sent — a bare, anonymous GET.
+ * Any failure (offline, rate-limited) is "no update", never an error on screen.
  *
- * STABLE RELEASES ONLY, and that has to be done by hand here. GitHub's
- * `/releases/latest` excluded pre-releases for us, so this only ever offered finished
- * builds. GitLab has no such endpoint — `/releases/permalink/latest` returns the newest
- * release of any kind (asked while writing this, it answered `v1.0.52-rc8`), so pointing
- * at the obvious equivalent would start pushing release candidates at everyone. The list
- * is fetched instead and anything with a pre-release suffix is dropped.
+ * STABLE RELEASES ONLY. The feed lists release candidates too (they are published the
+ * same way), and offering those to every user is exactly what the old GitHub
+ * `/releases/latest` endpoint used to prevent for us, so anything with a pre-release
+ * suffix is dropped here.
  */
 export function checkForDesktopUpdate(currentVersion: string): Promise<DesktopUpdate | null> {
   if (!isDesktop()) return Promise.resolve(null);
@@ -292,28 +289,26 @@ export function checkForDesktopUpdate(currentVersion: string): Promise<DesktopUp
       try {
         const ctl = new AbortController();
         const timer = setTimeout(() => ctl.abort(), 8_000);
-        const res = await fetch(
-          `https://gitlab.com/api/v4/projects/${RELEASES_PROJECT_API}/releases?per_page=20`,
-          { headers: { Accept: "application/json" }, signal: ctl.signal },
-        ).finally(() => clearTimeout(timer));
+        const res = await fetch(RELEASES_FEED, {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+          signal: ctl.signal,
+        }).finally(() => clearTimeout(timer));
         if (!res.ok) return null;
-        const data = (await res.json()) as unknown;
-        if (!Array.isArray(data)) return null;
+        const data = (await res.json()) as { releases?: unknown };
+        if (!Array.isArray(data?.releases)) return null;
         let best: DesktopUpdate | null = null;
-        for (const entry of data) {
-          const rel = entry as { tag_name?: unknown; _links?: { self?: unknown } };
-          const tag = typeof rel.tag_name === "string" ? rel.tag_name : "";
-          // Stable only: `v1.2.3`, never `v1.2.3-rc4`. See the note above.
-          if (!/^v?\d+\.\d+\.\d+$/.test(tag.trim())) continue;
-          const version = tag.trim().replace(/^v/, "");
+        for (const entry of data.releases) {
+          const rel = entry as { version?: unknown; url?: unknown };
+          const version = typeof rel.version === "string" ? rel.version.trim().replace(/^v/, "") : "";
+          // Stable only: `1.2.3`, never `1.2.3-rc4`. The feed lists pre-releases too,
+          // and they must not be pushed at everyone.
+          if (!/^\d+\.\d+\.\d+$/.test(version)) continue;
           if (!isNewerVersion(version, currentVersion)) continue;
           // Newest wins if the list is not ordered the way we assume.
           if (best && !isNewerVersion(version, best.version)) continue;
-          const self = rel._links?.self;
           const url =
-            typeof self === "string" && self.startsWith(`https://gitlab.com/${RELEASES_PROJECT}/`)
-              ? self
-              : `https://gitlab.com/${RELEASES_PROJECT}/-/releases`;
+            typeof rel.url === "string" && rel.url.startsWith(RELEASES_BASE) ? rel.url : RELEASES_BASE;
           best = { version, url };
         }
         return best;

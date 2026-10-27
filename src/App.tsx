@@ -2019,7 +2019,7 @@ function HostedNotice() {
             exactly the kind of assurance somebody relies on and later regrets. */}
         <Trans
           i18nKey="hostedNotice.browserWallet"
-          components={{ b: <b />, a: <a href="https://gitlab.com/zkas-group/zkas-wallet/-/releases" target="_blank" rel="noreferrer" /> }}
+          components={{ b: <b />, a: <a href="https://zkas.info/downloads/wallet/" target="_blank" rel="noreferrer" /> }}
         />
       </div>
     </div>
@@ -5635,7 +5635,7 @@ function AboutCard() {
       <p className="muted small" style={{ marginTop: 0 }}>
         {t("aboutCard.blurb")}
       </p>
-      <a href="https://gitlab.com/zkas-group/zkas-wallet" target="_blank" rel="noreferrer">
+      <a href="https://zkas.info/code/wallet" target="_blank" rel="noreferrer">
         {t("aboutCard.sourceCode")}
       </a>
       {" · "}
