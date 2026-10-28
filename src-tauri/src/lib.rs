@@ -2029,6 +2029,88 @@ fn zkas_node_update_available(settings: &Settings, node_exists: bool) -> bool {
     node_exists && settings.node_release.as_deref() != Some(services::ZKAS_RELEASE)
 }
 
+/// The first ZKas node release that follows mainnet past the 2026-10 security fork (DAA
+/// 6,983,500, 15 October 2026). An older node stops at the fork: it rejects every later block,
+/// builds templates on a chain the network has left, and answers every merged block the bridge
+/// submits with "block has invalid proof-of-work".
+const FIRST_POST_FORK_NODE_RELEASE: (u32, u32, u32) = (1, 0, 11);
+
+/// Mainnet DAA score of that fork. A node that cannot follow mainnet past it never gets its
+/// virtual DAA above it, whatever version it reports (every release before zkas-v1.0.13
+/// reports `2.0.1`), so this also tells a remote node in `custom` mode apart.
+const MAINNET_SECURITY_FORK_DAA: u64 = 6_983_500;
+
+/// The first solo-dual-mode bridge release that builds the post-fork merged-mining proof
+/// (ZKM1). v1.0.11 and older build the pre-fork form, which every post-fork node rejects as
+/// invalid proof-of-work while the bridge looks like it is working.
+const FIRST_POST_FORK_BRIDGE_RELEASE: (u32, u32, u32) = (1, 0, 12);
+
+/// `zkas-v1.0.12` -> `(1, 0, 12)`. `None` for anything else.
+fn node_release_number(release: &str) -> Option<(u32, u32, u32)> {
+    let mut parts = release.strip_prefix("zkas-v")?.split('.');
+    let mut next = || parts.next().and_then(|v| v.parse::<u32>().ok());
+    let number = (next()?, next()?, next()?);
+    parts.next().is_none().then_some(number)
+}
+
+/// Refuse to mine through a managed local node that cannot follow mainnet. Settings written
+/// before the app recorded the installed release carry no marker; those installs are exactly
+/// the pre-fork v1.0.10 ones, so no marker counts as too old. The Mine page installs the pinned
+/// node before it starts mining, but resuming on launch does not go through it, and on a
+/// platform with no published node there is nothing to update to: both must fail here, with a
+/// reason, instead of mining blocks the network rejects.
+/// `v1.0.12` (a bridge release) -> `(1, 0, 12)`. `None` for anything else.
+fn bridge_release_number(release: &str) -> Option<(u32, u32, u32)> {
+    node_release_number(&format!("zkas-{release}"))
+}
+
+/// Refuse to merge-mine with a bridge older than the fork's proof format. Settings from before
+/// the app recorded the bridge release carry no marker: treated as too old, like the node.
+fn require_post_fork_bridge(settings: &Settings) -> Result<(), String> {
+    match settings.bridge_release.as_deref().and_then(bridge_release_number) {
+        Some(release) if release >= FIRST_POST_FORK_BRIDGE_RELEASE => Ok(()),
+        _ => Err(format!(
+            "the Stratum bridge installed on this computer ({}) builds the merged-mining proof the network stopped accepting on 15 October 2026: every block would be rejected (\"invalid proof-of-work\"). Install the bridge update ({}) before dual mining",
+            settings.bridge_release.as_deref().unwrap_or("an older release"),
+            services::BRIDGE_RELEASE
+        )),
+    }
+}
+
+/// Refuse a mining node that is not past the security fork: still syncing, or a release older
+/// than zkas-v1.0.11 that cannot follow mainnet. Blocks mined through either are rejected.
+/// `block_in_place`: start commands can reach here from a worker of Tauri's runtime (see
+/// `stop_walletd`); outside a runtime it just runs the closure.
+fn require_node_past_fork(cache: &NodeClientCache, rpc: &str) -> Result<(), String> {
+    let probe = tokio::task::block_in_place(|| {
+        tauri::async_runtime::block_on(query_node_rpc_with_deadline(cache, rpc, std::time::Duration::from_secs(6)))
+    });
+    match probe {
+        Ok((_, _, daa, ..)) => node_past_fork(rpc, daa),
+        Err(error) => Err(format!("cannot read the ZKas node's chain state at {rpc}: {error}")),
+    }
+}
+
+fn node_past_fork(rpc: &str, virtual_daa: u64) -> Result<(), String> {
+    if virtual_daa >= MAINNET_SECURITY_FORK_DAA {
+        return Ok(());
+    }
+    Err(format!(
+        "the ZKas node at {rpc} is at DAA {virtual_daa}, before the 15 October 2026 network upgrade (DAA 6,983,500): it is still syncing, or it runs a release older than zkas-v1.0.11 that cannot follow the network. Blocks mined through it are rejected; wait for it to sync, or upgrade it"
+    ))
+}
+
+fn require_post_fork_local_node(settings: &Settings) -> Result<(), String> {
+    match settings.node_release.as_deref().and_then(node_release_number) {
+        Some(release) if release >= FIRST_POST_FORK_NODE_RELEASE => Ok(()),
+        _ => Err(format!(
+            "the ZKas node installed on this computer ({}) predates the 15 October 2026 network upgrade: it cannot follow the network, and every block mined through it is rejected (\"invalid proof-of-work\"). Install the ZKas node update ({}) before mining",
+            settings.node_release.as_deref().unwrap_or("an older release"),
+            services::ZKAS_RELEASE
+        )),
+    }
+}
+
 fn bridge_update_available(settings: &Settings, bridge_exists: bool) -> bool {
     bridge_exists
         && services::bridge_supported()
@@ -3127,6 +3209,14 @@ fn start_bridge(
     payout: &str,
     dual: bool,
 ) -> Result<u32, String> {
+    if e.settings.mining_node_mode == "local" {
+        require_post_fork_local_node(&e.settings)?;
+    }
+    if dual {
+        require_post_fork_bridge(&e.settings)?;
+    }
+    let rpc = e.mining_zkas_rpc()?;
+    require_node_past_fork(&e.node_clients, &rpc)?;
     let binary = e
         .settings
         .bridge_binary
@@ -3332,6 +3422,10 @@ fn start_cpu_miner(
     let mut e = engine(&state);
     let rpc = e.mining_zkas_rpc()?;
     probe_node(&rpc)?;
+    if e.settings.mining_node_mode == "local" {
+        require_post_fork_local_node(&e.settings)?;
+    }
+    require_node_past_fork(&e.node_clients, &rpc)?;
     let binary = e
         .settings
         .miner_binary
@@ -4589,6 +4683,46 @@ mod control_tests {
         settings.node_release = Some(services::ZKAS_RELEASE.into());
         assert!(!zkas_node_update_available(&settings, true));
         assert!(!zkas_node_update_available(&settings, false));
+    }
+
+    #[test]
+    fn mining_needs_a_post_fork_local_node() {
+        assert_eq!(node_release_number("zkas-v1.0.12"), Some((1, 0, 12)));
+        assert_eq!(node_release_number("zkas-v1.0"), None);
+        assert_eq!(node_release_number("zkas-v1.0.12.1"), None);
+        assert_eq!(node_release_number("v1.0.12"), None);
+        let mut settings = Settings {
+            node_binary: Some("/existing/zkas-node".into()),
+            ..Settings::default()
+        };
+        // No marker: written before the app recorded releases, i.e. a v1.0.10 install.
+        assert!(require_post_fork_local_node(&settings).is_err());
+        settings.node_release = Some("zkas-v1.0.10".into());
+        let refusal = require_post_fork_local_node(&settings).unwrap_err();
+        assert!(refusal.contains("zkas-v1.0.10") && refusal.contains(services::ZKAS_RELEASE));
+        settings.node_release = Some("zkas-v1.0.11".into());
+        assert!(require_post_fork_local_node(&settings).is_ok());
+        settings.node_release = Some(services::ZKAS_RELEASE.into());
+        assert!(require_post_fork_local_node(&settings).is_ok(), "the pinned release must pass");
+    }
+
+    #[test]
+    fn dual_mining_needs_a_post_fork_bridge() {
+        assert_eq!(bridge_release_number("v1.0.12"), Some((1, 0, 12)));
+        let mut settings = Settings::default();
+        assert!(require_post_fork_bridge(&settings).is_err(), "no marker: an older install");
+        settings.bridge_release = Some("v1.0.11".into());
+        assert!(require_post_fork_bridge(&settings).unwrap_err().contains("v1.0.11"));
+        settings.bridge_release = Some(services::BRIDGE_RELEASE.into());
+        assert!(require_post_fork_bridge(&settings).is_ok(), "the pinned bridge must pass");
+    }
+
+    #[test]
+    fn mining_needs_a_node_past_the_fork() {
+        assert!(node_past_fork("n", MAINNET_SECURITY_FORK_DAA).is_ok());
+        assert!(node_past_fork("n", 8_045_187).is_ok());
+        let refusal = node_past_fork("127.0.0.1:16810", 6_983_499).unwrap_err();
+        assert!(refusal.contains("6983499") && refusal.contains("zkas-v1.0.11"));
     }
 
     #[test]

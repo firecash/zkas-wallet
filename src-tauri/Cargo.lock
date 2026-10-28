@@ -9130,6 +9130,7 @@ dependencies = [
  "kaspa-consensus-core",
  "kaspa-core",
  "kaspa-grpc-client",
+ "kaspa-hashes",
  "kaspa-rpc-core",
  "libc",
  "local-ip-address",
