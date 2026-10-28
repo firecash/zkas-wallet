@@ -27,9 +27,10 @@ from datetime import datetime, timezone
 ROOT = sys.argv[1] if len(sys.argv) > 1 else "/var/www/zkas.info/html/downloads/wallet"
 BASE_URL = "https://zkas.info/downloads/wallet/"
 SOURCE_URL = "https://zkas.info/code/wallet"
-# Signed Radicle release records (rad-artifact), looked up by tag on our seed node.
-RADICLE_API = "https://207-241-172-71.sslip.io/api/v1/repos/zkas-wallet/releases"
-RADICLE_RELEASES = "https://radicle.network/nodes/207-241-172-71.sslip.io/zkas-wallet/releases"
+# Signed Radicle release records (rad-artifact), looked up by tag. Only zkas.info names here:
+# nginx on VPS1 maps /code/... to wherever the seed lives, so a move changes nginx only.
+RADICLE_API = "https://zkas.info/code/api/repos/zkas-wallet/releases"
+RADICLE_RELEASES = "https://zkas.info/code/wallet/releases"
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.]+))?$")
 
 # (filename suffix, platform label), in display order.
