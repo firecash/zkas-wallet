@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { embeddedNode, PUBLIC_EMBEDDED_NODES, DEFAULT_EMBEDDED_NODE } from "../src/embedded";
+import { embeddedNode, embeddedPrimaryNode, embeddedBackupNode, setEmbeddedNode, setEmbeddedBackupNode, normalizeNodeAddr, PUBLIC_EMBEDDED_NODES, DEFAULT_EMBEDDED_NODE } from "../src/embedded";
 
 const NODE_KEY = "wallet_embedded_node";
 const BACKUP_KEY = "wallet_embedded_node_backup";
@@ -35,5 +35,42 @@ describe("the embedded node default", () => {
     const backup = localStorage.getItem(BACKUP_KEY);
     expect(backup).toBeTruthy();
     expect(backup).not.toBe(localStorage.getItem(NODE_KEY));
+  });
+});
+
+// A node address without a port made the engine dial port 80 (the web server), which
+// fails every call with an HTTP/2 FRAME_SIZE_ERROR shown as "cannot reach the ZKas node".
+describe("node addresses always carry the gRPC port", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("adds the port to a bare host, IPv4 and IPv6", () => {
+    expect(normalizeNodeAddr("seed.zkas.info")).toBe("seed.zkas.info:16110");
+    expect(normalizeNodeAddr(" 160.187.211.153 ")).toBe("160.187.211.153:16110");
+    expect(normalizeNodeAddr("2001:db8::1")).toBe("[2001:db8::1]:16110");
+    expect(normalizeNodeAddr("[2001:db8::1]")).toBe("[2001:db8::1]:16110");
+  });
+
+  it("keeps an explicit port exactly", () => {
+    expect(normalizeNodeAddr("my-node.example:17110")).toBe("my-node.example:17110");
+    expect(normalizeNodeAddr("[2001:db8::1]:17110")).toBe("[2001:db8::1]:17110");
+  });
+
+  it("drops a pasted scheme and trailing slash", () => {
+    expect(normalizeNodeAddr("grpc://seed.zkas.info/")).toBe("seed.zkas.info:16110");
+    expect(normalizeNodeAddr("https://seed.zkas.info")).toBe("seed.zkas.info:16110");
+  });
+
+  it("repairs an install that already saved the host without a port", () => {
+    localStorage.setItem("wallet_embedded_nodes_seeded_v3", "1");
+    localStorage.setItem(NODE_KEY, "seed.zkas.info");
+    expect(embeddedNode()).toBe("seed.zkas.info:16110");
+    expect(embeddedPrimaryNode()).toBe("seed.zkas.info:16110");
+  });
+
+  it("stores what the user types with the port", () => {
+    setEmbeddedNode("seed.zkas.info");
+    setEmbeddedBackupNode("160.187.211.153");
+    expect(localStorage.getItem(NODE_KEY)).toBe("seed.zkas.info:16110");
+    expect(embeddedBackupNode()).toBe("160.187.211.153:16110");
   });
 });

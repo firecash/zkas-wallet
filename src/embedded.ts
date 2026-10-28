@@ -45,6 +45,26 @@ const Native = registerPlugin<EmbeddedEnginePlugin>("EmbeddedEngine");
 const CHOICE_KEY = "wallet_service_embedded";
 const NODE_KEY = "wallet_embedded_node";
 
+/** The node's gRPC port. The engine dials `grpc://<address>`, so an address without a
+ * port means port 80 — the web server on the same host, which answers HTTP/1 and fails
+ * every call with an HTTP/2 FRAME_SIZE_ERROR the app reports as "cannot reach the ZKas
+ * node". `seed.zkas.info` typed (or saved) without its port did exactly that. */
+export const ZKAS_RPC_PORT = 16110;
+
+/** An address the engine can dial: `host:port`, `[v6]:port` or an IPv4 with a port.
+ * A bare host or a bare IPv6 gets the node's gRPC port; a scheme or a trailing slash
+ * that people paste from a browser is dropped. Anything already carrying a port is
+ * left exactly as written. */
+export function normalizeNodeAddr(v: string): string {
+  let a = (v || "").trim().replace(/^grpc:\/\//i, "").replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  if (!a) return "";
+  if (a.startsWith("[")) return /\]:\d+$/.test(a) ? a : `${a}:${ZKAS_RPC_PORT}`;
+  const colons = (a.match(/:/g) || []).length;
+  if (colons > 1) return `[${a}]:${ZKAS_RPC_PORT}`; // bare IPv6
+  if (colons === 1) return /:\d+$/.test(a) ? a : `${a.split(":")[0]}:${ZKAS_RPC_PORT}`;
+  return `${a}:${ZKAS_RPC_PORT}`;
+}
+
 /** The public ZKas nodes the on-device engine can sync from, unless the user picks
  * their own. gRPC host:port.
  *
@@ -116,8 +136,8 @@ export function embeddedNode(): string {
   try {
     seedNodes();
     const backup = (localStorage.getItem(BACKUP_KEY) || "").trim();
-    if (localStorage.getItem(ACTIVE_BACKUP_KEY) === "1" && backup) return backup;
-    return (localStorage.getItem(NODE_KEY) || "").trim() || DEFAULT_EMBEDDED_NODE;
+    if (localStorage.getItem(ACTIVE_BACKUP_KEY) === "1" && backup) return normalizeNodeAddr(backup);
+    return normalizeNodeAddr(localStorage.getItem(NODE_KEY) || "") || DEFAULT_EMBEDDED_NODE;
   } catch {
     return DEFAULT_EMBEDDED_NODE;
   }
@@ -127,7 +147,7 @@ export function embeddedNode(): string {
 export function embeddedPrimaryNode(): string {
   try {
     seedNodes();
-    return (localStorage.getItem(NODE_KEY) || "").trim() || DEFAULT_EMBEDDED_NODE;
+    return normalizeNodeAddr(localStorage.getItem(NODE_KEY) || "") || DEFAULT_EMBEDDED_NODE;
   } catch {
     return DEFAULT_EMBEDDED_NODE;
   }
@@ -138,7 +158,7 @@ export function embeddedPrimaryNode(): string {
 export function embeddedBackupNode(): string {
   try {
     seedNodes();
-    return (localStorage.getItem(BACKUP_KEY) || "").trim();
+    return normalizeNodeAddr(localStorage.getItem(BACKUP_KEY) || "");
   } catch {
     return "";
   }
@@ -146,7 +166,7 @@ export function embeddedBackupNode(): string {
 
 export function setEmbeddedNode(v: string): void {
   try {
-    const a = (v || "").trim();
+    const a = normalizeNodeAddr(v);
     if (a) localStorage.setItem(NODE_KEY, a);
     else localStorage.removeItem(NODE_KEY);
     // Editing the primary means going back to it; otherwise a wallet left on the backup
@@ -159,7 +179,7 @@ export function setEmbeddedNode(v: string): void {
 
 export function setEmbeddedBackupNode(v: string): void {
   try {
-    const a = (v || "").trim();
+    const a = normalizeNodeAddr(v);
     if (a) localStorage.setItem(BACKUP_KEY, a);
     else {
       localStorage.removeItem(BACKUP_KEY);
@@ -302,7 +322,7 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = tru
   // Collapsing the two (persisting on every start) would pin the assignment the first
   // time the engine ran and quietly disable the thing that leaves a dead node behind.
   const explicit = !!(nodeAddr && nodeAddr.trim());
-  const node = explicit ? nodeAddr!.trim() : embeddedNode();
+  const node = explicit ? normalizeNodeAddr(nodeAddr!) : embeddedNode();
   const useTor = tor ?? embeddedTor();
   // Did the user change the node or the Tor toggle? start() is idempotent and would
   // otherwise keep the OLD transport, leaving e.g. a Tor-off switch stuck on a dead
