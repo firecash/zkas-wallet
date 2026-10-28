@@ -131,6 +131,28 @@ function seedNodes(): void {
   }
 }
 
+/** Rewrite stored node addresses that lack a port, once. Returns true when it changed
+ * one: an engine already running was started with the broken address (it dials port 80)
+ * and keeps running across app restarts, so the caller must restart it — comparing the
+ * repaired address with itself would otherwise report "nothing changed". */
+export function repairStoredNodeAddrs(): boolean {
+  let changed = false;
+  try {
+    for (const key of [NODE_KEY, BACKUP_KEY]) {
+      const raw = localStorage.getItem(key);
+      if (raw == null) continue;
+      const fixed = normalizeNodeAddr(raw);
+      if (fixed && fixed !== raw) {
+        localStorage.setItem(key, fixed);
+        changed = true;
+      }
+    }
+  } catch {
+    /* storage is a convenience here, never a requirement */
+  }
+  return changed;
+}
+
 /** The node to sync from: the primary, or the backup while failover has switched to it. */
 export function embeddedNode(): string {
   try {
@@ -336,8 +358,9 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = tru
   // caller told it succeeded, the row still showing the old address. The
   // persisted pair is the right baseline precisely because it is only written
   // once a start has actually bound a port.
+  const repaired = repairStoredNodeAddrs();
   const baseline = startedWith ?? { node: embeddedNode(), tor: embeddedTor() };
-  const changed = node !== baseline.node || useTor !== baseline.tor;
+  const changed = repaired || node !== baseline.node || useTor !== baseline.tor;
   const already = await Native.status().catch(() => ({ port: 0, running: false }));
   if (already.running && already.port > 0 && !changed) return `http://127.0.0.1:${already.port}`;
   if (already.running && changed) {

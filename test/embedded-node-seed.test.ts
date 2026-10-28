@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { embeddedNode, embeddedPrimaryNode, embeddedBackupNode, setEmbeddedNode, setEmbeddedBackupNode, normalizeNodeAddr, PUBLIC_EMBEDDED_NODES, DEFAULT_EMBEDDED_NODE } from "../src/embedded";
+import { embeddedNode, embeddedPrimaryNode, embeddedBackupNode, setEmbeddedNode, setEmbeddedBackupNode, normalizeNodeAddr, repairStoredNodeAddrs, PUBLIC_EMBEDDED_NODES, DEFAULT_EMBEDDED_NODE } from "../src/embedded";
 
 const NODE_KEY = "wallet_embedded_node";
 const BACKUP_KEY = "wallet_embedded_node_backup";
@@ -72,5 +72,27 @@ describe("node addresses always carry the gRPC port", () => {
     setEmbeddedBackupNode("160.187.211.153");
     expect(localStorage.getItem(NODE_KEY)).toBe("seed.zkas.info:16110");
     expect(embeddedBackupNode()).toBe("160.187.211.153:16110");
+  });
+});
+
+// An engine started with a portless address keeps running across app restarts, so the stored
+// value must be rewritten ONCE and reported, letting ensureEmbedded restart the engine.
+describe("repairStoredNodeAddrs", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("rewrites portless primary and backup once and reports it", () => {
+    localStorage.setItem(NODE_KEY, "seed.zkas.info");
+    localStorage.setItem(BACKUP_KEY, "160.187.211.153");
+    expect(repairStoredNodeAddrs()).toBe(true);
+    expect(localStorage.getItem(NODE_KEY)).toBe("seed.zkas.info:16110");
+    expect(localStorage.getItem(BACKUP_KEY)).toBe("160.187.211.153:16110");
+    expect(repairStoredNodeAddrs()).toBe(false);
+  });
+
+  it("leaves correct and empty values alone", () => {
+    localStorage.setItem(NODE_KEY, "my-node.example:17110");
+    expect(repairStoredNodeAddrs()).toBe(false);
+    expect(localStorage.getItem(NODE_KEY)).toBe("my-node.example:17110");
+    expect(localStorage.getItem(BACKUP_KEY)).toBeNull();
   });
 });
