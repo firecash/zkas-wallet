@@ -3910,6 +3910,7 @@ dependencies = [
  "risc0-circuit-recursion",
  "risc0-core",
  "risc0-zkp",
+ "risc0-zkvm-platform",
  "secp256k1",
  "serde",
  "serde-wasm-bindgen",
@@ -6489,6 +6490,7 @@ dependencies = [
  "libc",
  "memchr",
  "ntapi",
+ "rayon",
  "windows 0.57.0",
 ]
 
@@ -9226,6 +9228,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "sysinfo",
  "tokio",
  "tower-http 0.5.2",
  "zakura-pasta-curves",

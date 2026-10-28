@@ -22,7 +22,7 @@ const MAX_LOG_LINES: usize = 2_000;
 const HEALTHY_RUN: Duration = Duration::from_secs(60);
 const MAX_RESTART_DELAY: u64 = 30;
 const MAX_RESTART_ATTEMPTS: u32 = 5;
-pub const ZKAS_RELEASE: &str = "zkas-v1.0.12";
+pub const ZKAS_RELEASE: &str = "zkas-v1.0.13";
 pub const BRIDGE_RELEASE: &str = "v1.0.12";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -1264,64 +1264,66 @@ fn file_sha256(path: &Path) -> Result<String, String> {
     Ok(hex::encode(hash.finalize()))
 }
 
-// Hosted on GitLab since the `firecash` GitHub account was suspended on 2026-10-23.
+// Node and bridge archives are served from zkas.info/downloads (GitHub suspended the account on
+// 2026-10-23, GitLab blocked it on 2026-10-24). Every hash below was taken from the bytes the site
+// serves and is verified after download (see `install_archive`), so a wrong one fails the install
+// closed rather than running an unverified binary.
 //
-// Every `github.com/firecash/...` URL here answered 404, which broke "install the node"
-// and "install the merged-mining bridge" for every desktop user on every platform. The
-// assets are now published as GitLab generic packages and these point at them.
-//
-// Two things changed with the move, and both matter:
-//
-//  * The BRIDGE is v1.0.12, not v1.0.11. v1.0.11 predates the ZKM1 fork: it submits work
-//    the node rejects as invalid PoW, so it finds no ZKAS blocks and pays nobody. Shipping
-//    v1.0.11 is worse than shipping no bridge, because it looks like it is working.
-//  * The NODE archive was REBUILT rather than re-uploaded byte for byte, so its hash is
-//    not the one the GitHub asset had. The sha256 below is the rebuilt archive's, checked
-//    against the `.sha256` the same release publishes beside it.
-//
-// Every hash below was taken from the bytes GitLab actually serves, by downloading them.
-// They are verified after download (see `install_archive`), so a wrong one fails the
-// install closed rather than running an unverified binary.
-//
-// Platforms NOT covered, deliberately rather than by oversight:
-//  * zkas-node publishes only linux-amd64 on GitLab today. Windows and macOS return a
-//    plain "not published" error instead of a dead URL, so the UI can say so.
-//  * solo-dual-mode v1.0.12 publishes no windows-arm64 build. Windows on ARM runs x64
-//    binaries under emulation, so that target is served the x64 archive on purpose.
+//  * The NODE is zkas-v1.0.13 on Linux x86_64, Windows x86_64 and macOS (arm64 and x86_64); each
+//    archive holds bin/<binaries>. Older releases had no Windows or macOS node at all.
+//  * The BRIDGE is v1.0.12, not v1.0.11. v1.0.11 predates the ZKM1 fork: it submits work the node
+//    rejects as invalid PoW, so it finds no ZKAS blocks and pays nobody.
+//  * solo-dual-mode v1.0.12 publishes no windows-arm64 build. Windows on ARM runs x64 binaries
+//    under emulation, so that target is served the x64 archive on purpose.
 //
 // The kaspanet/rusty-kaspa URLs further down are a third party's and still live.
 
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
+    // zkas-rusty tag zkas-v1.0.13 (7d892c81): the mainnet security-fork rules (DAA 6,983,500),
+    // the post-v1.0.11 node-kill fixes and the v1.0.13 walletd/p2p fixes. v1.0.10 predated the
+    // fork and could not follow mainnet past it.
     Ok(ArchiveSpec {
-        component: "zkas-v1.0.12-linux-x64",
-        // zkas-rusty d2c97763 (tag zkas-v1.0.12): the mainnet security-fork rules
-        // (DAA 6,983,500) plus the post-v1.0.11 fixes for remote node kills. v1.0.10 predated
-        // the fork and could not follow mainnet past it.
-        url: "https://zkas.info/downloads/node/1.0.12/zkas-zkas-v1.0.12-linux-amd64.zip",
-        sha256: "720e3c52e5969a7980bc4d6da5107b8f939aaabcc514c24e906b72fdcec3847e",
+        component: "zkas-v1.0.13-linux-x64",
+        url: "https://zkas.info/downloads/node/1.0.13/zkas-zkas-v1.0.13-linux-amd64.zip",
+        sha256: "8e84dcdfc5be395fbd1c88ba877cbff63de5f9a23d4629116f45732888e24247",
     })
 }
 
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    // The node is published for linux-amd64 only so far (zkas.info/downloads/node). Saying
-    // so plainly beats a dead download URL.
-    Err("no verified ZKas node release is published for this platform yet".into())
+    // zkas-rusty tag zkas-v1.0.13 (7d892c81): the mainnet security-fork rules (DAA 6,983,500),
+    // the post-v1.0.11 node-kill fixes and the v1.0.13 walletd/p2p fixes. v1.0.10 predated the
+    // fork and could not follow mainnet past it.
+    Ok(ArchiveSpec {
+        component: "zkas-v1.0.13-windows-x64",
+        url: "https://zkas.info/downloads/node/1.0.13/zkas-zkas-v1.0.13-win64.zip",
+        sha256: "bb4dea9613d90e0ed2d44d2c28b852c6373c2d6ac80ef51d47b6c1ac17f63948",
+    })
 }
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    // The node is published for linux-amd64 only so far (zkas.info/downloads/node). Saying
-    // so plainly beats a dead download URL.
-    Err("no verified ZKas node release is published for this platform yet".into())
+    // zkas-rusty tag zkas-v1.0.13 (7d892c81): the mainnet security-fork rules (DAA 6,983,500),
+    // the post-v1.0.11 node-kill fixes and the v1.0.13 walletd/p2p fixes. v1.0.10 predated the
+    // fork and could not follow mainnet past it.
+    Ok(ArchiveSpec {
+        component: "zkas-v1.0.13-macos-arm64",
+        url: "https://zkas.info/downloads/node/1.0.13/zkas-zkas-v1.0.13-osx-arm64.zip",
+        sha256: "dbc6623f32309eaab66d6cbd05d20fc130e0f52fbb125f2963cec5d223be91dc",
+    })
 }
 
 #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    // The node is published for linux-amd64 only so far (zkas.info/downloads/node). Saying
-    // so plainly beats a dead download URL.
-    Err("no verified ZKas node release is published for this platform yet".into())
+    // zkas-rusty tag zkas-v1.0.13 (7d892c81): the mainnet security-fork rules (DAA 6,983,500),
+    // the post-v1.0.11 node-kill fixes and the v1.0.13 walletd/p2p fixes. v1.0.10 predated the
+    // fork and could not follow mainnet past it.
+    Ok(ArchiveSpec {
+        component: "zkas-v1.0.13-macos-x64",
+        url: "https://zkas.info/downloads/node/1.0.13/zkas-zkas-v1.0.13-osx-x86_64.zip",
+        sha256: "99cffcfd3dbcdc4a80abc5d1cf50e09e7e2df6edbad7134e95fbb8458ebd11d1",
+    })
 }
 
 #[cfg(not(any(
