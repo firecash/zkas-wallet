@@ -1270,7 +1270,8 @@ fn file_sha256(path: &Path) -> Result<String, String> {
 // closed rather than running an unverified binary.
 //
 //  * The NODE is zkas-v1.0.13 on Linux x86_64, Windows x86_64 and macOS (arm64 and x86_64); each
-//    archive holds bin/<binaries>. Older releases had no Windows or macOS node at all.
+//    archive holds bin/<binaries>. Windows and macOS node builds were lost with the GitHub account
+//    and are back from 1.0.13.
 //  * The BRIDGE is v1.0.12, not v1.0.11. v1.0.11 predates the ZKM1 fork: it submits work the node
 //    rejects as invalid PoW, so it finds no ZKAS blocks and pays nobody.
 //  * solo-dual-mode v1.0.12 publishes no windows-arm64 build. Windows on ARM runs x64 binaries
