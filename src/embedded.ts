@@ -55,13 +55,30 @@ export const ZKAS_RPC_PORT = 16110;
  * A bare host or a bare IPv6 gets the node's gRPC port; a scheme or a trailing slash
  * that people paste from a browser is dropped. Anything already carrying a port is
  * left exactly as written. */
+/** A port the engine will actually dial. The engine parses it as a u16 and falls back to
+ * the default when it does not fit, so anything this accepts but the engine rejects makes
+ * the app DISPLAY one node while the engine talks to another: `host:99999` showed as
+ * typed and connected to `host:16110`. Same rule on both sides, so what is shown is what
+ * is dialled. Port 0 is not dialable either. */
+function usablePort(p: string): boolean {
+  if (!/^\d+$/.test(p)) return false;
+  const n = Number(p);
+  return n >= 1 && n <= 65535;
+}
+
 export function normalizeNodeAddr(v: string): string {
   let a = (v || "").trim().replace(/^grpc:\/\//i, "").replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  // A pasted URL can carry a path ("https://host/rpc"); keeping it produced the
+  // un-dialable host "host/rpc:16110". The authority is everything before the first "/".
+  a = a.split("/")[0];
   if (!a) return "";
-  if (a.startsWith("[")) return /\]:\d+$/.test(a) ? a : `${a}:${ZKAS_RPC_PORT}`;
+  if (a.startsWith("[")) {
+    const i = a.lastIndexOf("]:");
+    return i >= 0 && usablePort(a.slice(i + 2)) ? a : `${a.replace(/\]:.*$/, "]")}:${ZKAS_RPC_PORT}`;
+  }
   const colons = (a.match(/:/g) || []).length;
   if (colons > 1) return `[${a}]:${ZKAS_RPC_PORT}`; // bare IPv6
-  if (colons === 1) return /:\d+$/.test(a) ? a : `${a.split(":")[0]}:${ZKAS_RPC_PORT}`;
+  if (colons === 1) return usablePort(a.slice(a.lastIndexOf(":") + 1)) ? a : `${a.split(":")[0]}:${ZKAS_RPC_PORT}`;
   return `${a}:${ZKAS_RPC_PORT}`;
 }
 

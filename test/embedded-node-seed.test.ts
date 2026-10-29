@@ -96,3 +96,45 @@ describe("repairStoredNodeAddrs", () => {
     expect(localStorage.getItem(BACKUP_KEY)).toBeNull();
   });
 });
+
+describe("a node address the app shows is the one the engine dials", () => {
+  // The engine parses the port as a u16 and silently falls back to 16110 when it does
+  // not fit. The app used to accept any digits, so `host:99999` was DISPLAYED as typed
+  // while the engine connected to `host:16110` — the wallet naming one node and talking
+  // to another. These cases are the ones where the two used to disagree.
+  it("falls back to the default port when the port cannot be dialled", () => {
+    expect(normalizeNodeAddr("host:99999")).toBe("host:16110");
+    expect(normalizeNodeAddr("host:65536")).toBe("host:16110");
+    expect(normalizeNodeAddr("host:0")).toBe("host:16110");
+    expect(normalizeNodeAddr("[2001:db8::1]:99999")).toBe("[2001:db8::1]:16110");
+  });
+
+  it("keeps a port that can be dialled", () => {
+    expect(normalizeNodeAddr("host:65535")).toBe("host:65535");
+    expect(normalizeNodeAddr("host:1")).toBe("host:1");
+    expect(normalizeNodeAddr("127.0.0.1:17110")).toBe("127.0.0.1:17110");
+    expect(normalizeNodeAddr("[2001:db8::1]:17110")).toBe("[2001:db8::1]:17110");
+  });
+
+  it("drops a path pasted from a browser instead of making it part of the host", () => {
+    // "host/rpc:16110" is not a host; it never resolves and the failure reads as
+    // "cannot reach the ZKas node", which is the symptom this whole change exists for.
+    expect(normalizeNodeAddr("grpc://host/path")).toBe("host:16110");
+    expect(normalizeNodeAddr("https://seed.zkas.info/rpc/")).toBe("seed.zkas.info:16110");
+    expect(normalizeNodeAddr("http://1.2.3.4:17110/x")).toBe("1.2.3.4:17110");
+  });
+  it("is idempotent, so repairing a stored address cannot loop", () => {
+    // repairStoredNodeAddrs() restarts the engine whenever it CHANGES a stored address.
+    // If normalizing an already-normalized address changed it again, every launch would
+    // repair, restart, repair — for ever. This is the guard on that.
+    for (const a of [
+      "seed.zkas.info", "seed.zkas.info:16110", "host:99999", "host:65536", "host:0",
+      "host:abc", "grpc://host/path", "https://seed.zkas.info/rpc/", "2001:db8::1",
+      "[2001:db8::1]", "[2001:db8::1]:99999", "[2001:db8::1]:17110", "127.0.0.1:17110",
+      " spaced.host ", "1.2.3.4:", "host.onion", "grpc://[2001:db8::1]:16110/",
+    ]) {
+      const once = normalizeNodeAddr(a);
+      expect(normalizeNodeAddr(once), `normalizing ${a} twice`).toBe(once);
+    }
+  });
+});

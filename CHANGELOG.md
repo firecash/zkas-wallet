@@ -13,6 +13,33 @@ suspended on 23 October.
 
 ### Highlights
 
+- **A wallet stuck on "Opening…" now opens.** If your wallet had been synced
+  before, the app checked its saved progress against the node and, when the node
+  could not confirm it, retried that check about once a second — for ever,
+  silently, while the screen said "Opening…". It never gave up and never said
+  why. The node can now confirm the progress and the wallet resumes from it
+  instead (about 300,000 blocks in two minutes in testing) rather than starting
+  over or hanging.
+- **The node address works without a port.** `seed.zkas.info` typed or saved
+  without `:16110` meant port 80 — the web server, not the node — and every call
+  failed as "cannot reach the ZKas node". The port is added when it is missing,
+  an address already saved without one is repaired, and a pasted browser URL
+  loses its `https://` and any path. A port that cannot be dialled (`0`, or
+  anything above 65535) falls back to the default **and the app now shows the
+  address it will actually use**: it used to display the port you typed while
+  connecting somewhere else.
+- **Switching wallets syncs the one you are looking at.** A phone has a single
+  sync slot, and the wallet you had just switched away from kept it while it
+  caught up — so the wallet on screen did not sync at all (measured: never
+  within a minute; now about 50 seconds).
+- **The app stops leaking connections to the node.** Each time the connection
+  dropped and was re-established, the old one was abandoned but kept redialling
+  for ever: two more every time. Enough phones doing that filled a public node's
+  connection slots, which is what made it unreachable for everyone. Connections
+  are now closed properly and stay at two.
+- **"Connected" no longer appears before the node has answered.** For the first
+  30 seconds after launch the app claimed a connected node at block 0 even when
+  it could not reach one.
 - **A black-and-green wallet.** The app now shares the palette of the ZKas pool
   site: a near-black, green-tinted ground, green section labels, and hairline
   borders that actually show where one block ends and the next begins. The old
