@@ -37,6 +37,7 @@ class EmbeddedEnginePlugin : Plugin() {
         // "Fast sync" (Settings / Run on this phone). Absent from an older web bundle: keep
         // whatever was stored.
         if (call.data.has("fastSync")) EngineControl.storeFastSync(context, call.getBoolean("fastSync", true) ?: true)
+        if (call.data.has("chainFilesUrl")) EngineControl.storeChainFilesUrl(context, call.getString("chainFilesUrl") ?: "")
         EngineControl.applyFastSync(context)
         // The sync notification below is invisible on Android 13+ until this is granted.
         NotificationPermission.maybeAsk(activity)

@@ -11,7 +11,19 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { embeddedTor, embeddedPrimaryNode, embeddedBackupNode, embeddedUsingBackup, embeddedFastSync, isPublicZkasNode } from "./embedded";
+import {
+  embeddedTor,
+  embeddedPrimaryNode,
+  embeddedBackupNode,
+  embeddedUsingBackup,
+  embeddedFastSync,
+  embeddedChainFilesUrl,
+  isPublicZkasNode,
+  normalizeChainFilesUrl,
+  validChainFilesUrl,
+  DEFAULT_CHAIN_FILES_URL,
+  type FastSync,
+} from "./embedded";
 
 export function RunOnPhoneOption({
   active,
@@ -24,7 +36,7 @@ export function RunOnPhoneOption({
   busy?: boolean;
   starting?: boolean;
   tag?: ReactNode;
-  onStart: (node: string, tor: boolean, backup?: string, fast?: boolean) => void | Promise<void>;
+  onStart: (node: string, tor: boolean, backup?: string, fast?: FastSync) => void | Promise<void>;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -38,10 +50,18 @@ export function RunOnPhoneOption({
   // The user's choice, kept as chosen even while it cannot apply (Tor on, or their own node):
   // switching Tor off again must not silently leave fast sync off, or turn it on.
   const [fast, setFast] = useState(() => embeddedFastSync());
+  const [fastUrl, setFastUrl] = useState(() => embeddedChainFilesUrl() || DEFAULT_CHAIN_FILES_URL);
   const onBackup = embeddedUsingBackup();
   const publicNode = isPublicZkasNode(node || embeddedPrimaryNode());
-  const fastApplies = !tor && publicNode;
-  const go = () => void onStart(node.trim(), tor, backup.trim(), fast);
+  // The engine's rule: the default address only with ZKas's public nodes; an address the
+  // user typed with any node; never over Tor.
+  const customUrl = normalizeChainFilesUrl(fastUrl) !== "";
+  const fastApplies = !tor && (publicNode || customUrl);
+  const urlOk = validChainFilesUrl(fastUrl);
+  const go = () => {
+    if (fast && !tor && !urlOk) return;
+    void onStart(node.trim(), tor, backup.trim(), { on: fast, url: fastUrl });
+  };
   return (
     <div className="run-on-phone">
       <button
@@ -91,24 +111,38 @@ export function RunOnPhoneOption({
               <span className="muted small">{t("runOnPhoneOption.torDesc")}</span>
             </span>
           </label>
-          <label className="row" style={{ gap: 10, alignItems: "flex-start", cursor: fastApplies ? "pointer" : "default", opacity: fastApplies ? 1 : 0.6 }}>
-            <input
-              type="checkbox"
-              data-diag="fast-sync"
-              checked={fast && fastApplies}
-              style={{ marginTop: 3 }}
-              disabled={!!busy || !fastApplies}
-              onChange={(e) => setFast(e.target.checked)}
-            />
-            <span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label className="row" style={{ gap: 10, alignItems: "center", cursor: tor ? "default" : "pointer" }}>
+              <input type="checkbox" data-diag="fast-sync" checked={fast && !tor} disabled={!!busy || tor} onChange={(e) => setFast(e.target.checked)} />
               <b>{t("runOnPhoneOption.fastTitle")}</b>
-              <br />
-              <span className="muted small">
-                {tor ? t("runOnPhoneOption.fastOffTor") : !publicNode ? t("runOnPhoneOption.fastOffOwnNode") : t("runOnPhoneOption.fastDesc")}
-              </span>
+            </label>
+            {fast && !tor && (
+              <input
+                value={fastUrl}
+                onChange={(e) => setFastUrl(e.target.value)}
+                placeholder={t("runOnPhoneOption.fastUrlPlaceholder")}
+                aria-label={t("runOnPhoneOption.fastUrlLabel")}
+                disabled={!!busy}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
+                inputMode="url"
+                style={{ width: "100%" }}
+              />
+            )}
+            <span className="muted small">
+              {tor
+                ? t("runOnPhoneOption.fastOffTor")
+                : !fast
+                  ? t("runOnPhoneOption.fastOff")
+                  : !urlOk
+                    ? t("runOnPhoneOption.fastBadUrl")
+                    : !fastApplies
+                      ? t("runOnPhoneOption.fastOffOwnNode")
+                      : t("runOnPhoneOption.fastHint")}
             </span>
-          </label>
-          <button type="button" className="btn" disabled={!!busy} onClick={go}>
+          </div>
+          <button type="button" className="btn" disabled={!!busy || (fast && !tor && !urlOk)} onClick={go}>
             {starting ? t("runOnPhoneOption.starting") : t("runOnPhoneOption.start")}
           </button>
         </div>

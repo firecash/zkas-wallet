@@ -105,7 +105,7 @@ import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
 import { LOG_PARTS, partEnabled, setPartEnabled, type LogPart } from "./diag/parts";
 import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug, engineBusy, setEngineBusy, engineKeepAlive } from "./embedded";
 import { captureScanReceipt, adoptScanReceipt, haveScanReceipt } from "./scanreceipt";
-import { rotatePublicNode, setEmbeddedBackupNode } from "./embedded";
+import { rotatePublicNode, setEmbeddedBackupNode, type FastSync } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
@@ -2253,7 +2253,7 @@ function ConnectionButton() {
   /// claiming it "works immediately". The hosted service has already scanned, so
   /// the balance is there at once. Recorded as a remote choice so it survives a
   /// restart, and so api.ts routes calls to it instead of the embedded engine.
-  const connectEmbedded = async (node?: string, tor?: boolean, backup?: string, fast?: boolean) => {
+  const connectEmbedded = async (node?: string, tor?: boolean, backup?: string, fast?: FastSync) => {
     setBusy("phone");
     try {
       // Persist the spare before starting, so failover has somewhere to go from the
@@ -8397,7 +8397,7 @@ function NetworkPrivacyCard() {
         setBusy(null);
       });
   };
-  const startOnPhone = (node?: string, tor?: boolean, backup?: string, fast?: boolean) => run("phone", async () => { if (backup !== undefined) setEmbeddedBackupNode(backup); await captureScanReceipt(loadStatusCache()?.address); const u = await ensureEmbedded(node, tor, true, fast); setEmbeddedChosen(true); markBackgroundPromptPending(); setBase(u); setWalletdBearer(""); });
+  const startOnPhone = (node?: string, tor?: boolean, backup?: string, fast?: FastSync) => run("phone", async () => { if (backup !== undefined) setEmbeddedBackupNode(backup); await captureScanReceipt(loadStatusCache()?.address); const u = await ensureEmbedded(node, tor, true, fast); setEmbeddedChosen(true); markBackgroundPromptPending(); setBase(u); setWalletdBearer(""); });
   const leaveEngine = async () => {
     if (embeddedChosen()) {
       await captureScanReceipt(loadStatusCache()?.address);

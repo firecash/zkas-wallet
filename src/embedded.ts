@@ -19,7 +19,7 @@ import { filterEngineText } from "./diag/parts";
 import i18n from "./i18n";
 
 interface EmbeddedEnginePlugin {
-  start(opts: { nodeAddr?: string; secret?: string; socks?: string; fastSync?: boolean }): Promise<{ port: number }>;
+  start(opts: { nodeAddr?: string; secret?: string; socks?: string; fastSync?: boolean; chainFilesUrl?: string }): Promise<{ port: number }>;
   stop(): Promise<void>;
   status(): Promise<{ port: number; running: boolean }>;
   logs(): Promise<{ text: string }>;
@@ -288,6 +288,39 @@ export function setEmbeddedFastSync(on: boolean): void {
   try { if (on) localStorage.removeItem(FAST_KEY); else localStorage.setItem(FAST_KEY, "0"); } catch { /* ignore */ }
 }
 
+/** Where fast sync downloads from by default (the engine's `PUBLIC_CHAIN_FILES`). */
+export const DEFAULT_CHAIN_FILES_URL = "https://zkas.info/shielded-chain";
+const FAST_URL_KEY = "wallet_embedded_chain_files_url";
+
+/** The Fast sync address; "" means the default. A typed address is the user's choice and is
+ * used with any node (the engine still requires ZKas's signature on what it serves). */
+export function embeddedChainFilesUrl(): string {
+  try { return localStorage.getItem(FAST_URL_KEY) ?? ""; } catch { return ""; }
+}
+
+export function setEmbeddedChainFilesUrl(url: string): void {
+  const u = normalizeChainFilesUrl(url);
+  try { if (u) localStorage.setItem(FAST_URL_KEY, u); else localStorage.removeItem(FAST_URL_KEY); } catch { /* ignore */ }
+}
+
+/** "" for the default (empty or the public address itself), else the trimmed URL. */
+export function normalizeChainFilesUrl(url: string): string {
+  const u = url.trim().replace(/\/+$/, "");
+  return u === DEFAULT_CHAIN_FILES_URL ? "" : u;
+}
+
+/** Is this a usable Fast sync address ("" = default, or an http(s) URL)? */
+export function validChainFilesUrl(url: string): boolean {
+  const u = normalizeChainFilesUrl(url);
+  return u === "" || /^https?:\/\/[^\s/]+(\/\S*)?$/.test(u);
+}
+
+export interface FastSync {
+  on: boolean;
+  /** "" = the default address. */
+  url: string;
+}
+
 /**
  * Is `addr` one of ZKas's public nodes — the only nodes the engine pairs with the published
  * chain files? Mirrors `chain_files::default_for_node` in zkas-walletd (display only: the
@@ -384,9 +417,9 @@ export function setEngineBusy(v: boolean): void {
 /// every time and the engine never left the dead node, while the UI switched to
 /// "on the backup now" and the offline card promised it would reconnect on its
 /// own. Comparing against what we actually started is the only honest test.
-let startedWith: { node: string; tor: boolean; fast: boolean } | null = null;
+let startedWith: { node: string; tor: boolean; fast: boolean; fastUrl: string } | null = null;
 
-export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = true, fast?: boolean): Promise<string> {
+export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = true, fast?: FastSync): Promise<string> {
   if (!embeddedAvailable()) throw new Error(i18n.t("embedded.unavailable"));
   // An address passed here is a CHOICE and gets pinned; nothing passed means "whichever
   // public node you assign me", which stays automatic so failover can move it later.
@@ -396,7 +429,8 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = tru
   const node = explicit ? normalizeNodeAddr(nodeAddr!) : embeddedNode();
   const useTor = tor ?? embeddedTor();
   // Read by the engine once, at start: a change has to restart it, like a node or Tor change.
-  const useFast = fast ?? embeddedFastSync();
+  const useFast = fast?.on ?? embeddedFastSync();
+  const useFastUrl = fast ? normalizeChainFilesUrl(fast.url) : embeddedChainFilesUrl();
   // Did the user change the node or the Tor toggle? start() is idempotent and would
   // otherwise keep the OLD transport, leaving e.g. a Tor-off switch stuck on a dead
   // SOCKS proxy (permanent "opening"). If so, stop the running engine and restart it.
@@ -410,8 +444,9 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = tru
   // persisted pair is the right baseline precisely because it is only written
   // once a start has actually bound a port.
   const repaired = repairStoredNodeAddrs();
-  const baseline = startedWith ?? { node: embeddedNode(), tor: embeddedTor(), fast: embeddedFastSync() };
-  const changed = repaired || node !== baseline.node || useTor !== baseline.tor || useFast !== baseline.fast;
+  const baseline = startedWith ?? { node: embeddedNode(), tor: embeddedTor(), fast: embeddedFastSync(), fastUrl: embeddedChainFilesUrl() };
+  const changed =
+    repaired || node !== baseline.node || useTor !== baseline.tor || useFast !== baseline.fast || useFastUrl !== baseline.fastUrl;
   const already = await Native.status().catch(() => ({ port: 0, running: false }));
   if (already.running && already.port > 0 && !changed) return `http://127.0.0.1:${already.port}`;
   if (already.running && changed) {
@@ -440,14 +475,15 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = tru
     // not exist and it would never reach a node; with the VPN up, plain connections are
     // already carried over Tor.
     const socks = useTor && !isIosPlatform() ? ORBOT_SOCKS : undefined;
-    startPromise = Native.start({ nodeAddr: node, socks, fastSync: useFast }).then((r) => r.port);
+    startPromise = Native.start({ nodeAddr: node, socks, fastSync: useFast, chainFilesUrl: useFastUrl }).then((r) => r.port);
   }
   try {
     const port = await startPromise;
     if (!port) throw new Error("engine returned no port");
     setEmbeddedTor(useTor);
     setEmbeddedFastSync(useFast);
-    startedWith = { node, tor: useTor, fast: useFast };
+    setEmbeddedChainFilesUrl(useFastUrl);
+    startedWith = { node, tor: useTor, fast: useFast, fastUrl: useFastUrl };
     void setEngineDebugLogs(embeddedDebugChosen());
     return `http://127.0.0.1:${port}`;
   } finally {

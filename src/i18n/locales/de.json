@@ -1626,22 +1626,29 @@
     "nodePlaceholder": "host:port",
     "backupHint": "Backup-Node (optional) — nur genutzt, wenn der erste nicht antwortet.",
     "backupPlaceholder": "host:port — leer lassen",
-    "onBackupNow": "Synchronisiert gerade vom Backup: der erste Node antwortete nicht."
+    "onBackupNow": "Synchronisiert gerade vom Backup: der erste Node antwortete nicht.",
+    "fastTitle": "Schnell-Sync",
+    "fastHint": "Lädt Chain-Dateien von dieser Adresse. Sie sieht deine IP, nicht dein Wallet.",
+    "fastOff": "Aus: Jeder Block kommt vom Node.",
+    "fastOffTor": "Aus über Tor.",
+    "fastOffOwnNode": "Mit deinem eigenen Node nicht genutzt, außer du gibst eine eigene Adresse ein.",
+    "fastBadUrl": "Gib eine https://-Adresse ein.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Schnell-Sync-Adresse"
   },
   "whatsNew": {
     "eyebrow": "Neu",
-    "title": "Wallet auf dem Handy ausführen",
-    "gotIt": "Verstanden",
-    "titleOnPhone": "Wähle deine Nodes",
-    "onPhoneTitle": "Kein Server sieht dein Wallet",
-    "onPhoneDesc": "Die Wallet-Engine läuft auf diesem Handy. Deine Schlüssel und dein Betrachtungsschlüssel verlassen es nie – kein Dienst sieht dein Guthaben oder deine Zahlungen.",
-    "nodesTitle": "Zwei Nodes, mit Fallback",
-    "nodesDesc": "Wähle den Node zum Synchronisieren und optional ein Backup. Antwortet der erste nicht, wechselt das Wallet automatisch zum Backup.",
-    "onPhoneCaveat": "Wissenswert: Die erste Synchronisierung liest die Chain auf deinem Handy. Bei einem frischen Wallet geht das schnell; bei einem älteren kann es dauern. Du kannst jederzeit zurückwechseln.",
-    "switchNow": "Auf meinem Handy",
-    "switching": "Startet…",
+    "title": "Neu in dieser Version",
     "switchFailed": "Konnte die On-Device-Engine nicht starten. Du bist noch beim vorherigen Dienst.",
-    "notNow": "Später"
+    "fastTitle": "Schnell-Sync",
+    "fastDesc": "Auf diesem Handy dauert das Aufholen Sekunden statt Minuten. Die App lädt Chain-Dateien von zkas.info und prüft sie gegen den Node. zkas.info sieht deine IP, nicht dein Wallet.",
+    "fixTitle": "Behoben",
+    "fixDesc": "Mehrere Wallets, die gleichzeitig synchronisieren, laden nicht mehr immer wieder dieselben Dateien.",
+    "logsTitle": "Kürzere Logs",
+    "logsDesc": "Einstellungen → Debug-Logs: Schalte Teile ab, die du nicht brauchst.",
+    "disableFast": "Schnell-Sync deaktivieren",
+    "disabling": "Wird ausgeschaltet…",
+    "ok": "OK"
   },
   "mainRoot": {
     "opening": "Öffnen…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Mining-Software aktualisieren",
     "note": "{{release}} ist verfügbar. Eine ältere Bridge sendet Arbeit, die das Netzwerk ablehnt — sie mint ohne Ertrag."
+  },
+  "logParts": {
+    "title": "Log-Teile",
+    "hint": "Schalte ab, was du nicht brauchst. Fehler bleiben immer erhalten.",
+    "sync": "Sync",
+    "files": "Chain-Dateien & Almanach",
+    "send": "Senden",
+    "node": "Node",
+    "ui": "Tippen & Bildschirme",
+    "net": "App-Anfragen",
+    "app": "App & Leistung",
+    "libs": "Bibliotheken"
   }
 }

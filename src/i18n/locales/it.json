@@ -1842,22 +1842,29 @@
     "nodePlaceholder": "host:port",
     "backupHint": "Nodo di backup (opzionale) — usato solo se il primo smette di rispondere.",
     "backupPlaceholder": "host:port — lascia vuoto",
-    "onBackupNow": "Sincronizzazione in corso dal backup: il primo nodo non rispondeva."
+    "onBackupNow": "Sincronizzazione in corso dal backup: il primo nodo non rispondeva.",
+    "fastTitle": "Sincronizzazione rapida",
+    "fastHint": "Scarica i file della catena da questo indirizzo. Vede il tuo IP, non il tuo wallet.",
+    "fastOff": "Disattivata: ogni blocco arriva dal nodo.",
+    "fastOffTor": "Disattivata con Tor.",
+    "fastOffOwnNode": "Non usata con il tuo nodo, a meno che tu non inserisca un tuo indirizzo.",
+    "fastBadUrl": "Inserisci un indirizzo https://.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Indirizzo di sincronizzazione rapida"
   },
   "whatsNew": {
     "eyebrow": "Novità",
-    "title": "Avvia il portafoglio sul telefono",
-    "gotIt": "Capito",
-    "titleOnPhone": "Scegli i tuoi nodi",
-    "onPhoneTitle": "Nessun server vede il portafoglio",
-    "onPhoneDesc": "Il motore del portafoglio gira sul telefono. Le tue chiavi e la chiave di sola lettura non lo lasciano mai, quindi nessun servizio può vedere saldo o pagamenti.",
-    "nodesTitle": "Due nodi, con fallback",
-    "nodesDesc": "Scegli il nodo da cui sincronizzare e un backup opzionale. Se il primo smette di rispondere, il portafoglio passa al backup da solo.",
-    "onPhoneCaveat": "Da sapere: la prima sincronizzazione legge la catena sul telefono. Per un portafoglio recente è veloce; per uno più vecchio può richiedere un po', e puoi tornare indietro quando vuoi.",
-    "switchNow": "Avvia sul telefono",
-    "switching": "Avvio…",
+    "title": "Novità",
     "switchFailed": "Impossibile avviare il motore locale. Sei ancora sul servizio precedente.",
-    "notNow": "Non ora"
+    "fastTitle": "Sincronizzazione rapida",
+    "fastDesc": "Su questo telefono, mettersi in pari richiede secondi invece di minuti. L’app scarica i file della catena da zkas.info e li verifica con il nodo. zkas.info vede il tuo IP, non il tuo wallet.",
+    "fixTitle": "Risolto",
+    "fixDesc": "Più wallet che si sincronizzano insieme non scaricano più gli stessi file di continuo.",
+    "logsTitle": "Log più brevi",
+    "logsDesc": "Impostazioni → Log di debug: disattiva le parti che non ti servono.",
+    "disableFast": "Disattiva sincronizzazione rapida",
+    "disabling": "Disattivazione…",
+    "ok": "OK"
   },
   "mainRoot": {
     "opening": "Apertura…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Aggiorna il software di mining",
     "note": "{{release}} è disponibile. Un bridge vecchio invia lavoro che la rete rifiuta, quindi mina senza guadagnare."
+  },
+  "logParts": {
+    "title": "Parti del log",
+    "hint": "Disattiva ciò che non ti serve. Gli errori restano sempre.",
+    "sync": "Sincronizzazione",
+    "files": "File della catena e almanacco",
+    "send": "Invii",
+    "node": "Nodo",
+    "ui": "Tocchi e schermate",
+    "net": "Richieste dell’app",
+    "app": "App e prestazioni",
+    "libs": "Librerie"
   }
 }

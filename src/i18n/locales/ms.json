@@ -1808,22 +1808,29 @@
     "nodePlaceholder": "host:port",
     "backupHint": "Nod sandaran (pilihan) — hanya digunakan jika yang pertama berhenti menjawab.",
     "backupPlaceholder": "host:port — kosongkan jika tiada",
-    "onBackupNow": "Sedang menyegerak dari sandaran: nod pertama tidak menjawab."
+    "onBackupNow": "Sedang menyegerak dari sandaran: nod pertama tidak menjawab.",
+    "fastTitle": "Segerak pantas",
+    "fastHint": "Memuat turun fail rantaian dari alamat ini. Ia melihat IP anda, bukan dompet anda.",
+    "fastOff": "Mati: setiap blok datang dari nod.",
+    "fastOffTor": "Mati melalui Tor.",
+    "fastOffOwnNode": "Tidak digunakan dengan nod anda sendiri, melainkan anda masukkan alamat sendiri.",
+    "fastBadUrl": "Masukkan alamat https://.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Alamat segerak pantas"
   },
   "whatsNew": {
     "eyebrow": "Baru",
-    "title": "Jalankan dompet pada telefon anda",
-    "gotIt": "Faham",
-    "titleOnPhone": "Pilih nod anda",
-    "onPhoneTitle": "Tiada pelayan lihat dompet anda",
-    "onPhoneDesc": "Enjin dompet berjalan pada telefon ini. Kunci dan kunci lihat anda tidak pernah meninggalkannya, jadi tiada perkhidmatan boleh melihat baki atau bayaran anda.",
-    "nodesTitle": "Dua nod, dengan sandaran",
-    "nodesDesc": "Pilih nod untuk menyegerak, dan sandaran pilihan. Jika yang pertama berhenti menjawab, dompet beralih ke sandaran sendiri.",
-    "onPhoneCaveat": "Perlu tahu: segerakan pertama membaca rantaian pada telefon anda. Untuk dompet yang baru dibuat, ia cepat; untuk yang lama, ia boleh mengambil masa, dan anda boleh bertukar balik bila-bila masa.",
-    "switchNow": "Jalankan pada telefon saya",
-    "switching": "Memulakan…",
+    "title": "Apa yang baharu",
     "switchFailed": "Gagal memulakan enjin pada peranti. Anda masih menggunakan perkhidmatan sebelumnya.",
-    "notNow": "Nanti dulu"
+    "fastTitle": "Segerak pantas",
+    "fastDesc": "Di telefon ini, mengejar rantaian mengambil masa saat, bukan minit. Aplikasi memuat turun fail rantaian dari zkas.info dan menyemaknya dengan nod. zkas.info melihat IP anda, bukan dompet anda.",
+    "fixTitle": "Dibaiki",
+    "fixDesc": "Beberapa dompet yang bersegerak serentak tidak lagi memuat turun fail yang sama berulang kali.",
+    "logsTitle": "Log lebih pendek",
+    "logsDesc": "Tetapan → Log nyahpepijat: matikan bahagian yang tidak diperlukan.",
+    "disableFast": "Matikan segerak pantas",
+    "disabling": "Mematikan…",
+    "ok": "OK"
   },
   "mainRoot": {
     "opening": "Membuka…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Kemas kini perisian perlombongan",
     "note": "{{release}} tersedia. Bridge lama menghantar kerja yang ditolak rangkaian, jadi melombong tanpa pendapatan."
+  },
+  "logParts": {
+    "title": "Bahagian log",
+    "hint": "Matikan yang tidak perlu. Ralat sentiasa disimpan.",
+    "sync": "Segerak",
+    "files": "Fail rantaian & almanak",
+    "send": "Penghantaran",
+    "node": "Nod",
+    "ui": "Ketikan & skrin",
+    "net": "Permintaan aplikasi",
+    "app": "Aplikasi & prestasi",
+    "libs": "Pustaka"
   }
 }

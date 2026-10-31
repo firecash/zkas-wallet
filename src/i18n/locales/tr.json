@@ -1808,22 +1808,29 @@
     "nodePlaceholder": "host:port",
     "backupHint": "Yedek düğüm (isteğe bağlı) — yalnızca ilki yanıt vermezse kullanılır.",
     "backupPlaceholder": "host:port — boş bırakın",
-    "onBackupNow": "Şu anda yedekten eşitleniyor: ilk düğüm yanıt vermiyordu."
+    "onBackupNow": "Şu anda yedekten eşitleniyor: ilk düğüm yanıt vermiyordu.",
+    "fastTitle": "Hızlı eşitleme",
+    "fastHint": "Zincir dosyalarını bu adresten indirir. IP’nizi görür, cüzdanınızı değil.",
+    "fastOff": "Kapalı: her blok düğümden gelir.",
+    "fastOffTor": "Tor üzerinden kapalı.",
+    "fastOffOwnNode": "Kendi adresinizi girmezseniz kendi düğümünüzle kullanılmaz.",
+    "fastBadUrl": "Bir https:// adresi girin.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Hızlı eşitleme adresi"
   },
   "whatsNew": {
     "eyebrow": "Yeni",
-    "title": "Cüzdanı telefonunuzda çalıştırın",
-    "gotIt": "Anladım",
-    "titleOnPhone": "Düğümlerinizi seçin",
-    "onPhoneTitle": "Hiçbir sunucu cüzdanınızı görmez",
-    "onPhoneDesc": "Cüzdan motoru bu telefonda çalışır. Anahtarlarınız ve görüntüleme anahtarınız asla telefondan çıkmaz, bu nedenle hiçbir hizmet bakiyenizi veya ödemelerinizi göremez.",
-    "nodesTitle": "İki düğüm, yedekli",
-    "nodesDesc": "Eşitlenecek düğümü ve isteğe bağlı bir yedeği seçin. İlki yanıt vermezse cüzdan otomatik olarak yedeğe geçer.",
-    "onPhoneCaveat": "Bilmenizde fayda var: ilk eşitleme zinciri telefonunuzda okur. Yeni bir cüzdan için bu hızlıdır; eski bir cüzdan için biraz zaman alabilir ve istediğiniz zaman geri dönebilirsiniz.",
-    "switchNow": "Telefonumda çalıştır",
-    "switching": "Başlatılıyor…",
+    "title": "Yenilikler",
     "switchFailed": "Cihaz içi motor başlatılamadı. Hâlâ önceki hizmeti kullanıyorsunuz.",
-    "notNow": "Şimdi değil"
+    "fastTitle": "Hızlı eşitleme",
+    "fastDesc": "Bu telefonda yetişmek dakikalar yerine saniyeler sürüyor. Uygulama zincir dosyalarını zkas.info’dan indirir ve düğümle doğrular. zkas.info IP’nizi görür, cüzdanınızı değil.",
+    "fixTitle": "Düzeltildi",
+    "fixDesc": "Aynı anda eşitlenen birden çok cüzdan artık aynı dosyaları tekrar tekrar indirmiyor.",
+    "logsTitle": "Daha kısa günlükler",
+    "logsDesc": "Ayarlar → Hata ayıklama günlükleri: ihtiyacınız olmayan bölümleri kapatın.",
+    "disableFast": "Hızlı eşitlemeyi kapat",
+    "disabling": "Kapatılıyor…",
+    "ok": "Tamam"
   },
   "mainRoot": {
     "opening": "Açılıyor…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Madencilik yazılımını güncelle",
     "note": "{{release}} yayında. Eski köprü ağın reddettiği iş gönderir, bu yüzden kazanç olmadan madencilik yapar."
+  },
+  "logParts": {
+    "title": "Günlük bölümleri",
+    "hint": "İhtiyacınız olmayanı kapatın. Hatalar her zaman tutulur.",
+    "sync": "Eşitleme",
+    "files": "Zincir dosyaları ve almanak",
+    "send": "Gönderimler",
+    "node": "Düğüm",
+    "ui": "Dokunuşlar ve ekranlar",
+    "net": "Uygulama istekleri",
+    "app": "Uygulama ve performans",
+    "libs": "Kütüphaneler"
   }
 }

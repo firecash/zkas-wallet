@@ -1771,22 +1771,29 @@
     "nodePlaceholder": "host:porta",
     "backupHint": "Nó de backup (opcional) — usado só se o primeiro parar de responder.",
     "backupPlaceholder": "host:porta — vazio se não tiver",
-    "onBackupNow": "Sincronizando do backup: o primeiro nó não estava respondendo."
+    "onBackupNow": "Sincronizando do backup: o primeiro nó não estava respondendo.",
+    "fastTitle": "Sincronização rápida",
+    "fastHint": "Baixa arquivos da cadeia deste endereço. Ele vê seu IP, não sua carteira.",
+    "fastOff": "Desligada: cada bloco vem do nó.",
+    "fastOffTor": "Desligada pelo Tor.",
+    "fastOffOwnNode": "Não usada com seu próprio nó, a menos que você informe seu próprio endereço.",
+    "fastBadUrl": "Digite um endereço https://.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Endereço da sincronização rápida"
   },
   "whatsNew": {
     "eyebrow": "Novo",
-    "title": "Rode a carteira no seu celular",
-    "gotIt": "Entendi",
-    "titleOnPhone": "Escolha seus nós",
-    "onPhoneTitle": "Nenhum servidor vê sua carteira",
-    "onPhoneDesc": "O motor da carteira roda neste celular. Suas chaves e chave de visualização nunca saem dele, então nenhum serviço vê seu saldo ou pagamentos.",
-    "nodesTitle": "Dois nós, com fallback",
-    "nodesDesc": "Escolha o nó para sincronizar e um backup opcional. Se o primeiro parar de responder, a carteira muda pro backup sozinha.",
-    "onPhoneCaveat": "Vale saber: a primeira sincronização lê a cadeia no seu celular. Para uma carteira recente é rápido; para uma antiga pode demorar, e você pode voltar quando quiser.",
-    "switchNow": "Rodar no celular",
-    "switching": "Iniciando…",
+    "title": "Novidades",
     "switchFailed": "Não foi possível iniciar o motor local. Você ainda está no serviço anterior.",
-    "notNow": "Agora não"
+    "fastTitle": "Sincronização rápida",
+    "fastDesc": "Neste celular, atualizar leva segundos em vez de minutos. O app baixa arquivos da cadeia do zkas.info e os confere com o nó. O zkas.info vê seu IP, não sua carteira.",
+    "fixTitle": "Corrigido",
+    "fixDesc": "Várias carteiras sincronizando ao mesmo tempo não baixam mais os mesmos arquivos repetidamente.",
+    "logsTitle": "Logs mais curtos",
+    "logsDesc": "Configurações → Logs de depuração: desligue as partes de que não precisa.",
+    "disableFast": "Desativar sincronização rápida",
+    "disabling": "Desativando…",
+    "ok": "OK"
   },
   "mainRoot": {
     "opening": "Abrindo…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Atualizar o software de mineração",
     "note": "{{release}} está disponível. Uma ponte antiga envia trabalho que a rede rejeita, então minera sem ganhar."
+  },
+  "logParts": {
+    "title": "Partes do log",
+    "hint": "Desligue o que não precisa. Erros são sempre mantidos.",
+    "sync": "Sincronização",
+    "files": "Arquivos da cadeia e almanaque",
+    "send": "Envios",
+    "node": "Nó",
+    "ui": "Toques e telas",
+    "net": "Requisições do app",
+    "app": "App e desempenho",
+    "libs": "Bibliotecas"
   }
 }

@@ -1842,22 +1842,29 @@
     "nodePlaceholder": "host:port",
     "backupHint": "백업 노드(선택) — 첫 노드가 응답하지 않을 때만 사용합니다.",
     "backupPlaceholder": "host:port — 비우면 없음",
-    "onBackupNow": "현재 백업 노드에서 동기화 중입니다. 첫 노드가 응답하지 않았습니다."
+    "onBackupNow": "현재 백업 노드에서 동기화 중입니다. 첫 노드가 응답하지 않았습니다.",
+    "fastTitle": "빠른 동기화",
+    "fastHint": "이 주소에서 체인 파일을 내려받습니다. IP는 보이지만 지갑은 보이지 않습니다.",
+    "fastOff": "꺼짐: 모든 블록을 노드에서 받습니다.",
+    "fastOffTor": "Tor 사용 시 꺼짐.",
+    "fastOffOwnNode": "직접 주소를 입력하지 않으면 내 노드에서는 사용되지 않습니다.",
+    "fastBadUrl": "https:// 주소를 입력하세요.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "빠른 동기화 주소"
   },
   "whatsNew": {
     "eyebrow": "새로움",
-    "title": "휴대폰에서 지갑 실행",
-    "gotIt": "확인",
-    "titleOnPhone": "노드 선택",
-    "onPhoneTitle": "서버가 지갑을 볼 수 없음",
-    "onPhoneDesc": "지갑 엔진이 이 휴대폰에서 실행됩니다. 키와 보기 키가 기기를 떠나지 않아, 어떤 서비스도 잔액이나 결제를 볼 수 없습니다.",
-    "nodesTitle": "두 개 노드, 자동 전환",
-    "nodesDesc": "동기화할 노드와 선택적 백업을 선택하세요. 첫 노드가 응답하지 않으면 지갑이 자동으로 백업으로 전환됩니다.",
-    "onPhoneCaveat": "참고: 첫 동기화는 휴대폰에서 체인을 읽습니다. 최근 생성된 지갑은 빠르지만, 오래된 지갑은 시간이 걸릴 수 있습니다. 언제든지 이전 서비스로 전환할 수 있습니다.",
-    "switchNow": "휴대폰에서 실행",
-    "switching": "시작 중…",
+    "title": "새로운 기능",
     "switchFailed": "기기 내 엔진을 시작할 수 없습니다. 이전 서비스를 계속 사용합니다.",
-    "notNow": "나중에"
+    "fastTitle": "빠른 동기화",
+    "fastDesc": "이 휴대폰에서 따라잡는 데 몇 분이 아니라 몇 초면 됩니다. 앱이 zkas.info에서 체인 파일을 내려받아 노드로 확인합니다. zkas.info는 IP를 보지만 지갑은 보지 못합니다.",
+    "fixTitle": "수정됨",
+    "fixDesc": "여러 지갑을 동시에 동기화해도 같은 파일을 계속 다시 내려받지 않습니다.",
+    "logsTitle": "더 짧은 로그",
+    "logsDesc": "설정 → 디버그 로그: 필요 없는 부분을 끄세요.",
+    "disableFast": "빠른 동기화 끄기",
+    "disabling": "끄는 중…",
+    "ok": "확인"
   },
   "mainRoot": {
     "opening": "여는 중…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "채굴 소프트웨어 업데이트",
     "note": "{{release}}을(를) 사용할 수 있습니다. 오래된 브리지는 네트워크가 거부하는 작업을 보내 채굴해도 보상이 없습니다."
+  },
+  "logParts": {
+    "title": "로그 항목",
+    "hint": "필요 없는 것은 끄세요. 오류는 항상 남습니다.",
+    "sync": "동기화",
+    "files": "체인 파일 및 알마낙",
+    "send": "송금",
+    "node": "노드",
+    "ui": "탭 및 화면",
+    "net": "앱 요청",
+    "app": "앱 및 성능",
+    "libs": "라이브러리"
   }
 }

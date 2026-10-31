@@ -20,7 +20,7 @@ import { walletdProfiles } from "./connection-profiles";
 import { ACCENTS, currentAccent, setAccent, type Accent } from "./theme";
 import { ONION_WALLETD_URL } from "./lib/relay";
 import { OrbotHelp } from "./OrbotHelp";
-import { embeddedAvailable, setEmbeddedChosen, ensureEmbedded, setEmbeddedBackupNode } from "./embedded";
+import { embeddedAvailable, setEmbeddedChosen, ensureEmbedded, setEmbeddedBackupNode, type FastSync } from "./embedded";
 import { markBackgroundPromptPending } from "./bgsync";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { showAccessTokenField } from "./lib/accesstoken";
@@ -47,7 +47,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
     setBase(""); setWalletdBearer(""); finish();
   };
 
-  const connectPhone = async (node?: string, tor?: boolean, backup?: string, fast?: boolean) => {
+  const connectPhone = async (node?: string, tor?: boolean, backup?: string, fast?: FastSync) => {
     if (busy) return;
     setErr(""); setBusy("phone");
     try {

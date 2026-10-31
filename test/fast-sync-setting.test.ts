@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { embeddedFastSync, setEmbeddedFastSync, isPublicZkasNode, PUBLIC_EMBEDDED_NODES, DEFAULT_EMBEDDED_NODE } from "../src/embedded";
+import { embeddedFastSync, setEmbeddedFastSync, isPublicZkasNode, PUBLIC_EMBEDDED_NODES, DEFAULT_EMBEDDED_NODE, embeddedChainFilesUrl, setEmbeddedChainFilesUrl, normalizeChainFilesUrl, validChainFilesUrl, DEFAULT_CHAIN_FILES_URL } from "../src/embedded";
 
 // "Fast sync" (Run on this phone): the engine reads catch-up from ZKas's published chain
 // files. It is on unless the user switches it off, and it only ever applies against ZKas's
@@ -32,3 +32,27 @@ describe("fast sync setting", () => {
     }
   });
 });
+
+describe("fast sync address", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("defaults to the public files and stores the default as nothing", () => {
+    expect(embeddedChainFilesUrl()).toBe("");
+    setEmbeddedChainFilesUrl(DEFAULT_CHAIN_FILES_URL + "/");
+    expect(embeddedChainFilesUrl()).toBe("");
+    expect(normalizeChainFilesUrl("  " + DEFAULT_CHAIN_FILES_URL + "  ")).toBe("");
+  });
+
+  it("keeps an address the user typed, trimmed", () => {
+    setEmbeddedChainFilesUrl(" https://mirror.example/chain/ ");
+    expect(embeddedChainFilesUrl()).toBe("https://mirror.example/chain");
+    setEmbeddedChainFilesUrl("");
+    expect(embeddedChainFilesUrl()).toBe("");
+  });
+
+  it("accepts only http(s) addresses", () => {
+    for (const ok of ["", DEFAULT_CHAIN_FILES_URL, "https://mirror.example/chain", "http://10.0.0.5:8080/files"]) expect(validChainFilesUrl(ok), ok).toBe(true);
+    for (const bad of ["mirror.example", "ftp://x/y", "https://", "https:// space", "https://a b", "javascript:alert(1)"]) expect(validChainFilesUrl(bad), bad).toBe(false);
+  });
+});
+

@@ -1842,22 +1842,29 @@
     "nodePlaceholder": "host:port",
     "backupHint": "Node cadangan (opsional) — hanya dipakai jika yang pertama berhenti merespons.",
     "backupPlaceholder": "host:port — kosongkan jika tidak ada",
-    "onBackupNow": "Sedang menyinkron dari cadangan: node pertama tidak merespons."
+    "onBackupNow": "Sedang menyinkron dari cadangan: node pertama tidak merespons.",
+    "fastTitle": "Sinkron cepat",
+    "fastHint": "Mengunduh file rantai dari alamat ini. Ia melihat IP Anda, bukan dompet Anda.",
+    "fastOff": "Mati: setiap blok datang dari node.",
+    "fastOffTor": "Mati lewat Tor.",
+    "fastOffOwnNode": "Tidak dipakai dengan node Anda sendiri, kecuali Anda mengisi alamat sendiri.",
+    "fastBadUrl": "Masukkan alamat https://.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Alamat sinkron cepat"
   },
   "whatsNew": {
     "eyebrow": "Baru",
-    "title": "Jalankan dompet di ponsel Anda",
-    "gotIt": "Mengerti",
-    "titleOnPhone": "Pilih node Anda",
-    "onPhoneTitle": "Tak ada server yang lihat dompet Anda",
-    "onPhoneDesc": "Mesin dompet berjalan di ponsel ini. Kunci dan kunci lihat Anda tak pernah meninggalkannya, jadi tak ada layanan yang bisa melihat saldo atau pembayaran Anda.",
-    "nodesTitle": "Dua node, dengan cadangan",
-    "nodesDesc": "Pilih node untuk sinkron, dan cadangan opsional. Jika yang pertama berhenti merespons, dompet otomatis beralih ke cadangan.",
-    "onPhoneCaveat": "Perlu diketahui: sinkron pertama membaca rantai di ponsel Anda. Untuk dompet yang baru dibuat, itu cepat; untuk yang lama bisa memakan waktu, dan Anda bisa kembali kapan saja.",
-    "switchNow": "Jalankan di ponsel",
-    "switching": "Memulai…",
+    "title": "Yang baru",
     "switchFailed": "Gagal memulai mesin di perangkat. Anda masih di layanan sebelumnya.",
-    "notNow": "Nanti"
+    "fastTitle": "Sinkron cepat",
+    "fastDesc": "Di ponsel ini, mengejar ketertinggalan butuh detik, bukan menit. Aplikasi mengunduh file rantai dari zkas.info dan memeriksanya dengan node. zkas.info melihat IP Anda, bukan dompet Anda.",
+    "fixTitle": "Diperbaiki",
+    "fixDesc": "Beberapa dompet yang sinkron bersamaan tidak lagi mengunduh file yang sama berulang-ulang.",
+    "logsTitle": "Log lebih pendek",
+    "logsDesc": "Pengaturan → Log debug: matikan bagian yang tidak Anda perlukan.",
+    "disableFast": "Matikan sinkron cepat",
+    "disabling": "Mematikan…",
+    "ok": "OK"
   },
   "mainRoot": {
     "opening": "Membuka…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Perbarui perangkat lunak penambangan",
     "note": "{{release}} tersedia. Bridge lama mengirim pekerjaan yang ditolak jaringan, jadi menambang tanpa penghasilan."
+  },
+  "logParts": {
+    "title": "Bagian log",
+    "hint": "Matikan yang tidak perlu. Kesalahan selalu disimpan.",
+    "sync": "Sinkron",
+    "files": "File rantai & almanak",
+    "send": "Pengiriman",
+    "node": "Node",
+    "ui": "Ketukan & layar",
+    "net": "Permintaan aplikasi",
+    "app": "Aplikasi & kinerja",
+    "libs": "Pustaka"
   }
 }

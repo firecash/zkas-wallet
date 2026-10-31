@@ -378,14 +378,14 @@
   },
   "logParts": {
     "title": "Log parts",
-    "hint": "Switch off what you don't need so the important lines aren't pushed out. Warnings and errors are always kept.",
-    "sync": "Sync & scan",
+    "hint": "Turn off what you don't need. Errors are always kept.",
+    "sync": "Sync",
     "files": "Chain files & almanac",
-    "send": "Sends & notes",
-    "node": "Node connection",
+    "send": "Sends",
+    "node": "Node",
     "ui": "Taps & screens",
     "net": "App requests",
     "app": "App & performance",
-    "libs": "Library internals"
+    "libs": "Libraries"
   }
 }

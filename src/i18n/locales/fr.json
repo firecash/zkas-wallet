@@ -1842,22 +1842,29 @@
     "nodePlaceholder": "hôte:port",
     "backupHint": "Nœud de secours (facultatif) — utilisé seulement si le premier ne répond plus.",
     "backupPlaceholder": "hôte:port — laisser vide",
-    "onBackupNow": "Synchronisation en cours depuis le nœud de secours : le premier ne répondait pas."
+    "onBackupNow": "Synchronisation en cours depuis le nœud de secours : le premier ne répondait pas.",
+    "fastTitle": "Synchro rapide",
+    "fastHint": "Télécharge les fichiers de la chaîne depuis cette adresse. Elle voit votre IP, pas votre portefeuille.",
+    "fastOff": "Désactivée : chaque bloc vient du nœud.",
+    "fastOffTor": "Désactivée via Tor.",
+    "fastOffOwnNode": "Pas utilisée avec votre propre nœud, sauf si vous saisissez votre propre adresse.",
+    "fastBadUrl": "Saisissez une adresse https://.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Adresse de synchro rapide"
   },
   "whatsNew": {
     "eyebrow": "Nouveau",
-    "title": "Exécutez le portefeuille sur votre téléphone",
-    "gotIt": "Compris",
-    "titleOnPhone": "Choisissez vos nœuds",
-    "onPhoneTitle": "Aucun serveur ne voit votre portefeuille",
-    "onPhoneDesc": "Le moteur du portefeuille tourne sur ce téléphone. Vos clés et votre clé de visualisation ne le quittent jamais, donc aucun service ne peut voir votre solde ni vos paiements.",
-    "nodesTitle": "Deux nœuds, avec un basculement",
-    "nodesDesc": "Choisissez le nœud de synchronisation et un nœud de secours facultatif. Si le premier ne répond plus, le portefeuille bascule automatiquement sur le second.",
-    "onPhoneCaveat": "À savoir : la première synchronisation lit la chaîne sur votre téléphone. Pour un portefeuille récent, c'est rapide ; pour un plus ancien, cela peut prendre du temps, et vous pouvez revenir en arrière à tout moment.",
-    "switchNow": "Exécuter sur mon téléphone",
-    "switching": "Démarrage…",
+    "title": "Nouveautés",
     "switchFailed": "Impossible de démarrer le moteur sur l'appareil. Vous êtes toujours sur le service précédent.",
-    "notNow": "Pas maintenant"
+    "fastTitle": "Synchro rapide",
+    "fastDesc": "Sur ce téléphone, le rattrapage prend quelques secondes au lieu de minutes. L’app télécharge les fichiers de la chaîne depuis zkas.info et les vérifie auprès du nœud. zkas.info voit votre IP, pas votre portefeuille.",
+    "fixTitle": "Corrigé",
+    "fixDesc": "Plusieurs portefeuilles qui se synchronisent en même temps ne retéléchargent plus les mêmes fichiers en boucle.",
+    "logsTitle": "Journaux plus courts",
+    "logsDesc": "Réglages → Journaux de débogage : désactivez les parties inutiles.",
+    "disableFast": "Désactiver la synchro rapide",
+    "disabling": "Désactivation…",
+    "ok": "OK"
   },
   "mainRoot": {
     "opening": "Ouverture…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Mettre à jour le logiciel de minage",
     "note": "{{release}} est disponible. Un pont ancien envoie un travail que le réseau rejette : il mine sans rien gagner."
+  },
+  "logParts": {
+    "title": "Parties du journal",
+    "hint": "Désactivez ce dont vous n’avez pas besoin. Les erreurs sont toujours conservées.",
+    "sync": "Synchro",
+    "files": "Fichiers de la chaîne et almanach",
+    "send": "Envois",
+    "node": "Nœud",
+    "ui": "Appuis et écrans",
+    "net": "Requêtes de l’app",
+    "app": "App et performances",
+    "libs": "Bibliothèques"
   }
 }

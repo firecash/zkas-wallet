@@ -36,8 +36,7 @@ import { ConfirmWatch } from "./ConfirmWatch";
 import { BootLoader } from "./components/BootLoader";
 import { listWallets } from "./wallets";
 import { isNative, loadStatusCache, setBase } from "./api";
-import { embeddedChosen, ensureEmbedded, setEmbeddedChosen } from "./embedded";
-import { captureScanReceipt } from "./scanreceipt";
+import { embeddedChainFilesUrl, embeddedChosen, ensureEmbedded, setEmbeddedFastSync } from "./embedded";
 import { bgSyncReconfigure } from "./bgsync";
 import { internalRouteFromLink, queuePaymentLink } from "./paymentlinks";
 import "./styles.css";
@@ -111,14 +110,15 @@ function Root({ locked, askNode, whatsNew, pendingWatch }: { locked: boolean; as
       {showWhatsNew && (
         <WhatsNew
           onClose={() => setShowWhatsNew(false)}
-          onSwitch={async () => {
-            // The same sequence the other two switch sites use, in the same order.
-            // Capturing the scan BEFORE the endpoint moves is the whole point of the
-            // receipt, and a one-tap path that skipped it would quietly hand the engine
-            // a rescan from birthday — the exact cost this notice promises is small.
-            await captureScanReceipt(loadStatusCache()?.address);
-            const url = await ensureEmbedded();
-            setEmbeddedChosen(true);
+          onDisableFastSync={async () => {
+            // Through ensureEmbedded, not by writing the setting first: it persists the choice
+            // only once the engine has restarted with it, and compares against what the engine
+            // was started with. Not on the phone engine: just remember it for when it is.
+            if (!embeddedChosen()) {
+              setEmbeddedFastSync(false);
+              return;
+            }
+            const url = await ensureEmbedded(undefined, undefined, true, { on: false, url: embeddedChainFilesUrl() });
             setBase(url);
             void bgSyncReconfigure();
           }}

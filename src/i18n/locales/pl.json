@@ -1842,22 +1842,29 @@
     "nodePlaceholder": "host:port",
     "backupHint": "Zapasowy węzeł (opcjonalnie) — używany tylko gdy pierwszy przestanie odpowiadać.",
     "backupPlaceholder": "host:port — zostaw puste",
-    "onBackupNow": "Obecnie synchronizujesz z zapasowego: pierwszy węzeł nie odpowiadał."
+    "onBackupNow": "Obecnie synchronizujesz z zapasowego: pierwszy węzeł nie odpowiadał.",
+    "fastTitle": "Szybka synchronizacja",
+    "fastHint": "Pobiera pliki łańcucha z tego adresu. Widzi Twoje IP, nie Twój portfel.",
+    "fastOff": "Wyłączona: każdy blok pochodzi z węzła.",
+    "fastOffTor": "Wyłączona przez Tor.",
+    "fastOffOwnNode": "Nie działa z Twoim własnym węzłem, chyba że podasz własny adres.",
+    "fastBadUrl": "Wpisz adres https://.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Adres szybkiej synchronizacji"
   },
   "whatsNew": {
     "eyebrow": "Nowość",
-    "title": "Uruchom portfel na telefonie",
-    "gotIt": "Rozumiem",
-    "titleOnPhone": "Wybierz swoje węzły",
-    "onPhoneTitle": "Żaden serwer nie widzi portfela",
-    "onPhoneDesc": "Silnik portfela działa na tym telefonie. Twoje klucze i klucz podglądu nigdy go nie opuszczają, więc żadna usługa nie widzi salda ani płatności.",
-    "nodesTitle": "Dwa węzły z zapasowym",
-    "nodesDesc": "Wybierz węzeł do synchronizacji i opcjonalny zapasowy. Gdy pierwszy przestanie odpowiadać, portfel sam przełączy się na zapasowy.",
-    "onPhoneCaveat": "Warto wiedzieć: pierwsza synchronizacja odczytuje łańcuch na telefonie. Dla nowego portfela to szybkie; dla starszego może potrwać, a w każdej chwili możesz wrócić do poprzedniego.",
-    "switchNow": "Uruchom na telefonie",
-    "switching": "Uruchamianie…",
+    "title": "Co nowego",
     "switchFailed": "Nie udało się uruchomić silnika na urządzeniu. Nadal korzystasz z poprzedniej usługi.",
-    "notNow": "Nie teraz"
+    "fastTitle": "Szybka synchronizacja",
+    "fastDesc": "Na tym telefonie nadrabianie trwa sekundy zamiast minut. Aplikacja pobiera pliki łańcucha z zkas.info i sprawdza je z węzłem. zkas.info widzi Twoje IP, nie Twój portfel.",
+    "fixTitle": "Naprawiono",
+    "fixDesc": "Kilka portfeli synchronizujących się naraz nie pobiera już w kółko tych samych plików.",
+    "logsTitle": "Krótsze logi",
+    "logsDesc": "Ustawienia → Logi debugowania: wyłącz części, których nie potrzebujesz.",
+    "disableFast": "Wyłącz szybką synchronizację",
+    "disabling": "Wyłączanie…",
+    "ok": "OK"
   },
   "mainRoot": {
     "opening": "Otwieranie…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Zaktualizuj oprogramowanie do kopania",
     "note": "Dostępna jest wersja {{release}}. Stary most wysyła pracę odrzucaną przez sieć, więc kopie bez zarobku."
+  },
+  "logParts": {
+    "title": "Części logów",
+    "hint": "Wyłącz to, czego nie potrzebujesz. Błędy są zawsze zapisywane.",
+    "sync": "Synchronizacja",
+    "files": "Pliki łańcucha i almanach",
+    "send": "Wysyłki",
+    "node": "Węzeł",
+    "ui": "Dotknięcia i ekrany",
+    "net": "Żądania aplikacji",
+    "app": "Aplikacja i wydajność",
+    "libs": "Biblioteki"
   }
 }

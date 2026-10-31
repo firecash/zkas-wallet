@@ -1821,22 +1821,29 @@
     "nodePlaceholder": "host:poort",
     "backupHint": "Back-upnode (optioneel) — alleen gebruikt als de eerste niet reageert.",
     "backupPlaceholder": "host:poort — leeglaten voor geen",
-    "onBackupNow": "Synchroniseert nu van de back-up: de eerste node reageerde niet."
+    "onBackupNow": "Synchroniseert nu van de back-up: de eerste node reageerde niet.",
+    "fastTitle": "Snelle sync",
+    "fastHint": "Downloadt chainbestanden van dit adres. Het ziet je IP, niet je wallet.",
+    "fastOff": "Uit: elk blok komt van de node.",
+    "fastOffTor": "Uit via Tor.",
+    "fastOffOwnNode": "Niet gebruikt met je eigen node, tenzij je een eigen adres invult.",
+    "fastBadUrl": "Vul een https://-adres in.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Adres voor snelle sync"
   },
   "whatsNew": {
     "eyebrow": "Nieuw",
-    "title": "Draai de wallet op je telefoon",
-    "gotIt": "Begrepen",
-    "titleOnPhone": "Kies je nodes",
-    "onPhoneTitle": "Geen server ziet je wallet",
-    "onPhoneDesc": "De wallet-engine draait op deze telefoon. Je sleutels en kijksleutel verlaten het nooit, dus geen dienst kan je saldo of betalingen zien.",
-    "nodesTitle": "Twee nodes, met een back-up",
-    "nodesDesc": "Kies de node waarvan je synchroniseert en een optionele back-up. Stopt de eerste met reageren, dan schakelt de wallet automatisch over naar de back-up.",
-    "onPhoneCaveat": "Goed om te weten: de eerste synchronisatie leest de keten op je telefoon. Voor een recente wallet is dat snel; voor een oudere kan het even duren, en je kunt altijd terugschakelen.",
-    "switchNow": "Op mijn telefoon",
-    "switching": "Starten…",
+    "title": "Wat is er nieuw",
     "switchFailed": "Kon de on-device-engine niet starten. Je zit nog op de vorige dienst.",
-    "notNow": "Niet nu"
+    "fastTitle": "Snelle sync",
+    "fastDesc": "Op deze telefoon duurt bijwerken seconden in plaats van minuten. De app downloadt chainbestanden van zkas.info en controleert ze bij de node. zkas.info ziet je IP, niet je wallet.",
+    "fixTitle": "Opgelost",
+    "fixDesc": "Meerdere wallets die tegelijk synchroniseren downloaden niet meer steeds dezelfde bestanden.",
+    "logsTitle": "Kortere logs",
+    "logsDesc": "Instellingen → Debuglogs: zet onderdelen uit die je niet nodig hebt.",
+    "disableFast": "Snelle sync uitzetten",
+    "disabling": "Uitzetten…",
+    "ok": "OK"
   },
   "mainRoot": {
     "opening": "Openen…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Mining-software bijwerken",
     "note": "{{release}} is beschikbaar. Een oude bridge stuurt werk dat het netwerk weigert, dus mijnt zonder opbrengst."
+  },
+  "logParts": {
+    "title": "Logonderdelen",
+    "hint": "Zet uit wat je niet nodig hebt. Fouten blijven altijd bewaard.",
+    "sync": "Sync",
+    "files": "Chainbestanden & almanak",
+    "send": "Verzenden",
+    "node": "Node",
+    "ui": "Tikken & schermen",
+    "net": "App-verzoeken",
+    "app": "App & prestaties",
+    "libs": "Bibliotheken"
   }
 }

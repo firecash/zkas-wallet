@@ -28,11 +28,18 @@ object EngineControl {
     }
 
     private const val FAST_SYNC_KEY = "fast_sync"
+    private const val CHAIN_FILES_URL_KEY = "chain_files_url"
 
     /** Remember the app's "Fast sync" choice where the background worker can read it. */
     @JvmStatic
     fun storeFastSync(ctx: Context, on: Boolean) {
         ctx.getSharedPreferences(BackgroundSyncPlugin.PREFS, Context.MODE_PRIVATE).edit().putBoolean(FAST_SYNC_KEY, on).apply()
+    }
+
+    /** Remember the Fast sync address ("" = the public default). */
+    @JvmStatic
+    fun storeChainFilesUrl(ctx: Context, url: String) {
+        ctx.getSharedPreferences(BackgroundSyncPlugin.PREFS, Context.MODE_PRIVATE).edit().putString(CHAIN_FILES_URL_KEY, url).apply()
     }
 
     /**
@@ -42,8 +49,10 @@ object EngineControl {
      */
     @JvmStatic
     fun applyFastSync(ctx: Context) {
-        val on = ctx.getSharedPreferences(BackgroundSyncPlugin.PREFS, Context.MODE_PRIVATE).getBoolean(FAST_SYNC_KEY, true)
+        val prefs = ctx.getSharedPreferences(BackgroundSyncPlugin.PREFS, Context.MODE_PRIVATE)
+        val on = prefs.getBoolean(FAST_SYNC_KEY, true)
         try { uniffi.zkas_walletd_mobile.setFastSync(on) } catch (_: Throwable) {}
+        try { uniffi.zkas_walletd_mobile.setChainFilesUrl(prefs.getString(CHAIN_FILES_URL_KEY, "") ?: "") } catch (_: Throwable) {}
     }
 
     /**

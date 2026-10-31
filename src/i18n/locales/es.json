@@ -1842,22 +1842,29 @@
     "nodePlaceholder": "host:puerto",
     "backupHint": "Nodo de respaldo (opcional) — solo se usa si el primero deja de responder.",
     "backupPlaceholder": "host:puerto — vacío si no",
-    "onBackupNow": "Sincronizando desde el respaldo: el primer nodo no respondía."
+    "onBackupNow": "Sincronizando desde el respaldo: el primer nodo no respondía.",
+    "fastTitle": "Sincronización rápida",
+    "fastHint": "Descarga archivos de la cadena desde esta dirección. Ve tu IP, no tu billetera.",
+    "fastOff": "Desactivada: cada bloque viene del nodo.",
+    "fastOffTor": "Desactivada con Tor.",
+    "fastOffOwnNode": "No se usa con tu propio nodo, salvo que pongas tu propia dirección.",
+    "fastBadUrl": "Introduce una dirección https://.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Dirección de sincronización rápida"
   },
   "whatsNew": {
     "eyebrow": "Nuevo",
-    "title": "Ejecuta la billetera en tu teléfono",
-    "gotIt": "Entendido",
-    "titleOnPhone": "Elige tus nodos",
-    "onPhoneTitle": "Ningún servidor ve tu billetera",
-    "onPhoneDesc": "El motor de la billetera corre en este teléfono. Tus claves y tu clave de visualización nunca lo abandonan, así que ningún servicio puede ver tu saldo ni tus pagos.",
-    "nodesTitle": "Dos nodos, con respaldo",
-    "nodesDesc": "Elige el nodo para sincronizar y un respaldo opcional. Si el primero deja de responder, la billetera cambia al respaldo sola.",
-    "onPhoneCaveat": "Para saber: la primera sincronización lee la cadena en tu teléfono. Para una billetera reciente es rápida; para una más vieja puede tardar, y puedes volver al servicio anterior cuando quieras.",
-    "switchNow": "Ejecutar en mi teléfono",
-    "switching": "Iniciando…",
+    "title": "Novedades",
     "switchFailed": "No se pudo iniciar el motor local. Sigues en el servicio anterior.",
-    "notNow": "Ahora no"
+    "fastTitle": "Sincronización rápida",
+    "fastDesc": "En este teléfono, ponerse al día tarda segundos en vez de minutos. La app descarga archivos de la cadena de zkas.info y los comprueba con el nodo. zkas.info ve tu IP, no tu billetera.",
+    "fixTitle": "Corregido",
+    "fixDesc": "Varias billeteras sincronizando a la vez ya no descargan los mismos archivos una y otra vez.",
+    "logsTitle": "Registros más cortos",
+    "logsDesc": "Ajustes → Registros de depuración: desactiva las partes que no necesites.",
+    "disableFast": "Desactivar sincronización rápida",
+    "disabling": "Desactivando…",
+    "ok": "Aceptar"
   },
   "mainRoot": {
     "opening": "Abriendo…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Actualizar el software de minería",
     "note": "{{release}} está disponible. Un puente antiguo envía trabajo que la red rechaza, así que mina sin ganar nada."
+  },
+  "logParts": {
+    "title": "Partes del registro",
+    "hint": "Desactiva lo que no necesites. Los errores siempre se guardan.",
+    "sync": "Sincronización",
+    "files": "Archivos de la cadena y almanaque",
+    "send": "Envíos",
+    "node": "Nodo",
+    "ui": "Toques y pantallas",
+    "net": "Peticiones de la app",
+    "app": "App y rendimiento",
+    "libs": "Bibliotecas"
   }
 }

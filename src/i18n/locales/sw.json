@@ -1805,22 +1805,29 @@
     "nodePlaceholder": "host:port",
     "backupHint": "Nodi nakala (si lazima) — inatumika tu ikiwa ya kwanza haijibu.",
     "backupPlaceholder": "host:port — acha wazi",
-    "onBackupNow": "Inasawazisha kutoka kwa nakala: nodi ya kwanza haikujibu."
+    "onBackupNow": "Inasawazisha kutoka kwa nakala: nodi ya kwanza haikujibu.",
+    "fastTitle": "Usawazishaji wa haraka",
+    "fastHint": "Hupakua faili za mnyororo kutoka anwani hii. Inaona IP yako, si pochi yako.",
+    "fastOff": "Imezimwa: kila bloku hutoka kwa nodi.",
+    "fastOffTor": "Imezimwa kupitia Tor.",
+    "fastOffOwnNode": "Haitumiki na nodi yako mwenyewe, isipokuwa uweke anwani yako.",
+    "fastBadUrl": "Weka anwani ya https://.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Anwani ya usawazishaji wa haraka"
   },
   "whatsNew": {
     "eyebrow": "Mpya",
-    "title": "Endesha pochi kwenye simu yako",
-    "gotIt": "Nimeelewa",
-    "titleOnPhone": "Chagua nodi zako",
-    "onPhoneTitle": "Hakuna seva inayoona pochi yako",
-    "onPhoneDesc": "Injini ya pochi inaendeshwa kwenye simu hii. Funguo zako na ufunguo wako wa kutazama haviondoki humo, kwa hivyo hakuna huduma inayoweza kuona salio lako au malipo yako.",
-    "nodesTitle": "Nodi mbili, na nakala rudufu",
-    "nodesDesc": "Chagua nodi unayosawazisha kutoka, na nakala rudufu (si lazima). Ikiwa ya kwanza haijibu, pochi inahamia kwenye nakala yenyewe.",
-    "onPhoneCaveat": "Jambo la kujua: usawazishaji wa kwanza unasoma mnyororo kwenye simu yako. Kwa pochi iliyotengenezwa hivi karibuni ni haraka; kwa ya zamani inaweza kuchukua muda, na unaweza kurudi nyuma wakati wowote.",
-    "switchNow": "Endesha kwenye simu yangu",
-    "switching": "Inaanza…",
+    "title": "Mapya",
     "switchFailed": "Haikuweza kuanzisha injini ya kifaa. Bado uko kwenye huduma ya awali.",
-    "notNow": "Sio sasa"
+    "fastTitle": "Usawazishaji wa haraka",
+    "fastDesc": "Kwenye simu hii, kufikia hali ya sasa huchukua sekunde badala ya dakika. Programu hupakua faili za mnyororo kutoka zkas.info na kuzikagua na nodi. zkas.info inaona IP yako, si pochi yako.",
+    "fixTitle": "Imerekebishwa",
+    "fixDesc": "Pochi kadhaa zinazosawazisha pamoja hazipakui tena faili zilezile mara kwa mara.",
+    "logsTitle": "Kumbukumbu fupi",
+    "logsDesc": "Mipangilio → Kumbukumbu za utatuzi: zima sehemu usizohitaji.",
+    "disableFast": "Zima usawazishaji wa haraka",
+    "disabling": "Inazima…",
+    "ok": "Sawa"
   },
   "mainRoot": {
     "opening": "Inafungua…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Sasisha programu ya uchimbaji",
     "note": "{{release}} inapatikana. Daraja la zamani hutuma kazi ambayo mtandao hukataa, hivyo huchimba bila malipo."
+  },
+  "logParts": {
+    "title": "Sehemu za kumbukumbu",
+    "hint": "Zima usichohitaji. Hitilafu huhifadhiwa daima.",
+    "sync": "Usawazishaji",
+    "files": "Faili za mnyororo na almanaki",
+    "send": "Kutuma",
+    "node": "Nodi",
+    "ui": "Migusoni na skrini",
+    "net": "Maombi ya programu",
+    "app": "Programu na utendaji",
+    "libs": "Maktaba"
   }
 }

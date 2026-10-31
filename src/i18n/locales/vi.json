@@ -1787,22 +1787,29 @@
     "nodePlaceholder": "host:port",
     "backupHint": "Nút dự phòng (tùy chọn) — chỉ dùng nếu nút đầu không trả lời.",
     "backupPlaceholder": "host:port — để trống nếu không",
-    "onBackupNow": "Đang đồng bộ từ nút dự phòng: nút đầu không trả lời."
+    "onBackupNow": "Đang đồng bộ từ nút dự phòng: nút đầu không trả lời.",
+    "fastTitle": "Đồng bộ nhanh",
+    "fastHint": "Tải tệp chuỗi từ địa chỉ này. Nó thấy IP của bạn, không thấy ví của bạn.",
+    "fastOff": "Tắt: mọi khối đều lấy từ nút.",
+    "fastOffTor": "Tắt khi dùng Tor.",
+    "fastOffOwnNode": "Không dùng với nút của riêng bạn, trừ khi bạn nhập địa chỉ riêng.",
+    "fastBadUrl": "Nhập địa chỉ https://.",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "Địa chỉ đồng bộ nhanh"
   },
   "whatsNew": {
     "eyebrow": "Mới",
-    "title": "Chạy ví trên điện thoại của bạn",
-    "gotIt": "Đã hiểu",
-    "titleOnPhone": "Chọn nút của bạn",
-    "onPhoneTitle": "Không máy chủ nào thấy ví của bạn",
-    "onPhoneDesc": "Công cụ ví chạy trên điện thoại này. Khóa và khóa xem của bạn không bao giờ rời khỏi nó, nên không dịch vụ nào thấy số dư hay khoản thanh toán của bạn.",
-    "nodesTitle": "Hai nút, có dự phòng",
-    "nodesDesc": "Chọn nút bạn đồng bộ từ đó và một nút dự phòng tùy chọn. Nếu nút đầu không trả lời, ví tự động chuyển sang nút dự phòng.",
-    "onPhoneCaveat": "Đáng biết: lần đồng bộ đầu đọc chuỗi trên điện thoại của bạn. Với ví mới tạo thì nhanh; với ví cũ có thể mất một lúc, và bạn có thể chuyển lại bất kỳ lúc nào.",
-    "switchNow": "Chạy trên điện thoại",
-    "switching": "Đang khởi động…",
+    "title": "Có gì mới",
     "switchFailed": "Không thể khởi động công cụ trên thiết bị. Bạn vẫn đang dùng dịch vụ trước.",
-    "notNow": "Để sau"
+    "fastTitle": "Đồng bộ nhanh",
+    "fastDesc": "Trên điện thoại này, bắt kịp chỉ mất vài giây thay vì vài phút. Ứng dụng tải tệp chuỗi từ zkas.info và kiểm tra với nút. zkas.info thấy IP của bạn, không thấy ví của bạn.",
+    "fixTitle": "Đã sửa",
+    "fixDesc": "Nhiều ví đồng bộ cùng lúc không còn tải đi tải lại cùng các tệp.",
+    "logsTitle": "Nhật ký ngắn hơn",
+    "logsDesc": "Cài đặt → Nhật ký gỡ lỗi: tắt những phần bạn không cần.",
+    "disableFast": "Tắt đồng bộ nhanh",
+    "disabling": "Đang tắt…",
+    "ok": "OK"
   },
   "mainRoot": {
     "opening": "Đang mở…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "Cập nhật phần mềm đào",
     "note": "Đã có {{release}}. Cầu nối cũ gửi công việc bị mạng từ chối, nên đào mà không có thưởng."
+  },
+  "logParts": {
+    "title": "Phần nhật ký",
+    "hint": "Tắt những gì không cần. Lỗi luôn được giữ lại.",
+    "sync": "Đồng bộ",
+    "files": "Tệp chuỗi & niên giám",
+    "send": "Gửi",
+    "node": "Nút",
+    "ui": "Chạm & màn hình",
+    "net": "Yêu cầu của ứng dụng",
+    "app": "Ứng dụng & hiệu năng",
+    "libs": "Thư viện"
   }
 }

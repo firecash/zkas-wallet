@@ -1805,22 +1805,29 @@
     "nodePlaceholder": "host:port",
     "backupHint": "備用節點（選填）— 僅在第一個無回應時使用。",
     "backupPlaceholder": "host:port — 留空則無",
-    "onBackupNow": "目前正從備用節點同步：第一個節點無回應。"
+    "onBackupNow": "目前正從備用節點同步：第一個節點無回應。",
+    "fastTitle": "快速同步",
+    "fastHint": "從此位址下載鏈檔案。它看得到你的 IP，看不到你的錢包。",
+    "fastOff": "已關閉：每個區塊都來自節點。",
+    "fastOffTor": "使用 Tor 時關閉。",
+    "fastOffOwnNode": "除非填入你自己的位址，否則在你自己的節點上不使用。",
+    "fastBadUrl": "請輸入 https:// 位址。",
+    "fastUrlPlaceholder": "https://…",
+    "fastUrlLabel": "快速同步位址"
   },
   "whatsNew": {
     "eyebrow": "新功能",
-    "title": "在手機上執行錢包",
-    "gotIt": "知道了",
-    "titleOnPhone": "選擇你的節點",
-    "onPhoneTitle": "無伺服器可查看你的錢包",
-    "onPhoneDesc": "錢包引擎在此手機上執行。你的密鑰與查看密鑰絕不離開手機，因此沒有任何服務能看到你的餘額或付款。",
-    "nodesTitle": "兩個節點，附備援",
-    "nodesDesc": "選擇同步來源的節點，以及選用的備用節點。若第一個無回應，錢包會自動切換到備用節點。",
-    "onPhoneCaveat": "值得留意：首次同步會在此手機上讀取鏈。近期建立的錢包很快；較舊的錢包可能需要一些時間，你隨時可以切換回原本的服務。",
-    "switchNow": "在手機上執行",
-    "switching": "啟動中…",
+    "title": "新功能",
     "switchFailed": "無法啟動裝置端引擎。你仍在使用先前的服務。",
-    "notNow": "稍後再說"
+    "fastTitle": "快速同步",
+    "fastDesc": "在這支手機上，追上進度只需幾秒而不是幾分鐘。App 從 zkas.info 下載鏈檔案並與節點核對。zkas.info 看得到你的 IP，看不到你的錢包。",
+    "fixTitle": "已修正",
+    "fixDesc": "多個錢包同時同步時，不再反覆下載相同的檔案。",
+    "logsTitle": "更短的日誌",
+    "logsDesc": "設定 → 除錯日誌：關閉不需要的部分。",
+    "disableFast": "關閉快速同步",
+    "disabling": "正在關閉…",
+    "ok": "好"
   },
   "mainRoot": {
     "opening": "開啟中…"
@@ -2089,5 +2096,17 @@
   "bridgeUpdateNotice": {
     "title": "更新挖礦軟體",
     "note": "{{release}} 已發布。舊版橋接提交的工作會被網路拒絕，挖礦也拿不到收益。"
+  },
+  "logParts": {
+    "title": "日誌內容",
+    "hint": "關閉不需要的部分。錯誤一律保留。",
+    "sync": "同步",
+    "files": "鏈檔案與年鑑",
+    "send": "傳送",
+    "node": "節點",
+    "ui": "點擊與畫面",
+    "net": "App 請求",
+    "app": "App 與效能",
+    "libs": "程式庫"
   }
 }
