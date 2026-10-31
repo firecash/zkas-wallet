@@ -3815,6 +3815,12 @@ async function addAccountWallet(): Promise<void> {
     // Born now: the daemon fast-syncs from the tip instead of replaying a chain
     // this account cannot have history on.
     birthday = (await api.status().catch(() => null))?.daa_score ?? 0;
+    // ...and NEVER born at 0. A status that failed, or an engine that has not reached its
+    // node yet, reads 0, and 0 means "scan from genesis" to the daemon: a brand-new, empty
+    // account would replay the whole chain (measured 2026-10-31 on the phone engine: past
+    // the public node's ~10.8-day frontier window that is ~25 min and ~2.6 GB of RAM).
+    // Nothing has been minted or switched yet, so refusing here changes nothing.
+    if (!(birthday > 0)) throw new Error(i18n.t("onboard.connectingWhy"));
   } catch (e) {
     // Silence here is why "Add account" looked like a dead button: the derive,
     // the viewing-key step and the status call all ended in `return` with
@@ -4375,6 +4381,20 @@ function Onboard({
         setError(t("onboard.errHasKey"));
         return;
       }
+      // Born now: the daemon fast-syncs from the current tip instead of scanning
+      // the whole chain for history this wallet cannot have.
+      //
+      // The tip is read HERE, fresh, before anything is written. `status` starts from the
+      // on-disk cache (`loadStatusCache`), so on any launch after the first it is whatever
+      // tip the app last saw — days or weeks old — and the Create button is live with it.
+      // A wallet born that far back scans history it cannot have, and past the public
+      // node's ~10.8-day frontier window that is a scan from GENESIS (measured 2026-10-31:
+      // ~25 min and ~2.6 GB on the phone engine). And never 0: that is genesis outright.
+      const birthday = (await api.status().catch(() => null))?.daa_score ?? 0;
+      if (!(birthday > 0)) {
+        setError(t("onboard.connectingWhy"));
+        return;
+      }
       // New wallets are born with a 12-word recovery phrase: it can actually be
       // written down and typed back, which a 64-hex seed cannot. The phrase is the
       // DEVICE master — every wallet added later is an account under it, so there
@@ -4406,9 +4426,6 @@ function Onboard({
         secret = await accountSeedHex(w.mnemonic, 0);
         if (token) setAccountOf(token, 0);
       }
-      // Born now: the daemon fast-syncs from the current tip instead of scanning
-      // the whole chain for history this wallet cannot have.
-      const birthday = status?.daa_score ?? 0;
       // Store the key BEFORE registering the wallet, and only proceed once it is
       // verifiably on the device: the reverse order can register a wallet whose
       // key never landed, which receives coins it can never spend.
