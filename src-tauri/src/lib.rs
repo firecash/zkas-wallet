@@ -845,6 +845,10 @@ impl Engine {
                     r.page_cache_ttl_secs = 60;
                     // Single wallet: the cache only needs to hold the read-ahead window.
                     r.page_cache_entries = r.prefetch_depth + 2;
+                    // Published chain files: catch-up reads the 12-hour segments over HTTPS
+                    // instead of paging the node. Only against ZKas's own public nodes, never
+                    // against a node the user runs (see `default_for_node`).
+                    r.chain_files = zkas_walletd::chain_files::default_for_node(&node_rpc);
                 }
                 r
             },
