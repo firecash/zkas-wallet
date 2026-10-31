@@ -102,6 +102,7 @@ import { getTxLabel, setTxLabel } from "./txlabels";
 import { takePaymentLink } from "./paymentlinks";
 import { walletNodeProfiles, walletdProfiles, type EndpointProfile } from "./connection-profiles";
 import { HOSTED_WALLETD_URL, ONION_WALLETD_URL } from "./lib/relay";
+import { LOG_PARTS, partEnabled, setPartEnabled, type LogPart } from "./diag/parts";
 import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, stopEmbedded, engineLogs, setEngineDebugLogs, embeddedDebugChosen, setEmbeddedDebug, engineBusy, setEngineBusy, engineKeepAlive } from "./embedded";
 import { captureScanReceipt, adoptScanReceipt, haveScanReceipt } from "./scanreceipt";
 import { rotatePublicNode, setEmbeddedBackupNode } from "./embedded";
@@ -2252,7 +2253,7 @@ function ConnectionButton() {
   /// claiming it "works immediately". The hosted service has already scanned, so
   /// the balance is there at once. Recorded as a remote choice so it survives a
   /// restart, and so api.ts routes calls to it instead of the embedded engine.
-  const connectEmbedded = async (node?: string, tor?: boolean, backup?: string) => {
+  const connectEmbedded = async (node?: string, tor?: boolean, backup?: string, fast?: boolean) => {
     setBusy("phone");
     try {
       // Persist the spare before starting, so failover has somewhere to go from the
@@ -2261,7 +2262,7 @@ function ConnectionButton() {
       // While we are still talking to the service being left: ask it for this wallet's
       // finished scan, so the on-device engine resumes instead of starting over.
       await captureScanReceipt(loadStatusCache()?.address);
-      const url = await ensureEmbedded(node, tor);
+      const url = await ensureEmbedded(node, tor, true, fast);
       setEmbeddedChosen(true);
       markBackgroundPromptPending();
       setBase(url); setWalletdBearer("");
@@ -2463,7 +2464,7 @@ function ConnectionButton() {
 
             <div className="connection-list">
               {embeddedAvailable() && (
-                <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? t("connectionButton.starting") : embeddedChosen() ? t("connectionButton.on") : t("connectionButton.use")} onStart={(n, tor, backup) => connectEmbedded(n, tor, backup)} />
+                <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? t("connectionButton.starting") : embeddedChosen() ? t("connectionButton.on") : t("connectionButton.use")} onStart={(n, tor, backup, fast) => connectEmbedded(n, tor, backup, fast)} />
               )}
               <button className={`connection-option ${!embeddedChosen() && hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
                 <span><b>{t("connectionButton.publicService")}</b><small>{desktop ? t("connectionButton.publicDescDesktop") : t("connectionButton.publicDescMobile")}</small></span><span>{busy === "hosted" ? t("connectionButton.checking") : hosted && !onion ? t("connectionButton.connected") : t("connectionButton.use")}</span>
@@ -8155,6 +8156,12 @@ function diagRows(status: Status | null): [string, string][] {
       rows.push(["missing history", `true — daemon serves from DAA ${status.history_from_daa !== undefined ? fmtCount(status.history_from_daa) : "?"}`]);
     }
     rows.push(["network", status.network]);
+    const cf = status.chain_files;
+    if (cf) {
+      rows.push(["chain files", cf.disabled ? `OFF — a check failed, reading from the node (${cf.source})` : cf.source]);
+      rows.push(["  served from files", `${fmtCount(cf.pages_served)} pages · ${fmtCount(cf.segments_loaded)} segments · ${cf.downloaded_mb} MB downloaded`]);
+      if (cf.refetched_segments > 0) rows.push(["  re-downloaded", `${fmtCount(cf.refetched_segments)} segments fetched more than once`]);
+    }
     if (status.error) rows.push(["daemon error", status.error]);
   } else {
     rows.push(["status", "no answer from the service yet"]);
@@ -8226,8 +8233,42 @@ function DebugLogsCard({ status }: { status: Status | null }) {
         </div>
         <p className="muted small" style={{ margin: 0 }}>{t("diagnostics.openHint")}</p>
       </div>
+      <LogPartsSection engine={engine} />
       {engine && <DebugLogsEngineSection on={on} toggle={toggle} show={show} shown={shown} text={text} />}
     </Collapsible>
+  );
+}
+
+/// Settings → Debug logs → Log parts: switch off the parts of the logs you do not need, so the
+/// ones you do are not pushed out. Warnings and errors are always kept (see diag/parts.ts).
+function LogPartsSection({ engine }: { engine: boolean }) {
+  const { t } = useTranslation();
+  const [, bump] = useState(0);
+  const label: Record<LogPart, string> = {
+    sync: t("logParts.sync"),
+    files: t("logParts.files"),
+    send: t("logParts.send"),
+    node: t("logParts.node"),
+    ui: t("logParts.ui"),
+    net: t("logParts.net"),
+    app: t("logParts.app"),
+    libs: t("logParts.libs"),
+  };
+  // The engine-only parts mean nothing without an engine in this app.
+  const parts = LOG_PARTS.filter((p) => engine || !["files", "node", "libs"].includes(p));
+  return (
+    <div className="stack" style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
+      <b>{t("logParts.title")}</b>
+      <span className="muted small">{t("logParts.hint")}</span>
+      <div className="row" style={{ gap: 14, flexWrap: "wrap" }}>
+        {parts.map((p) => (
+          <label key={p} className="row small" style={{ gap: 6, cursor: "pointer" }}>
+            <input type="checkbox" checked={partEnabled(p)} onChange={(e) => { setPartEnabled(p, e.target.checked); bump((n) => n + 1); }} />
+            {label[p]}
+          </label>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -8356,7 +8397,7 @@ function NetworkPrivacyCard() {
         setBusy(null);
       });
   };
-  const startOnPhone = (node?: string, tor?: boolean, backup?: string) => run("phone", async () => { if (backup !== undefined) setEmbeddedBackupNode(backup); await captureScanReceipt(loadStatusCache()?.address); const u = await ensureEmbedded(node, tor); setEmbeddedChosen(true); markBackgroundPromptPending(); setBase(u); setWalletdBearer(""); });
+  const startOnPhone = (node?: string, tor?: boolean, backup?: string, fast?: boolean) => run("phone", async () => { if (backup !== undefined) setEmbeddedBackupNode(backup); await captureScanReceipt(loadStatusCache()?.address); const u = await ensureEmbedded(node, tor, true, fast); setEmbeddedChosen(true); markBackgroundPromptPending(); setBase(u); setWalletdBearer(""); });
   const leaveEngine = async () => {
     if (embeddedChosen()) {
       await captureScanReceipt(loadStatusCache()?.address);
@@ -8384,7 +8425,7 @@ function NetworkPrivacyCard() {
       <p className="muted small" style={{ marginTop: 0 }}>{t("networkPrivacyCard.intro")}</p>
       <div className="connection-list">
         {embeddedAvailable() && (
-          <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n, tor, backup) => startOnPhone(n, tor, backup)} />
+          <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n, tor, backup, fast) => startOnPhone(n, tor, backup, fast)} />
         )}
         <button className={"connection-option" + (current === "public" ? " active" : "")} disabled={!!busy} onClick={usePublic}>
           <span><b>{t("networkPrivacyCard.publicTitle")}</b><small>{t("networkPrivacyCard.publicHint")}</small></span><span>{tag("public")}</span>

@@ -4,13 +4,14 @@
 //
 // First tap reveals the node address (prefilled with the default public ZKas
 // node) and a Tor toggle. The node is who you ask about your coins; Tor (via
-// Orbot) hides your IP from that node. Both are chosen before the on-device
-// engine starts.
+// Orbot) hides your IP from that node. Fast sync reads catch-up from the chain
+// files ZKas publishes instead of block by block from the node. All are chosen
+// before the on-device engine starts.
 
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { embeddedTor, embeddedPrimaryNode, embeddedBackupNode, embeddedUsingBackup } from "./embedded";
+import { embeddedTor, embeddedPrimaryNode, embeddedBackupNode, embeddedUsingBackup, embeddedFastSync, isPublicZkasNode } from "./embedded";
 
 export function RunOnPhoneOption({
   active,
@@ -23,7 +24,7 @@ export function RunOnPhoneOption({
   busy?: boolean;
   starting?: boolean;
   tag?: ReactNode;
-  onStart: (node: string, tor: boolean, backup?: string) => void | Promise<void>;
+  onStart: (node: string, tor: boolean, backup?: string, fast?: boolean) => void | Promise<void>;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -34,8 +35,13 @@ export function RunOnPhoneOption({
   const [node, setNode] = useState(() => embeddedPrimaryNode());
   const [backup, setBackup] = useState(() => embeddedBackupNode());
   const [tor, setTor] = useState(() => embeddedTor());
+  // The user's choice, kept as chosen even while it cannot apply (Tor on, or their own node):
+  // switching Tor off again must not silently leave fast sync off, or turn it on.
+  const [fast, setFast] = useState(() => embeddedFastSync());
   const onBackup = embeddedUsingBackup();
-  const go = () => void onStart(node.trim(), tor, backup.trim());
+  const publicNode = isPublicZkasNode(node || embeddedPrimaryNode());
+  const fastApplies = !tor && publicNode;
+  const go = () => void onStart(node.trim(), tor, backup.trim(), fast);
   return (
     <div className="run-on-phone">
       <button
@@ -83,6 +89,23 @@ export function RunOnPhoneOption({
               <b>{t("runOnPhoneOption.torTitle")}</b>
               <br />
               <span className="muted small">{t("runOnPhoneOption.torDesc")}</span>
+            </span>
+          </label>
+          <label className="row" style={{ gap: 10, alignItems: "flex-start", cursor: fastApplies ? "pointer" : "default", opacity: fastApplies ? 1 : 0.6 }}>
+            <input
+              type="checkbox"
+              data-diag="fast-sync"
+              checked={fast && fastApplies}
+              style={{ marginTop: 3 }}
+              disabled={!!busy || !fastApplies}
+              onChange={(e) => setFast(e.target.checked)}
+            />
+            <span>
+              <b>{t("runOnPhoneOption.fastTitle")}</b>
+              <br />
+              <span className="muted small">
+                {tor ? t("runOnPhoneOption.fastOffTor") : !publicNode ? t("runOnPhoneOption.fastOffOwnNode") : t("runOnPhoneOption.fastDesc")}
+              </span>
             </span>
           </label>
           <button type="button" className="btn" disabled={!!busy} onClick={go}>

@@ -12,6 +12,7 @@
 import type { Status } from "../api";
 import { SETTLE_MARGIN, syncRate } from "../lib/syncrate";
 import { event, isVerbose, safeText } from "./log";
+import { partEnabled, partOfEngineLine } from "./parts";
 
 export type SyncState = "no_wallet" | "loading" | "node_down" | "syncing" | "stalled" | "warming" | "synced" | "unreachable";
 
@@ -178,6 +179,16 @@ const PARSERS: { re: RegExp; ev: string; map: (m: RegExpExecArray) => Record<str
   { re: /wallet sync page timed out after ([\d.]+\w+)/, ev: "page_timeout", map: (m) => ({ after_ms: rustDurationMs(m[1]) }) },
   { re: /checkpoint on request: saved (\d+)\/(\d+) wallet\(s\), preserving (\d+) block/, ev: "checkpoint", map: (m) => ({ saved: +m[1], total: +m[2], blocks: +m[3] }) },
   { re: /release_memory: dropped (\d+) decoded leaves/, ev: "release_memory", map: (m) => ({ leaves: +m[1] }) },
+  // Chain files and the frontier almanac: where catch-up came from, and what it cost.
+  {
+    re: /chain files: segment (\d+) ready: (\d+) blocks, (\d+) KB, (\d+) ms \((\d+) MB downloaded this session, (\d+) pages served from files\)/,
+    ev: "chain_file_segment",
+    map: (m) => ({ segment: +m[1], blocks: +m[2], kb: +m[3], ms: +m[4], session_mb: +m[5], pages: +m[6] }),
+  },
+  { re: /chain files: segment (\d+) fetched (\d+) times this session \((\d+) MB/, ev: "chain_file_refetch", map: (m) => ({ segment: +m[1], times: +m[2], session_mb: +m[3] }) },
+  { re: /chain files verified: the tree built from them equals the node's/, ev: "chain_files_verified", map: () => ({}) },
+  { re: /chain files DISABLED: (.*)$/, ev: "chain_files_disabled", map: (m) => ({ why: m[1].slice(0, 200) }) },
+  { re: /starting from the frontier almanac at daa (\d+) \(tree position (\d+)\)/, ev: "almanac_start", map: (m) => ({ daa: +m[1], position: +m[2] }) },
   // walletd's structured per-wallet stage timings (zkas-rusty 0fb6f65): one `scan_stats` line
   // per wallet per minute at most, and one `ckpt_load` per wallet load. Space-separated
   // key=value, keys [a-z_]+, every value a number except `tok` (a SHA-256 pseudonym of the
@@ -225,10 +236,21 @@ export function splitEngineLine(raw: string): EngineLine {
   return { level: "INFO", msg: raw };
 }
 
-function emitEngineLine(line: EngineLine, source: string): void {
-  const parsed = parseEngineMessage(line.msg);
-  if (parsed) event("sync", parsed.ev, { ...parsed.fields, source }, { withAction: false });
+/// The whole module path of an Android ring line (`zkas_walletd::chain_files`), which
+/// `splitEngineLine` shortens to its last segment: the log-part filter needs all of it to
+/// tell walletd's own submodules from third-party crates. Desktop rows carry it already.
+function moduleOf(raw: string, line: EngineLine): string | undefined {
+  return /^\d+ \[\w+\] (\S+?): /.exec(raw)?.[1] ?? line.target;
+}
+
+function emitEngineLine(line: EngineLine, source: string, module?: string): void {
   const lvl = /^err/i.test(line.level) ? "error" : /^warn/i.test(line.level) ? "warn" : /^(debug|trace)/i.test(line.level) ? "debug" : "info";
+  // Settings → Log parts, decided BEFORE anything is recorded: a part switched off drops both
+  // the raw line and the structured event parsed from it. Warnings and errors are kept.
+  const part = partOfEngineLine(module ?? line.target, line.msg);
+  if (!partEnabled(part) && lvl !== "error" && lvl !== "warn") return;
+  const parsed = parseEngineMessage(line.msg);
+  if (parsed) event("sync", parsed.ev, { ...parsed.fields, source }, { withAction: false, part });
   if (lvl === "debug" && !isVerbose()) return;
   // Rate-limited at normal: the engine is chatty, and the files are a ring — a flood of
   // engine lines must not rotate the app's own events out.
@@ -280,7 +302,8 @@ export function ingestEngineText(text: string, source: "desktop" | "android"): n
       previous++;
       continue;
     }
-    emitEngineLine(splitEngineLine(raw), source);
+    const line = splitEngineLine(raw);
+    emitEngineLine(line, source, moduleOf(raw, line));
     n++;
   }
   if (previous) event("engine", "previous_session_skipped", { source, lines: previous });

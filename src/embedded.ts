@@ -15,10 +15,11 @@ import { isNative } from "./api";
 import { isDesktop } from "./desktop";
 import { desktopServices } from "./desktop-services";
 import { knownWalletTokens } from "./walletstate";
+import { filterEngineText } from "./diag/parts";
 import i18n from "./i18n";
 
 interface EmbeddedEnginePlugin {
-  start(opts: { nodeAddr?: string; secret?: string; socks?: string }): Promise<{ port: number }>;
+  start(opts: { nodeAddr?: string; secret?: string; socks?: string; fastSync?: boolean }): Promise<{ port: number }>;
   stop(): Promise<void>;
   status(): Promise<{ port: number; running: boolean }>;
   logs(): Promise<{ text: string }>;
@@ -267,6 +268,37 @@ export function setEmbeddedTor(on: boolean): void {
   try { if (on) localStorage.setItem(TOR_KEY, "1"); else localStorage.removeItem(TOR_KEY); } catch { /* ignore */ }
 }
 
+const FAST_KEY = "wallet_embedded_fast_sync";
+/**
+ * "Fast sync": the on-device engine reads catch-up from the chain files ZKas publishes
+ * (zkas.info/shielded-chain) instead of asking the node for every block. On by default.
+ *
+ * What it reveals, so the setting can say it plainly: the files are the same for everyone,
+ * so a download says nothing about which wallet is asking — only the device's IP address and
+ * which 12-hour stretches of chain it fetched (roughly when the wallet was made or last
+ * synced), to zkas.info. The engine only ever uses them against ZKas's own public nodes, whose
+ * operator already sees that IP and the exact blocks requested, and never over Tor. Against
+ * the user's own node the setting has no effect at all.
+ */
+export function embeddedFastSync(): boolean {
+  try { return localStorage.getItem(FAST_KEY) !== "0"; } catch { return true; }
+}
+
+export function setEmbeddedFastSync(on: boolean): void {
+  try { if (on) localStorage.removeItem(FAST_KEY); else localStorage.setItem(FAST_KEY, "0"); } catch { /* ignore */ }
+}
+
+/**
+ * Is `addr` one of ZKas's public nodes — the only nodes the engine pairs with the published
+ * chain files? Mirrors `chain_files::default_for_node` in zkas-walletd (display only: the
+ * engine makes the real decision).
+ */
+export function isPublicZkasNode(addr: string): boolean {
+  const a = addr.trim().toLowerCase();
+  const host = a.startsWith("[") ? a.slice(1).split("]")[0] : a.includes(":") ? a.slice(0, a.lastIndexOf(":")) : a;
+  return host === "zkas.info" || host.endsWith(".zkas.info") || host === "185.147.157.125" || host === "160.187.211.153";
+}
+
 const DEBUG_KEY = "wallet_embedded_debug";
 /** Verbose engine logging chosen in Settings. */
 export function embeddedDebugChosen(): boolean {
@@ -352,9 +384,9 @@ export function setEngineBusy(v: boolean): void {
 /// every time and the engine never left the dead node, while the UI switched to
 /// "on the backup now" and the offline card promised it would reconnect on its
 /// own. Comparing against what we actually started is the only honest test.
-let startedWith: { node: string; tor: boolean } | null = null;
+let startedWith: { node: string; tor: boolean; fast: boolean } | null = null;
 
-export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = true): Promise<string> {
+export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = true, fast?: boolean): Promise<string> {
   if (!embeddedAvailable()) throw new Error(i18n.t("embedded.unavailable"));
   // An address passed here is a CHOICE and gets pinned; nothing passed means "whichever
   // public node you assign me", which stays automatic so failover can move it later.
@@ -363,6 +395,8 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = tru
   const explicit = !!(nodeAddr && nodeAddr.trim());
   const node = explicit ? normalizeNodeAddr(nodeAddr!) : embeddedNode();
   const useTor = tor ?? embeddedTor();
+  // Read by the engine once, at start: a change has to restart it, like a node or Tor change.
+  const useFast = fast ?? embeddedFastSync();
   // Did the user change the node or the Tor toggle? start() is idempotent and would
   // otherwise keep the OLD transport, leaving e.g. a Tor-off switch stuck on a dead
   // SOCKS proxy (permanent "opening"). If so, stop the running engine and restart it.
@@ -376,8 +410,8 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = tru
   // persisted pair is the right baseline precisely because it is only written
   // once a start has actually bound a port.
   const repaired = repairStoredNodeAddrs();
-  const baseline = startedWith ?? { node: embeddedNode(), tor: embeddedTor() };
-  const changed = repaired || node !== baseline.node || useTor !== baseline.tor;
+  const baseline = startedWith ?? { node: embeddedNode(), tor: embeddedTor(), fast: embeddedFastSync() };
+  const changed = repaired || node !== baseline.node || useTor !== baseline.tor || useFast !== baseline.fast;
   const already = await Native.status().catch(() => ({ port: 0, running: false }));
   if (already.running && already.port > 0 && !changed) return `http://127.0.0.1:${already.port}`;
   if (already.running && changed) {
@@ -406,13 +440,14 @@ export async function ensureEmbedded(nodeAddr?: string, tor?: boolean, pin = tru
     // not exist and it would never reach a node; with the VPN up, plain connections are
     // already carried over Tor.
     const socks = useTor && !isIosPlatform() ? ORBOT_SOCKS : undefined;
-    startPromise = Native.start({ nodeAddr: node, socks }).then((r) => r.port);
+    startPromise = Native.start({ nodeAddr: node, socks, fastSync: useFast }).then((r) => r.port);
   }
   try {
     const port = await startPromise;
     if (!port) throw new Error("engine returned no port");
     setEmbeddedTor(useTor);
-    startedWith = { node, tor: useTor };
+    setEmbeddedFastSync(useFast);
+    startedWith = { node, tor: useTor, fast: useFast };
     void setEngineDebugLogs(embeddedDebugChosen());
     return `http://127.0.0.1:${port}`;
   } finally {
@@ -487,7 +522,7 @@ export async function engineLogs(): Promise<string> {
     const text = rows
       .map((row) => `${new Date(row.at_unix_ms).toISOString().slice(11, 19)} ${row.line}`)
       .join("\n");
-    return scrubWalletTokens(text, knownWalletTokens());
+    return scrubWalletTokens(filterEngineText(text), knownWalletTokens());
   }
   const r = await Native.logs().catch(() => ({ text: "" }));
   // The exit history leads, because it is the part that survives a crash: the ring
@@ -498,7 +533,7 @@ export async function engineLogs(): Promise<string> {
   // The engine is walletd, walletd logs the wallet token on many lines, and that token is the
   // credential for the FVK view of this wallet — balances, payments, memos. The button exists
   // so the text can be pasted into a support channel, which is the whole problem.
-  return scrubWalletTokens(history + (r.text || ""), knownWalletTokens());
+  return scrubWalletTokens(history + filterEngineText(r.text || ""), knownWalletTokens());
 }
 
 /// The on-device engine's raw log ring (Android), for the diagnostic log's poller. NOT for

@@ -47,12 +47,12 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
     setBase(""); setWalletdBearer(""); finish();
   };
 
-  const connectPhone = async (node?: string, tor?: boolean, backup?: string) => {
+  const connectPhone = async (node?: string, tor?: boolean, backup?: string, fast?: boolean) => {
     if (busy) return;
     setErr(""); setBusy("phone");
     try {
       if (backup !== undefined) setEmbeddedBackupNode(backup);
-      const url = await ensureEmbedded(node, tor);
+      const url = await ensureEmbedded(node, tor, true, fast);
       setEmbeddedChosen(true);
       markBackgroundPromptPending();
       setBase(url); setWalletdBearer("");
@@ -105,7 +105,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
         <span className="eyebrow">{t("firstRunConnect.connectEyebrow")}</span>
         <div className="connection-list firstrun-conn">
           {embeddedAvailable() && (
-            <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} tag={<span className="chip on">{t("firstRunConnect.recommended")}</span>} onStart={(n, useTor, backup) => connectPhone(n, useTor, backup)} />
+            <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} tag={<span className="chip on">{t("firstRunConnect.recommended")}</span>} onStart={(n, useTor, backup, fast) => connectPhone(n, useTor, backup, fast)} />
           )}
           <button className="connection-option" disabled={!!busy} onClick={connectPublic}>
             <span><b>{t("firstRunConnect.publicTitle")}</b><small>{t("firstRunConnect.publicDesc")}</small></span>

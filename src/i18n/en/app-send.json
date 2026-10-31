@@ -375,5 +375,17 @@
     "later": "Not now",
     "never": "Don't ask again",
     "noScreen": "This phone has no battery-optimisation screen. Background sync still runs, on Android's schedule."
+  },
+  "logParts": {
+    "title": "Log parts",
+    "hint": "Switch off what you don't need so the important lines aren't pushed out. Warnings and errors are always kept.",
+    "sync": "Sync & scan",
+    "files": "Chain files & almanac",
+    "send": "Sends & notes",
+    "node": "Node connection",
+    "ui": "Taps & screens",
+    "net": "App requests",
+    "app": "App & performance",
+    "libs": "Library internals"
   }
 }

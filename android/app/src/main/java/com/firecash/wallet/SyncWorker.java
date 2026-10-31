@@ -112,6 +112,8 @@ public class SyncWorker extends Worker {
                 String dir = new File(getApplicationContext().getFilesDir(), "wallets").getAbsolutePath();
                 // Same ceiling the UI path reports: the worker starts the same engine.
                 EngineControl.reportMemoryBudget(getApplicationContext());
+                // The user's "Fast sync" choice binds a background sync exactly as it does the app.
+                EngineControl.applyFastSync(getApplicationContext());
                 port = EngineControl.startEngine(node, dir, socks.isEmpty() ? null : socks);
                 startedHere = true;
             }

@@ -27,6 +27,25 @@ object EngineControl {
         0
     }
 
+    private const val FAST_SYNC_KEY = "fast_sync"
+
+    /** Remember the app's "Fast sync" choice where the background worker can read it. */
+    @JvmStatic
+    fun storeFastSync(ctx: Context, on: Boolean) {
+        ctx.getSharedPreferences(BackgroundSyncPlugin.PREFS, Context.MODE_PRIVATE).edit().putBoolean(FAST_SYNC_KEY, on).apply()
+    }
+
+    /**
+     * Hand the stored "Fast sync" choice to the engine. Called before EVERY start — the app's
+     * and the background worker's — so a sync the app did not start cannot use the published
+     * chain files after the user switched them off. Default on, as the app's own default.
+     */
+    @JvmStatic
+    fun applyFastSync(ctx: Context) {
+        val on = ctx.getSharedPreferences(BackgroundSyncPlugin.PREFS, Context.MODE_PRIVATE).getBoolean(FAST_SYNC_KEY, true)
+        try { uniffi.zkas_walletd_mobile.setFastSync(on) } catch (_: Throwable) {}
+    }
+
     /**
      * Tell the engine how much memory this app is allowed.
      *

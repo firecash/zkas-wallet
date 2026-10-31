@@ -484,6 +484,8 @@ export interface Status {
   // With `missing_history`: the DAA score this wallet's view starts at, so the
   // banner can name the floor. Older daemons (and a restarted one) omit it.
   history_from_daa?: number;
+  /// Published chain files the engine reads catch-up from (absent: node only, or older engine).
+  chain_files?: { source: string; disabled: boolean; pages_served: number; segments_loaded: number; downloaded_mb: number; refetched_segments: number };
   // Watch-only wallet: the daemon holds the viewing key only. Surfaced as a badge
   // so a restored/read-only wallet never looks like it can spend. Older daemons omit it.
   watch_only?: boolean;

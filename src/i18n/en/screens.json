@@ -137,6 +137,10 @@
     "onBackupNow": "Currently syncing from the backup: the first node was not answering.",
     "torTitle": "Reach the node over Tor",
     "torDesc": "Hides your IP from the node. Requires the Orbot app (Tor) running on this phone.",
+    "fastTitle": "Fast sync",
+    "fastDesc": "Catches up in seconds instead of minutes by downloading ZKas's published chain files, checked against the node. zkas.info sees this phone's IP and which days of chain it downloads — the same operator as the public node, which already sees that. No addresses, balances or transactions: everyone downloads the same files.",
+    "fastOffTor": "Off while Tor is on: the download would bypass Tor and show zkas.info your IP.",
+    "fastOffOwnNode": "Not used with your own node: the engine reads everything from that node, and nothing goes to zkas.info.",
     "starting": "Starting…",
     "start": "Start on this phone"
   },

@@ -15,6 +15,7 @@
 // No level records a sensitive field: verbose changes VOLUME, never what kind of data.
 
 import { redactError, redactFields, redactText } from "./redact";
+import { partEnabled, partOfCategory, type LogPart } from "./parts";
 
 export type DiagLevel = "off" | "normal" | "verbose";
 export type Severity = "debug" | "info" | "warn" | "error";
@@ -158,6 +159,9 @@ export interface EventOpts {
   verbose?: boolean;
   /// Attach the current action id (default: true for ui/nav/net/send).
   withAction?: boolean;
+  /// The log part this event belongs to when its category alone does not say (an engine
+  /// line about chain files is recorded as a `sync` event but belongs to "files").
+  part?: LogPart;
 }
 
 const ACTION_CATS = new Set(["ui", "nav", "net", "send", "signer"]);
@@ -166,6 +170,9 @@ const ACTION_CATS = new Set(["ui", "nav", "net", "send", "signer"]);
 export function event(cat: string, ev: string, fields: Record<string, unknown> = {}, opts: EventOpts = {}): void {
   if (level === "off") return;
   if (opts.verbose && level !== "verbose") return;
+  // A part switched off in Settings drops its routine lines; warnings and errors stay.
+  const part = opts.part ?? partOfCategory(cat);
+  if (part && !partEnabled(part) && opts.lvl !== "warn" && opts.lvl !== "error") return;
   const started = performance.now();
   try {
     const e: DiagEvent = {
