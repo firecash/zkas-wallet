@@ -1761,7 +1761,7 @@ function __wbg_get_imports() {
 }
 
 function __wbg_init_memory(imports, memory) {
-    imports.wbg.memory = memory || new WebAssembly.Memory({initial:48,maximum:65536,shared:true});
+    imports.wbg.memory = memory || new WebAssembly.Memory({initial:47,maximum:65536,shared:true});
 }
 
 function __wbg_finalize_init(instance, module, thread_stack_size) {

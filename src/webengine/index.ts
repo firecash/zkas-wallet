@@ -48,6 +48,7 @@ export function stopBrowserEngine(): void {
   worker.postMessage({ type: "stop" });
   worker.terminate();
   worker = null;
+  settleWaiters();
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -150,6 +151,20 @@ function stopAll(): void {
   stopBrowserEngine();
   running = null;
   latest = null;
+}
+
+/** A stopped worker answers nothing: settle everyone still waiting on it now, instead of
+ *  leaving a Send screen on "proving" until its 10-minute timeout. */
+function settleWaiters(): void {
+  for (const [id, done] of sendWaiters) {
+    sendWaiters.delete(id);
+    done({ error: "The wallet in this browser was stopped or switched before the payment was sent. Nothing was sent." });
+  }
+  const empty = JSON.stringify({ recoverableHistory: true, total: 0, rows: [] });
+  for (const [id, done] of historyWaiters) {
+    historyWaiters.delete(id);
+    done(empty);
+  }
 }
 
 /** The engine's history in the wallet service's `/api/wallet/history` shape. */
