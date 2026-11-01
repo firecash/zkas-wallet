@@ -71,4 +71,7 @@ export default defineConfig({
   define: versionDefines(),
   base: "./",
   build: { outDir: "dist" },
+  // The browser engine's thread pool (wasm-bindgen-rayon) starts nested MODULE workers;
+  // the default "iife" worker format cannot bundle those.
+  worker: { format: "es" },
 });

@@ -84,6 +84,9 @@ export interface SyncDeps {
  *  depth when the spend is mined; walletd adds 30 of slack; DAA runs a little ahead of blue. */
 export const ANCHOR_DEPTH_DAA = 1_000;
 
+/** Segments downloaded ahead of the one being ingested (~10 MB each). */
+export const SEGMENT_READ_AHEAD = 2;
+
 /** Checkpoint every this many segments while catching up. */
 const SAVE_EVERY_SEGMENTS = 2;
 
@@ -191,12 +194,11 @@ export async function runSync(d: SyncDeps): Promise<void> {
   }
   d.onEngine?.(eng);
 
-  // 1. Published segments.
-  let sinceSave = 0;
-  for (const s of segs) {
-    if (d.shouldStop()) return;
-    if (s.to.daa <= Number(eng.scanned())) continue;
-    const bytes = await fromMirrors(
+  // 1. Published segments. Downloads run AHEAD of ingest (up to SEGMENT_READ_AHEAD at once), so
+  // the network and the decryption overlap instead of taking turns: each segment used to sit
+  // idle on the CPU while the next one downloaded, and the reverse.
+  const fetchSegment = (s: Segment) =>
+    fromMirrors(
       (b) => `${b}/${s.file}`,
       s.index,
       async (r) => {
@@ -205,6 +207,23 @@ export async function runSync(d: SyncDeps): Promise<void> {
         return b;
       },
     );
+  const pending = segs.filter((s) => s.to.daa > Number(eng!.scanned()));
+  const inflight = new Map<number, Promise<Uint8Array>>();
+  const ensure = (i: number) => {
+    const s = pending[i];
+    if (s && !inflight.has(i)) {
+      const p = fetchSegment(s);
+      p.catch(() => undefined); // awaited (and rethrown) when its turn comes
+      inflight.set(i, p);
+    }
+  };
+  let sinceSave = 0;
+  for (let i = 0; i < pending.length; i++) {
+    const s = pending[i];
+    if (d.shouldStop()) return;
+    for (let k = 0; k <= SEGMENT_READ_AHEAD; k++) ensure(i + k);
+    const bytes = await inflight.get(i)!;
+    inflight.delete(i);
     try {
       // The segment's signed end frontier: an engine holding no note adopts it instead of
       // hashing the segment's leaves.

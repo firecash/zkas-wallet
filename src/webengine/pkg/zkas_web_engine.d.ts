@@ -5,15 +5,15 @@
  */
 export function verify_manifest(json: string): string;
 /**
- * Does a downloaded segment match its manifest entry (size and SHA-256)?
- */
-export function segment_matches(bytes: Uint8Array, sha256_hex: string, size: bigint): boolean;
-export function address_of_fvk(fvk_hex: string): string;
-/**
  * Build the Halo 2 proving key now (a few seconds, once per page): called when the wallet is
  * idle at the tip, so the first payment does not pay for it. Later calls return at once.
  */
 export function warm_prover(): void;
+export function address_of_fvk(fvk_hex: string): string;
+/**
+ * Does a downloaded segment match its manifest entry (size and SHA-256)?
+ */
+export function segment_matches(bytes: Uint8Array, sha256_hex: string, size: bigint): boolean;
 /**
  * Configuration for the WASM32 bindings runtime interface.
  * @see {@link IWASM32BindingsConfig}

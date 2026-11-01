@@ -9,7 +9,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 export default [
   {
     files: ["src/**/*.ts", "src/**/*.tsx"],
-    ignores: ["src/signer/firecash_signer.js", "src/webengine/pkg/**"],
+    ignores: ["src/signer/firecash_signer.js", "src/webengine/pkg/**", "src/webengine/pkg-threads/**"],
     languageOptions: { parser, parserOptions: { ecmaFeatures: { jsx: true } } },
     plugins: { "react-hooks": reactHooks },
     rules: { "react-hooks/rules-of-hooks": "error" },

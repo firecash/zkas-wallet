@@ -281,6 +281,10 @@ function DashboardView() {
             loading="lazy"
             referrerPolicy="no-referrer"
             sandbox="allow-scripts allow-same-origin"
+            // The wallet page is cross-origin isolated (its browser engine needs threads);
+            // a credentialless frame may still embed this cross-origin page in Chrome/Edge,
+            // and explorer.zkas.info/live sends COEP itself for the others.
+            {...({ credentialless: "" } as Record<string, string>)}
           />
           <a className="explorer-live-full" href="https://explorer.zkas.info/live" target="_blank" rel="noreferrer">{t("dashboardView.fullView")}</a>
         </section>

@@ -225,26 +225,12 @@ export function verify_manifest(json) {
     }
 }
 
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
 /**
- * Does a downloaded segment match its manifest entry (size and SHA-256)?
- * @param {Uint8Array} bytes
- * @param {string} sha256_hex
- * @param {bigint} size
- * @returns {boolean}
+ * Build the Halo 2 proving key now (a few seconds, once per page): called when the wallet is
+ * idle at the tip, so the first payment does not pay for it. Later calls return at once.
  */
-export function segment_matches(bytes, sha256_hex, size) {
-    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_export_2);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(sha256_hex, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.segment_matches(ptr0, len0, ptr1, len1, size);
-    return ret !== 0;
+export function warm_prover() {
+    wasm.warm_prover();
 }
 
 /**
@@ -278,12 +264,26 @@ export function address_of_fvk(fvk_hex) {
     }
 }
 
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
 /**
- * Build the Halo 2 proving key now (a few seconds, once per page): called when the wallet is
- * idle at the tip, so the first payment does not pay for it. Later calls return at once.
+ * Does a downloaded segment match its manifest entry (size and SHA-256)?
+ * @param {Uint8Array} bytes
+ * @param {string} sha256_hex
+ * @param {bigint} size
+ * @returns {boolean}
  */
-export function warm_prover() {
-    wasm.warm_prover();
+export function segment_matches(bytes, sha256_hex, size) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_export_2);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(sha256_hex, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.segment_matches(ptr0, len0, ptr1, len1, size);
+    return ret !== 0;
 }
 
 let stack_pointer = 128;

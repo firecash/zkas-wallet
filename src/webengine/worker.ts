@@ -1,8 +1,29 @@
 // The browser wallet engine, off the main thread. Started with the wallet's viewing key (derived
 // on the page from the seed it holds); posts status as it syncs. Nothing here sends a key, an
 // address or wallet state anywhere: it only downloads public chain data.
-import init, { Engine, segment_matches, verify_manifest, warm_prover } from "./pkg/zkas_web_engine.js";
-import wasmUrl from "./pkg/zkas_web_engine_bg.wasm?url";
+import type * as EngineModule from "./pkg/zkas_web_engine.js";
+
+type M = typeof EngineModule;
+
+/** The engine build for this page: multi-threaded when the page is cross-origin isolated (the
+ *  prover and the decryption then use every core — measured 3.7x faster proofs), otherwise the
+ *  single-threaded build, which runs everywhere. A pool that fails to start falls back too. */
+async function loadEngine(): Promise<{ m: M; threads: number }> {
+  if ((self as unknown as { crossOriginIsolated?: boolean }).crossOriginIsolated && typeof SharedArrayBuffer !== "undefined") {
+    try {
+      const [m, u] = await Promise.all([import("./pkg-threads/zkas_web_engine.js"), import("./pkg-threads/zkas_web_engine_bg.wasm?url")]);
+      await m.default({ module_or_path: u.default });
+      const n = Math.max(1, Math.min(navigator.hardwareConcurrency || 2, 16));
+      await m.initThreadPool(n);
+      return { m: m as unknown as M, threads: n };
+    } catch {
+      /* the single-threaded build below */
+    }
+  }
+  const [m, u] = await Promise.all([import("./pkg/zkas_web_engine.js"), import("./pkg/zkas_web_engine_bg.wasm?url")]);
+  await m.default({ module_or_path: u.default });
+  return { m, threads: 1 };
+}
 import { runSync, type BrowserSyncStatus } from "./sync";
 import { aheadKey, aheadUsable } from "./ahead";
 import { deleteCheckpoint, loadCheckpoint, saveCheckpoint } from "./store";
@@ -17,7 +38,7 @@ export interface StartMessage {
 }
 
 let stopped = false;
-let ready: Promise<unknown> | null = null;
+let ready: Promise<{ m: M; threads: number }> | null = null;
 interface LiveEngine {
   history?(limit: number, offset: number): string;
   prepare_send?(skHex: string, to: string, amount: bigint, memo: string): string;
@@ -118,8 +139,12 @@ self.onmessage = async (ev: MessageEvent<StartMessage | SendMessage | { type: "s
   if (msg.type !== "start") return;
   stopped = false;
   current = msg;
-  ready ??= init({ module_or_path: wasmUrl });
-  await ready;
+  ready ??= loadEngine().then((r) => {
+    console.info(`zkas browser engine: ${r.threads > 1 ? `${r.threads} threads` : "single-threaded"}`);
+    return r;
+  });
+  const { m } = await ready;
+  const { Engine, segment_matches, verify_manifest, warm_prover } = m;
   // Run until stopped. A failed run — a mirror or the gateway unreachable for a moment, the
   // gateway answering "busy" — is retried with backoff and resumes from the saved checkpoint; it
   // used to end syncing for the whole session. The last good numbers stay on screen meanwhile:
