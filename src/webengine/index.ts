@@ -4,7 +4,7 @@
 // zkas.info) and the chain gateway, which see this browser's IP, as a node does.
 import { accountSeedHex, fvkHex, looksLikeHexSeed } from "../signer";
 import { clearnetAllowed } from "../lib/privacy";
-import { walletIdFor } from "./store";
+import { deleteCheckpoint, walletIdFor } from "./store";
 import type { BrowserSyncStatus } from "./sync";
 
 export type { BrowserSyncStatus } from "./sync";
@@ -311,6 +311,36 @@ export function browserRegistered(address: string): boolean {
   }
 }
 
+const RESCAN_KEY = (address: string) => `browser_rescan_from:${address}`;
+
+/** The birthday a rescan the user asked for starts from, when there is one (0 = genesis). It
+ *  overrides the earliest-birthday rule: "scan again from this date" is the user's choice. */
+export function browserRescanFrom(address: string): number | null {
+  try {
+    const v = localStorage.getItem(RESCAN_KEY(address));
+    return v === null ? null : Math.max(0, Number(v) || 0);
+  } catch {
+    return null;
+  }
+}
+
+/** `POST /api/wallet/rescan` in browser mode: stop the engine, drop this wallet's checkpoint and
+ *  last report, and let the next status poll start it again from `birthday` (genesis when
+ *  omitted, as the wallet service does). Nothing leaves the page. */
+export async function browserRescan(birthday?: number): Promise<{ rescanning: boolean }> {
+  const w = resolver ? await resolver().catch(() => null) : null;
+  if (!w?.seedHex) throw new Error("There is no wallet in this browser to rescan.");
+  stopAll();
+  await deleteCheckpoint(await walletIdFor(await fvkHex(w.seedHex)));
+  try {
+    localStorage.removeItem(LAST_KEY(w.address));
+    localStorage.setItem(RESCAN_KEY(w.address), String(birthday && birthday > 0 ? Math.floor(birthday) : 0));
+  } catch {
+    /* without storage the engine restarts from the wallet's birthday */
+  }
+  return { rescanning: true };
+}
+
 /** The birthday recorded when this browser registered `address` (0 when it did not). */
 export function browserBirthday(address: string): number {
   try {
@@ -342,6 +372,9 @@ export async function browserWatch(fvk: string, birthday: number): Promise<{ add
     const b = had > 0 && birthday > 0 ? Math.min(had, birthday) : had > 0 ? had : birthday;
     if (b > 0) localStorage.setItem(BIRTHDAY_KEY(address), String(b));
     else localStorage.setItem(BIRTHDAY_KEY(address), "0");
+    // A rescan's start stays the user's choice, unless this registration knows an earlier one.
+    const r = browserRescanFrom(address);
+    if (r !== null && r > 0 && b >= 0 && b < r) localStorage.setItem(RESCAN_KEY(address), String(b));
   } catch {
     /* the app's own birthday record is used instead */
   }

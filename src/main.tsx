@@ -2,7 +2,7 @@
 // from the accessor itself, and one unguarded read anywhere took the whole
 // wallet down with an unrecoverable error screen.
 import "./lib/storage-shim";
-import { browserBirthday, browserModeChosen, browserRegistered, setBrowserWalletResolver, shouldReloadForIsolation, syncCrossOriginIsolation } from "./webengine";
+import { browserBirthday, browserModeChosen, browserRegistered, browserRescanFrom, setBrowserWalletResolver, shouldReloadForIsolation, syncCrossOriginIsolation } from "./webengine";
 import { resolveDeviceSeed, knownBirthday, findOrphanedSeed, setDeviceSeed } from "./lib/deviceseed";
 import { addressFromSeed } from "./signer";
 
@@ -33,6 +33,8 @@ setBrowserWalletResolver(async () => {
   // wallet for now, as a service reports one it was never told about. The app then registers it
   // (its own create step, or its re-register of a known wallet with the known birthday).
   if (!browserRegistered(address)) return null;
+  const rescan = browserRescanFrom(address);
+  if (rescan !== null) return { seedHex, address, birthday: rescan };
   const known = [knownBirthday(address), browserBirthday(address)].filter((b) => b > 0);
   return { seedHex, address, birthday: known.length ? Math.min(...known) : 0 };
 });
