@@ -556,7 +556,7 @@
     "tabSend": "보내기",
     "tabHistory": "거래 내역",
     "tabSignatures": "서명",
-    "tabTools": "결제",
+    "tabTools": "지갑 도구",
     "tabSettings": "설정",
     "confConfirmed": "확인 완료",
     "confs_one": "{{count}} 확인",

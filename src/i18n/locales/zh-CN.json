@@ -596,7 +596,7 @@
     "tabSend": "转账",
     "tabHistory": "记录",
     "tabSignatures": "签名",
-    "tabTools": "付款",
+    "tabTools": "钱包工具",
     "tabSettings": "设置",
     "confConfirmed": "已确认",
     "confs_one": "{{count}} 次确认",

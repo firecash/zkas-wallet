@@ -646,10 +646,13 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
   if (tab === "settings") settingsSeen.current = true;
   // A pill that just left the row (rotate to portrait while on Signatures) must not
   // leave the pane showing a section with no tab to name it.
+  // On a phone, Signatures (and on the web Wallet tools) are opened from Settings instead of
+  // the hidden row, and carry their own way back (PhoneBackToWallet): reachable, so kept.
   useEffect(() => {
     // An empty row (phone) is not a reason to reset: History IS the pane shown there.
-    if (tabs.length && tab !== "send" && tab !== "receive" && !tabs.includes(tab)) setTab("history");
-  }, [tabs, tab]);
+    const reachable: Tab[] = roomy ? tabs : [...tabs, "signatures", ...(isNative() ? [] : (["tools"] as Tab[]))];
+    if (tabs.length && tab !== "send" && tab !== "receive" && !reachable.includes(tab)) setTab("history");
+  }, [tabs, tab, roomy]);
   // This device holds a viewing key and no seed. It cannot sign a spend at all —
   // the UI simply must not offer what would fail, and must not imply the balance
   // is spendable from here.
@@ -1881,9 +1884,15 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
                 onSendAnother={onSendAnother}
               />
             </Pane>
-            {!viewOnly && <Pane visible={tab === "signatures"}><Signatures status={status} /></Pane>}
+            {!viewOnly && (
+              <Pane visible={tab === "signatures"}>
+                <PhoneBackToWallet onBack={() => setTab("history")} />
+                <Signatures status={status} />
+              </Pane>
+            )}
             {!viewOnly && toolsSeen.current && (
               <Pane visible={tab === "tools"}>
+                <PhoneBackToWallet onBack={() => setTab("history")} />
                 <Suspense fallback={<div className="card"><div className="muted small">{t("app.loading")}</div></div>}>
                   <WalletTools status={status} />
                 </Suspense>
@@ -5314,6 +5323,31 @@ function Collapsible({
   );
 }
 
+/** A Settings row that opens a wallet pane (`/?tab=…`), for screens a phone cannot reach from
+ *  the hidden tab row. */
+function SettingsLink({ title, to, className }: { title: string; to: "signatures" | "tools"; className?: string }) {
+  return (
+    <div className={"card setrow" + (className ? ` ${className}` : "")}>
+      <button type="button" className="setrow-head" onClick={() => (window.location.hash = `#/?tab=${to}`)}>
+        <span className="setrow-title" title={title}>{title}</span>
+        <span className="setrow-right">
+          <ChevronDown className="setrow-chev setrow-chev-go" size={18} aria-hidden="true" />
+        </span>
+      </button>
+    </div>
+  );
+}
+
+/** The way back from a wallet pane opened from Settings on a phone, where there is no tab row. */
+function PhoneBackToWallet({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <button type="button" className="btn ghost phone-only pane-back" onClick={onBack}>
+      {t("app.backToWallet")}
+    </button>
+  );
+}
+
 function SettingsSection({ label }: { label: string }) {
   return <div className="settings-section">{label}</div>;
 }
@@ -5511,6 +5545,10 @@ function SettingsPane({ status }: { status: Status }) {
       <Collapsible title={t("settingsPane.contacts")}>
         <ContactsCard />
       </Collapsible>
+      {/* On a phone the wallet's tab row is hidden (the bottom bar replaces it), and with it
+          the only way to Signatures and, on the web, Wallet tools. They open from here. */}
+      {!viewOnly && <SettingsLink className="phone-only" title={t("appShell.tabSignatures")} to="signatures" />}
+      {!viewOnly && !isNative() && <SettingsLink className="phone-only" title={t("walletTools.eyebrow")} to="tools" />}
       {/* Desktop keeps node-source controls (it runs its own daemon). Web/mobile talk
           to the hosted service and do not need — and should not offer — a raw
           daemon-URL override in Settings: it confused users and did not work for the

@@ -456,7 +456,7 @@
     "tabSend": "送信",
     "tabHistory": "履歴",
     "tabSignatures": "署名",
-    "tabTools": "支払う",
+    "tabTools": "ウォレットツール",
     "tabSettings": "設定",
     "confConfirmed": "確認済み",
     "confs_one": "{{count}} 承認",

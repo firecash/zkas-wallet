@@ -3835,3 +3835,12 @@ input#tx-label { min-height: 44px; }
   .walletbar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .walletbar-name { min-width: 0; }
 }
+
+/* Shown wherever the wallet's tab row lacks Signatures and Tools: below 900px the app keeps
+   only History and the gear in it (ROOMY_QUERY in App.tsx), and below 620px hides it. */
+.phone-only { display: none; }
+@media (max-width: 899.98px) {
+  .app-shell:not(.desktop-shell) .phone-only { display: revert; }
+}
+.pane-back { margin-bottom: 12px; }
+.setrow-chev-go { transform: rotate(-90deg); }

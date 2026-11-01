@@ -516,7 +516,7 @@
     "tabSend": "Senden",
     "tabHistory": "Verlauf",
     "tabSignatures": "Signaturen",
-    "tabTools": "Bezahlen",
+    "tabTools": "Wallet-Tools",
     "tabSettings": "Einstellungen",
     "confConfirmed": "bestätigt",
     "confs_one": "{{count}} Bestätigung",

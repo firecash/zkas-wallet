@@ -556,7 +556,7 @@
     "tabSend": "Envoyer",
     "tabHistory": "Historique",
     "tabSignatures": "Signatures",
-    "tabTools": "Payer",
+    "tabTools": "Outils du portefeuille",
     "tabSettings": "Paramètres",
     "confConfirmed": "confirmé",
     "confs_one": "{{count}} conf",
