@@ -790,7 +790,8 @@
     "scanning": "Số dư hiện ra khi ví quét chuỗi — tiền của bạn an toàn.",
     "lowerBound": "Số dư này là <b>giới hạn dưới</b>: chế độ xem của ví được xây dựng lại qua một nút đã cắt bớt lịch sử cũ, nên các đồng được tạo từ lâu có thể bị thiếu. Tiền của bạn vẫn an toàn trên chuỗi — chỉ quét lại từ một nút phục vụ lịch sử đầy đủ (xây dựng lại qua nút này cũng sẽ mù tương tự). Nếu đây là nút của bạn và nó vẫn đang điền lịch sử ẩn danh, hãy chờ nhật ký của nó báo \"shielded history: VERIFIED\" rồi quét lại.",
     "lowerBoundFrom": "Số dư này là <b>giới hạn dưới</b>: chế độ xem của ví được xây dựng lại qua một nút đã cắt bớt lịch sử cũ (có sẵn từ khối {{block}}), nên các đồng được tạo từ lâu có thể bị thiếu. Tiền của bạn vẫn an toàn trên chuỗi — chỉ quét lại từ một nút phục vụ lịch sử đầy đủ (xây dựng lại qua nút này cũng sẽ mù tương tự). Nếu đây là nút của bạn và nó vẫn đang điền lịch sử ẩn danh, hãy chờ nhật ký của nó báo \"shielded history: VERIFIED\" rồi quét lại.",
-    "notUpdating": "số dư đã xác nhận gần nhất"
+    "notUpdating": "số dư đã xác nhận gần nhất",
+    "readyOnly": "{{spendable}} sẵn sàng để chi"
   },
   "addAccountWallet": {
     "noPhrase": "Ví này không có cụm từ khôi phục, nên không thể tạo tài khoản từ nó. Dùng “Thêm ví riêng” — ví đó có cụm từ riêng, bạn phải sao lưu.",
@@ -953,7 +954,7 @@
     "behindDetail_one": "Bạn có thể gửi ngay — mọi thứ cần cho thanh toán đã có. Ví vẫn đang đọc khối mới nhất {{n}}, nên bất kỳ thứ gì đến trong đó chưa được tính.",
     "behindDetail_other": "Bạn có thể gửi ngay — mọi thứ cần cho thanh toán đã có. Ví vẫn đang đọc {{n}} khối mới nhất, nên bất kỳ thứ gì đến trong đó chưa được tính.",
     "browserReadyLabel": "Đã cập nhật",
-    "browserReadyDetail": "Đang theo dõi ví này trong trình duyệt. Để gửi, hãy mở trong ứng dụng hoặc qua dịch vụ công cộng."
+    "browserReadyDetail": "Số dư đã cập nhật. Đồng nhận được có thể chi tiêu tại đây khoảng 10 phút sau khi được đào."
   },
   "desktopServices": {
     "desktopOnly": "Tính năng này có sẵn trên ứng dụng máy tính."
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "Chạy trong trình duyệt này",
-    "desc": "Riêng tư nhất trên web: khóa của bạn không bao giờ rời trình duyệt này và không dịch vụ nào thấy ví của bạn. Chưa thể gửi từ đây."
+    "desc": "Riêng tư nhất trên web: khóa của bạn không bao giờ rời trình duyệt này và không dịch vụ nào thấy ví của bạn."
   },
   "browserEngine": {
     "notInBrowser": "Không khả dụng khi ví chạy trong trình duyệt này. Hãy dùng ứng dụng hoặc dịch vụ công cộng cho việc này."
+  },
+  "fastSyncSettings": {
+    "apply": "Áp dụng",
+    "applying": "Đang áp dụng…",
+    "applied": "Đã áp dụng: bộ máy ví đã khởi động lại với thiết lập này.",
+    "saved": "Đã lưu. Sẽ dùng lần tới ví chạy trên điện thoại này.",
+    "failed": "Không thể áp dụng: {{error}}",
+    "useDefault": "Dùng địa chỉ mặc định"
   }
 }

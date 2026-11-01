@@ -17,14 +17,61 @@ export interface StartMessage {
 
 let stopped = false;
 let ready: Promise<unknown> | null = null;
-let live: { history?(limit: number, offset: number): string } | null = null;
+interface LiveEngine {
+  history?(limit: number, offset: number): string;
+  prepare_send?(skHex: string, to: string, amount: bigint, memo: string): string;
+  mark_sent?(positionsJson: string, txidHex: string, outflow: bigint): void;
+  checkpoint(): Uint8Array;
+}
+let live: LiveEngine | null = null;
+let current: StartMessage | null = null;
+
+interface SendMessage {
+  type: "send";
+  id: number;
+  skHex: string;
+  to: string;
+  amountSompi: string;
+  memo: string;
+}
+
+/** Prove, submit, park. The spending key arrives with this one message and is not kept. */
+async function send(msg: SendMessage): Promise<{ txid: string; feeSompi: number } | { error: string }> {
+  const eng = live;
+  if (!eng?.prepare_send || !eng.mark_sent || !current) return { error: "The wallet is still starting in this browser; try again in a moment." };
+  let prepared: { bundle_hex: string; positions: number[]; fee: number; outflow: number };
+  try {
+    prepared = JSON.parse(eng.prepare_send(msg.skHex, msg.to, BigInt(msg.amountSompi), msg.memo));
+  } catch (e) {
+    return { error: String((e as Error)?.message ?? e) };
+  }
+  const bytes = new Uint8Array(prepared.bundle_hex.match(/../g)!.map((h) => parseInt(h, 16)));
+  let r: Response;
+  try {
+    r = await fetch(`${current.gateway}/submit`, { method: "POST", headers: { "content-type": "application/octet-stream" }, body: bytes });
+  } catch {
+    return { error: "The payment could not reach the network. Nothing was sent; try again." };
+  }
+  if (!r.ok) return { error: (await r.text().catch(() => "")) || `The network refused the payment (${r.status}). Nothing was sent.` };
+  const { txid } = (await r.json()) as { txid: string };
+  // Parked, not deleted: the notes leave the balance now and come back on their own if the
+  // payment is never mined. Saved at once, so a reload cannot offer the same notes again.
+  eng.mark_sent(JSON.stringify(prepared.positions), txid, BigInt(prepared.outflow));
+  await saveCheckpoint(current.id, eng.checkpoint()).catch(() => false);
+  return { txid, feeSompi: prepared.fee };
+}
 
 const post = (status: BrowserSyncStatus) => (self as unknown as Worker).postMessage({ type: "status", status });
 
-self.onmessage = async (ev: MessageEvent<StartMessage | { type: "stop" } | { type: "history"; id: number; limit: number; offset: number }>) => {
+self.onmessage = async (ev: MessageEvent<StartMessage | SendMessage | { type: "stop" } | { type: "history"; id: number; limit: number; offset: number }>) => {
   const msg = ev.data;
   if (msg.type === "stop") {
     stopped = true;
+    return;
+  }
+  if (msg.type === "send") {
+    const result = await send(msg);
+    (self as unknown as Worker).postMessage({ type: "sent", id: msg.id, result });
     return;
   }
   if (msg.type === "history") {
@@ -38,6 +85,7 @@ self.onmessage = async (ev: MessageEvent<StartMessage | { type: "stop" } | { typ
     return;
   }
   stopped = false;
+  current = msg;
   ready ??= init({ module_or_path: wasmUrl });
   await ready;
   // Run until stopped. A failed run — a mirror or the gateway unreachable for a moment, the
@@ -65,7 +113,7 @@ self.onmessage = async (ev: MessageEvent<StartMessage | { type: "stop" } | { typ
           post(st);
         },
         onEngine: (e) => {
-          live = e;
+          live = e as unknown as LiveEngine;
         },
         shouldStop: () => stopped,
       });

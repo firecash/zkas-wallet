@@ -15,6 +15,8 @@ export interface EngineLike {
   checkpoint(): Uint8Array;
   status(): string;
   history?(limit: number, offset: number): string;
+  set_anchor?(boundaryJson: string): void;
+  set_mempool?(payloadsJson: string): void;
   free?(): void;
 }
 
@@ -45,6 +47,13 @@ export interface BrowserSyncStatus {
   birthday: number;
   balanceSompi: string;
   notes: number;
+  /** walletd's money fields, from the engine (sompi, decimal strings). */
+  spendableSompi?: string;
+  maturingSompi?: string;
+  pendingInSompi?: string;
+  pendingOutSompi?: string;
+  pendingChangeSompi?: string;
+  spendReady?: boolean;
   /** The wallet tree equalled the node's at the cursor (null: not checked yet this session). */
   verified: boolean | null;
   error?: string;
@@ -71,6 +80,10 @@ export interface SyncDeps {
   sleep?(ms: number): Promise<void>;
 }
 
+/** How far below the tip (DAA) the matured anchor is taken: consensus wants 600 blue score of
+ *  depth when the spend is mined; walletd adds 30 of slack; DAA runs a little ahead of blue. */
+export const ANCHOR_DEPTH_DAA = 1_000;
+
 /** Checkpoint every this many segments while catching up. */
 const SAVE_EVERY_SEGMENTS = 2;
 
@@ -82,7 +95,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
   let verified: boolean | null = null;
 
   const report = (phase: BrowserSyncStatus["phase"], error?: string) => {
-    let st = { balance_sompi: "0", notes: 0 };
+    let st: Record<string, string | number | boolean> = { balance_sompi: "0", notes: 0 };
     try {
       if (eng) st = JSON.parse(eng.status());
     } catch {
@@ -93,8 +106,14 @@ export async function runSync(d: SyncDeps): Promise<void> {
       scanned: eng ? Number(eng.scanned()) : 0,
       tip,
       birthday: d.birthday,
-      balanceSompi: st.balance_sompi,
-      notes: st.notes,
+      balanceSompi: String(st.balance_sompi ?? "0"),
+      notes: Number(st.notes ?? 0),
+      spendableSompi: st.spendable_sompi as string | undefined,
+      maturingSompi: st.maturing_sompi as string | undefined,
+      pendingInSompi: st.pending_in_sompi as string | undefined,
+      pendingOutSompi: st.pending_out_sompi as string | undefined,
+      pendingChangeSompi: st.pending_change_sompi as string | undefined,
+      spendReady: st.spend_ready as boolean | undefined,
       verified,
       ...(error ? { error } : {}),
     });
@@ -242,8 +261,25 @@ export async function runSync(d: SyncDeps): Promise<void> {
     }
     await d.save(eng.checkpoint());
     await refreshTip();
+    // At the tip: the matured anchor (the node's frontier well below the tip, so a spend rooted
+    // there is final when mined: the consensus depth is 600 blue, ~1000 DAA leaves room) and the
+    // mempool (an incoming payment shows a second after it is sent). Both best-effort.
+    if (tip > ANCHOR_DEPTH_DAA) {
+      try {
+        const a = await (await get(`${d.gateway}/tree?below=${tip - ANCHOR_DEPTH_DAA}`)).json();
+        if (typeof a?.block === "string") eng.set_anchor?.(JSON.stringify(a));
+      } catch {
+        /* the previous anchor stands */
+      }
+    }
+    try {
+      const m = await (await get(`${d.gateway}/mempool`)).json();
+      if (Array.isArray(m)) eng.set_mempool?.(JSON.stringify(m));
+    } catch {
+      /* no mempool preview this round */
+    }
     report("synced");
-    await sleep((d.pollSecs ?? 10) * 1000);
+    await sleep((d.pollSecs ?? 5) * 1000);
     await refreshTip();
   }
 }

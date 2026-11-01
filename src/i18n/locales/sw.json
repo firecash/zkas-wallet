@@ -790,7 +790,8 @@
     "scanning": "Salio linaonekana mkoba unapochanganua mnyororo — fedha zako ziko salama.",
     "lowerBound": "Salio hili ni <b>kiwango cha chini</b>: mwonekano wa pochi ulijengwa upya kupitia nodi ambayo imekata historia ya zamani, kwa hivyo sarafu zilizoundwa zamani sana zinaweza kukosekana. Sarafu zako ziko salama kwenye mnyororo — chunguza tena tu kutoka kwa nodi inayotoa historia kamili (kujenga upya kupitia hii kungekuwa na upofu sawa). Kama hii ni nodi yako mwenyewe na bado inajaza historia iliyofichwa, subiri kumbukumbu yake iseme \"historia iliyofichwa: IMETHIBITISHWA\" kisha chunguza tena.",
     "lowerBoundFrom": "Salio hili ni <b>kiwango cha chini</b>: mwonekano wa pochi ulijengwa upya kupitia nodi ambayo imekata historia ya zamani (inapatikana kutoka bloku {{block}}), kwa hivyo sarafu zilizoundwa zamani sana zinaweza kukosekana. Sarafu zako ziko salama kwenye mnyororo — chunguza tena tu kutoka kwa nodi inayotoa historia kamili (kujenga upya kupitia hii kungekuwa na upofu sawa). Kama hii ni nodi yako mwenyewe na bado inajaza historia iliyofichwa, subiri kumbukumbu yake iseme \"historia iliyofichwa: IMETHIBITISHWA\" kisha chunguza tena.",
-    "notUpdating": "salio la mwisho lililothibitishwa"
+    "notUpdating": "salio la mwisho lililothibitishwa",
+    "readyOnly": "{{spendable}} tayari kutumika"
   },
   "iosInstallNotice": {
     "installedCopy": "Una mkoba kwenye Safari? Haujashirikiwa na nakala hii iliyosakinishwa — rejesha hapa kwa maneno yake ya kurejesha.",
@@ -962,7 +963,7 @@
     "behindDetailBare": "Unaweza kutuma sasa — kila kitu kinachohitajika kwa malipo kiko mbele. Mkoba bado unasoma vizuizi vipya, hivyo chochote kilichofika ndani yake hakijahesabiwa bado.",
     "etaLeft": "{{duration}} imesalia",
     "browserReadyLabel": "Imesasishwa",
-    "browserReadyDetail": "Pochi hii inafuatiliwa kwenye kivinjari hiki. Ili kutuma, ifungue kwenye programu au kwa huduma ya umma."
+    "browserReadyDetail": "Salio lako limesasishwa. Sarafu unazopokea zinaweza kutumika hapa takriban dakika 10 baada ya kuchimbwa."
   },
   "desktopServices": {
     "desktopOnly": "Kidhibiti hiki kinapatikana kwenye programu ya kompyuta."
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "Endesha kwenye kivinjari hiki",
-    "desc": "Faragha zaidi kwenye wavuti: funguo zako haziondoki kwenye kivinjari hiki na hakuna huduma inayoona pochi yako. Kutuma bado hakupatikani hapa."
+    "desc": "Faragha zaidi kwenye wavuti: funguo zako haziondoki kwenye kivinjari hiki na hakuna huduma inayoona pochi yako."
   },
   "browserEngine": {
     "notInBrowser": "Haipatikani wakati pochi inaendeshwa kwenye kivinjari hiki. Tumia programu au huduma ya umma kwa hili."
+  },
+  "fastSyncSettings": {
+    "apply": "Tumia",
+    "applying": "Inatumika…",
+    "applied": "Imetumika: injini ya pochi imeanzishwa upya na mpangilio huu.",
+    "saved": "Imehifadhiwa. Itatumika pochi itakapoendeshwa tena kwenye simu hii.",
+    "failed": "Haikuweza kutumika: {{error}}",
+    "useDefault": "Tumia anwani chaguo-msingi"
   }
 }

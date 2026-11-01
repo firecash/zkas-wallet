@@ -765,7 +765,8 @@
     "keepsGoing": "可关闭后返回——同步仍在继续。",
     "prunedRebuild": "此节点已裁剪旧历史，重建余额可能为<b>下限</b>。你的币在链上——从提供完整历史的节点重新扫描即可查看全部。若这是你自己的节点且仍在填充屏蔽历史，请等待日志显示\"shielded history: VERIFIED\"后重新扫描。",
     "prunedRebuildFrom": "此节点已裁剪旧历史（可用区块从{{block}}开始），重建余额可能为<b>下限</b>。你的币在链上——从提供完整历史的节点重新扫描即可查看全部。若这是你自己的节点且仍在填充屏蔽历史，请等待日志显示\"shielded history: VERIFIED\"后重新扫描。",
-    "notUpdating": "最后确认的余额"
+    "notUpdating": "最后确认的余额",
+    "readyOnly": "{{spendable}} 可用"
   },
   "addAccountWallet": {
     "noPhrase": "此钱包无助记词，无法派生账户。请使用“添加独立钱包” — 它将生成自己的助记词，需备份。",
@@ -996,7 +997,7 @@
     "readyLabel": "就绪",
     "readyDetail": "余额已是最新。",
     "browserReadyLabel": "已是最新",
-    "browserReadyDetail": "正在此浏览器中查看此钱包。如需发送，请在应用或公共服务中打开。"
+    "browserReadyDetail": "余额已是最新。收到的币在被打包约 10 分钟后即可在此花费。"
   },
   "desktopServices": {
     "desktopOnly": "此控件仅在桌面应用可用。"
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "在此浏览器中运行",
-    "desc": "网页上最私密的方式：你的密钥从不离开此浏览器，任何服务都看不到你的钱包。此处暂不能发送。"
+    "desc": "网页上最私密的方式：你的密钥从不离开此浏览器，任何服务都看不到你的钱包。"
   },
   "browserEngine": {
     "notInBrowser": "钱包在此浏览器中运行时不可用。请使用应用或公共服务。"
+  },
+  "fastSyncSettings": {
+    "apply": "应用",
+    "applying": "正在应用…",
+    "applied": "已应用：钱包引擎已按此设置重新启动。",
+    "saved": "已保存。下次钱包在此手机上运行时使用。",
+    "failed": "无法应用：{{error}}",
+    "useDefault": "使用默认地址"
   }
 }

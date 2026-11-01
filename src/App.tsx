@@ -108,7 +108,8 @@ import { captureScanReceipt, adoptScanReceipt, haveScanReceipt } from "./scanrec
 import { rotatePublicNode, setEmbeddedBackupNode, type FastSync } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { RunInBrowserOption } from "./RunInBrowserOption";
-import { browserModeChosen, setBrowserModeChosen } from "./webengine";
+import { FastSyncSettings, fastSyncSummary } from "./FastSyncSettings";
+import { browserModeChosen, browserSend, setBrowserModeChosen } from "./webengine";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
 import { adoptViewKey } from "./lib/watchadopt";
@@ -3382,6 +3383,9 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
   // value and pending change are NOT spendable yet, so they only count toward maturing.
   const maturing = maturingFc(status) + pendingIn + pendingChange;
   const spendable = spendableFc(status) - outflow;
+  // What the change / arriving line already names, so the maturing line does not repeat it.
+  const explained = changeNotice.shown ? changeNotice.amount : inNotice.shown ? inNotice.amount : 0;
+  const arrivingRest = Math.max(0, maturing - explained);
   // MUST be called before the `restoring` early return: a hook below it renders
   // only on some renders, and the moment "restoring" flips off React throws
   // #310 (more hooks than the previous render) and takes the whole UI down.
@@ -3593,12 +3597,17 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
           : ""}
       </div>
       <div className="sub notice-slot">
-        {maturing > 0.00000001 ? (
+        {/* The line above already names our own change (or an incoming payment) — and
+            `maturing` includes that same money, so this line said it a second time:
+            "1,379 coming back as change" then "13,379 arriving · 24 ready to spend" (live
+            report, 1 Nov). Here only what the line above does NOT explain is "arriving";
+            when nothing is left, only the ready-to-spend figure remains. */}
+        {arrivingRest > 0.00000001 ? (
           view.canSpend ? (
             <span>
               <Trans
                 i18nKey="balanceHero.readyAndArriving"
-                values={{ spendable: trimFc(Math.max(0, spendable).toFixed(8)), maturing: trimFc(maturing.toFixed(8)) }}
+                values={{ spendable: noticeAmt(Math.max(0, spendable)), maturing: noticeAmt(arrivingRest) }}
                 components={{ em: <span style={{ color: "var(--ember)" }} /> }}
               />
             </span>
@@ -3610,11 +3619,13 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
             <span>
               <Trans
                 i18nKey="balanceHero.arrivingOnly"
-                values={{ maturing: trimFc(maturing.toFixed(8)) }}
+                values={{ maturing: noticeAmt(arrivingRest) }}
                 components={{ em: <span style={{ color: "var(--ember)" }} /> }}
               />
             </span>
           )
+        ) : maturing > 0.00000001 && view.canSpend ? (
+          t("balanceHero.readyOnly", { spendable: noticeAmt(Math.max(0, spendable)) })
         ) : (
           ""
         )}
@@ -5548,6 +5559,11 @@ function SettingsPane({ status }: { status: Status }) {
       <Collapsible title={t("settingsPane.networkPrivacy")} summary={networkPrivacyLabel()}>
         <NetworkPrivacyCard />
       </Collapsible>
+      {embeddedAvailable() && (
+        <Collapsible title={t("runOnPhoneOption.fastTitle")} summary={fastSyncSummary(t("settingsPane.on"), t("settingsPane.off"))}>
+          <FastSyncSettings />
+        </Collapsible>
+      )}
       <Collapsible title={t("settingsPane.accessTokenField")} summary={showAccessTokenField() ? t("settingsPane.shown") : t("settingsPane.hidden")}>
         <AccessTokenSetting />
       </Collapsible>
@@ -6719,7 +6735,7 @@ function Send({
   // the send only when it was asked for precisely the same payment.
   const ahead = useRef<PreparedAhead | null>(null);
   useEffect(() => {
-    if (!confirming || busy || fragmented) return;
+    if (!confirming || busy || fragmented || browserModeChosen()) return;
     const feeSompi = feeCustomSet ? Math.round(feeCustom * 1e8) : undefined;
     if (prepareAheadUsable(ahead.current, to.trim(), amt, feeSompi, memo, false)) return;
     let live = true;
@@ -6858,17 +6874,22 @@ function Send({
       // active wallet — so the check belongs immediately before it, not only at
       // the top of this function.
       if (!stillSameWallet()) throw new Error(WALLET_CHANGED);
-      const r = await sendNonCustodial(
-        seed.trim(),
-        networkOf(status),
-        to.trim(),
-        amt,
-        feeSompi,
-        onStage,
-        memo,
-        allowMultipleTransactions,
-        early,
-      );
+      // "Run in this browser": the payment is proven in the page and submitted through the chain
+      // gateway; no wallet service takes part. Same result shape, so everything below is shared.
+      if (browserModeChosen()) onStage("proving");
+      const r: { txid: string; fee_sompi?: number; parts?: { txid: string; amount_sompi: number; fee_sompi: number }[] } = browserModeChosen()
+        ? await browserSend(seed.trim(), to.trim(), amt, memo)
+        : await sendNonCustodial(
+            seed.trim(),
+            networkOf(status),
+            to.trim(),
+            amt,
+            feeSompi,
+            onStage,
+            memo,
+            allowMultipleTransactions,
+            early,
+          );
       // Remember how long that actually took, scaled by the notes it spent, so the
       // NEXT send can count down instead of only counting up. Recorded on success
       // only: a run that failed part-way measures the failure, not the work.

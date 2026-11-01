@@ -65,7 +65,7 @@
     "readyLabel": "Ready",
     "readyDetail": "Your balance is up to date.",
     "browserReadyLabel": "Up to date",
-    "browserReadyDetail": "Watching this wallet in this browser. To send, open it in the app or with the public service."
+    "browserReadyDetail": "Your balance is up to date. Coins you receive become spendable here about 10 minutes after they are mined."
   },
   "desktopServices": {
     "desktopOnly": "This control is available in the desktop app."

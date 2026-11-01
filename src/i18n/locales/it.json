@@ -799,7 +799,8 @@
     "scanning": "I saldi compaiono mentre il portafoglio scansiona la catena — i fondi sono al sicuro.",
     "lowerBound": "Questo saldo è un <b>limite inferiore</b>: la vista del portafoglio è stata ricostruita tramite un nodo che ha potato la cronologia vecchia, quindi monete create molto tempo fa potrebbero mancare. I tuoi fondi sono al sicuro sulla catena — riscansiona solo da un nodo con cronologia completa (ricostruire da questo sarebbe altrettanto cieco). Se è il tuo nodo e sta ancora caricando la cronologia schermata, aspetta che il log dica \"shielded history: VERIFIED\" e poi riscansiona.",
     "lowerBoundFrom": "Questo saldo è un <b>limite inferiore</b>: la vista del portafoglio è stata ricostruita tramite un nodo che ha potato la cronologia vecchia (disponibile dal blocco {{block}}), quindi monete create molto tempo fa potrebbero mancare. I tuoi fondi sono al sicuro sulla catena — riscansiona solo da un nodo con cronologia completa (ricostruire da questo sarebbe altrettanto cieco). Se è il tuo nodo e sta ancora caricando la cronologia schermata, aspetta che il log dica \"shielded history: VERIFIED\" e poi riscansiona.",
-    "notUpdating": "ultimo saldo confermato"
+    "notUpdating": "ultimo saldo confermato",
+    "readyOnly": "{{spendable}} pronti da spendere"
   },
   "addAccountWallet": {
     "noPhrase": "Questo portafoglio non ha una frase di recupero, quindi non si può derivare un account. Usa “Aggiungi portafoglio separato” — ha la sua frase di recupero, di cui fare backup.",
@@ -962,7 +963,7 @@
     "behindDetailBare": "Puoi già inviare: tutto il necessario è visibile. Il wallet sta ancora leggendo i nuovi blocchi, quindi quanto arrivato lì non è ancora conteggiato.",
     "etaLeft": "{{duration}} rimanenti",
     "browserReadyLabel": "Aggiornato",
-    "browserReadyDetail": "Wallet osservato in questo browser. Per inviare, aprilo nell’app o con il servizio pubblico."
+    "browserReadyDetail": "Il saldo è aggiornato. Le monete ricevute sono spendibili qui circa 10 minuti dopo essere state minate."
   },
   "desktopServices": {
     "desktopOnly": "Questo controllo è disponibile nell'app desktop."
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "Esegui in questo browser",
-    "desc": "Il più privato sul web: le tue chiavi non lasciano mai questo browser e nessun servizio vede il tuo wallet. Qui non è ancora possibile inviare."
+    "desc": "Il più privato sul web: le tue chiavi non lasciano mai questo browser e nessun servizio vede il tuo wallet."
   },
   "browserEngine": {
     "notInBrowser": "Non disponibile mentre il wallet funziona in questo browser. Usa l’app o il servizio pubblico per questo."
+  },
+  "fastSyncSettings": {
+    "apply": "Applica",
+    "applying": "Applicazione…",
+    "applied": "Applicato: il motore del wallet è ripartito con questa impostazione.",
+    "saved": "Salvato. Verrà usato al prossimo avvio su questo telefono.",
+    "failed": "Impossibile applicare: {{error}}",
+    "useDefault": "Usa l’indirizzo predefinito"
   }
 }

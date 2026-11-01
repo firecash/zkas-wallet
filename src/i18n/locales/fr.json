@@ -799,7 +799,8 @@
     "scanning": "Les soldes apparaissent pendant le scan de la chaîne — vos fonds sont en sécurité.",
     "lowerBound": "Ce solde est une <b>borne inférieure</b> : la vue du portefeuille a été reconstruite via un nœud qui a élagué l’historique ancien, donc des pièces créées il y a longtemps peuvent manquer. Vos fonds sont en sécurité sur la chaîne — réanalysez uniquement depuis un nœud qui sert l’historique complet (reconstruire via celui-ci donnerait le même résultat aveugle). Si c’est votre propre nœud et qu’il remplit encore l’historique protégé, attendez que son journal indique « shielded history: VERIFIED » puis réanalysez.",
     "lowerBoundFrom": "Ce solde est une <b>borne inférieure</b> : la vue du portefeuille a été reconstruite via un nœud qui a élagué l’historique ancien (disponible à partir du bloc {{block}}), donc des pièces créées il y a longtemps peuvent manquer. Vos fonds sont en sécurité sur la chaîne — réanalysez uniquement depuis un nœud qui sert l’historique complet (reconstruire via celui-ci donnerait le même résultat aveugle). Si c’est votre propre nœud et qu’il remplit encore l’historique protégé, attendez que son journal indique « shielded history: VERIFIED » puis réanalysez.",
-    "notUpdating": "dernier solde confirmé"
+    "notUpdating": "dernier solde confirmé",
+    "readyOnly": "{{spendable}} disponibles"
   },
   "recoverWallet": {
     "watchIntro": "Affiche le solde et l'historique sans phrase de récupération. Impossible d'envoyer : une clé de visualisation n'autorise pas les dépenses.",
@@ -962,7 +963,7 @@
     "behindDetailBare": "Vous pouvez envoyer maintenant — tout ce qu'il faut est déjà visible. Le portefeuille lit encore les derniers blocs, ce qui y est arrivé n'est pas encore compté.",
     "etaLeft": "{{duration}} restante",
     "browserReadyLabel": "À jour",
-    "browserReadyDetail": "Portefeuille suivi dans ce navigateur. Pour envoyer, ouvrez-le dans l’app ou avec le service public."
+    "browserReadyDetail": "Votre solde est à jour. Les pièces reçues sont dépensables ici environ 10 minutes après leur minage."
   },
   "desktopServices": {
     "desktopOnly": "Cette option est disponible dans l'appli de bureau."
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "Exécuter dans ce navigateur",
-    "desc": "Le plus privé sur le web : vos clés ne quittent jamais ce navigateur et aucun service ne voit votre portefeuille. L’envoi n’est pas encore possible ici."
+    "desc": "Le plus privé sur le web : vos clés ne quittent jamais ce navigateur et aucun service ne voit votre portefeuille."
   },
   "browserEngine": {
     "notInBrowser": "Indisponible tant que le portefeuille tourne dans ce navigateur. Utilisez l’app ou le service public pour cela."
+  },
+  "fastSyncSettings": {
+    "apply": "Appliquer",
+    "applying": "Application…",
+    "applied": "Appliqué : le moteur du portefeuille a redémarré avec ce réglage.",
+    "saved": "Enregistré. Utilisé au prochain démarrage sur ce téléphone.",
+    "failed": "Impossible d’appliquer : {{error}}",
+    "useDefault": "Utiliser l’adresse par défaut"
   }
 }

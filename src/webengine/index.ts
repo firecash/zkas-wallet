@@ -2,7 +2,7 @@
 // the seed this browser already holds and handed only to the in-page worker — no wallet service
 // ever receives it. Public chain data comes from ZKas's chain files (Cloudflare CDN, then
 // zkas.info) and the chain gateway, which see this browser's IP, as a node does.
-import { fvkHex } from "../signer";
+import { accountSeedHex, fvkHex, looksLikeHexSeed } from "../signer";
 import { clearnetAllowed } from "../lib/privacy";
 import { walletIdFor } from "./store";
 import type { BrowserSyncStatus } from "./sync";
@@ -86,11 +86,41 @@ export function browserStatus(): BrowserSyncStatus | null {
   return latest;
 }
 
-function onWorkerMessage(ev: MessageEvent<{ type: string; id?: number; json?: string; status?: BrowserSyncStatus }>) {
+type SendResult = { txid: string; feeSompi: number } | { error: string };
+const sendWaiters = new Map<number, (r: SendResult) => void>();
+let sendId = 0;
+
+function onWorkerMessage(ev: MessageEvent<{ type: string; id?: number; json?: string; status?: BrowserSyncStatus; result?: SendResult }>) {
   if (ev.data?.type === "history" && ev.data.id !== undefined) {
     historyWaiters.get(ev.data.id)?.(ev.data.json ?? "");
     historyWaiters.delete(ev.data.id);
   }
+  if (ev.data?.type === "sent" && ev.data.id !== undefined && ev.data.result) {
+    sendWaiters.get(ev.data.id)?.(ev.data.result);
+    sendWaiters.delete(ev.data.id);
+  }
+}
+
+/** Pay `amountFc` ZKAS to `to` from the wallet running in this browser: the payment is built
+ *  and proven in the page's worker, signed with this browser's key, and submitted through the
+ *  chain gateway. The same result shape as the service path, so History and the balance treat
+ *  it identically. Proving takes from a few seconds to a minute in a browser. */
+export async function browserSend(secret: string, to: string, amountFc: number, memo: string): Promise<{ txid: string; fee_sompi: number }> {
+  const w = worker;
+  if (!w || !running) throw new Error("The wallet is still starting in this browser; try again in a moment.");
+  const s = secret.trim();
+  const skHex = looksLikeHexSeed(s) ? s.toLowerCase() : await accountSeedHex(s, 0);
+  const amountSompi = BigInt(Math.round(amountFc * 1e8)).toString();
+  const id = ++sendId;
+  const result = await new Promise<SendResult>((resolve) => {
+    sendWaiters.set(id, resolve);
+    w.postMessage({ type: "send", id, skHex, to: to.trim(), amountSompi, memo: memo ?? "" });
+    setTimeout(() => {
+      if (sendWaiters.delete(id)) resolve({ error: "The payment took too long to prepare in this browser. Check History before trying again." });
+    }, 600_000);
+  });
+  if ("error" in result) throw new Error(result.error);
+  return { txid: result.txid, fee_sompi: result.feeSompi };
 }
 
 async function startFor(w: BrowserWallet): Promise<void> {
@@ -207,8 +237,7 @@ export async function browserWatch(fvk: string, birthday: number): Promise<{ add
 }
 
 /** The engine's state as the wallet service's `/api/status` answer, so every screen reads it
- *  unchanged. Starts, switches or stops the engine to follow the wallet this browser holds now.
- *  Sending is reported unavailable (`spend_ready: false`) until the browser proves payments. */
+ *  unchanged. Starts, switches or stops the engine to follow the wallet this browser holds now. */
 export async function browserServiceStatus(): Promise<Record<string, unknown>> {
   const w = resolver ? await resolver().catch(() => null) : null;
   if (!w || !w.seedHex) {
@@ -246,6 +275,11 @@ export async function browserServiceStatus(): Promise<Record<string, unknown>> {
   const s = latest;
   const tip = s?.tip || (await gatewayTip());
   const bal = s?.balanceSompi ?? "0";
+  const spendable = s?.spendableSompi ?? "0";
+  const maturing = s?.maturingSompi ?? "0";
+  const pin = s?.pendingInSompi ?? "0";
+  const pout = s?.pendingOutSompi ?? "0";
+  const pchange = s?.pendingChangeSompi ?? "0";
   return {
     has_wallet: true,
     address: w.address,
@@ -254,20 +288,22 @@ export async function browserServiceStatus(): Promise<Record<string, unknown>> {
     node_connected: !!s && s.phase !== "error",
     daa_score: tip,
     synced: s?.phase === "synced",
-    spend_ready: false,
+    spend_ready: s?.phase === "synced" && !!s.spendReady,
     loading: !s || s.phase === "starting",
     scanned_blocks: s?.scanned || w.birthday,
     chain_len: tip,
     balance_sompi: bal,
     balance_fc: fc(bal),
-    spendable_sompi: bal,
-    spendable_fc: fc(bal),
-    maturing_sompi: "0",
-    maturing_fc: "0.00000000",
-    pending_in_sompi: "0",
-    pending_in_fc: "0.00000000",
-    pending_out_sompi: "0",
-    pending_out_fc: "0.00000000",
+    spendable_sompi: spendable,
+    spendable_fc: fc(spendable),
+    maturing_sompi: maturing,
+    maturing_fc: fc(maturing),
+    pending_in_sompi: pin,
+    pending_in_fc: fc(pin),
+    pending_out_sompi: pout,
+    pending_out_fc: fc(pout),
+    pending_change_sompi: pchange,
+    pending_change_fc: fc(pchange),
     note_count: s?.notes ?? 0,
     updated_unix: Math.floor(Date.now() / 1000),
     error: s?.phase === "error" ? (s.error ?? "error") : null,

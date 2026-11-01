@@ -799,7 +799,8 @@
     "scanning": "Saldo muncul saat dompet memindai rantai — dana Anda aman.",
     "lowerBound": "Saldo ini adalah <b>batas bawah</b>: tampilan dompet dibangun ulang melalui node yang telah memangkas riwayat lama, jadi koin yang dibuat lama mungkin hilang darinya. Koin Anda aman di rantai — pindai ulang hanya dari node yang menyajikan riwayat penuh (membangun ulang melalui yang ini akan sama butanya). Jika ini node Anda sendiri dan masih mengisi riwayat terlindungi, tunggu log-nya mengatakan \"shielded history: VERIFIED\" lalu pindai ulang.",
     "lowerBoundFrom": "Saldo ini adalah <b>batas bawah</b>: tampilan dompet dibangun ulang melalui node yang telah memangkas riwayat lama (tersedia dari blok {{block}}), jadi koin yang dibuat lama mungkin hilang darinya. Koin Anda aman di rantai — pindai ulang hanya dari node yang menyajikan riwayat penuh (membangun ulang melalui yang ini akan sama butanya). Jika ini node Anda sendiri dan masih mengisi riwayat terlindungi, tunggu log-nya mengatakan \"shielded history: VERIFIED\" lalu pindai ulang.",
-    "notUpdating": "saldo terkonfirmasi terakhir"
+    "notUpdating": "saldo terkonfirmasi terakhir",
+    "readyOnly": "{{spendable}} siap dibelanjakan"
   },
   "addAccountWallet": {
     "noPhrase": "Dompet ini tidak punya frasa pemulihan, jadi akun tidak bisa diturunkan darinya. Gunakan “Tambah dompet terpisah” — dompet itu punya frasa pemulihan sendiri yang harus Anda cadangkan.",
@@ -962,7 +963,7 @@
     "behindDetailBare": "Anda bisa kirim sekarang — semua yang dibutuhkan pembayaran sudah terlihat. Dompet masih membaca blok terbaru, jadi apapun yang tiba di dalamnya belum terhitung.",
     "etaLeft": "{{duration}} lagi",
     "browserReadyLabel": "Terbaru",
-    "browserReadyDetail": "Dompet ini dipantau di browser ini. Untuk mengirim, buka di aplikasi atau dengan layanan publik."
+    "browserReadyDetail": "Saldo Anda terbaru. Koin yang diterima bisa dibelanjakan di sini sekitar 10 menit setelah ditambang."
   },
   "desktopServices": {
     "desktopOnly": "Kontrol ini tersedia di aplikasi desktop."
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "Jalankan di browser ini",
-    "desc": "Paling privat di web: kunci Anda tidak pernah meninggalkan browser ini dan tak ada layanan yang melihat dompet Anda. Mengirim belum tersedia di sini."
+    "desc": "Paling privat di web: kunci Anda tidak pernah meninggalkan browser ini dan tak ada layanan yang melihat dompet Anda."
   },
   "browserEngine": {
     "notInBrowser": "Tidak tersedia selama dompet berjalan di browser ini. Gunakan aplikasi atau layanan publik untuk ini."
+  },
+  "fastSyncSettings": {
+    "apply": "Terapkan",
+    "applying": "Menerapkan…",
+    "applied": "Diterapkan: mesin dompet dimulai ulang dengan pengaturan ini.",
+    "saved": "Disimpan. Dipakai saat dompet berjalan lagi di ponsel ini.",
+    "failed": "Tidak bisa diterapkan: {{error}}",
+    "useDefault": "Pakai alamat bawaan"
   }
 }

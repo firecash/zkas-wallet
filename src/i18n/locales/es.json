@@ -799,7 +799,8 @@
     "scanning": "Los saldos aparecen al escanear la cadena — tus fondos están seguros.",
     "lowerBound": "Este saldo es una <b>cota inferior</b>: la vista de la billetera se reconstruyó con un nodo que ha podado el historial antiguo, por lo que pueden faltar monedas creadas hace mucho. Tus fondos están seguros en la cadena — reescanea solo desde un nodo que sirva el historial completo (reconstruir con este daría el mismo resultado ciego). Si es tu propio nodo y aún está llenando el historial blindado, espera a que su registro diga \"shielded history: VERIFIED\" y reescanea entonces.",
     "lowerBoundFrom": "Este saldo es una <b>cota inferior</b>: la vista de la billetera se reconstruyó con un nodo que ha podado el historial antiguo (disponible desde el bloque {{block}}), por lo que pueden faltar monedas creadas hace mucho. Tus fondos están seguros en la cadena — reescanea solo desde un nodo que sirva el historial completo (reconstruir con este daría el mismo resultado ciego). Si es tu propio nodo y aún está llenando el historial blindado, espera a que su registro diga \"shielded history: VERIFIED\" y reescanea entonces.",
-    "notUpdating": "último saldo confirmado"
+    "notUpdating": "último saldo confirmado",
+    "readyOnly": "{{spendable}} listos para gastar"
   },
   "onboard": {
     "pastedFromClipboard": "pegado del portapapeles",
@@ -962,7 +963,7 @@
     "behindDetailBare": "Ya puedes enviar — todo lo necesario está visible. La billetera aún lee los bloques más nuevos, así que lo que llegó en ellos aún no se cuenta.",
     "etaLeft": "{{duration}} restante",
     "browserReadyLabel": "Al día",
-    "browserReadyDetail": "Viendo esta billetera en este navegador. Para enviar, ábrela en la app o con el servicio público."
+    "browserReadyDetail": "Tu saldo está al día. Las monedas recibidas se pueden gastar aquí unos 10 minutos después de minarse."
   },
   "desktopServices": {
     "desktopOnly": "Este control está disponible en la app de escritorio."
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "Ejecutar en este navegador",
-    "desc": "Lo más privado en la web: tus claves nunca salen de este navegador y ningún servicio de billetera ve tu billetera. Aún no se puede enviar desde aquí."
+    "desc": "Lo más privado en la web: tus claves nunca salen de este navegador y ningún servicio de billetera ve tu billetera."
   },
   "browserEngine": {
     "notInBrowser": "No disponible mientras la billetera funciona en este navegador. Usa la app o el servicio público para esto."
+  },
+  "fastSyncSettings": {
+    "apply": "Aplicar",
+    "applying": "Aplicando…",
+    "applied": "Aplicado: el motor de la billetera se reinició con este ajuste.",
+    "saved": "Guardado. Se usará la próxima vez que la billetera funcione en este teléfono.",
+    "failed": "No se pudo aplicar: {{error}}",
+    "useDefault": "Usar la dirección predeterminada"
   }
 }

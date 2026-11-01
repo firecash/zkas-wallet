@@ -799,7 +799,8 @@
     "scanning": "Saldo verschijnt tijdens scannen — uw geld is veilig.",
     "lowerBound": "Dit saldo is een <b>ondergrens</b>: het overzicht van de wallet is opnieuw opgebouwd via een node die oude geschiedenis heeft gesnoeid, dus lang geleden aangemaakte munten kunnen ontbreken. Je munten zijn veilig op de keten — scan alleen opnieuw vanaf een node die de volledige geschiedenis aanbiedt (opnieuw opbouwen via deze zou net zo blind uitkomen). Als dit je eigen node is en deze nog steeds de afgeschermde geschiedenis aanvult, wacht dan tot het logboek \"shielded history: VERIFIED\" zegt en scan dan opnieuw.",
     "lowerBoundFrom": "Dit saldo is een <b>ondergrens</b>: het overzicht van de wallet is opnieuw opgebouwd via een node die oude geschiedenis heeft gesnoeid (beschikbaar vanaf blok {{block}}), dus lang geleden aangemaakte munten kunnen ontbreken. Je munten zijn veilig op de keten — scan alleen opnieuw vanaf een node die de volledige geschiedenis aanbiedt (opnieuw opbouwen via deze zou net zo blind uitkomen). Als dit je eigen node is en deze nog steeds de afgeschermde geschiedenis aanvult, wacht dan tot het logboek \"shielded history: VERIFIED\" zegt en scan dan opnieuw.",
-    "notUpdating": "laatst bevestigde saldo"
+    "notUpdating": "laatst bevestigde saldo",
+    "readyOnly": "{{spendable}} klaar om uit te geven"
   },
   "addAccountWallet": {
     "noPhrase": "Deze portemonnee heeft geen herstelzin, dus er kan geen account van worden afgeleid. Gebruik 'Aparte portemonnee toevoegen' — die krijgt een eigen herstelzin, die u moet back-uppen.",
@@ -996,7 +997,7 @@
     "readyLabel": "Klaar",
     "readyDetail": "Je saldo is actueel.",
     "browserReadyLabel": "Bijgewerkt",
-    "browserReadyDetail": "Deze wallet wordt in deze browser gevolgd. Open hem in de app of via de openbare dienst om te verzenden."
+    "browserReadyDetail": "Je saldo is bijgewerkt. Ontvangen munten zijn hier ongeveer 10 minuten na het minen uit te geven."
   },
   "desktopServices": {
     "desktopOnly": "Dit onderdeel is beschikbaar in de desktop-app."
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "In deze browser uitvoeren",
-    "desc": "Het meest privé op het web: je sleutels verlaten deze browser nooit en geen walletdienst ziet je wallet. Verzenden kan hier nog niet."
+    "desc": "Het meest privé op het web: je sleutels verlaten deze browser nooit en geen walletdienst ziet je wallet."
   },
   "browserEngine": {
     "notInBrowser": "Niet beschikbaar zolang de wallet in deze browser draait. Gebruik hiervoor de app of de openbare dienst."
+  },
+  "fastSyncSettings": {
+    "apply": "Toepassen",
+    "applying": "Toepassen…",
+    "applied": "Toegepast: de wallet-engine is opnieuw gestart met deze instelling.",
+    "saved": "Opgeslagen. Gebruikt bij de volgende start op deze telefoon.",
+    "failed": "Kon niet worden toegepast: {{error}}",
+    "useDefault": "Standaardadres gebruiken"
   }
 }

@@ -765,7 +765,8 @@
     "keepsGoing": "Kapatıp dönebilirsiniz — devam eder.",
     "prunedRebuild": "Bu düğüm eski geçmişi budadı, bu nedenle yeniden oluşturulan bakiye <b>alt sınır</b> olabilir. Paralarınız zincirde — tam geçmiş sunan bir düğümden yeniden tarayın. Kendi düğümünüzse ve korumalı geçmişi hâlâ dolduruyorsa, günlüğünde \"shielded history: VERIFIED\" yazmasını bekleyip yeniden tarayın.",
     "prunedRebuildFrom": "Bu düğüm eski geçmişi budadı (blok {{block}}'dan itibaren mevcut), bu nedenle yeniden oluşturulan bakiye <b>alt sınır</b> olabilir. Paralarınız zincirde — tam geçmiş sunan bir düğümden yeniden tarayın. Kendi düğümünüzse ve korumalı geçmişi hâlâ dolduruyorsa, günlüğünde \"shielded history: VERIFIED\" yazmasını bekleyip yeniden tarayın.",
-    "notUpdating": "son onaylanan bakiye"
+    "notUpdating": "son onaylanan bakiye",
+    "readyOnly": "{{spendable}} harcanmaya hazır"
   },
   "addAccountWallet": {
     "noPhrase": "Bu cüzdanın kurtarma ifadesi yok, bu nedenle ondan bir hesap türetilemez. “Ayrı cüzdan ekle”yi kullanın — kendi kurtarma ifadesini alır, onu yedeklemelisiniz.",
@@ -928,7 +929,7 @@
     "behindDetail_other": "Artık gönderebilirsiniz — bir ödeme için gereken her şey görünürde. Cüzdan hâlâ en yeni {{n}} bloğu okuyor, bu nedenle bu bloklarda gelenler henüz sayılmaz.",
     "behindDetailBare": "Artık gönderebilirsiniz — bir ödeme için gereken her şey görünürde. Cüzdan hâlâ en yeni blokları okuyor, bu nedenle bu bloklarda gelenler henüz sayılmaz.",
     "browserReadyLabel": "Güncel",
-    "browserReadyDetail": "Bu cüzdan bu tarayıcıda izleniyor. Göndermek için uygulamada veya genel hizmetle açın."
+    "browserReadyDetail": "Bakiyeniz güncel. Alınan coinler, blokta işlendikten yaklaşık 10 dakika sonra burada harcanabilir."
   },
   "desktopServices": {
     "desktopOnly": "Bu kontrol yalnızca masaüstü uygulamasında kullanılabilir."
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "Bu tarayıcıda çalıştır",
-    "desc": "Web’de en gizlisi: anahtarlarınız bu tarayıcıdan hiç çıkmaz ve hiçbir cüzdan hizmeti cüzdanınızı görmez. Buradan gönderim henüz yok."
+    "desc": "Web’de en gizlisi: anahtarlarınız bu tarayıcıdan hiç çıkmaz ve hiçbir cüzdan hizmeti cüzdanınızı görmez."
   },
   "browserEngine": {
     "notInBrowser": "Cüzdan bu tarayıcıda çalışırken kullanılamaz. Bunun için uygulamayı veya genel hizmeti kullanın."
+  },
+  "fastSyncSettings": {
+    "apply": "Uygula",
+    "applying": "Uygulanıyor…",
+    "applied": "Uygulandı: cüzdan motoru bu ayarla yeniden başladı.",
+    "saved": "Kaydedildi. Cüzdan bu telefonda bir sonraki çalıştığında kullanılır.",
+    "failed": "Uygulanamadı: {{error}}",
+    "useDefault": "Varsayılan adresi kullan"
   }
 }

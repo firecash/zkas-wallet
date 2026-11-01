@@ -189,9 +189,17 @@
   },
   "runInBrowserOption": {
     "title": "Run in this browser",
-    "desc": "Most private on the web: your keys never leave this browser and no wallet service sees your wallet. Sending is not available here yet."
+    "desc": "Most private on the web: your keys never leave this browser and no wallet service sees your wallet."
   },
   "browserEngine": {
     "notInBrowser": "Not available while the wallet runs in this browser. Use the app, or the public service, for this."
+  },
+  "fastSyncSettings": {
+    "apply": "Apply",
+    "applying": "Applying…",
+    "applied": "Applied: the wallet engine restarted with this setting.",
+    "saved": "Saved. Used the next time the wallet runs on this phone.",
+    "failed": "Could not apply it: {{error}}",
+    "useDefault": "Use the default address"
   }
 }

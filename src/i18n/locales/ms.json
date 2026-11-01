@@ -790,7 +790,8 @@
     "scanning": "Baki muncul semasa dompet mengimbas rantaian — dana anda selamat.",
     "lowerBound": "Baki ini adalah <b>batas bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama, jadi syiling yang dicipta lama dahulu mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (membina semula melalui yang ini akan sama butanya). Jika ini nod anda sendiri dan ia masih mengisi sejarah terlindung, tunggu lognya menyatakan \"shielded history: VERIFIED\" dan imbas semula kemudian.",
     "lowerBoundFrom": "Baki ini adalah <b>batas bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama (tersedia dari blok {{block}}), jadi syiling yang dicipta lama dahulu mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (membina semula melalui yang ini akan sama butanya). Jika ini nod anda sendiri dan ia masih mengisi sejarah terlindung, tunggu lognya menyatakan \"shielded history: VERIFIED\" dan imbas semula kemudian.",
-    "notUpdating": "baki disahkan terakhir"
+    "notUpdating": "baki disahkan terakhir",
+    "readyOnly": "{{spendable}} sedia dibelanjakan"
   },
   "addAccountWallet": {
     "noPhrase": "Dompet ini tiada frasa pemulihan, jadi akaun tidak boleh diterbitkan daripadanya. Guna “Tambah dompet berasingan” — ia ada frasa pemulihan sendiri, yang mesti anda sandarkan.",
@@ -962,7 +963,7 @@
     "behindDetail_other": "Anda boleh hantar sekarang — semua yang diperlukan pembayaran sudah kelihatan. Dompet masih membaca {{n}} blok terbaru, jadi apa-apa yang tiba di dalamnya belum dikira.",
     "behindDetailBare": "Anda boleh hantar sekarang — semua yang diperlukan pembayaran sudah kelihatan. Dompet masih membaca blok terbaru, jadi apa-apa yang tiba di dalamnya belum dikira.",
     "browserReadyLabel": "Terkini",
-    "browserReadyDetail": "Dompet ini dipantau dalam pelayar ini. Untuk menghantar, buka dalam aplikasi atau dengan perkhidmatan awam."
+    "browserReadyDetail": "Baki anda terkini. Syiling yang diterima boleh dibelanjakan di sini kira-kira 10 minit selepas dilombong."
   },
   "desktopServices": {
     "desktopOnly": "Kawalan ini ada dalam aplikasi desktop."
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "Jalankan dalam pelayar ini",
-    "desc": "Paling peribadi di web: kunci anda tidak pernah meninggalkan pelayar ini dan tiada perkhidmatan melihat dompet anda. Menghantar belum tersedia di sini."
+    "desc": "Paling peribadi di web: kunci anda tidak pernah meninggalkan pelayar ini dan tiada perkhidmatan melihat dompet anda."
   },
   "browserEngine": {
     "notInBrowser": "Tidak tersedia semasa dompet berjalan dalam pelayar ini. Gunakan aplikasi atau perkhidmatan awam untuk ini."
+  },
+  "fastSyncSettings": {
+    "apply": "Guna",
+    "applying": "Sedang digunakan…",
+    "applied": "Digunakan: enjin dompet dimulakan semula dengan tetapan ini.",
+    "saved": "Disimpan. Digunakan apabila dompet berjalan lagi di telefon ini.",
+    "failed": "Tidak dapat digunakan: {{error}}",
+    "useDefault": "Guna alamat lalai"
   }
 }

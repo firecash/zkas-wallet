@@ -765,7 +765,8 @@
     "keepsGoing": "Możesz zamknąć i wrócić — proces trwa dalej.",
     "prunedRebuild": "Ten węzeł przyciął starszą historię, więc odbudowane saldo może być <b>dolnym ograniczeniem</b>. Twoje monety są w łańcuchu — przeskanuj ponownie z węzła udostępniającego pełną historię, aby zobaczyć wszystko. Jeśli to twój własny węzeł i wciąż uzupełnia historię chronioną, poczekaj, aż w logu pojawi się \"shielded history: VERIFIED\" i przeskanuj ponownie.",
     "prunedRebuildFrom": "Ten węzeł przyciął starszą historię (dostępną od bloku {{block}}), więc odbudowane saldo może być <b>dolnym ograniczeniem</b>. Twoje monety są w łańcuchu — przeskanuj ponownie z węzła udostępniającego pełną historię, aby zobaczyć wszystko. Jeśli to twój własny węzeł i wciąż uzupełnia historię chronioną, poczekaj, aż w logu pojawi się \"shielded history: VERIFIED\" i przeskanuj ponownie.",
-    "notUpdating": "ostatnie potwierdzone saldo"
+    "notUpdating": "ostatnie potwierdzone saldo",
+    "readyOnly": "{{spendable}} gotowe do wydania"
   },
   "addAccountWallet": {
     "noPhrase": "Ten portfel nie ma frazy odzyskiwania, więc nie można z niego wyprowadzić konta. Użyj „Dodaj osobny portfel” — ma własną frazę odzyskiwania, którą musisz utworzyć kopię zapasową.",
@@ -996,7 +997,7 @@
     "readyLabel": "Gotowe",
     "readyDetail": "Twoje saldo jest aktualne.",
     "browserReadyLabel": "Aktualny",
-    "browserReadyDetail": "Portfel obserwowany w tej przeglądarce. Aby wysłać, otwórz go w aplikacji lub przez usługę publiczną."
+    "browserReadyDetail": "Saldo jest aktualne. Otrzymane monety można tu wydać około 10 minut po wydobyciu."
   },
   "desktopServices": {
     "desktopOnly": "Ta opcja jest dostępna w aplikacji desktopowej."
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "Uruchom w tej przeglądarce",
-    "desc": "Najbardziej prywatnie w sieci: klucze nigdy nie opuszczają tej przeglądarki, a żadna usługa nie widzi portfela. Wysyłanie nie jest tu jeszcze dostępne."
+    "desc": "Najbardziej prywatnie w sieci: klucze nigdy nie opuszczają tej przeglądarki, a żadna usługa nie widzi portfela."
   },
   "browserEngine": {
     "notInBrowser": "Niedostępne, gdy portfel działa w tej przeglądarce. Użyj do tego aplikacji lub usługi publicznej."
+  },
+  "fastSyncSettings": {
+    "apply": "Zastosuj",
+    "applying": "Stosowanie…",
+    "applied": "Zastosowano: silnik portfela uruchomił się ponownie z tym ustawieniem.",
+    "saved": "Zapisano. Użyte przy następnym uruchomieniu na tym telefonie.",
+    "failed": "Nie udało się zastosować: {{error}}",
+    "useDefault": "Użyj adresu domyślnego"
   }
 }

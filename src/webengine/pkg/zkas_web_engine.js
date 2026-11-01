@@ -47,6 +47,11 @@ function getStringFromWasm0(ptr, len) {
     return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
 }
 
+function getArrayU8FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+
 let WASM_VECTOR_LEN = 0;
 
 const cachedTextEncoder = (typeof TextEncoder !== 'undefined' ? new TextEncoder('utf-8') : { encode: () => { throw Error('TextEncoder not available') } } );
@@ -188,6 +193,29 @@ function takeObject(idx) {
     dropObject(idx);
     return ret;
 }
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+/**
+ * Does a downloaded segment match its manifest entry (size and SHA-256)?
+ * @param {Uint8Array} bytes
+ * @param {string} sha256_hex
+ * @param {bigint} size
+ * @returns {boolean}
+ */
+export function segment_matches(bytes, sha256_hex, size) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_export_2);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(sha256_hex, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.segment_matches(ptr0, len0, ptr1, len1, size);
+    return ret !== 0;
+}
+
 /**
  * The page's entry point for [`verify_manifest_str`].
  * @param {string} json
@@ -218,28 +246,6 @@ export function verify_manifest(json) {
         wasm.__wbindgen_add_to_stack_pointer(16);
         wasm.__wbindgen_export_1(deferred3_0, deferred3_1, 1);
     }
-}
-
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
-/**
- * Does a downloaded segment match its manifest entry (size and SHA-256)?
- * @param {Uint8Array} bytes
- * @param {string} sha256_hex
- * @param {bigint} size
- * @returns {boolean}
- */
-export function segment_matches(bytes, sha256_hex, size) {
-    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_export_2);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(sha256_hex, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.segment_matches(ptr0, len0, ptr1, len1, size);
-    return ret !== 0;
 }
 
 /**
@@ -273,9 +279,18 @@ export function address_of_fvk(fvk_hex) {
     }
 }
 
-function getArrayU8FromWasm0(ptr, len) {
-    ptr = ptr >>> 0;
-    return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+let stack_pointer = 128;
+
+function addBorrowedObject(obj) {
+    if (stack_pointer == 1) throw new Error('out of js stack');
+    heap[--stack_pointer] = obj;
+    return stack_pointer;
+}
+
+function _assertClass(instance, klass) {
+    if (!(instance instanceof klass)) {
+        throw new Error(`expected instance of ${klass.name}`);
+    }
 }
 /**
  * Configuration for the WASM32 bindings runtime interface.
@@ -360,19 +375,6 @@ export function setLogLevel(level) {
     wasm.setLogLevel(addHeapObject(level));
 }
 
-let stack_pointer = 128;
-
-function addBorrowedObject(obj) {
-    if (stack_pointer == 1) throw new Error('out of js stack');
-    heap[--stack_pointer] = obj;
-    return stack_pointer;
-}
-
-function _assertClass(instance, klass) {
-    if (!(instance instanceof klass)) {
-        throw new Error(`expected instance of ${klass.name}`);
-    }
-}
 /**
  *
  *  Kaspa `Address` version (`PubKey`, `PubKey ECDSA`, `ScriptHash`)
@@ -691,6 +693,28 @@ export class Engine {
         }
     }
     /**
+     * The matured anchor: the node's tree frontier at a chain block deep enough that a spend
+     * rooted there is final when mined (the gateway's `/tree?below=<tip - margin>`). Notes
+     * below its leaf count are spendable; the rest are maturing. Witnesses are advanced to it
+     * here, a little at a time, so a send is a lookup.
+     * @param {string} boundary_json
+     */
+    set_anchor(boundary_json) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(boundary_json, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.engine_set_anchor(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            if (r1) {
+                throw takeObject(r0);
+            }
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
      * See [`Engine::page`].
      * @param {Uint8Array} bytes
      * @returns {string}
@@ -719,6 +743,68 @@ export class Engine {
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
             wasm.__wbindgen_export_1(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
+     * The mempool's shielded bundles (hex payloads, from the gateway's `/mempool`): what they
+     * would do to this wallet once mined. Bundles already counted from the unsettled blocks
+     * are skipped, so a payment crossing from mempool to block is counted once.
+     * @param {string} payloads_json
+     */
+    set_mempool(payloads_json) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(payloads_json, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.engine_set_mempool(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            if (r1) {
+                throw takeObject(r0);
+            }
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Build and prove a payment of `amount` sompi to `to` (a `zkas:` address) from this
+     * wallet's matured notes, rooted at the matured anchor. `sk_hex` is the wallet's 32-byte
+     * spending key; it is used for this call only. Returns the bundle to submit, the leaf
+     * positions it spends and the fee. Nothing is marked spent until [`Engine::mark_sent`].
+     * @param {string} sk_hex
+     * @param {string} to
+     * @param {bigint} amount
+     * @param {string} memo
+     * @returns {string}
+     */
+    prepare_send(sk_hex, to, amount, memo) {
+        let deferred5_0;
+        let deferred5_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(sk_hex, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(to, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
+            const len1 = WASM_VECTOR_LEN;
+            const ptr2 = passStringToWasm0(memo, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
+            const len2 = WASM_VECTOR_LEN;
+            wasm.engine_prepare_send(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1, amount, ptr2, len2);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+            var ptr4 = r0;
+            var len4 = r1;
+            if (r3) {
+                ptr4 = 0; len4 = 0;
+                throw takeObject(r2);
+            }
+            deferred5_0 = ptr4;
+            deferred5_1 = len4;
+            return getStringFromWasm0(ptr4, len4);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export_1(deferred5_0, deferred5_1, 1);
         }
     }
     /**
@@ -901,6 +987,30 @@ export class Engine {
     scanned() {
         const ret = wasm.engine_scanned(this.__wbg_ptr);
         return BigInt.asUintN(64, ret);
+    }
+    /**
+     * The payment `txid` was accepted by the node: park its notes (they leave the balance, and
+     * return on their own if the payment is never mined) and record the change coming back.
+     * @param {string} positions_json
+     * @param {string} txid_hex
+     * @param {bigint} outflow
+     */
+    mark_sent(positions_json, txid_hex, outflow) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(positions_json, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(txid_hex, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
+            const len1 = WASM_VECTOR_LEN;
+            wasm.engine_mark_sent(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1, outflow);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            if (r1) {
+                throw takeObject(r0);
+            }
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
     }
 }
 
@@ -1401,6 +1511,9 @@ function __wbg_get_imports() {
             wasm.__wbindgen_export_1(deferred0_0, deferred0_1, 1);
         }
     };
+    imports.wbg.__wbg_getRandomValues_e9de607763a970bd = function() { return handleError(function (arg0, arg1) {
+        globalThis.crypto.getRandomValues(getArrayU8FromWasm0(arg0, arg1));
+    }, arguments) };
     imports.wbg.__wbg_get_67b2ba62fc30de12 = function() { return handleError(function (arg0, arg1) {
         const ret = Reflect.get(getObject(arg0), getObject(arg1));
         return addHeapObject(ret);

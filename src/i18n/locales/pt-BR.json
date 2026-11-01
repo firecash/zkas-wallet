@@ -790,7 +790,8 @@
     "scanning": "Saldos aparecem enquanto a carteira escaneia a cadeia — seus fundos estão seguros.",
     "lowerBound": "Este saldo é um <b>limite inferior</b>: a visualização da carteira foi reconstruída por um nó que podou o histórico antigo, então moedas criadas há muito tempo podem estar faltando. Suas moedas estão seguras na cadeia — reescaneie apenas de um nó que sirva o histórico completo (reconstruir por este seria igualmente cego). Se este for seu próprio nó e ele ainda estiver preenchendo o histórico blindado, aguarde o log mostrar \"shielded history: VERIFIED\" e reescaneie então.",
     "lowerBoundFrom": "Este saldo é um <b>limite inferior</b>: a visualização da carteira foi reconstruída por um nó que podou o histórico antigo (disponível a partir do bloco {{block}}), então moedas criadas há muito tempo podem estar faltando. Suas moedas estão seguras na cadeia — reescaneie apenas de um nó que sirva o histórico completo (reconstruir por este seria igualmente cego). Se este for seu próprio nó e ele ainda estiver preenchendo o histórico blindado, aguarde o log mostrar \"shielded history: VERIFIED\" e reescaneie então.",
-    "notUpdating": "último saldo confirmado"
+    "notUpdating": "último saldo confirmado",
+    "readyOnly": "{{spendable}} prontos para gastar"
   },
   "addAccountWallet": {
     "noPhrase": "Esta carteira não tem frase de recuperação, então não é possível derivar uma conta. Use “Adicionar carteira separada” — ela tem sua própria frase, da qual você deve fazer backup.",
@@ -954,7 +955,7 @@
     "behindDetailBare": "Você já pode enviar — tudo que um pagamento precisa já está visível. A carteira ainda está lendo os blocos mais novos, então o que chegou neles ainda não foi contado.",
     "etaLeft": "{{duration}} restantes",
     "browserReadyLabel": "Atualizada",
-    "browserReadyDetail": "Acompanhando esta carteira neste navegador. Para enviar, abra-a no app ou com o serviço público."
+    "browserReadyDetail": "Seu saldo está atualizado. Moedas recebidas ficam disponíveis aqui cerca de 10 minutos após serem mineradas."
   },
   "desktopServices": {
     "desktopOnly": "Este controle está disponível no app para desktop."
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "Executar neste navegador",
-    "desc": "O mais privado na web: suas chaves nunca saem deste navegador e nenhum serviço vê sua carteira. Ainda não é possível enviar daqui."
+    "desc": "O mais privado na web: suas chaves nunca saem deste navegador e nenhum serviço vê sua carteira."
   },
   "browserEngine": {
     "notInBrowser": "Indisponível enquanto a carteira roda neste navegador. Use o app ou o serviço público para isso."
+  },
+  "fastSyncSettings": {
+    "apply": "Aplicar",
+    "applying": "Aplicando…",
+    "applied": "Aplicado: o motor da carteira reiniciou com esta configuração.",
+    "saved": "Salvo. Será usado na próxima vez que a carteira rodar neste telefone.",
+    "failed": "Não foi possível aplicar: {{error}}",
+    "useDefault": "Usar o endereço padrão"
   }
 }

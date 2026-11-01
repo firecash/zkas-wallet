@@ -334,7 +334,9 @@ export function walletStatus(s: StatusInput): WalletStatusView {
   // It is a real state with a real cause (the wallet's mirror of the chain tree is not
   // valid yet), it resolves on its own in seconds, and the only honest thing to do is
   // name it instead of claiming readiness the daemon will not honour.
-  if (s.browserMode) {
+  // Browser mode and nothing spendable yet (no matured anchor, or every coin still maturing):
+  // the balance is final; the wait is only the network's maturity rule.
+  if (s.browserMode && !walletCanSpend(s)) {
     return {
       phase: "ready",
       label: i18n.t("status.browserReadyLabel"),

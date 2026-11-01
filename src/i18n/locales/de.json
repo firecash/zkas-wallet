@@ -675,7 +675,7 @@
     "behindDetailBare": "Du kannst jetzt senden – alles Nötige ist bereits im Blick. Das Wallet liest noch die neuesten Blöcke, daher wird, was darin ankam, noch nicht gezählt. ",
     "etaLeft": "{{duration}} verbleibend",
     "browserReadyLabel": "Aktuell",
-    "browserReadyDetail": "Dieses Wallet wird in diesem Browser beobachtet. Zum Senden öffne es in der App oder über den öffentlichen Dienst."
+    "browserReadyDetail": "Dein Guthaben ist aktuell. Empfangene Coins sind hier etwa 10 Minuten nach dem Mining ausgebbar."
   },
   "desktopServices": {
     "desktopOnly": "Diese Steuerung gibt es nur in der Desktop-App."
@@ -779,7 +779,8 @@
     "keepsGoing": "Du kannst schließen und wiederkommen – es läuft weiter.",
     "prunedRebuild": "Dieser Node hat alte History gekürzt, daher kann das neu aufgebaute Guthaben eine <b>Untergrenze</b> sein. Deine Coins sind on-chain – scanne von einem Node mit vollständiger History erneut, um alles zu sehen. Falls dies dein eigener Node ist und er noch die abgeschirmte History füllt, warte, bis im Log „shielded history: VERIFIED“ steht, und scanne erneut.",
     "prunedRebuildFrom": "Dieser Node hat alte History gekürzt (verfügbar ab Block {{block}}), daher kann das neu aufgebaute Guthaben eine <b>Untergrenze</b> sein. Deine Coins sind on-chain – scanne von einem Node mit vollständiger History erneut, um alles zu sehen. Falls dies dein eigener Node ist und er noch die abgeschirmte History füllt, warte, bis im Log „shielded history: VERIFIED“ steht, und scanne erneut.",
-    "notUpdating": "letztes bestätigtes Guthaben"
+    "notUpdating": "letztes bestätigtes Guthaben",
+    "readyOnly": "{{spendable}} sofort ausgebbar"
   },
   "addAccountWallet": {
     "noPhrase": "Dieses Wallet hat keine Wiederherstellungsphrase, daher kann kein Konto abgeleitet werden. Nutze „Separates Wallet hinzufügen“ – es bekommt eine eigene Wiederherstellungsphrase, die du sichern musst.",
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "In diesem Browser ausführen",
-    "desc": "Am privatesten im Web: Deine Schlüssel verlassen diesen Browser nie, und kein Wallet-Dienst sieht dein Wallet. Senden ist hier noch nicht möglich."
+    "desc": "Am privatesten im Web: Deine Schlüssel verlassen diesen Browser nie, und kein Wallet-Dienst sieht dein Wallet."
   },
   "browserEngine": {
     "notInBrowser": "Nicht verfügbar, solange das Wallet in diesem Browser läuft. Nutze dafür die App oder den öffentlichen Dienst."
+  },
+  "fastSyncSettings": {
+    "apply": "Übernehmen",
+    "applying": "Wird übernommen…",
+    "applied": "Übernommen: Die Wallet-Engine wurde mit dieser Einstellung neu gestartet.",
+    "saved": "Gespeichert. Gilt beim nächsten Start auf diesem Telefon.",
+    "failed": "Konnte nicht übernommen werden: {{error}}",
+    "useDefault": "Standardadresse verwenden"
   }
 }

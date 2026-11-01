@@ -1,13 +1,13 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * The page's entry point for [`verify_manifest_str`].
- */
-export function verify_manifest(json: string): string;
-/**
  * Does a downloaded segment match its manifest entry (size and SHA-256)?
  */
 export function segment_matches(bytes: Uint8Array, sha256_hex: string, size: bigint): boolean;
+/**
+ * The page's entry point for [`verify_manifest_str`].
+ */
+export function verify_manifest(json: string): string;
 export function address_of_fvk(fvk_hex: string): string;
 /**
  * Configuration for the WASM32 bindings runtime interface.
@@ -99,20 +99,13 @@ export enum NetworkType {
 }
 
 /**
- * Interface for configuring workflow-rs WASM32 bindings.
+ * Interface defines the structure of a Script Public Key.
  * 
- * @category General
+ * @category Consensus
  */
-export interface IWASM32BindingsConfig {
-    /**
-     * This option can be used to disable the validation of class names
-     * for instances of classes exported by Rust WASM32 when passing
-     * these classes to WASM32 functions.
-     * 
-     * This can be useful to programmatically disable checks when using
-     * a bundler that mangles class symbol names.
-     */
-    validateClassNames : boolean;
+export interface IScriptPublicKey {
+    version : number;
+    script: HexString;
 }
 
 
@@ -136,13 +129,20 @@ export interface IWASM32BindingsConfig {
 
 
 /**
- * Interface defines the structure of a Script Public Key.
+ * Interface for configuring workflow-rs WASM32 bindings.
  * 
- * @category Consensus
+ * @category General
  */
-export interface IScriptPublicKey {
-    version : number;
-    script: HexString;
+export interface IWASM32BindingsConfig {
+    /**
+     * This option can be used to disable the validation of class names
+     * for instances of classes exported by Rust WASM32 when passing
+     * these classes to WASM32 functions.
+     * 
+     * This can be useful to programmatically disable checks when using
+     * a bundler that mangles class symbol names.
+     */
+    validateClassNames : boolean;
 }
 
 
@@ -209,9 +209,29 @@ export class Engine {
    */
   checkpoint(): Uint8Array;
   /**
+   * The matured anchor: the node's tree frontier at a chain block deep enough that a spend
+   * rooted there is final when mined (the gateway's `/tree?below=<tip - margin>`). Notes
+   * below its leaf count are spendable; the rest are maturing. Witnesses are advanced to it
+   * here, a little at a time, so a send is a lookup.
+   */
+  set_anchor(boundary_json: string): void;
+  /**
    * See [`Engine::page`].
    */
   ingest_page(bytes: Uint8Array): string;
+  /**
+   * The mempool's shielded bundles (hex payloads, from the gateway's `/mempool`): what they
+   * would do to this wallet once mined. Bundles already counted from the unsettled blocks
+   * are skipped, so a payment crossing from mempool to block is counted once.
+   */
+  set_mempool(payloads_json: string): void;
+  /**
+   * Build and prove a payment of `amount` sompi to `to` (a `zkas:` address) from this
+   * wallet's matured notes, rooted at the matured anchor. `sk_hex` is the wallet's 32-byte
+   * spending key; it is used for this call only. Returns the bundle to submit, the leaf
+   * positions it spends and the fee. Nothing is marked spent until [`Engine::mark_sent`].
+   */
+  prepare_send(sk_hex: string, to: string, amount: bigint, memo: string): string;
   /**
    * This wallet's tree frontier at `low()`, as the gateway's /tree answers it — for the
    * check against the node. Undefined while the wallet holds no tree of its own.
@@ -239,6 +259,11 @@ export class Engine {
    */
   static restore(fvk_hex: string, bytes: Uint8Array): Engine;
   scanned(): bigint;
+  /**
+   * The payment `txid` was accepted by the node: park its notes (they leave the balance, and
+   * return on their own if the payment is never mined) and record the change coming back.
+   */
+  mark_sent(positions_json: string, txid_hex: string, outflow: bigint): void;
 }
 /**
  * @category General
@@ -332,9 +357,13 @@ export interface InitOutput {
   readonly engine_ingest_page: (a: number, b: number, c: number, d: number) => void;
   readonly engine_ingest_segment: (a: number, b: number, c: number, d: number, e: bigint, f: number, g: number, h: number, i: number) => void;
   readonly engine_low: (a: number, b: number) => void;
+  readonly engine_mark_sent: (a: number, b: number, c: number, d: number, e: number, f: number, g: bigint) => void;
   readonly engine_new: (a: number, b: number, c: number, d: number, e: number, f: bigint) => void;
+  readonly engine_prepare_send: (a: number, b: number, c: number, d: number, e: number, f: number, g: bigint, h: number, i: number) => void;
   readonly engine_restore: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly engine_scanned: (a: number) => bigint;
+  readonly engine_set_anchor: (a: number, b: number, c: number, d: number) => void;
+  readonly engine_set_mempool: (a: number, b: number, c: number, d: number) => void;
   readonly engine_status: (a: number, b: number) => void;
   readonly engine_tip_frontier: (a: number, b: number) => void;
   readonly segment_matches: (a: number, b: number, c: number, d: number, e: bigint) => number;

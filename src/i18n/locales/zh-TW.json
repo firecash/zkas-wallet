@@ -790,7 +790,8 @@
     "scanning": "錢包掃描鏈時顯示餘額 — 你的資金安全無虞。",
     "lowerBound": "此餘額為<b>下限</b>：錢包的視圖是透過一個已修剪舊歷史的節點重建的，因此很久以前創建的幣可能已遺失。你的幣在鏈上是安全的 — 請僅從提供完整歷史的節點重新掃描（透過此節點重建的結果同樣會不完整）。如果這是你自己的節點且仍在填充屏蔽歷史，請等待其日誌顯示「shielded history: VERIFIED」後再重新掃描。",
     "lowerBoundFrom": "此餘額為<b>下限</b>：錢包的視圖是透過一個已修剪舊歷史的節點重建的（可從區塊 {{block}} 取得），因此很久以前創建的幣可能已遺失。你的幣在鏈上是安全的 — 請僅從提供完整歷史的節點重新掃描（透過此節點重建的結果同樣會不完整）。如果這是你自己的節點且仍在填充屏蔽歷史，請等待其日誌顯示「shielded history: VERIFIED」後再重新掃描。",
-    "notUpdating": "最後確認的餘額"
+    "notUpdating": "最後確認的餘額",
+    "readyOnly": "{{spendable}} 可用"
   },
   "iosInstallNotice": {
     "installedCopy": "在 Safari 中已有錢包？它不會與此安裝版本共用——請在此使用助記詞復原。",
@@ -954,7 +955,7 @@
     "behindDetailBare": "你現在即可發送 — 付款所需資訊皆已載入。錢包仍在讀取最新區塊，因此其中收到的款項尚未計入。",
     "etaLeft": "剩餘 {{duration}}",
     "browserReadyLabel": "已是最新",
-    "browserReadyDetail": "正在此瀏覽器中查看此錢包。如需傳送，請在 App 或公開服務中開啟。"
+    "browserReadyDetail": "餘額已是最新。收到的幣在被打包約 10 分鐘後即可在此花費。"
   },
   "desktopServices": {
     "desktopOnly": "此功能僅限桌面版應用程式使用。"
@@ -2116,9 +2117,17 @@
   },
   "runInBrowserOption": {
     "title": "在此瀏覽器中執行",
-    "desc": "網頁上最私密的方式：你的金鑰從不離開此瀏覽器，任何服務都看不到你的錢包。此處暫時無法傳送。"
+    "desc": "網頁上最私密的方式：你的金鑰從不離開此瀏覽器，任何服務都看不到你的錢包。"
   },
   "browserEngine": {
     "notInBrowser": "錢包在此瀏覽器中執行時無法使用。請改用 App 或公開服務。"
+  },
+  "fastSyncSettings": {
+    "apply": "套用",
+    "applying": "套用中…",
+    "applied": "已套用：錢包引擎已依此設定重新啟動。",
+    "saved": "已儲存。下次錢包在此手機上執行時使用。",
+    "failed": "無法套用：{{error}}",
+    "useDefault": "使用預設位址"
   }
 }
