@@ -27,7 +27,7 @@ import {
 } from "./localtx";
 import { ensureSigner, fvkHex, generateMnemonicWallet, accountSeedHex, signLocal, verifyLocal, type Network } from "./signer";
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, prepareAhead, prepareAheadUsable, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, MIN_NOTES_PER_MERGE, type PreparedAhead, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
-import { signerCanSign, walletCanSpend, walletStatus } from "./status";
+import { scanFraction, signerCanSign, walletCanSpend, walletStatus } from "./status";
 import { useZkasPrice, fmtFiat } from "./price";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
 import { feeReserveSompi } from "./fees";
@@ -3306,7 +3306,9 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
   })();
   const shownScanned = resumeFrom ? resumeFrom.scanned_blocks : status.scanned_blocks;
   const shownChainLen = resumeFrom ? resumeFrom.chain_len : status.chain_len;
-  const pct = shownChainLen > 0 ? Math.min(100, Math.round((shownScanned / shownChainLen) * 100)) : 0;
+  // Of THIS wallet's scan (birthday to tip), not of the chain since genesis — see `scanFrom`.
+  const scanFrom = status.birthday ?? resumeFrom?.birthday ?? null;
+  const pct = Math.round((scanFraction(shownScanned, shownChainLen, scanFrom) ?? 0) * 100);
   // The daemon has not rebuilt this wallet's state yet — it reports zeros because it
   // does not KNOW the balance, not because the balance is zero. Never render those
   // zeros as a balance; fall back to the last figure it gave us.
@@ -3353,6 +3355,7 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
     spendReady: isWatchOnly() ? false : status.spend_ready,
     scannedBlocks: shownScanned,
     chainLen: shownChainLen,
+    scanFrom,
     warming: !!status.warming,
     loading: !!status.loading,
     nodeConnected: status.node_connected,

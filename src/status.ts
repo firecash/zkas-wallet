@@ -29,6 +29,11 @@ export interface StatusInput {
   synced: boolean;
   scannedBlocks: number;
   chainLen: number;
+  /// Where this wallet's scan starts (its birthday DAA), so progress means "of the work
+  /// this wallet has to do", not "of the chain since genesis". Without it a wallet born
+  /// 60 days ago read 35% the moment its scan BEGAN, and a restart looked like losing half
+  /// of it. Null/0 when unknown: progress then counts from genesis, as before.
+  scanFrom?: number | null;
   /// Daemon is still making this wallet fast to spend from (cold witnesses).
   warming: boolean;
   /// The daemon's own answer to "would a spend be accepted right now". Absent on
@@ -164,23 +169,32 @@ function behindDetail(behind?: number): string {
     : i18n.t("status.behindDetailBare");
 }
 
-function pctOf(scanned: number, total: number): number | null {
+/// Fraction of this wallet's own scan done: from `from` (its birthday) to `total` (the tip).
+/// A scan that starts a little below the birthday (the almanac's daily frontier) reads 0.
+export function scanFraction(scanned: number, total: number, from?: number | null): number | null {
   if (!(total > 0) || !(scanned >= 0)) return null;
-  return Math.max(0, Math.min(100, Math.round((scanned / total) * 100)));
+  const start = from && from > 0 && from < total ? from : 0;
+  return Math.max(0, Math.min(1, (scanned - start) / (total - start)));
+}
+
+function pctOf(scanned: number, total: number, from?: number | null): number | null {
+  const f = scanFraction(scanned, total, from);
+  return f === null ? null : Math.round(f * 100);
 }
 
 /// One decimal, floored — never round UP to "100.0%" while work remains, which is
 /// the single most frustrating thing a progress display can do.
-function pctFineOf(scanned: number, total: number): string | null {
-  if (!(total > 0) || !(scanned >= 0)) return null;
-  const raw = Math.max(0, Math.min(100, (scanned / total) * 100));
+function pctFineOf(scanned: number, total: number, from?: number | null): string | null {
+  const f = scanFraction(scanned, total, from);
+  if (f === null) return null;
+  const raw = f * 100;
   const floored = Math.floor(raw * 10) / 10;
   return `${(scanned < total ? Math.min(floored, 99.9) : 100).toFixed(1)}%`;
 }
 
 export function walletStatus(s: StatusInput): WalletStatusView {
-  const pct = pctOf(s.scannedBlocks, s.chainLen);
-  const pctFine = pctFineOf(s.scannedBlocks, s.chainLen);
+  const pct = pctOf(s.scannedBlocks, s.chainLen, s.scanFrom);
+  const pctFine = pctFineOf(s.scannedBlocks, s.chainLen, s.scanFrom);
   const progress = s.chainLen > 0 ? { scanned: s.scannedBlocks, total: s.chainLen } : null;
   const eta = s.etaSeconds != null ? i18n.t("status.etaLeft", { duration: formatDuration(s.etaSeconds) }) : null;
 

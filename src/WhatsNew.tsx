@@ -1,30 +1,62 @@
 // One-time "what's new" for EXISTING users on update.
 //
-// Fresh installs meet these choices in the first-run screens, so they are marked as having
-// seen it; an existing wallet skips first-run and would otherwise gain them silently. Shown
-// once per release that needs it, gated by the version key below. The previous notice (the
-// on-device engine, 1.0.39) had its own key, so whoever dismissed that one still sees this.
+// Version-based, not keyed per release: the app records the version it last ran, and the
+// notice is shown to an existing wallet whose last-run version is older than the release
+// that introduced what it describes (`NOTICE_SINCE`) — whichever later version they install,
+// and however many releases they skipped. A fresh install records its version at first boot,
+// so it never sees a notice about the version it started on. Writing a new notice means
+// changing the text and `NOTICE_SINCE`; nothing else.
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { embeddedAvailable, embeddedFastSync } from "./embedded";
+import { isNewerVersion } from "./desktop";
+import { APP_VERSION } from "./version";
 
-const SEEN_KEY = "whatsnew_seen_v1_0_52_rc22_fastsync";
+/// The release this notice describes: fast sync, the re-download fix, log parts.
+export const NOTICE_SINCE = "1.0.52-rc22";
+/// The app version that last ran on this device (written at every boot).
+const LAST_VERSION_KEY = "app_last_seen_version";
+/// Dismissal keys of the card before this mechanism: whoever dismissed one has seen it.
+const LEGACY_DISMISSED = ["whatsnew_seen_v1_0_52_rc22_fastsync"];
 
-/** Whether to show the update notice: an existing wallet, on a build with the on-device
- * engine (Android), that has not seen it. A device with no wallet yet is a fresh install:
- * it is marked seen here, so it does not get the notice after creating its first wallet. */
-export function shouldShowWhatsNew(hasWalletHistory: boolean): boolean {
-  if (!embeddedAvailable()) return false;
+function readLastVersion(): string | null {
   try {
-    if (!hasWalletHistory) {
-      localStorage.setItem(SEEN_KEY, "1");
-      return false;
-    }
-    return !localStorage.getItem(SEEN_KEY);
+    if (LEGACY_DISMISSED.some((k) => localStorage.getItem(k))) return NOTICE_SINCE;
+    return localStorage.getItem(LAST_VERSION_KEY);
   } catch {
+    return null;
+  }
+}
+
+function recordVersion(v: string): void {
+  try {
+    localStorage.setItem(LAST_VERSION_KEY, v);
+  } catch {
+    /* no storage: the notice may show again, which is harmless */
+  }
+}
+
+/** Whether to show the update notice. `version` is the running app (overridable for tests).
+ * Records this boot's version unless the notice is still owed, so a later notice compares
+ * against the version the user actually last ran. */
+export function shouldShowWhatsNew(hasWalletHistory: boolean, version: string = APP_VERSION): boolean {
+  if (!embeddedAvailable()) return false;
+  if (!hasWalletHistory) {
+    recordVersion(version);
     return false;
   }
+  const last = readLastVersion();
+  // No record: last run by a version from before versions were recorded — older than any
+  // notice. Owed only if this build is at or past the notice's release; a "dev" build never.
+  const owed = version !== "dev" && !isNewerVersion(NOTICE_SINCE, version) && (last === null || isNewerVersion(NOTICE_SINCE, last));
+  if (!owed) recordVersion(version);
+  return owed;
+}
+
+/** The notice was dealt with (OK, or fast sync turned off): record this version. */
+export function markWhatsNewSeen(version: string = APP_VERSION): void {
+  recordVersion(version);
 }
 
 export function WhatsNew({ onClose, onDisableFastSync }: { onClose: () => void; onDisableFastSync: () => void | Promise<void> }) {
@@ -33,7 +65,7 @@ export function WhatsNew({ onClose, onDisableFastSync }: { onClose: () => void; 
   const [err, setErr] = useState("");
   const fastOn = embeddedFastSync();
   const done = () => {
-    try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
+    markWhatsNewSeen();
     onClose();
   };
   const disable = () => {
