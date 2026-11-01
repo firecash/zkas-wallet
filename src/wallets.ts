@@ -210,8 +210,19 @@ export function addWallet(activate = true): string {
   return token;
 }
 
+const PREV_KEY = "wallet_prev_token";
+
+/** The wallet that was active before the current one, if any. */
+export function previousToken(): string | null {
+  return readLocal(PREV_KEY);
+}
+
 /** Switch the active wallet. The other wallets' data stays exactly where it is. */
 export function switchWallet(token: string): void {
+  // The wallet being left is the one most likely to be switched back to: prewarm keeps only
+  // that one warm (see prewarm.ts).
+  const prev = activeToken();
+  if (prev && prev !== token) writeLocal(PREV_KEY, prev);
   // writeLocal: a raw setItem threw out of the click handler that called this, so on a
   // browser with storage blocked tapping another wallet did nothing at all — not even the
   // reload that follows. It now takes effect for the session even when it cannot persist.

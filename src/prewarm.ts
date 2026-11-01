@@ -15,6 +15,13 @@
 // The app knows. One `/api/status` per wallet is enough: on the far side it loads the
 // wallet, refreshes `last_touch` so the sync loop keeps it at the tip, and marks it warm.
 //
+// Only ONE other wallet, the one switched away from last. Touching every wallet a user owns
+// every 120 s was itself the eviction thrash it meant to prevent: the hosted daemon keeps 4
+// wallets resident for the whole fleet, so a user with five wallets pinned slots that other
+// users' active wallets then lost, and everyone paid the restore (measured: 1,871 loads a
+// day, p90 open 24 s). The wallet you just left is the switch that happens; the rest are
+// opened on demand. And nothing while the app is in the background: no one is switching.
+//
 // Deliberately gentle. Each of those calls can cost the daemon a multi-hundred-megabyte
 // restore, so they go out ONE AT A TIME with a gap between them — a burst would put a
 // cohort of restores through a load gate that only fits 16, which is how everything ends
@@ -22,7 +29,7 @@
 // polling it every second.
 
 import { getBase, touchWallet } from "./api";
-import { activeToken, listWallets, normBase } from "./wallets";
+import { activeToken, listWallets, normBase, previousToken } from "./wallets";
 
 /** Gap between touches. One restore at a time, not a thundering herd. */
 const STAGGER_MS = 4_000;
@@ -52,9 +59,12 @@ async function round(): Promise<void> {
     // No stamp means the wallet has not been seen on any daemon since the registry started
     // recording it, so it is left alone until its own status poll establishes where it
     // lives. Warming it is a convenience; guessing with a credential is not worth it.
+    if (typeof document !== "undefined" && document.hidden) return;
     const here = normBase(getBase());
+    const prev = previousToken();
     const others = listWallets()
       .filter((w) => w.token && w.token !== active && w.base && w.base === here)
+      .filter((w) => w.token === prev)
       .map((w) => w.token);
     for (const token of others) {
       await touchWallet(token);
