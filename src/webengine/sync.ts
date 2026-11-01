@@ -98,6 +98,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
   let eng: EngineLike | null = null;
   let tip = 0;
   let verified: boolean | null = null;
+  let everSynced = false;
 
   const report = (phase: BrowserSyncStatus["phase"], error?: string) => {
     let st: Record<string, string | number | boolean> = { balance_sompi: "0", notes: 0 };
@@ -271,7 +272,11 @@ export async function runSync(d: SyncDeps): Promise<void> {
         }
         throw e;
       }
-      report("tip");
+      // Following the tip once synced, a page that lands at the margin is not "catching up":
+      // reporting it as "tip" flipped the status to not-synced and NOT SPEND-READY for a moment
+      // on every new block page (seen in a user log every few seconds, Send greyed out). The
+      // "synced" report a moment later carries the new balance.
+      if (!(res.at_margin && everSynced)) report("tip");
       if (res.at_margin) break;
       // Long gateway catch-ups (a wallet back after days, or the stretch past the last chain
       // file) used to save only at the margin, so a reload mid-way restarted from the files'
@@ -313,6 +318,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
       /* no mempool preview this round */
     }
     report("synced");
+    everSynced = true;
     await sleep((d.pollSecs ?? 5) * 1000);
     await refreshTip();
   }

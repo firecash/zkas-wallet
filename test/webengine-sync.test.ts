@@ -83,6 +83,19 @@ describe("browser sync loop", () => {
     expect(t.store![0]).toBe(220);
   });
 
+  it("following the tip once synced never reports not-synced for a page at the margin", async () => {
+    // Each new block page reported "tip" (not synced, not spend-ready) before "synced": the
+    // status flickered and Send greyed out every few seconds.
+    let rounds = 0;
+    const t = deps({ shouldStop: () => rounds >= 3, onStatus: (st) => { t.statuses.push(st.phase); if (st.phase === "synced") rounds++; } });
+    await runSync(t.d);
+    const first = t.statuses.indexOf("synced");
+    expect(first).toBeGreaterThan(0);
+    expect(t.statuses.slice(0, first)).toContain("tip");
+    expect(t.statuses.slice(first)).not.toContain("tip");
+    expect(t.statuses.filter((x) => x === "synced").length).toBe(3);
+  });
+
   it("saves during a long gateway catch-up, not only at the tip", async () => {
     // 5 gateway pages at 20 s each: a reload part-way must resume near there, not at the files' end.
     const t = deps({ create: () => new FakeEngine(0, 5) });
