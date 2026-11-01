@@ -62,7 +62,8 @@ describe("every wallet-touching call survives a cold load, and only those", () =
     // /api/wallet/settings was 15s (36.9% of loads exceed it) and
     // /api/wallet/proof was 30s (17.9%).
     for (const path of ["/api/wallet/settings", "/api/wallet/proof"]) {
-      const i = api.indexOf(path);
+      // The request itself (browser mode's router mentions the path first).
+      const i = api.indexOf(`"POST", "${path}"`) > 0 ? api.indexOf(`"POST", "${path}"`) : api.indexOf(path);
       expect(i, path).toBeGreaterThan(0);
       expect(api.slice(i, i + 220), path).toContain("COLD_WALLET_MS");
     }

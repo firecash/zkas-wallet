@@ -246,6 +246,15 @@ export class Engine {
    * See [`Engine::segment`].
    */
   ingest_segment(bytes: Uint8Array, index: bigint, from_block_hex: string, to_boundary_json: string): string;
+  /**
+   * The general form of [`Engine::prepare_send`]: several payees in one transaction
+   * (`payees_json` = `[{to, amount_sompi, memo}]`), or a consolidation (`opts.consolidate`:
+   * no payees; the wallet's settled coins merged into one, paid to itself), with
+   * `opts.recoverable` (default true) choosing whether the payment can be read back from
+   * the seed (false = the wallet's "private sends"). Returns the same shape as prepare_send,
+   * plus `merged` (coins merged) for a consolidation.
+   */
+  prepare_payment(sk_hex: string, payees_json: string, opts_json: string): string;
   low(): string;
   /**
    * A new wallet watching `fvk_hex`, starting at a manifest segment boundary (`from` of the
@@ -369,6 +378,7 @@ export interface InitOutput {
   readonly engine_low: (a: number, b: number) => void;
   readonly engine_mark_sent: (a: number, b: number, c: number, d: number, e: number, f: number, g: bigint) => void;
   readonly engine_new: (a: number, b: number, c: number, d: number, e: number, f: bigint) => void;
+  readonly engine_prepare_payment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
   readonly engine_prepare_send: (a: number, b: number, c: number, d: number, e: number, f: number, g: bigint, h: number, i: number) => void;
   readonly engine_restore: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly engine_scanned: (a: number) => bigint;

@@ -888,6 +888,48 @@ export class Engine {
         }
     }
     /**
+     * The general form of [`Engine::prepare_send`]: several payees in one transaction
+     * (`payees_json` = `[{to, amount_sompi, memo}]`), or a consolidation (`opts.consolidate`:
+     * no payees; the wallet's settled coins merged into one, paid to itself), with
+     * `opts.recoverable` (default true) choosing whether the payment can be read back from
+     * the seed (false = the wallet's "private sends"). Returns the same shape as prepare_send,
+     * plus `merged` (coins merged) for a consolidation.
+     * @param {string} sk_hex
+     * @param {string} payees_json
+     * @param {string} opts_json
+     * @returns {string}
+     */
+    prepare_payment(sk_hex, payees_json, opts_json) {
+        let deferred5_0;
+        let deferred5_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(sk_hex, wasm.__wbindgen_export_3, wasm.__wbindgen_export_4);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(payees_json, wasm.__wbindgen_export_3, wasm.__wbindgen_export_4);
+            const len1 = WASM_VECTOR_LEN;
+            const ptr2 = passStringToWasm0(opts_json, wasm.__wbindgen_export_3, wasm.__wbindgen_export_4);
+            const len2 = WASM_VECTOR_LEN;
+            wasm.engine_prepare_payment(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+            var ptr4 = r0;
+            var len4 = r1;
+            if (r3) {
+                ptr4 = 0; len4 = 0;
+                throw takeObject(r2);
+            }
+            deferred5_0 = ptr4;
+            deferred5_1 = len4;
+            return getStringFromWasm0(ptr4, len4);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export_2(deferred5_0, deferred5_1, 1);
+        }
+    }
+    /**
      * @returns {string}
      */
     low() {

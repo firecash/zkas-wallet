@@ -42,6 +42,7 @@ let ready: Promise<{ m: M; threads: number }> | null = null;
 interface LiveEngine {
   history?(limit: number, offset: number): string;
   prepare_send?(skHex: string, to: string, amount: bigint, memo: string): string;
+  prepare_payment?(skHex: string, payeesJson: string, optsJson: string): string;
   mark_sent?(positionsJson: string, txidHex: string, outflow: bigint): void;
   unspent?(positionsJson: string): boolean;
   checkpoint(): Uint8Array;
@@ -57,19 +58,30 @@ interface SendMessage {
   to: string;
   amountSompi: string;
   memo: string;
+  /** Several payees in one transaction (then `to`/`amountSompi`/`memo` are unused). */
+  payees?: { to: string; amount_sompi: string; memo?: string }[];
+  /** Merge the wallet's settled coins into one (no payees). */
+  consolidate?: boolean;
+  /** false = the wallet's private sends: not readable back from the seed. Default true. */
+  recoverable?: boolean;
 }
 
-type Prepared = { bundle_hex: string; positions: number[]; fee: number; outflow: number; txid: string };
+type Prepared = { bundle_hex: string; positions: number[]; fee: number; outflow: number; txid: string; merged?: number };
 
 /** A payment proven while the user reviews it (Confirm screen open): the proof takes ~8 s in
  *  a browser, and the review takes about as long. Kept for one payment, never past its TTL. */
 let ahead: { key: string; at: number; positions: number[]; prepared: Prepared } | null = null;
-const keyOf = (m: SendMessage) => aheadKey(m.to, m.amountSompi, m.memo);
+const keyOf = (m: SendMessage) => aheadKey(m.to, m.amountSompi, `${m.memo}${m.recoverable === false ? "\u0000private" : ""}`);
 
 function prove(msg: SendMessage): Prepared | { error: string } {
   const eng = live;
   if (!eng?.prepare_send) return { error: "The wallet is still starting in this browser; try again in a moment." };
   try {
+    if (eng.prepare_payment) {
+      const payees = msg.consolidate ? [] : (msg.payees ?? [{ to: msg.to, amount_sompi: msg.amountSompi, memo: msg.memo }]);
+      return JSON.parse(eng.prepare_payment(msg.skHex, JSON.stringify(payees), JSON.stringify({ consolidate: !!msg.consolidate, recoverable: msg.recoverable !== false }))) as Prepared;
+    }
+    if (msg.payees || msg.consolidate || msg.recoverable === false) return { error: "This browser's wallet engine is out of date; reload the page." };
     return JSON.parse(eng.prepare_send(msg.skHex, msg.to, BigInt(msg.amountSompi), msg.memo)) as Prepared;
   } catch (e) {
     return { error: String((e as Error)?.message ?? e) };
@@ -85,10 +97,11 @@ function prepareAhead(msg: SendMessage): void {
 
 /** Submit (a payment proven ahead, if it still matches and its coins are unspent; otherwise
  *  prove now), then park. The spending key arrives with these messages and is not kept. */
-async function send(msg: SendMessage): Promise<{ txid: string; feeSompi: number } | { error: string }> {
+async function send(msg: SendMessage): Promise<{ txid: string; feeSompi: number; merged?: number } | { error: string }> {
   const eng = live;
   if (!eng?.prepare_send || !eng.mark_sent || !current) return { error: "The wallet is still starting in this browser; try again in a moment." };
-  const reuse = aheadUsable(ahead, keyOf(msg), Date.now(), (ps) => eng.unspent?.(JSON.stringify(ps)) ?? false) ? ahead!.prepared : null;
+  const single = !msg.payees && !msg.consolidate;
+  const reuse = single && aheadUsable(ahead, keyOf(msg), Date.now(), (ps) => eng.unspent?.(JSON.stringify(ps)) ?? false) ? ahead!.prepared : null;
   ahead = null; // single use, whatever happens next
   const p = reuse ?? prove(msg);
   if ("error" in p) return { error: p.error };
@@ -113,7 +126,7 @@ async function send(msg: SendMessage): Promise<{ txid: string; feeSompi: number 
   // payment is never mined. Saved at once, so a reload cannot offer the same notes again.
   eng.mark_sent(JSON.stringify(prepared.positions), txid, BigInt(prepared.outflow));
   await saveCheckpoint(current.id, eng.checkpoint()).catch(() => false);
-  return { txid, feeSompi: prepared.fee };
+  return { txid, feeSompi: prepared.fee, merged: prepared.merged };
 }
 
 const post = (status: BrowserSyncStatus) => (self as unknown as Worker).postMessage({ type: "status", status });

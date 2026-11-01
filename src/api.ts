@@ -16,7 +16,7 @@ import { WALLET_SERVICE_PORT } from "./ports";
 import { desktopRemoteBase } from "./desktop";
 import i18n from "./i18n";
 import { publicEndpoint, privacyMode, isOnionHost} from "./lib/privacy";
-import { browserModeChosen, browserServiceStatus, browserHistory, browserRescan, browserWatch, setBrowserModeChosen, stopBrowserEngine } from "./webengine";
+import { browserModeChosen, browserServiceStatus, browserHistory, browserRescan, browserWatch, setBrowserPrivateSends, setBrowserModeChosen, stopBrowserEngine } from "./webengine";
 import { clearTombstone } from "./wallets";
 // The diagnostic log's network observer. net.ts imports nothing from the app, so no cycle.
 import { claimSignal, recordRequest } from "./diag/net";
@@ -725,6 +725,9 @@ async function reqInner<T>(method: string, path: string, body: unknown, timeoutM
       const b = (body ?? {}) as { fvk_hex?: string; birthday?: number };
       if (!b.fvk_hex) throw new Error("no viewing key");
       return (await browserWatch(b.fvk_hex, Number(b.birthday) || 0)) as unknown as T;
+    }
+    if (path === "/api/wallet/settings" && method === "POST") {
+      return (await setBrowserPrivateSends(!!(body as { private_sends?: boolean } | null)?.private_sends)) as unknown as T;
     }
     if (path === "/api/wallet/rescan" && method === "POST") {
       return (await browserRescan(Number((body as { birthday?: number } | null)?.birthday) || undefined)) as unknown as T;

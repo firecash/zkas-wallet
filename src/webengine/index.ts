@@ -150,7 +150,7 @@ export function browserStatus(): BrowserSyncStatus | null {
   return latest;
 }
 
-type SendResult = { txid: string; feeSompi: number } | { error: string };
+type SendResult = { txid: string; feeSompi: number; merged?: number } | { error: string };
 const sendWaiters = new Map<number, (r: SendResult) => void>();
 let sendId = 0;
 
@@ -177,7 +177,61 @@ export async function browserPrepareAhead(secret: string, to: string, amountFc: 
   const w = worker;
   if (!w || !running) return;
   const skHex = await skOf(secret);
-  w.postMessage({ type: "prepare", id: 0, skHex, to: to.trim(), amountSompi: BigInt(Math.round(amountFc * 1e8)).toString(), memo: memo ?? "" });
+  w.postMessage({ type: "prepare", id: 0, skHex, to: to.trim(), amountSompi: BigInt(Math.round(amountFc * 1e8)).toString(), memo: memo ?? "", recoverable: !browserPrivateSends(running.address) });
+}
+
+const PRIVATE_KEY = (address: string) => `browser_private_sends:${address}`;
+
+/** The wallet's "private sends" setting in browser mode (off by default, as on the service). */
+export function browserPrivateSends(address: string): boolean {
+  try {
+    return localStorage.getItem(PRIVATE_KEY(address)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** `POST /api/wallet/settings` in browser mode: kept on this page, applied to every payment. */
+export async function setBrowserPrivateSends(on: boolean): Promise<{ recoverableHistory: boolean; privateSends: boolean }> {
+  const w = resolver ? await resolver().catch(() => null) : null;
+  if (!w) throw new Error("There is no wallet in this browser.");
+  try {
+    if (on) localStorage.setItem(PRIVATE_KEY(w.address), "1");
+    else localStorage.removeItem(PRIVATE_KEY(w.address));
+  } catch {
+    throw new Error("This browser refused to store the setting.");
+  }
+  return { recoverableHistory: true, privateSends: on };
+}
+
+/** Prove and submit in the worker; resolves to its result or throws its error. */
+async function workerSend(msg: Record<string, unknown>): Promise<{ txid: string; feeSompi: number; merged?: number }> {
+  const w = worker;
+  if (!w || !running) throw new Error("The wallet is still starting in this browser; try again in a moment.");
+  const id = ++sendId;
+  const result = await new Promise<SendResult>((resolve) => {
+    sendWaiters.set(id, resolve);
+    w.postMessage({ type: "send", id, to: "", amountSompi: "0", memo: "", recoverable: !browserPrivateSends(running!.address), ...msg });
+    setTimeout(() => {
+      if (sendWaiters.delete(id)) resolve({ error: "The payment took too long to prepare in this browser. Check History before trying again." });
+    }, 600_000);
+  });
+  if ("error" in result) throw new Error(result.error);
+  return result;
+}
+
+/** Wallet tools -> Batch send, in browser mode: every payee in ONE transaction proven here. */
+export async function browserSendMany(secret: string, payees: { to: string; amount_sompi: string; memo?: string }[]): Promise<{ payees: number; tx_count: number; txid: string; fee_sompi: number }> {
+  const r = await workerSend({ skHex: await skOf(secret), payees: payees.map((p) => ({ ...p, to: p.to.trim() })) });
+  return { payees: payees.length, tx_count: 1, txid: r.txid, fee_sompi: r.feeSompi };
+}
+
+/** Wallet tools -> Combine coins, in browser mode: merges the smallest settled coins into one. */
+export async function browserConsolidate(secret: string): Promise<{ consolidated: number; notes_remaining: number; txid: string }> {
+  const before = latest?.notes ?? 0;
+  const r = await workerSend({ skHex: await skOf(secret), consolidate: true });
+  const merged = r.merged ?? 0;
+  return { consolidated: merged, notes_remaining: Math.max(1, before - merged + 1), txid: r.txid };
 }
 
 /** Pay `amountFc` ZKAS to `to` from the wallet running in this browser: the payment is built
@@ -185,30 +239,30 @@ export async function browserPrepareAhead(secret: string, to: string, amountFc: 
  *  chain gateway. The same result shape as the service path, so History and the balance treat
  *  it identically. Proving takes from a few seconds to a minute in a browser. */
 export async function browserSend(secret: string, to: string, amountFc: number, memo: string): Promise<{ txid: string; fee_sompi: number }> {
-  const w = worker;
-  if (!w || !running) throw new Error("The wallet is still starting in this browser; try again in a moment.");
-  const skHex = await skOf(secret);
-  const amountSompi = BigInt(Math.round(amountFc * 1e8)).toString();
-  const id = ++sendId;
-  const result = await new Promise<SendResult>((resolve) => {
-    sendWaiters.set(id, resolve);
-    w.postMessage({ type: "send", id, skHex, to: to.trim(), amountSompi, memo: memo ?? "" });
-    setTimeout(() => {
-      if (sendWaiters.delete(id)) resolve({ error: "The payment took too long to prepare in this browser. Check History before trying again." });
-    }, 600_000);
-  });
-  if ("error" in result) throw new Error(result.error);
-  return { txid: result.txid, fee_sompi: result.feeSompi };
+  const r = await workerSend({ skHex: await skOf(secret), to: to.trim(), amountSompi: BigInt(Math.round(amountFc * 1e8)).toString(), memo: memo ?? "" });
+  return { txid: r.txid, fee_sompi: r.feeSompi };
 }
 
 const LAST_KEY = (address: string) => `browser_last_status:${address}`;
+const SYNCED_KEY = (address: string) => `browser_last_synced:${address}`;
+
+function lastSynced(address: string): { scanned: number; at: number } | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(SYNCED_KEY(address)) || "null");
+    return v && typeof v.scanned === "number" && typeof v.at === "number" ? v : null;
+  } catch {
+    return null;
+  }
+}
+/** A synced report this recent still describes a wallet restarting at the same position. */
+const RESUME_FRESH_MS = 10 * 60_000;
 
 /** The engine's last report for `address`, kept so a reloaded page shows where the wallet was
  *  (not its birthday, i.e. 0%) during the second before the engine speaks. */
-function lastReported(address: string): BrowserSyncStatus | null {
+function lastReported(address: string): (BrowserSyncStatus & { at?: number }) | null {
   try {
     const v = JSON.parse(localStorage.getItem(LAST_KEY(address)) || "null");
-    return v && typeof v.scanned === "number" ? (v as BrowserSyncStatus) : null;
+    return v && typeof v.scanned === "number" ? (v as BrowserSyncStatus & { at?: number }) : null;
   } catch {
     return null;
   }
@@ -221,7 +275,8 @@ async function startFor(w: BrowserWallet): Promise<void> {
     latest = st;
     if (st.scanned > 0 && st.phase !== "error") {
       try {
-        localStorage.setItem(LAST_KEY(w.address), JSON.stringify(st));
+        localStorage.setItem(LAST_KEY(w.address), JSON.stringify({ ...st, at: Date.now() }));
+        if (st.phase === "synced") localStorage.setItem(SYNCED_KEY(w.address), JSON.stringify({ scanned: st.scanned, at: Date.now() }));
       } catch {
         /* a convenience only */
       }
@@ -334,6 +389,7 @@ export async function browserRescan(birthday?: number): Promise<{ rescanning: bo
   await deleteCheckpoint(await walletIdFor(await fvkHex(w.seedHex)));
   try {
     localStorage.removeItem(LAST_KEY(w.address));
+    localStorage.removeItem(SYNCED_KEY(w.address));
     localStorage.setItem(RESCAN_KEY(w.address), String(birthday && birthday > 0 ? Math.floor(birthday) : 0));
   } catch {
     /* without storage the engine restarts from the wallet's birthday */
@@ -423,6 +479,14 @@ export async function browserServiceStatus(): Promise<Record<string, unknown>> {
     return last ? { ...last, phase: "starting" as const } : null;
   })();
   const tip = s?.tip || (await gatewayTip());
+  // A reload restores the checkpoint and reports "starting" (no tip yet) for a moment; read as
+  // "not synced" that flashed "Catching up 0.0%" over a wallet that was up to date a second
+  // earlier. Resuming exactly where a recent synced report left off is still up to date (not
+  // yet spend-ready: the engine has not re-checked the tip).
+  // Same for the few blocks of catch-up right after ("tip"), against the last SYNCED report
+  // (the last report itself is overwritten by them).
+  const was = s && (s.phase === "starting" || s.phase === "tip") ? lastSynced(w.address) : null;
+  const resumed = !!was && s!.scanned >= was.scanned && Date.now() - was.at < RESUME_FRESH_MS;
   const bal = s?.balanceSompi ?? "0";
   const spendable = s?.spendableSompi ?? "0";
   const maturing = s?.maturingSompi ?? "0";
@@ -436,7 +500,7 @@ export async function browserServiceStatus(): Promise<Record<string, unknown>> {
     network: "mainnet",
     node_connected: !!s && s.phase !== "error",
     daa_score: tip,
-    synced: s?.phase === "synced",
+    synced: s?.phase === "synced" || resumed,
     spend_ready: s?.phase === "synced" && !!s.spendReady,
     // "Starting" with a restored checkpoint already knows its position: not "opening".
     loading: !s || (s.phase === "starting" && !(s.scanned > 0)),
@@ -458,5 +522,6 @@ export async function browserServiceStatus(): Promise<Record<string, unknown>> {
     updated_unix: Math.floor(Date.now() / 1000),
     error: s?.phase === "error" ? (s.error ?? "error") : null,
     watch_only: false,
+    private_sends: browserPrivateSends(w.address),
   };
 }

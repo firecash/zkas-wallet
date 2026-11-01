@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { api, type Status } from "../api";
+import { browserConsolidate, browserModeChosen, browserSendMany } from "../webengine";
+import { resolveDeviceSeed } from "../lib/deviceseed";
 
 type ToolTab = "batch" | "maintenance" | "verify";
 
@@ -53,10 +55,11 @@ function BatchSend({ status, onRefresh }: { status: Status | null; onRefresh: ()
     setError("");
     setResult("");
     try {
-      const response = await api.sendMany(
-        parsed.map(({ to, amount_sompi, memo }) => ({ to, amount_sompi: amount_sompi!.toString(), memo })),
-        feeSompi?.toString(),
-      );
+      const payees = parsed.map(({ to, amount_sompi, memo }) => ({ to, amount_sompi: amount_sompi!.toString(), memo }));
+      // In browser mode this page holds the key: one transaction, proven here.
+      const response = browserModeChosen()
+        ? await browserSendMany(await resolveDeviceSeed(status?.address ?? undefined), payees)
+        : await api.sendMany(payees, feeSompi?.toString());
       setResult(t("batchSend.paid", { payees: response.payees, count: response.tx_count }));
       onRefresh();
     } catch (e) {
@@ -92,7 +95,7 @@ function Maintenance({ status, onRefresh }: { status: Status | null; onRefresh: 
     setMessage("");
     setError("");
     try {
-      const response = await api.consolidate();
+      const response = browserModeChosen() ? await browserConsolidate(await resolveDeviceSeed(status?.address ?? undefined)) : await api.consolidate();
       setMessage(t("walletMaintenance.combined", { consolidated: response.consolidated, remaining: response.notes_remaining }));
       onRefresh();
     } catch (e) {

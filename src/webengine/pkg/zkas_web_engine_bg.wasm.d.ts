@@ -10,6 +10,7 @@ export const engine_ingest_segment: (a: number, b: number, c: number, d: number,
 export const engine_low: (a: number, b: number) => void;
 export const engine_mark_sent: (a: number, b: number, c: number, d: number, e: number, f: number, g: bigint) => void;
 export const engine_new: (a: number, b: number, c: number, d: number, e: number, f: bigint) => void;
+export const engine_prepare_payment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
 export const engine_prepare_send: (a: number, b: number, c: number, d: number, e: number, f: number, g: bigint, h: number, i: number) => void;
 export const engine_restore: (a: number, b: number, c: number, d: number, e: number) => void;
 export const engine_scanned: (a: number) => bigint;
