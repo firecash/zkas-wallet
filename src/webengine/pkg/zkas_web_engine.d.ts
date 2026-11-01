@@ -1,14 +1,19 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Does a downloaded segment match its manifest entry (size and SHA-256)?
- */
-export function segment_matches(bytes: Uint8Array, sha256_hex: string, size: bigint): boolean;
-/**
  * The page's entry point for [`verify_manifest_str`].
  */
 export function verify_manifest(json: string): string;
+/**
+ * Does a downloaded segment match its manifest entry (size and SHA-256)?
+ */
+export function segment_matches(bytes: Uint8Array, sha256_hex: string, size: bigint): boolean;
 export function address_of_fvk(fvk_hex: string): string;
+/**
+ * Build the Halo 2 proving key now (a few seconds, once per page): called when the wallet is
+ * idle at the tip, so the first payment does not pay for it. Later calls return at once.
+ */
+export function warm_prover(): void;
 /**
  * Configuration for the WASM32 bindings runtime interface.
  * @see {@link IWASM32BindingsConfig}
@@ -260,6 +265,11 @@ export class Engine {
   static restore(fvk_hex: string, bytes: Uint8Array): Engine;
   scanned(): bigint;
   /**
+   * Are all of these leaf positions still unspent notes of this wallet (none spent or parked
+   * since)? A payment proven ahead of the user's confirmation is submitted only if so.
+   */
+  unspent(positions_json: string): boolean;
+  /**
    * The payment `txid` was accepted by the node: park its notes (they leave the balance, and
    * return on their own if the payment is never mined) and record the change coming back.
    */
@@ -366,8 +376,10 @@ export interface InitOutput {
   readonly engine_set_mempool: (a: number, b: number, c: number, d: number) => void;
   readonly engine_status: (a: number, b: number) => void;
   readonly engine_tip_frontier: (a: number, b: number) => void;
+  readonly engine_unspent: (a: number, b: number, c: number) => number;
   readonly segment_matches: (a: number, b: number, c: number, d: number, e: bigint) => number;
   readonly verify_manifest: (a: number, b: number, c: number) => void;
+  readonly warm_prover: () => void;
   readonly __wbg_get_networkid_suffix: (a: number) => number;
   readonly __wbg_get_networkid_type: (a: number) => number;
   readonly __wbg_networkid_free: (a: number, b: number) => void;

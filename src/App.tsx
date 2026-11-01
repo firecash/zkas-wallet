@@ -109,7 +109,7 @@ import { rotatePublicNode, setEmbeddedBackupNode, type FastSync } from "./embedd
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { RunInBrowserOption } from "./RunInBrowserOption";
 import { FastSyncSettings, fastSyncSummary } from "./FastSyncSettings";
-import { browserModeChosen, browserSend, setBrowserModeChosen } from "./webengine";
+import { browserModeChosen, browserPrepareAhead, browserSend, setBrowserModeChosen } from "./webengine";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
 import { adoptViewKey } from "./lib/watchadopt";
@@ -6735,7 +6735,14 @@ function Send({
   // the send only when it was asked for precisely the same payment.
   const ahead = useRef<PreparedAhead | null>(null);
   useEffect(() => {
-    if (!confirming || busy || fragmented || browserModeChosen()) return;
+    if (!confirming || busy || fragmented) return;
+    if (browserModeChosen()) {
+      // The browser engine proves this payment while the user reads the Confirm screen.
+      void resolveDeviceSeed(status?.address ?? undefined)
+        .then((seed) => browserPrepareAhead(seed.trim(), to.trim(), amt, memo))
+        .catch(() => undefined);
+      return;
+    }
     const feeSompi = feeCustomSet ? Math.round(feeCustom * 1e8) : undefined;
     if (prepareAheadUsable(ahead.current, to.trim(), amt, feeSompi, memo, false)) return;
     let live = true;

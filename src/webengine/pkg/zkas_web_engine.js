@@ -193,29 +193,6 @@ function takeObject(idx) {
     dropObject(idx);
     return ret;
 }
-
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
-/**
- * Does a downloaded segment match its manifest entry (size and SHA-256)?
- * @param {Uint8Array} bytes
- * @param {string} sha256_hex
- * @param {bigint} size
- * @returns {boolean}
- */
-export function segment_matches(bytes, sha256_hex, size) {
-    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_export_2);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(sha256_hex, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.segment_matches(ptr0, len0, ptr1, len1, size);
-    return ret !== 0;
-}
-
 /**
  * The page's entry point for [`verify_manifest_str`].
  * @param {string} json
@@ -248,6 +225,28 @@ export function verify_manifest(json) {
     }
 }
 
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+/**
+ * Does a downloaded segment match its manifest entry (size and SHA-256)?
+ * @param {Uint8Array} bytes
+ * @param {string} sha256_hex
+ * @param {bigint} size
+ * @returns {boolean}
+ */
+export function segment_matches(bytes, sha256_hex, size) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_export_2);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(sha256_hex, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.segment_matches(ptr0, len0, ptr1, len1, size);
+    return ret !== 0;
+}
+
 /**
  * @param {string} fvk_hex
  * @returns {string}
@@ -277,6 +276,14 @@ export function address_of_fvk(fvk_hex) {
         wasm.__wbindgen_add_to_stack_pointer(16);
         wasm.__wbindgen_export_1(deferred3_0, deferred3_1, 1);
     }
+}
+
+/**
+ * Build the Halo 2 proving key now (a few seconds, once per page): called when the wallet is
+ * idle at the tip, so the first payment does not pay for it. Later calls return at once.
+ */
+export function warm_prover() {
+    wasm.warm_prover();
 }
 
 let stack_pointer = 128;
@@ -987,6 +994,18 @@ export class Engine {
     scanned() {
         const ret = wasm.engine_scanned(this.__wbg_ptr);
         return BigInt.asUintN(64, ret);
+    }
+    /**
+     * Are all of these leaf positions still unspent notes of this wallet (none spent or parked
+     * since)? A payment proven ahead of the user's confirmation is submitted only if so.
+     * @param {string} positions_json
+     * @returns {boolean}
+     */
+    unspent(positions_json) {
+        const ptr0 = passStringToWasm0(positions_json, wasm.__wbindgen_export_2, wasm.__wbindgen_export_3);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.engine_unspent(this.__wbg_ptr, ptr0, len0);
+        return ret !== 0;
     }
     /**
      * The payment `txid` was accepted by the node: park its notes (they leave the balance, and

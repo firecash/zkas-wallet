@@ -1,9 +1,10 @@
 // The browser wallet engine, off the main thread. Started with the wallet's viewing key (derived
 // on the page from the seed it holds); posts status as it syncs. Nothing here sends a key, an
 // address or wallet state anywhere: it only downloads public chain data.
-import init, { Engine, segment_matches, verify_manifest } from "./pkg/zkas_web_engine.js";
+import init, { Engine, segment_matches, verify_manifest, warm_prover } from "./pkg/zkas_web_engine.js";
 import wasmUrl from "./pkg/zkas_web_engine_bg.wasm?url";
 import { runSync, type BrowserSyncStatus } from "./sync";
+import { aheadKey, aheadUsable } from "./ahead";
 import { deleteCheckpoint, loadCheckpoint, saveCheckpoint } from "./store";
 
 export interface StartMessage {
@@ -21,13 +22,15 @@ interface LiveEngine {
   history?(limit: number, offset: number): string;
   prepare_send?(skHex: string, to: string, amount: bigint, memo: string): string;
   mark_sent?(positionsJson: string, txidHex: string, outflow: bigint): void;
+  unspent?(positionsJson: string): boolean;
   checkpoint(): Uint8Array;
 }
 let live: LiveEngine | null = null;
 let current: StartMessage | null = null;
+let warmed = false;
 
 interface SendMessage {
-  type: "send";
+  type: "send" | "prepare";
   id: number;
   skHex: string;
   to: string;
@@ -35,16 +38,40 @@ interface SendMessage {
   memo: string;
 }
 
-/** Prove, submit, park. The spending key arrives with this one message and is not kept. */
-async function send(msg: SendMessage): Promise<{ txid: string; feeSompi: number } | { error: string }> {
+type Prepared = { bundle_hex: string; positions: number[]; fee: number; outflow: number };
+
+/** A payment proven while the user reviews it (Confirm screen open): the proof takes ~8 s in
+ *  a browser, and the review takes about as long. Kept for one payment, never past its TTL. */
+let ahead: { key: string; at: number; positions: number[]; prepared: Prepared } | null = null;
+const keyOf = (m: SendMessage) => aheadKey(m.to, m.amountSompi, m.memo);
+
+function prove(msg: SendMessage): Prepared | { error: string } {
   const eng = live;
-  if (!eng?.prepare_send || !eng.mark_sent || !current) return { error: "The wallet is still starting in this browser; try again in a moment." };
-  let prepared: { bundle_hex: string; positions: number[]; fee: number; outflow: number };
+  if (!eng?.prepare_send) return { error: "The wallet is still starting in this browser; try again in a moment." };
   try {
-    prepared = JSON.parse(eng.prepare_send(msg.skHex, msg.to, BigInt(msg.amountSompi), msg.memo));
+    return JSON.parse(eng.prepare_send(msg.skHex, msg.to, BigInt(msg.amountSompi), msg.memo)) as Prepared;
   } catch (e) {
     return { error: String((e as Error)?.message ?? e) };
   }
+}
+
+/** Prove now and keep it for the matching send. Errors are dropped: the send proves again and
+ *  reports them. */
+function prepareAhead(msg: SendMessage): void {
+  const p = prove(msg);
+  ahead = "error" in p ? null : { key: keyOf(msg), at: Date.now(), positions: p.positions, prepared: p };
+}
+
+/** Submit (a payment proven ahead, if it still matches and its coins are unspent; otherwise
+ *  prove now), then park. The spending key arrives with these messages and is not kept. */
+async function send(msg: SendMessage): Promise<{ txid: string; feeSompi: number } | { error: string }> {
+  const eng = live;
+  if (!eng?.prepare_send || !eng.mark_sent || !current) return { error: "The wallet is still starting in this browser; try again in a moment." };
+  const reuse = aheadUsable(ahead, keyOf(msg), Date.now(), (ps) => eng.unspent?.(JSON.stringify(ps)) ?? false) ? ahead!.prepared : null;
+  ahead = null; // single use, whatever happens next
+  const p = reuse ?? prove(msg);
+  if ("error" in p) return { error: p.error };
+  const prepared = p;
   const bytes = new Uint8Array(prepared.bundle_hex.match(/../g)!.map((h) => parseInt(h, 16)));
   let r: Response;
   try {
@@ -69,6 +96,10 @@ self.onmessage = async (ev: MessageEvent<StartMessage | SendMessage | { type: "s
     stopped = true;
     return;
   }
+  if (msg.type === "prepare") {
+    prepareAhead(msg);
+    return;
+  }
   if (msg.type === "send") {
     const result = await send(msg);
     (self as unknown as Worker).postMessage({ type: "sent", id: msg.id, result });
@@ -84,6 +115,7 @@ self.onmessage = async (ev: MessageEvent<StartMessage | SendMessage | { type: "s
     (self as unknown as Worker).postMessage({ type: "history", id: msg.id, json });
     return;
   }
+  if (msg.type !== "start") return;
   stopped = false;
   current = msg;
   ready ??= init({ module_or_path: wasmUrl });
@@ -111,6 +143,18 @@ self.onmessage = async (ev: MessageEvent<StartMessage | SendMessage | { type: "s
           last = st;
           backoff = 2_000;
           post(st);
+          // At the tip and idle: build the proving key now (~3 s, once per page) so the first
+          // payment does not wait for it.
+          if (st.phase === "synced" && !warmed) {
+            warmed = true;
+            setTimeout(() => {
+              try {
+                warm_prover();
+              } catch {
+                /* the first payment builds it instead */
+              }
+            }, 0);
+          }
         },
         onEngine: (e) => {
           live = e as unknown as LiveEngine;

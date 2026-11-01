@@ -101,6 +101,21 @@ function onWorkerMessage(ev: MessageEvent<{ type: string; id?: number; json?: st
   }
 }
 
+const skOf = async (secret: string) => {
+  const s = secret.trim();
+  return looksLikeHexSeed(s) ? s.toLowerCase() : await accountSeedHex(s, 0);
+};
+
+/** Start proving this payment now, while the user reviews it (the Confirm screen): the proof
+ *  takes ~8 s in a browser, so pressing Confirm then only submits. Fire-and-forget; a later
+ *  `browserSend` of exactly this payment uses it, anything else proves afresh. */
+export async function browserPrepareAhead(secret: string, to: string, amountFc: number, memo: string): Promise<void> {
+  const w = worker;
+  if (!w || !running) return;
+  const skHex = await skOf(secret);
+  w.postMessage({ type: "prepare", id: 0, skHex, to: to.trim(), amountSompi: BigInt(Math.round(amountFc * 1e8)).toString(), memo: memo ?? "" });
+}
+
 /** Pay `amountFc` ZKAS to `to` from the wallet running in this browser: the payment is built
  *  and proven in the page's worker, signed with this browser's key, and submitted through the
  *  chain gateway. The same result shape as the service path, so History and the balance treat
@@ -108,8 +123,7 @@ function onWorkerMessage(ev: MessageEvent<{ type: string; id?: number; json?: st
 export async function browserSend(secret: string, to: string, amountFc: number, memo: string): Promise<{ txid: string; fee_sompi: number }> {
   const w = worker;
   if (!w || !running) throw new Error("The wallet is still starting in this browser; try again in a moment.");
-  const s = secret.trim();
-  const skHex = looksLikeHexSeed(s) ? s.toLowerCase() : await accountSeedHex(s, 0);
+  const skHex = await skOf(secret);
   const amountSompi = BigInt(Math.round(amountFc * 1e8)).toString();
   const id = ++sendId;
   const result = await new Promise<SendResult>((resolve) => {
