@@ -878,6 +878,8 @@ async function reqInner<T>(method: string, path: string, body: unknown, timeoutM
   if (status < 200 || status >= 300) {
     throw Object.assign(new Error(typeof data.error === "string" ? data.error : `${status} ${statusText}`.trim()), {
       httpStatus: status,
+      // walletd's answer to a retried payment it already broadcast (idempotent sends).
+      alreadySent: data.already_sent,
     });
   }
   return data as T;
@@ -1172,7 +1174,7 @@ export const api = {
   // floating-point coin amount ever crosses the wire. The one float→integer
   // conversion happens where the user's decimal input is parsed, not here.
   // Proving is the slow step (~seconds per note) — 5-minute ceiling.
-  prepare: (fvk_hex: string, to: string, amountSompi: bigint, fee?: number, memo?: string, allow_partial?: boolean) =>
+  prepare: (fvk_hex: string, to: string, amountSompi: bigint, fee?: number, memo?: string, allow_partial?: boolean, request_id?: string) =>
     req<PrepareResp>(
       "POST",
       "/api/wallet/prepare",
@@ -1183,6 +1185,7 @@ export const api = {
         fee,
         memo: memo?.trim() ? memo.trim() : undefined,
         allow_partial,
+        request_id,
       },
       300_000,
     ).then(sanePrepare),

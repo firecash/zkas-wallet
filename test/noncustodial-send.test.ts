@@ -36,7 +36,7 @@ describe("noncustodial payment atomicity", () => {
     await expect(
       sendNonCustodial("ab".repeat(32), "mainnet", "zkas:test", 10),
     ).rejects.toBeInstanceOf(FragmentedWalletError);
-    expect(prepare).toHaveBeenCalledWith(expect.any(String), "zkas:test", 1_000_000_000n, undefined, undefined, false);
+    expect(prepare).toHaveBeenCalledWith(expect.any(String), "zkas:test", 1_000_000_000n, undefined, undefined, false, expect.any(String));
     expect(verifyAndSignPayment).not.toHaveBeenCalled();
     expect(submit).not.toHaveBeenCalled();
   });
@@ -70,8 +70,11 @@ describe("noncustodial payment atomicity", () => {
       "ab".repeat(32), "mainnet", "zkas:test", 10, undefined, undefined, undefined, true,
     );
     expect(result.parts).toHaveLength(2);
-    expect(prepare).toHaveBeenNthCalledWith(1, expect.any(String), "zkas:test", 1_000_000_000n, undefined, undefined, true);
-    expect(prepare).toHaveBeenNthCalledWith(2, expect.any(String), "zkas:test", 400_000_000n, undefined, undefined, true);
+    expect(prepare).toHaveBeenNthCalledWith(1, expect.any(String), "zkas:test", 1_000_000_000n, undefined, undefined, true, expect.any(String));
+    expect(prepare).toHaveBeenNthCalledWith(2, expect.any(String), "zkas:test", 400_000_000n, undefined, undefined, true, expect.any(String));
+    // One payment, one request id: the first transaction carries it, the next `id.1`.
+    const id = prepare.mock.calls[0][6] as string;
+    expect(prepare.mock.calls[1][6]).toBe(`${id}.1`);
   });
 });
 

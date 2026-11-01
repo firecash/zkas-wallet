@@ -59,7 +59,7 @@ interface SendMessage {
   memo: string;
 }
 
-type Prepared = { bundle_hex: string; positions: number[]; fee: number; outflow: number };
+type Prepared = { bundle_hex: string; positions: number[]; fee: number; outflow: number; txid: string };
 
 /** A payment proven while the user reviews it (Confirm screen open): the proof takes ~8 s in
  *  a browser, and the review takes about as long. Kept for one payment, never past its TTL. */
@@ -98,7 +98,14 @@ async function send(msg: SendMessage): Promise<{ txid: string; feeSompi: number 
   try {
     r = await fetch(`${current.gateway}/submit`, { method: "POST", headers: { "content-type": "application/octet-stream" }, body: bytes });
   } catch {
-    return { error: "The payment could not reach the network. Nothing was sent; try again." };
+    // No answer: the payment may or may not be on the network. Park its coins under the
+    // transaction id it would have (they return on their own if it never lands), so a retry
+    // cannot build a second payment from them, and say so instead of "nothing was sent".
+    if (prepared.txid) {
+      eng.mark_sent(JSON.stringify(prepared.positions), prepared.txid, BigInt(prepared.outflow));
+      await saveCheckpoint(current.id, eng.checkpoint()).catch(() => false);
+    }
+    return { error: "The connection dropped while this payment was being sent, so it is not known whether it went out. Check History in a minute; its coins are held back meanwhile, so trying again cannot pay twice." };
   }
   if (!r.ok) return { error: (await r.text().catch(() => "")) || `The network refused the payment (${r.status}). Nothing was sent.` };
   const { txid } = (await r.json()) as { txid: string };

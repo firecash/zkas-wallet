@@ -20,6 +20,7 @@
 import { error as diagError, event as diagEvent, span as diagSpan } from "./diag/log";
 import { api, type PrepareResp } from "./api";
 import { elapsedSince } from "./lib/elapsed";
+import { readLocal, writeLocal } from "./lib/safestore";
 import { fvkHex, verifyAndSignPayment, type Network } from "./signer";
 import { feeReserveSompi, minRelayFeeForSpends } from "./fees";
 import i18n from "./i18n";
@@ -372,7 +373,81 @@ export interface PreparedAhead {
 /// adopted: a second /prepare beside it would only be refused by the per-wallet guard.
 const PREPARED_AHEAD_MAX_AGE_MS = 240_000;
 
-function prepareKey(to: string, owed: bigint, fee: number | undefined, memo: string | undefined, allowMultiple: boolean): string {
+// ---- Idempotent sends -----------------------------------------------------------------------
+//
+// Every payment carries a request id to /prepare. When a submit's outcome is UNKNOWN (no answer:
+// it may be on the network) the id is kept on this device against the exact payment, and any
+// retry of that payment — including the early prepare of the Confirm screen — reuses it. walletd
+// answers a prepare whose id it already broadcast with the original transaction instead of
+// building a second payment from other coins, which is how a lost response used to pay twice.
+//
+// The "already sent" answer is accepted ONLY for a reused id (a retry after an unknown outcome):
+// for a fresh payment an honest daemon cannot have broadcast it, so the claim is refused rather
+// than letting a lying daemon convince the user a payment went out.
+const UNKNOWN_SUBMITS_KEY = "zkas_unknown_submits";
+const UNKNOWN_SUBMIT_TTL_MS = 24 * 3600_000;
+type UnknownSubmits = Record<string, { rid: string; at: number }>;
+
+function loadUnknownSubmits(): UnknownSubmits {
+  try {
+    const all = JSON.parse(readLocal(UNKNOWN_SUBMITS_KEY) || "{}") as UnknownSubmits;
+    const now = Date.now();
+    return Object.fromEntries(Object.entries(all).filter(([, v]) => v && typeof v.rid === "string" && now - v.at < UNKNOWN_SUBMIT_TTL_MS));
+  } catch {
+    return {};
+  }
+}
+
+/** The request id for this payment intent, and whether it is a retry of an unknown outcome. */
+export function requestIdFor(intent: string): { rid: string; retry: boolean } {
+  const known = loadUnknownSubmits()[intent];
+  if (known) return { rid: known.rid, retry: true };
+  const rid =
+    typeof crypto?.randomUUID === "function"
+      ? crypto.randomUUID()
+      : Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+  return { rid, retry: false };
+}
+
+/** Keep `rid` against payment `intent` after an unknown submit outcome, so a retry reuses it and
+ *  walletd answers with the transaction it already broadcast. A multi-transaction payment whose
+ *  later transaction was unknown is also remembered under the REMAINDER the app then offers (a
+ *  different amount, so a different intent), with the id its first transaction will carry —
+ *  exactly the unknown transaction's (`chunkRid`). */
+export function rememberUnknownSubmit(intent: string, rid: string): void {
+  const all = loadUnknownSubmits();
+  all[intent] = { rid, at: Date.now() };
+  writeLocal(UNKNOWN_SUBMITS_KEY, JSON.stringify(all));
+}
+
+export function forgetUnknownSubmit(intent: string): void {
+  const all = loadUnknownSubmits();
+  if (!(intent in all)) return;
+  delete all[intent];
+  writeLocal(UNKNOWN_SUBMITS_KEY, JSON.stringify(all));
+}
+
+interface AlreadySent {
+  txid: string;
+  amount_sompi: number;
+  fee_sompi: number;
+  amount_sompi_exact?: string;
+  fee_sompi_exact?: string;
+}
+
+/** The request id of transaction `chunk` of a payment: the payment's own id for the first, so a
+ *  remainder retried as a new payment of its own reuses exactly the id it was sent under. */
+export function chunkRid(rid: string, chunk: number): string {
+  return chunk === 0 ? rid : `${rid}.${chunk}`;
+}
+
+/** walletd's "already sent" answer carried on a refused prepare, if any. */
+export function alreadySentOf(e: unknown): AlreadySent | null {
+  const s = (e as { alreadySent?: AlreadySent })?.alreadySent;
+  return s && typeof s.txid === "string" ? s : null;
+}
+
+export function prepareKey(to: string, owed: bigint, fee: number | undefined, memo: string | undefined, allowMultiple: boolean): string {
   return [to.trim(), owed.toString(), fee ?? "", (memo ?? "").trim(), allowMultiple ? 1 : 0].join("|");
 }
 
@@ -410,10 +485,11 @@ export function prepareAhead(
   allowMultipleTransactions = false,
 ): PreparedAhead {
   const owed = amountToSompi(amountFc);
+  const { rid } = requestIdFor(prepareKey(to, owed, fee, memo, allowMultipleTransactions));
   const promise = (async () => {
     const fvk = await fvkHex(seedHex);
     return prepareWaitingForIndex(
-      () => api.prepare(fvk, to, owed, fee, memo, allowMultipleTransactions),
+      () => api.prepare(fvk, to, owed, fee, memo, allowMultipleTransactions, rid),
       () => undefined,
       () => undefined,
     );
@@ -471,6 +547,14 @@ export async function sendNonCustodial(
   // in the chunk accounting.
   let owed = amountToSompi(amountFc);
   const totalSompi = owed;
+  const intent = prepareKey(to, totalSompi, fee, memo, allowMultipleTransactions);
+  const { rid, retry } = requestIdFor(intent);
+  // An unknown submit outcome: keep the id against this payment, and against the remainder the
+  // app then offers (see rememberUnknownSubmit). `owed` is this transaction's amount.
+  const noteUnknown = (chunk: number) => {
+    rememberUnknownSubmit(intent, rid);
+    if (chunk > 0) rememberUnknownSubmit(prepareKey(to, owed, fee, memo, allowMultipleTransactions), chunkRid(rid, chunk));
+  };
   // Adopt a prepare started at the Confirm screen only for THIS exact payment
   // and only while its session is comfortably inside the daemon's expiry.
   const adopted = ahead && prepareAheadUsable(ahead, to, amountFc, fee, memo, allowMultipleTransactions) ? ahead.promise : null;
@@ -519,14 +603,33 @@ export async function sendNonCustodial(
             ).catch(() => null)
           : null;
       if (!prep) {
+        try {
         prep = await prepareWaitingForIndex(
-          () => api.prepare(fvk, to, owed, fee, memo, allowMultipleTransactions),
+          () => api.prepare(fvk, to, owed, fee, memo, allowMultipleTransactions, chunkRid(rid, chunk)),
           (p) => onStage?.("warming", { ...progress(), warmingPct: p.pct, warmingEtaSecs: p.etaSecs }),
           () => onStage?.("proving", progress()),
           // The wallet's own background merge (or an earlier payment) still proving:
           // wait it out on the same screen rather than bounce back to the form.
           (note, waitedSecs) => onStage?.("warming", { ...progress(), note: waitedSecs >= 5 ? i18n.t("noncustodial.noteWaited", { note, secs: waitedSecs }) : note }),
         );
+        } catch (e) {
+          // walletd already broadcast this exact payment (a retry after an unknown outcome):
+          // record that transaction as this chunk instead of paying again. Only for a reused
+          // id, and never for more than this chunk still owes.
+          const done = alreadySentOf(e);
+          if (!done) throw e;
+          const paid = BigInt(done.amount_sompi_exact ?? Math.round(done.amount_sompi));
+          const paidFee = BigInt(done.fee_sompi_exact ?? Math.round(done.fee_sompi));
+          if (!retry || paid <= 0n || paid > owed || paidFee < 0n) throw new Error(i18n.t("noncustodial.amountChanged"));
+          prepSpan.end({ already_sent: true });
+          txids.push(done.txid);
+          sentParts.push({ txid: done.txid, amount_sompi: Number(paid), fee_sompi: Number(paidFee) });
+          sent += paid;
+          fees += paidFee;
+          owed -= paid;
+          if (owed <= 0n) break;
+          continue;
+        }
       }
       {
         const spends = prep.spend_auth?.length ?? 0;
@@ -617,6 +720,7 @@ export async function sendNonCustodial(
         submitSpan.end({ outcome: "failed", err: (e as Error)?.name }, { lvl: "warn" });
         const marked = e as { timedOut?: boolean; unreachable?: boolean };
         if (marked?.timedOut || marked?.unreachable) {
+          noteUnknown(chunk);
           throw new SubmitUnknownError(i18n.t("send.submitOutcomeUnknown"));
         }
         throw e;
@@ -663,6 +767,7 @@ export async function sendNonCustodial(
   }
 
   whole.end({ parts: txids.length, spends: spendsTotal, prove_ms_per_spend: spendsTotal ? Math.round(proveMsTotal / spendsTotal) : undefined, fee_sompi: Number(fees) });
+  forgetUnknownSubmit(intent);
   return { txid: txids[0], amount_sompi: Number(sent), fee_sompi: Number(fees), txids, parts: sentParts };
 }
 
