@@ -66,7 +66,70 @@ export function browserModeChosen(): boolean {
   }
 }
 
+/**
+ * Tell the service worker whether this browser runs the wallet, so it serves the app
+ * cross-origin isolated (multi-threaded proofs, see public/sw.js). Resolves true once the
+ * worker has stored the choice; false when there is no worker or it did not answer.
+ */
+export function syncCrossOriginIsolation(on: boolean): Promise<boolean> {
+  // Only where cross-origin frames can still be embedded credentialless (Chromium): Firefox
+  // honours COEP credentialless but not the iframe attribute, so isolating it would blank the
+  // live explorer embed. Elsewhere the wallet keeps the single-threaded build.
+  if (on && !isolationSafe()) on = false;
+  return new Promise((resolve) => {
+    try {
+      const sw = typeof navigator !== "undefined" ? navigator.serviceWorker : undefined;
+      if (!sw) return resolve(false);
+      const timer = setTimeout(() => resolve(false), 3_000);
+      void sw.ready.then((reg) => {
+        const target = reg.active;
+        if (!target) {
+          clearTimeout(timer);
+          return resolve(false);
+        }
+        const ch = new MessageChannel();
+        ch.port1.onmessage = (e) => {
+          clearTimeout(timer);
+          resolve(!!(e.data as { ok?: boolean })?.ok);
+        };
+        target.postMessage({ type: "coi", on }, [ch.port2]);
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+/** Reload once so the page comes back isolated, when it would make a difference: the wallet
+ *  runs here, the page is not isolated yet, a worker controls it and the browser supports
+ *  COEP credentialless (Chromium; elsewhere the next visit picks it up, or nothing changes).
+ *  At most once a day, so a browser that still refuses cannot loop. */
+export function shouldReloadForIsolation(now = Date.now()): boolean {
+  try {
+    if (typeof window === "undefined" || window.crossOriginIsolated) return false;
+    if (!navigator.serviceWorker?.controller) return false;
+    if (!isolationSafe()) return false;
+    const last = Number(localStorage.getItem(COI_RELOAD_KEY) || 0);
+    if (now - last < 86_400_000) return false;
+    localStorage.setItem(COI_RELOAD_KEY, String(now));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const COI_RELOAD_KEY = "browser_coi_reload_at";
+
+function isolationSafe(): boolean {
+  try {
+    return typeof HTMLIFrameElement !== "undefined" && "credentialless" in HTMLIFrameElement.prototype;
+  } catch {
+    return false;
+  }
+}
+
 export function setBrowserModeChosen(on: boolean): void {
+  void syncCrossOriginIsolation(on);
   try {
     if (on) localStorage.setItem(MODE_KEY, "1");
     else localStorage.removeItem(MODE_KEY);

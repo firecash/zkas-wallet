@@ -606,6 +606,8 @@ export function Mining() {
                 title={t("mining.dashboardFrameTitle")}
                 src={`http://127.0.0.1:${BRIDGE_DASHBOARD_PORT}/`}
                 sandbox="allow-scripts allow-same-origin"
+                // Embeddable while the page is cross-origin isolated (browser mode).
+                {...({ credentialless: "" } as Record<string, string>)}
               />
             ) : (
               <p className="msg warn small">{t("mining.dashboardHiddenPrivate")}</p>

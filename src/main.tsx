@@ -2,7 +2,7 @@
 // from the accessor itself, and one unguarded read anywhere took the whole
 // wallet down with an unrecoverable error screen.
 import "./lib/storage-shim";
-import { browserBirthday, browserRegistered, setBrowserWalletResolver } from "./webengine";
+import { browserBirthday, browserModeChosen, browserRegistered, setBrowserWalletResolver, shouldReloadForIsolation, syncCrossOriginIsolation } from "./webengine";
 import { resolveDeviceSeed, knownBirthday, findOrphanedSeed, setDeviceSeed } from "./lib/deviceseed";
 import { addressFromSeed } from "./signer";
 
@@ -656,6 +656,13 @@ async function boot() {
       }
     });
     void navigator.serviceWorker.register("/sw.js").catch(() => {});
+    // The wallet runs in this browser: have the worker serve the app cross-origin isolated,
+    // so the engine loads its multi-threaded build (proofs ~3.7x faster). The first time,
+    // reload once the worker has the choice, before the engine starts.
+    const wantCoi = browserModeChosen();
+    void syncCrossOriginIsolation(wantCoi).then((ok) => {
+      if (ok && wantCoi && shouldReloadForIsolation()) location.reload();
+    });
   }
 }
 
