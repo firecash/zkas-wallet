@@ -13,17 +13,22 @@ import { embeddedAvailable, embeddedFastSync } from "./embedded";
 import { isNewerVersion } from "./desktop";
 import { APP_VERSION } from "./version";
 
-/// The release this notice describes: fast sync, the re-download fix, log parts.
-export const NOTICE_SINCE = "1.0.52-rc22";
+/// The release this notice describes. rc25: fast sync now also downloads from ZKas's Cloudflare
+/// CDN — a third party that sees the device's IP — so everyone sees the notice (and its
+/// "Disable fast sync") again, including those who dismissed it for rc22-rc24.
+export const NOTICE_SINCE = "1.0.52-rc25";
 /// The app version that last ran on this device (written at every boot).
 const LAST_VERSION_KEY = "app_last_seen_version";
-/// Dismissal keys of the card before this mechanism: whoever dismissed one has seen it.
-const LEGACY_DISMISSED = ["whatsnew_seen_v1_0_52_rc22_fastsync"];
+/// Dismissal keys of the card before this mechanism, and the version each one was for.
+const LEGACY_DISMISSED: [string, string][] = [["whatsnew_seen_v1_0_52_rc22_fastsync", "1.0.52-rc22"]];
 
 function readLastVersion(): string | null {
   try {
-    if (LEGACY_DISMISSED.some((k) => localStorage.getItem(k))) return NOTICE_SINCE;
-    return localStorage.getItem(LAST_VERSION_KEY);
+    const recorded = localStorage.getItem(LAST_VERSION_KEY);
+    if (recorded) return recorded;
+    // Before versions were recorded: a dismissed card says the user saw THAT version.
+    const legacy = LEGACY_DISMISSED.find(([k]) => localStorage.getItem(k));
+    return legacy ? legacy[1] : null;
   } catch {
     return null;
   }

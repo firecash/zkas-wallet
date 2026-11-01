@@ -1850,14 +1850,15 @@
     "fastOffOwnNode": "Tidak dipakai dengan node Anda sendiri, kecuali Anda mengisi alamat sendiri.",
     "fastBadUrl": "Masukkan alamat https://.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "Alamat sinkron cepat"
+    "fastUrlLabel": "Alamat sinkron cepat",
+    "fastHintDefault": "Mengunduh file rantai dari ZKas dan CDN Cloudflare-nya. Mereka melihat IP Anda, bukan dompet Anda."
   },
   "whatsNew": {
     "eyebrow": "Baru",
     "title": "Yang baru",
     "switchFailed": "Gagal memulai mesin di perangkat. Anda masih di layanan sebelumnya.",
     "fastTitle": "Sinkron cepat",
-    "fastDesc": "Di ponsel ini, mengejar ketertinggalan butuh detik, bukan menit. Aplikasi mengunduh file rantai dari zkas.info dan memeriksanya dengan node. zkas.info melihat IP Anda, bukan dompet Anda.",
+    "fastDesc": "Di ponsel ini, mengejar ketertinggalan butuh detik, bukan menit. Aplikasi mengunduh file rantai dari ZKas dan CDN Cloudflare-nya dan memeriksanya dengan node. Mereka melihat IP Anda, bukan dompet Anda.",
     "fixTitle": "Diperbaiki",
     "fixDesc": "Beberapa dompet yang sinkron bersamaan tidak lagi mengunduh file yang sama berulang-ulang.",
     "logsTitle": "Log lebih pendek",

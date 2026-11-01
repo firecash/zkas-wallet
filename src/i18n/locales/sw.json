@@ -1813,14 +1813,15 @@
     "fastOffOwnNode": "Haitumiki na nodi yako mwenyewe, isipokuwa uweke anwani yako.",
     "fastBadUrl": "Weka anwani ya https://.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "Anwani ya usawazishaji wa haraka"
+    "fastUrlLabel": "Anwani ya usawazishaji wa haraka",
+    "fastHintDefault": "Hupakua faili za mnyororo kutoka ZKas na CDN yake ya Cloudflare. Wanaona IP yako, si pochi yako."
   },
   "whatsNew": {
     "eyebrow": "Mpya",
     "title": "Mapya",
     "switchFailed": "Haikuweza kuanzisha injini ya kifaa. Bado uko kwenye huduma ya awali.",
     "fastTitle": "Usawazishaji wa haraka",
-    "fastDesc": "Kwenye simu hii, kufikia hali ya sasa huchukua sekunde badala ya dakika. Programu hupakua faili za mnyororo kutoka zkas.info na kuzikagua na nodi. zkas.info inaona IP yako, si pochi yako.",
+    "fastDesc": "Kwenye simu hii, kufikia hali ya sasa huchukua sekunde badala ya dakika. Programu hupakua faili za mnyororo kutoka ZKas na CDN yake ya Cloudflare na kuzikagua na nodi. Wanaona IP yako, si pochi yako.",
     "fixTitle": "Imerekebishwa",
     "fixDesc": "Pochi kadhaa zinazosawazisha pamoja hazipakui tena faili zilezile mara kwa mara.",
     "logsTitle": "Kumbukumbu fupi",

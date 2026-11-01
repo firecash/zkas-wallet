@@ -1779,14 +1779,15 @@
     "fastOffOwnNode": "Não usada com seu próprio nó, a menos que você informe seu próprio endereço.",
     "fastBadUrl": "Digite um endereço https://.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "Endereço da sincronização rápida"
+    "fastUrlLabel": "Endereço da sincronização rápida",
+    "fastHintDefault": "Baixa arquivos da cadeia do ZKas e da sua CDN Cloudflare. Eles veem seu IP, não sua carteira."
   },
   "whatsNew": {
     "eyebrow": "Novo",
     "title": "Novidades",
     "switchFailed": "Não foi possível iniciar o motor local. Você ainda está no serviço anterior.",
     "fastTitle": "Sincronização rápida",
-    "fastDesc": "Neste celular, atualizar leva segundos em vez de minutos. O app baixa arquivos da cadeia do zkas.info e os confere com o nó. O zkas.info vê seu IP, não sua carteira.",
+    "fastDesc": "Neste celular, atualizar leva segundos em vez de minutos. O app baixa arquivos da cadeia do ZKas e da sua CDN Cloudflare e os confere com o nó. Eles veem seu IP, não sua carteira.",
     "fixTitle": "Corrigido",
     "fixDesc": "Várias carteiras sincronizando ao mesmo tempo não baixam mais os mesmos arquivos repetidamente.",
     "logsTitle": "Logs mais curtos",

@@ -1850,14 +1850,15 @@
     "fastOffOwnNode": "Nie działa z Twoim własnym węzłem, chyba że podasz własny adres.",
     "fastBadUrl": "Wpisz adres https://.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "Adres szybkiej synchronizacji"
+    "fastUrlLabel": "Adres szybkiej synchronizacji",
+    "fastHintDefault": "Pobiera pliki łańcucha z ZKas i jego CDN Cloudflare. Widzą Twoje IP, nie Twój portfel."
   },
   "whatsNew": {
     "eyebrow": "Nowość",
     "title": "Co nowego",
     "switchFailed": "Nie udało się uruchomić silnika na urządzeniu. Nadal korzystasz z poprzedniej usługi.",
     "fastTitle": "Szybka synchronizacja",
-    "fastDesc": "Na tym telefonie nadrabianie trwa sekundy zamiast minut. Aplikacja pobiera pliki łańcucha z zkas.info i sprawdza je z węzłem. zkas.info widzi Twoje IP, nie Twój portfel.",
+    "fastDesc": "Na tym telefonie nadrabianie trwa sekundy zamiast minut. Aplikacja pobiera pliki łańcucha z ZKas i jego CDN Cloudflare i sprawdza je z węzłem. Widzą Twoje IP, nie Twój portfel.",
     "fixTitle": "Naprawiono",
     "fixDesc": "Kilka portfeli synchronizujących się naraz nie pobiera już w kółko tych samych plików.",
     "logsTitle": "Krótsze logi",

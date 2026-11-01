@@ -1795,14 +1795,15 @@
     "fastOffOwnNode": "Không dùng với nút của riêng bạn, trừ khi bạn nhập địa chỉ riêng.",
     "fastBadUrl": "Nhập địa chỉ https://.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "Địa chỉ đồng bộ nhanh"
+    "fastUrlLabel": "Địa chỉ đồng bộ nhanh",
+    "fastHintDefault": "Tải tệp chuỗi từ ZKas và CDN Cloudflare của nó. Họ thấy IP của bạn, không thấy ví của bạn."
   },
   "whatsNew": {
     "eyebrow": "Mới",
     "title": "Có gì mới",
     "switchFailed": "Không thể khởi động công cụ trên thiết bị. Bạn vẫn đang dùng dịch vụ trước.",
     "fastTitle": "Đồng bộ nhanh",
-    "fastDesc": "Trên điện thoại này, bắt kịp chỉ mất vài giây thay vì vài phút. Ứng dụng tải tệp chuỗi từ zkas.info và kiểm tra với nút. zkas.info thấy IP của bạn, không thấy ví của bạn.",
+    "fastDesc": "Trên điện thoại này, bắt kịp chỉ mất vài giây thay vì vài phút. Ứng dụng tải tệp chuỗi từ ZKas và CDN Cloudflare của nó và kiểm tra với nút. Họ thấy IP của bạn, không thấy ví của bạn.",
     "fixTitle": "Đã sửa",
     "fixDesc": "Nhiều ví đồng bộ cùng lúc không còn tải đi tải lại cùng các tệp.",
     "logsTitle": "Nhật ký ngắn hơn",

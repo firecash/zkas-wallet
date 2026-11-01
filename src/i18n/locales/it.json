@@ -1850,14 +1850,15 @@
     "fastOffOwnNode": "Non usata con il tuo nodo, a meno che tu non inserisca un tuo indirizzo.",
     "fastBadUrl": "Inserisci un indirizzo https://.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "Indirizzo di sincronizzazione rapida"
+    "fastUrlLabel": "Indirizzo di sincronizzazione rapida",
+    "fastHintDefault": "Scarica i file della catena da ZKas e dalla sua CDN Cloudflare. Vedono il tuo IP, non il tuo wallet."
   },
   "whatsNew": {
     "eyebrow": "Novità",
     "title": "Novità",
     "switchFailed": "Impossibile avviare il motore locale. Sei ancora sul servizio precedente.",
     "fastTitle": "Sincronizzazione rapida",
-    "fastDesc": "Su questo telefono, mettersi in pari richiede secondi invece di minuti. L’app scarica i file della catena da zkas.info e li verifica con il nodo. zkas.info vede il tuo IP, non il tuo wallet.",
+    "fastDesc": "Su questo telefono, mettersi in pari richiede secondi invece di minuti. L’app scarica i file della catena da ZKas e dalla sua CDN Cloudflare e li verifica con il nodo. Vedono il tuo IP, non il tuo wallet.",
     "fixTitle": "Risolto",
     "fixDesc": "Più wallet che si sincronizzano insieme non scaricano più gli stessi file di continuo.",
     "logsTitle": "Log più brevi",

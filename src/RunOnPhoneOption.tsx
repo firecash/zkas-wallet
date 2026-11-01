@@ -139,7 +139,9 @@ export function RunOnPhoneOption({
                     ? t("runOnPhoneOption.fastBadUrl")
                     : !fastApplies
                       ? t("runOnPhoneOption.fastOffOwnNode")
-                      : t("runOnPhoneOption.fastHint")}
+                      : customUrl
+                        ? t("runOnPhoneOption.fastHint")
+                        : t("runOnPhoneOption.fastHintDefault")}
             </span>
           </div>
           <button type="button" className="btn" disabled={!!busy || (fast && !tor && !urlOk)} onClick={go}>

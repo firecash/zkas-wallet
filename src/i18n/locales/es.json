@@ -1850,14 +1850,15 @@
     "fastOffOwnNode": "No se usa con tu propio nodo, salvo que pongas tu propia dirección.",
     "fastBadUrl": "Introduce una dirección https://.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "Dirección de sincronización rápida"
+    "fastUrlLabel": "Dirección de sincronización rápida",
+    "fastHintDefault": "Descarga archivos de la cadena de ZKas y su CDN de Cloudflare. Ven tu IP, no tu billetera."
   },
   "whatsNew": {
     "eyebrow": "Nuevo",
     "title": "Novedades",
     "switchFailed": "No se pudo iniciar el motor local. Sigues en el servicio anterior.",
     "fastTitle": "Sincronización rápida",
-    "fastDesc": "En este teléfono, ponerse al día tarda segundos en vez de minutos. La app descarga archivos de la cadena de zkas.info y los comprueba con el nodo. zkas.info ve tu IP, no tu billetera.",
+    "fastDesc": "En este teléfono, ponerse al día tarda segundos en vez de minutos. La app descarga archivos de la cadena de ZKas y su CDN de Cloudflare y los comprueba con el nodo. Ven tu IP, no tu billetera.",
     "fixTitle": "Corregido",
     "fixDesc": "Varias billeteras sincronizando a la vez ya no descargan los mismos archivos una y otra vez.",
     "logsTitle": "Registros más cortos",

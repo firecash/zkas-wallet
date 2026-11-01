@@ -1850,14 +1850,15 @@
     "fastOffOwnNode": "Pas utilisée avec votre propre nœud, sauf si vous saisissez votre propre adresse.",
     "fastBadUrl": "Saisissez une adresse https://.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "Adresse de synchro rapide"
+    "fastUrlLabel": "Adresse de synchro rapide",
+    "fastHintDefault": "Télécharge les fichiers de la chaîne depuis ZKas et son CDN Cloudflare. Ils voient votre IP, pas votre portefeuille."
   },
   "whatsNew": {
     "eyebrow": "Nouveau",
     "title": "Nouveautés",
     "switchFailed": "Impossible de démarrer le moteur sur l'appareil. Vous êtes toujours sur le service précédent.",
     "fastTitle": "Synchro rapide",
-    "fastDesc": "Sur ce téléphone, le rattrapage prend quelques secondes au lieu de minutes. L’app télécharge les fichiers de la chaîne depuis zkas.info et les vérifie auprès du nœud. zkas.info voit votre IP, pas votre portefeuille.",
+    "fastDesc": "Sur ce téléphone, le rattrapage prend quelques secondes au lieu de minutes. L’app télécharge les fichiers de la chaîne depuis ZKas et son CDN Cloudflare et les vérifie auprès du nœud. Ils voient votre IP, pas votre portefeuille.",
     "fixTitle": "Corrigé",
     "fixDesc": "Plusieurs portefeuilles qui se synchronisent en même temps ne retéléchargent plus les mêmes fichiers en boucle.",
     "logsTitle": "Journaux plus courts",

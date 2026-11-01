@@ -1850,14 +1850,15 @@
     "fastOffOwnNode": "除非填写你自己的地址，否则在你自己的节点上不使用。",
     "fastBadUrl": "请输入 https:// 地址。",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "快速同步地址"
+    "fastUrlLabel": "快速同步地址",
+    "fastHintDefault": "从 ZKas 及其 Cloudflare CDN 下载链文件。它们能看到你的 IP，看不到你的钱包。"
   },
   "whatsNew": {
     "eyebrow": "新",
     "title": "新功能",
     "switchFailed": "无法启动设备端引擎。你仍在使用之前的服务。",
     "fastTitle": "快速同步",
-    "fastDesc": "在这部手机上，追上进度只需几秒而不是几分钟。应用从 zkas.info 下载链文件并与节点核对。zkas.info 能看到你的 IP，看不到你的钱包。",
+    "fastDesc": "在这部手机上，追上进度只需几秒而不是几分钟。应用从 ZKas 及其 Cloudflare CDN 下载链文件并与节点核对。它们能看到你的 IP，看不到你的钱包。",
     "fixTitle": "已修复",
     "fixDesc": "多个钱包同时同步时，不再反复下载相同的文件。",
     "logsTitle": "更短的日志",

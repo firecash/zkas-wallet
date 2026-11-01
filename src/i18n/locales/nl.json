@@ -1829,14 +1829,15 @@
     "fastOffOwnNode": "Niet gebruikt met je eigen node, tenzij je een eigen adres invult.",
     "fastBadUrl": "Vul een https://-adres in.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "Adres voor snelle sync"
+    "fastUrlLabel": "Adres voor snelle sync",
+    "fastHintDefault": "Downloadt chainbestanden van ZKas en zijn Cloudflare-CDN. Zij zien je IP, niet je wallet."
   },
   "whatsNew": {
     "eyebrow": "Nieuw",
     "title": "Wat is er nieuw",
     "switchFailed": "Kon de on-device-engine niet starten. Je zit nog op de vorige dienst.",
     "fastTitle": "Snelle sync",
-    "fastDesc": "Op deze telefoon duurt bijwerken seconden in plaats van minuten. De app downloadt chainbestanden van zkas.info en controleert ze bij de node. zkas.info ziet je IP, niet je wallet.",
+    "fastDesc": "Op deze telefoon duurt bijwerken seconden in plaats van minuten. De app downloadt chainbestanden van ZKas en zijn Cloudflare-CDN en controleert ze bij de node. Zij zien je IP, niet je wallet.",
     "fixTitle": "Opgelost",
     "fixDesc": "Meerdere wallets die tegelijk synchroniseren downloaden niet meer steeds dezelfde bestanden.",
     "logsTitle": "Kortere logs",

@@ -1816,14 +1816,15 @@
     "fastOffOwnNode": "Tidak digunakan dengan nod anda sendiri, melainkan anda masukkan alamat sendiri.",
     "fastBadUrl": "Masukkan alamat https://.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "Alamat segerak pantas"
+    "fastUrlLabel": "Alamat segerak pantas",
+    "fastHintDefault": "Memuat turun fail rantaian dari ZKas dan CDN Cloudflarenya. Mereka melihat IP anda, bukan dompet anda."
   },
   "whatsNew": {
     "eyebrow": "Baru",
     "title": "Apa yang baharu",
     "switchFailed": "Gagal memulakan enjin pada peranti. Anda masih menggunakan perkhidmatan sebelumnya.",
     "fastTitle": "Segerak pantas",
-    "fastDesc": "Di telefon ini, mengejar rantaian mengambil masa saat, bukan minit. Aplikasi memuat turun fail rantaian dari zkas.info dan menyemaknya dengan nod. zkas.info melihat IP anda, bukan dompet anda.",
+    "fastDesc": "Di telefon ini, mengejar rantaian mengambil masa saat, bukan minit. Aplikasi memuat turun fail rantaian dari ZKas dan CDN Cloudflarenya dan menyemaknya dengan nod. Mereka melihat IP anda, bukan dompet anda.",
     "fixTitle": "Dibaiki",
     "fixDesc": "Beberapa dompet yang bersegerak serentak tidak lagi memuat turun fail yang sama berulang kali.",
     "logsTitle": "Log lebih pendek",

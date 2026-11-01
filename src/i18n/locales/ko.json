@@ -1850,14 +1850,15 @@
     "fastOffOwnNode": "직접 주소를 입력하지 않으면 내 노드에서는 사용되지 않습니다.",
     "fastBadUrl": "https:// 주소를 입력하세요.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "빠른 동기화 주소"
+    "fastUrlLabel": "빠른 동기화 주소",
+    "fastHintDefault": "ZKas와 Cloudflare CDN에서 체인 파일을 내려받습니다. IP는 보이지만 지갑은 보이지 않습니다."
   },
   "whatsNew": {
     "eyebrow": "새로움",
     "title": "새로운 기능",
     "switchFailed": "기기 내 엔진을 시작할 수 없습니다. 이전 서비스를 계속 사용합니다.",
     "fastTitle": "빠른 동기화",
-    "fastDesc": "이 휴대폰에서 따라잡는 데 몇 분이 아니라 몇 초면 됩니다. 앱이 zkas.info에서 체인 파일을 내려받아 노드로 확인합니다. zkas.info는 IP를 보지만 지갑은 보지 못합니다.",
+    "fastDesc": "이 휴대폰에서 따라잡는 데 몇 분이 아니라 몇 초면 됩니다. 앱이 ZKas와 Cloudflare CDN에서 체인 파일을 내려받아 노드로 확인합니다. IP는 보이지만 지갑은 보이지 않습니다.",
     "fixTitle": "수정됨",
     "fixDesc": "여러 지갑을 동시에 동기화해도 같은 파일을 계속 다시 내려받지 않습니다.",
     "logsTitle": "더 짧은 로그",

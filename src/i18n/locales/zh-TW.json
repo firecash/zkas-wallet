@@ -1813,14 +1813,15 @@
     "fastOffOwnNode": "除非填入你自己的位址，否則在你自己的節點上不使用。",
     "fastBadUrl": "請輸入 https:// 位址。",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "快速同步位址"
+    "fastUrlLabel": "快速同步位址",
+    "fastHintDefault": "從 ZKas 及其 Cloudflare CDN 下載鏈檔案。它們看得到你的 IP，看不到你的錢包。"
   },
   "whatsNew": {
     "eyebrow": "新功能",
     "title": "新功能",
     "switchFailed": "無法啟動裝置端引擎。你仍在使用先前的服務。",
     "fastTitle": "快速同步",
-    "fastDesc": "在這支手機上，追上進度只需幾秒而不是幾分鐘。App 從 zkas.info 下載鏈檔案並與節點核對。zkas.info 看得到你的 IP，看不到你的錢包。",
+    "fastDesc": "在這支手機上，追上進度只需幾秒而不是幾分鐘。App 從 ZKas 及其 Cloudflare CDN 下載鏈檔案並與節點核對。它們看得到你的 IP，看不到你的錢包。",
     "fixTitle": "已修正",
     "fixDesc": "多個錢包同時同步時，不再反覆下載相同的檔案。",
     "logsTitle": "更短的日誌",

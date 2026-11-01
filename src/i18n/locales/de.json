@@ -1634,14 +1634,15 @@
     "fastOffOwnNode": "Mit deinem eigenen Node nicht genutzt, außer du gibst eine eigene Adresse ein.",
     "fastBadUrl": "Gib eine https://-Adresse ein.",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "Schnell-Sync-Adresse"
+    "fastUrlLabel": "Schnell-Sync-Adresse",
+    "fastHintDefault": "Lädt Chain-Dateien von ZKas und seinem Cloudflare-CDN. Sie sehen deine IP, nicht dein Wallet."
   },
   "whatsNew": {
     "eyebrow": "Neu",
     "title": "Neu in dieser Version",
     "switchFailed": "Konnte die On-Device-Engine nicht starten. Du bist noch beim vorherigen Dienst.",
     "fastTitle": "Schnell-Sync",
-    "fastDesc": "Auf diesem Handy dauert das Aufholen Sekunden statt Minuten. Die App lädt Chain-Dateien von zkas.info und prüft sie gegen den Node. zkas.info sieht deine IP, nicht dein Wallet.",
+    "fastDesc": "Auf diesem Handy dauert das Aufholen Sekunden statt Minuten. Die App lädt Chain-Dateien von ZKas und seinem Cloudflare-CDN und prüft sie gegen den Node. Sie sehen deine IP, nicht dein Wallet.",
     "fixTitle": "Behoben",
     "fixDesc": "Mehrere Wallets, die gleichzeitig synchronisieren, laden nicht mehr immer wieder dieselben Dateien.",
     "logsTitle": "Kürzere Logs",

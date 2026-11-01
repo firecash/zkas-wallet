@@ -1750,14 +1750,15 @@
     "fastOffOwnNode": "自分のアドレスを入れない限り、自分のノードでは使われません。",
     "fastBadUrl": "https:// のアドレスを入力してください。",
     "fastUrlPlaceholder": "https://…",
-    "fastUrlLabel": "高速同期のアドレス"
+    "fastUrlLabel": "高速同期のアドレス",
+    "fastHintDefault": "ZKasとそのCloudflare CDNからチェーンファイルをダウンロードします。見えるのはIPで、ウォレットは見えません。"
   },
   "whatsNew": {
     "eyebrow": "新機能",
     "title": "新機能",
     "switchFailed": "端末内エンジンを起動できませんでした。以前のサービスを引き続き使用します。",
     "fastTitle": "高速同期",
-    "fastDesc": "このスマホでは、追いつくのに数分ではなく数秒です。アプリはzkas.infoからチェーンファイルをダウンロードし、ノードで確認します。zkas.infoに見えるのはIPで、ウォレットは見えません。",
+    "fastDesc": "このスマホでは、追いつくのに数分ではなく数秒です。アプリはZKasとそのCloudflare CDNからチェーンファイルをダウンロードし、ノードで確認します。見えるのはIPで、ウォレットは見えません。",
     "fixTitle": "修正",
     "fixDesc": "複数のウォレットを同時に同期しても、同じファイルを何度もダウンロードしなくなりました。",
     "logsTitle": "ログを短く",
