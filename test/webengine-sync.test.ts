@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { runSync, type EngineLike, type SyncDeps, type Segment } from "../src/webengine/sync";
 
 // The browser sync loop's decisions, with a fake engine and fake network: mirror failover (R2
@@ -81,6 +81,24 @@ describe("browser sync loop", () => {
     expect(t.statuses.at(-1)).toBe("synced");
     expect(t.calls.some((u) => u.includes("/tree?block=b220"))).toBe(true);
     expect(t.store![0]).toBe(220);
+  });
+
+  it("saves during a long gateway catch-up, not only at the tip", async () => {
+    // 5 gateway pages at 20 s each: a reload part-way must resume near there, not at the files' end.
+    const t = deps({ create: () => new FakeEngine(0, 5) });
+    const saved: number[] = [];
+    const save0 = t.d.save;
+    t.d.save = async (b) => { saved.push(b[0]); return save0(b); };
+    let now = 1_000_000;
+    const spy = vi.spyOn(Date, "now").mockImplementation(() => (now += 20_000));
+    try {
+      await runSync(t.d);
+    } finally {
+      spy.mockRestore();
+    }
+    const mid = saved.filter((c) => c > 200 && c < 250);
+    expect(mid.length).toBeGreaterThanOrEqual(3);
+    expect(saved.at(-1)).toBe(250);
   });
 
   it("falls back from a mirror the browser cannot read, and asks it only once", async () => {

@@ -89,6 +89,8 @@ export const SEGMENT_READ_AHEAD = 2;
 
 /** Checkpoint every this many segments while catching up. */
 const SAVE_EVERY_SEGMENTS = 2;
+/** During a gateway catch-up, save at most this often (a reload resumes from here). */
+const GATEWAY_SAVE_MS = 15_000;
 
 export async function runSync(d: SyncDeps): Promise<void> {
   const bad = new Set<string>();
@@ -248,6 +250,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
   await d.save(eng.checkpoint());
 
   // 2. The gateway to the tip margin; then the node check; then keep following the tip.
+  let lastGatewaySave = Date.now();
   for (;;) {
     if (d.shouldStop()) return;
     for (;;) {
@@ -270,6 +273,13 @@ export async function runSync(d: SyncDeps): Promise<void> {
       }
       report("tip");
       if (res.at_margin) break;
+      // Long gateway catch-ups (a wallet back after days, or the stretch past the last chain
+      // file) used to save only at the margin, so a reload mid-way restarted from the files'
+      // end and the screen went back to an early percentage.
+      if (Date.now() - lastGatewaySave > GATEWAY_SAVE_MS) {
+        lastGatewaySave = Date.now();
+        await d.save(eng.checkpoint());
+      }
     }
     if (verified === null) {
       const mine = eng.tip_frontier();
