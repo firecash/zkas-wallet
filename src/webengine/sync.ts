@@ -9,7 +9,7 @@
 export interface EngineLike {
   low(): string;
   scanned(): bigint;
-  ingest_segment(bytes: Uint8Array, index: bigint, fromBlock: string): string;
+  ingest_segment(bytes: Uint8Array, index: bigint, fromBlock: string, toBoundaryJson: string): string;
   ingest_page(bytes: Uint8Array): string;
   tip_frontier(): string | undefined;
   checkpoint(): Uint8Array;
@@ -150,6 +150,22 @@ export async function runSync(d: SyncDeps): Promise<void> {
       eng = null;
     }
   }
+  // A wallet born after the last published segment (every new wallet) starts at the node's own
+  // frontier at its birthday, as the phone engine's fast sync does, instead of replaying up to a
+  // whole 12-hour segment it cannot hold notes in. The frontier is checked against the node again
+  // once the wallet reaches the tip (step 2), and a gateway that cannot place one falls back to
+  // the segment start below.
+  const lastSeg = segs[segs.length - 1];
+  if (!eng && lastSeg && d.birthday > lastSeg.to.daa) {
+    try {
+      const fr = await (await get(`${d.gateway}/tree?below=${d.birthday}`)).json();
+      if (typeof fr?.block === "string" && typeof fr?.size === "number" && fr.daa >= lastSeg.to.daa && fr.daa <= d.birthday) {
+        eng = d.create(JSON.stringify(fr), BigInt(d.birthday));
+      }
+    } catch {
+      /* start from the segment instead */
+    }
+  }
   if (!eng) {
     const start = [...segs].reverse().find((s) => s.from.daa <= d.birthday) ?? segs[0];
     eng = d.create(JSON.stringify(start.from), BigInt(d.birthday));
@@ -171,7 +187,9 @@ export async function runSync(d: SyncDeps): Promise<void> {
       },
     );
     try {
-      eng.ingest_segment(bytes, BigInt(s.index), s.from.block);
+      // The segment's signed end frontier: an engine holding no note adopts it instead of
+      // hashing the segment's leaves.
+      eng.ingest_segment(bytes, BigInt(s.index), s.from.block, JSON.stringify(s.to));
     } catch (e) {
       // The cursor is not in this segment (a gap, or the wallet already past it): the gateway
       // serves from the cursor whatever the files hold.

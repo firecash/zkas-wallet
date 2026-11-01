@@ -63,7 +63,9 @@
     "warmingDetail": "Your balance is up to date. The wallet is getting ready to pay — the first payment is the slow one, later ones take seconds.",
     "warmingDetailWaited": "Your balance is up to date. The wallet is getting ready to pay ({{waited}} so far) — the first payment is the slow one, later ones take seconds.",
     "readyLabel": "Ready",
-    "readyDetail": "Your balance is up to date."
+    "readyDetail": "Your balance is up to date.",
+    "browserReadyLabel": "Up to date",
+    "browserReadyDetail": "Watching this wallet in this browser. To send, open it in the app or with the public service."
   },
   "desktopServices": {
     "desktopOnly": "This control is available in the desktop app."

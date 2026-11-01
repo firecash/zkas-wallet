@@ -903,6 +903,18 @@ input, textarea, select {
   font-size: 14px;
   font-family: inherit;
 }
+/* The rule above is for text fields. Without this a checkbox inherited 100% width and 12px
+   padding and, in a row, became a wide empty box with its label squeezed into a narrow column
+   ("Reach the node over Tor" / "Fast sync" in Run on this phone, 1 Nov). */
+input[type="checkbox"], input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  padding: 0;
+  margin: 0;
+  border-radius: 4px;
+  accent-color: var(--ember);
+}
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--ember); }
 textarea { min-height: 84px; resize: vertical; font-family: var(--mono); font-size: 13px; }
 select { appearance: none; cursor: pointer; }

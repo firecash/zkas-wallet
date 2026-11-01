@@ -673,7 +673,9 @@
     "behindDetail_one": "Du kannst jetzt senden – alles Nötige ist bereits sichtbar. Das Wallet liest noch den neuesten {{n}} Block, daher wird, was darin ankam, noch nicht gezählt.",
     "behindDetail_other": "Du kannst jetzt senden – alles Nötige ist bereits im Blick. Das Wallet liest noch die neuesten {{n}} Blöcke, daher wird, was darin ankam, noch nicht gezählt. ",
     "behindDetailBare": "Du kannst jetzt senden – alles Nötige ist bereits im Blick. Das Wallet liest noch die neuesten Blöcke, daher wird, was darin ankam, noch nicht gezählt. ",
-    "etaLeft": "{{duration}} verbleibend"
+    "etaLeft": "{{duration}} verbleibend",
+    "browserReadyLabel": "Aktuell",
+    "browserReadyDetail": "Dieses Wallet wird in diesem Browser beobachtet. Zum Senden öffne es in der App oder über den öffentlichen Dienst."
   },
   "desktopServices": {
     "desktopOnly": "Diese Steuerung gibt es nur in der Desktop-App."
@@ -1722,7 +1724,8 @@
     "managedHere": "Verwaltet hier · gRPC {{port}}",
     "removeAria": "{{name}} entfernen",
     "stageRestarting": "Wallet-Engine wird neu gestartet · {{s}}s",
-    "stageLoadingScan": "Scan-Status wird geladen…"
+    "stageLoadingScan": "Scan-Status wird geladen…",
+    "labelBrowser": "Dieser Browser"
   },
   "walletSwitcher": {
     "defaultLabel": "Wallet 1",
@@ -1825,7 +1828,8 @@
     "thisComputer": "dieser Computer",
     "publicService": "der öffentliche Dienst (wallet.zkas.info)",
     "chosenService": "der gewählte Dienst",
-    "intro": "Dein Wallet synchronisiert über <b>{{where}}</b>. Es sieht dein Guthaben, deinen Verlauf und wohin du sendest – niemals deine Schlüssel, und es kann nicht ausgeben."
+    "intro": "Dein Wallet synchronisiert über <b>{{where}}</b>. Es sieht dein Guthaben, deinen Verlauf und wohin du sendest – niemals deine Schlüssel, und es kann nicht ausgeben.",
+    "browser": "Dein Wallet läuft <b>in diesem Browser</b>. Kein Wallet-Dienst sieht deine Schlüssel, dein Guthaben oder deinen Verlauf; öffentliche Chain-Daten kommen von zkas.info."
   },
   "iosInstallNotice": {
     "installedCopy": "Hast du ein Wallet in Safari? Es wird nicht mit dieser installierten Kopie geteilt – stell es hier mit der Wiederherstellungsphrase wieder her.",

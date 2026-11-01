@@ -16,7 +16,7 @@ import { WALLET_SERVICE_PORT } from "./ports";
 import { desktopRemoteBase } from "./desktop";
 import i18n from "./i18n";
 import { publicEndpoint, privacyMode, isOnionHost} from "./lib/privacy";
-import { browserModeChosen, browserStatusAsServiceStatus, browserHistory, setBrowserModeChosen, stopBrowserEngine } from "./webengine";
+import { browserModeChosen, browserServiceStatus, browserHistory, browserWatch, setBrowserModeChosen, stopBrowserEngine } from "./webengine";
 import { clearTombstone } from "./wallets";
 // The diagnostic log's network observer. net.ts imports nothing from the app, so no cycle.
 import { claimSignal, recordRequest } from "./diag/net";
@@ -711,7 +711,19 @@ async function reqInner<T>(method: string, path: string, body: unknown, timeoutM
   // in-page engine; everything else is refused here, in one place, so no screen can reach a
   // service by a route nobody checked.
   if (browserModeChosen() && /^\/api\//.test(path)) {
-    if (path === "/api/status") return browserStatusAsServiceStatus() as unknown as T;
+    // The per-browser token is minted by the first request — and no request leaves the page in
+    // this mode, so without this the seed of a wallet created here was filed under "default",
+    // then the first later caller of getToken() minted a token and the wallet vanished behind a
+    // "this browser no longer holds the key" screen (found end-to-end, 1 Nov).
+    if (!asToken) getToken();
+    if (path === "/api/status") return (await browserServiceStatus()) as unknown as T;
+    // Registering a wallet (create, import, restore, add account) stays on the page: the
+    // address is derived here and the in-page engine picks the wallet up from its seed.
+    if (path === "/api/wallet/watch" && method === "POST") {
+      const b = (body ?? {}) as { fvk_hex?: string; birthday?: number };
+      if (!b.fvk_hex) throw new Error("no viewing key");
+      return (await browserWatch(b.fvk_hex, Number(b.birthday) || 0)) as unknown as T;
+    }
     const h = /^\/api\/wallet\/history(?:\?(.*))?$/.exec(path);
     if (h) {
       const q = new URLSearchParams(h[1] ?? "");

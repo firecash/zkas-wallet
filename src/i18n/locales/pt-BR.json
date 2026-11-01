@@ -690,7 +690,8 @@
     "managedHere": "Gerenciado aqui · gRPC {{port}}",
     "removeAria": "Remover {{name}}",
     "stageRestarting": "Reiniciando motor da carteira · {{s}}s",
-    "stageLoadingScan": "Carregando estado do scan…"
+    "stageLoadingScan": "Carregando estado do scan…",
+    "labelBrowser": "Este navegador"
   },
   "walletSwitcher": {
     "defaultLabel": "Carteira 1",
@@ -951,7 +952,9 @@
     "behindDetail_one": "Você já pode enviar — tudo que um pagamento precisa já está visível. A carteira ainda está lendo o {{n}} bloco mais novo, então o que chegou nele ainda não foi contado.",
     "behindDetail_other": "Você já pode enviar — tudo que um pagamento precisa já está visível. A carteira ainda está lendo os {{n}} blocos mais novos, então o que chegou neles ainda não foi contado.",
     "behindDetailBare": "Você já pode enviar — tudo que um pagamento precisa já está visível. A carteira ainda está lendo os blocos mais novos, então o que chegou neles ainda não foi contado.",
-    "etaLeft": "{{duration}} restantes"
+    "etaLeft": "{{duration}} restantes",
+    "browserReadyLabel": "Atualizada",
+    "browserReadyDetail": "Acompanhando esta carteira neste navegador. Para enviar, abra-a no app ou com o serviço público."
   },
   "desktopServices": {
     "desktopOnly": "Este controle está disponível no app para desktop."
@@ -1832,7 +1835,8 @@
     "thisComputer": "este computador",
     "publicService": "o serviço público (wallet.zkas.info)",
     "chosenService": "o serviço que você escolheu",
-    "intro": "Sua carteira vai sincronizar via <b>{{where}}</b>. Ele vê seu saldo, histórico e envios — nunca suas chaves, e não pode gastar."
+    "intro": "Sua carteira vai sincronizar via <b>{{where}}</b>. Ele vê seu saldo, histórico e envios — nunca suas chaves, e não pode gastar.",
+    "browser": "Sua carteira roda <b>neste navegador</b>. Nenhum serviço vê suas chaves, saldo ou histórico; os dados públicos da cadeia vêm de zkas.info."
   },
   "watchonly": {
     "invalidViewKey": "Chave de visualização inválida."

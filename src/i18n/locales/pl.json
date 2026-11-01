@@ -699,7 +699,8 @@
     "nodeNotInstalled": "Lokalny węzeł zarządzany nie jest jeszcze zainstalowany. Ekrany Wydobywanie i Węzeł mogą zainstalować zweryfikowane wydanie automatycznie.",
     "close": "Zamknij",
     "stageRestarting": "Restartowanie silnika portfela · {{s}}s",
-    "stageLoadingScan": "Ładowanie stanu skanowania…"
+    "stageLoadingScan": "Ładowanie stanu skanowania…",
+    "labelBrowser": "Ta przeglądarka"
   },
   "walletSwitcher": {
     "defaultLabel": "Portfel 1",
@@ -827,7 +828,8 @@
     "thisComputer": "ten komputer",
     "publicService": "publiczna usługa (wallet.zkas.info)",
     "chosenService": "wybrana usługa",
-    "intro": "Twój portfel będzie synchronizować przez <b>{{where}}</b>. Widzi twoje saldo, historię i dokąd wysyłasz — nigdy twoich kluczy i nie może wydawać."
+    "intro": "Twój portfel będzie synchronizować przez <b>{{where}}</b>. Widzi twoje saldo, historię i dokąd wysyłasz — nigdy twoich kluczy i nie może wydawać.",
+    "browser": "Twój portfel działa <b>w tej przeglądarce</b>. Żadna usługa nie widzi kluczy, salda ani historii; publiczne dane łańcucha pochodzą z zkas.info."
   },
   "onboard": {
     "errHasKey": "To urządzenie ma już klucz portfela. Przywróć ten portfel — lub użyj przełącznika portfeli 'Dodaj inny portfel', aby nic nie zostało nadpisane.",
@@ -992,7 +994,9 @@
     "warmingDetail": "Twoje saldo jest aktualne. Portfel przygotowuje się do płatności — pierwsza jest wolna, kolejne trwają sekundy.",
     "warmingDetailWaited": "Twoje saldo jest aktualne. Portfel przygotowuje się do płatności ({{waited}} do tej pory) — pierwsza jest wolna, kolejne trwają sekundy.",
     "readyLabel": "Gotowe",
-    "readyDetail": "Twoje saldo jest aktualne."
+    "readyDetail": "Twoje saldo jest aktualne.",
+    "browserReadyLabel": "Aktualny",
+    "browserReadyDetail": "Portfel obserwowany w tej przeglądarce. Aby wysłać, otwórz go w aplikacji lub przez usługę publiczną."
   },
   "desktopServices": {
     "desktopOnly": "Ta opcja jest dostępna w aplikacji desktopowej."

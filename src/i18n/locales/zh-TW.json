@@ -690,7 +690,8 @@
     "managedHere": "在此管理 · gRPC {{port}}",
     "removeAria": "移除 {{name}}",
     "stageRestarting": "正在重啟錢包引擎 · {{s}}秒",
-    "stageLoadingScan": "載入掃描狀態中…"
+    "stageLoadingScan": "載入掃描狀態中…",
+    "labelBrowser": "此瀏覽器"
   },
   "walletSwitcher": {
     "defaultLabel": "錢包 1",
@@ -951,7 +952,9 @@
     "behindDetail_one": "你現在即可發送——付款所需資訊皆已載入。錢包仍在讀取最新的 {{n}} 個區塊，因此其中收到的內容尚未計入。",
     "behindDetail_other": "你現在即可發送——付款所需資訊皆已載入。錢包仍在讀取最新的 {{n}} 個區塊，因此其中收到的內容尚未計入。",
     "behindDetailBare": "你現在即可發送 — 付款所需資訊皆已載入。錢包仍在讀取最新區塊，因此其中收到的款項尚未計入。",
-    "etaLeft": "剩餘 {{duration}}"
+    "etaLeft": "剩餘 {{duration}}",
+    "browserReadyLabel": "已是最新",
+    "browserReadyDetail": "正在此瀏覽器中查看此錢包。如需傳送，請在 App 或公開服務中開啟。"
   },
   "desktopServices": {
     "desktopOnly": "此功能僅限桌面版應用程式使用。"
@@ -1069,7 +1072,8 @@
     "thisComputer": "這台電腦",
     "publicService": "公開服務 (wallet.zkas.info)",
     "chosenService": "你選擇的服務",
-    "intro": "你的錢包將透過<b>{{where}}</b>同步。它會看到你的餘額、歷史記錄和發送去向 — 絕不會看到你的密鑰，也無法支出。"
+    "intro": "你的錢包將透過<b>{{where}}</b>同步。它會看到你的餘額、歷史記錄和發送去向 — 絕不會看到你的密鑰，也無法支出。",
+    "browser": "你的錢包<b>在此瀏覽器中</b>執行。任何錢包服務都看不到你的金鑰、餘額或紀錄；公開鏈資料來自 zkas.info。"
   },
   "exportfile": {
     "shared": "{{filename}} 已可儲存或發送。",

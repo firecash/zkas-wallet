@@ -699,7 +699,8 @@
     "nodeNotInstalled": "Yönetilen yerel düğüm henüz kurulu değil. Madencilik ve Düğüm ekranları doğrulanmış sürümü otomatik kurabilir.",
     "close": "Kapat",
     "stageRestarting": "Cüzdan motoru yeniden başlatılıyor · {{s}}s",
-    "stageLoadingScan": "Tarama durumu yükleniyor…"
+    "stageLoadingScan": "Tarama durumu yükleniyor…",
+    "labelBrowser": "Bu tarayıcı"
   },
   "walletSwitcher": {
     "defaultLabel": "Cüzdan 1",
@@ -827,7 +828,8 @@
     "thisComputer": "bu bilgisayar",
     "publicService": "genel hizmet (wallet.zkas.info)",
     "chosenService": "seçtiğiniz hizmet",
-    "intro": "Cüzdanınız <b>{{where}}</b> üzerinden eşitlenecek. Bakiyenizi, geçmişinizi ve nereye gönderdiğinizi görür — anahtarlarınızı asla görmez ve harcama yapamaz."
+    "intro": "Cüzdanınız <b>{{where}}</b> üzerinden eşitlenecek. Bakiyenizi, geçmişinizi ve nereye gönderdiğinizi görür — anahtarlarınızı asla görmez ve harcama yapamaz.",
+    "browser": "Cüzdanınız <b>bu tarayıcıda</b> çalışıyor. Hiçbir hizmet anahtarlarınızı, bakiyenizi veya geçmişinizi görmez; herkese açık zincir verisi zkas.info'dan gelir."
   },
   "onboard": {
     "errHasKey": "Bu cihaz zaten bir cüzdan anahtarı tutuyor. Bunun yerine o cüzdanı geri yükleyin — veya cüzdan değiştiriciden 'Başka bir cüzdan ekle'yi kullanın, böylece hiçbir şeyin üzerine yazılmaz.",
@@ -924,7 +926,9 @@
     "aboutHours_other": "yaklaşık {{count}} saat",
     "behindDetail_one": "Artık gönderebilirsiniz — bir ödeme için gereken her şey görünürde. Cüzdan hâlâ en yeni {{n}} bloğu okuyor, bu nedenle bu bloklarda gelenler henüz sayılmaz.",
     "behindDetail_other": "Artık gönderebilirsiniz — bir ödeme için gereken her şey görünürde. Cüzdan hâlâ en yeni {{n}} bloğu okuyor, bu nedenle bu bloklarda gelenler henüz sayılmaz.",
-    "behindDetailBare": "Artık gönderebilirsiniz — bir ödeme için gereken her şey görünürde. Cüzdan hâlâ en yeni blokları okuyor, bu nedenle bu bloklarda gelenler henüz sayılmaz."
+    "behindDetailBare": "Artık gönderebilirsiniz — bir ödeme için gereken her şey görünürde. Cüzdan hâlâ en yeni blokları okuyor, bu nedenle bu bloklarda gelenler henüz sayılmaz.",
+    "browserReadyLabel": "Güncel",
+    "browserReadyDetail": "Bu cüzdan bu tarayıcıda izleniyor. Göndermek için uygulamada veya genel hizmetle açın."
   },
   "desktopServices": {
     "desktopOnly": "Bu kontrol yalnızca masaüstü uygulamasında kullanılabilir."

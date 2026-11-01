@@ -690,7 +690,8 @@
     "managedHere": "Quản lý tại đây · gRPC {{port}}",
     "removeAria": "Xóa {{name}}",
     "stageRestarting": "Đang khởi động lại ví · {{s}}s",
-    "stageLoadingScan": "Đang tải trạng thái quét…"
+    "stageLoadingScan": "Đang tải trạng thái quét…",
+    "labelBrowser": "Trình duyệt này"
   },
   "walletSwitcher": {
     "defaultLabel": "Ví 1",
@@ -852,7 +853,8 @@
     "thisComputer": "máy tính này",
     "publicService": "dịch vụ công (wallet.zkas.info)",
     "chosenService": "dịch vụ bạn đã chọn",
-    "intro": "Ví của bạn sẽ đồng bộ qua <b>{{where}}</b>. Nó thấy số dư, lịch sử và nơi bạn gửi — không bao giờ thấy khóa của bạn, và không thể chi tiêu."
+    "intro": "Ví của bạn sẽ đồng bộ qua <b>{{where}}</b>. Nó thấy số dư, lịch sử và nơi bạn gửi — không bao giờ thấy khóa của bạn, và không thể chi tiêu.",
+    "browser": "Ví của bạn chạy <b>trong trình duyệt này</b>. Không dịch vụ nào thấy khóa, số dư hay lịch sử của bạn; dữ liệu chuỗi công khai đến từ zkas.info."
   },
   "onboard": {
     "errHasKey": "Thiết bị này đã có khóa ví. Hãy khôi phục ví đó — hoặc dùng 'Thêm ví khác' trong trình chuyển đổi ví để không ghi đè.",
@@ -949,7 +951,9 @@
     "aboutHours_one": "khoảng {{count}} giờ",
     "aboutHours_other": "khoảng {{count}} giờ",
     "behindDetail_one": "Bạn có thể gửi ngay — mọi thứ cần cho thanh toán đã có. Ví vẫn đang đọc khối mới nhất {{n}}, nên bất kỳ thứ gì đến trong đó chưa được tính.",
-    "behindDetail_other": "Bạn có thể gửi ngay — mọi thứ cần cho thanh toán đã có. Ví vẫn đang đọc {{n}} khối mới nhất, nên bất kỳ thứ gì đến trong đó chưa được tính."
+    "behindDetail_other": "Bạn có thể gửi ngay — mọi thứ cần cho thanh toán đã có. Ví vẫn đang đọc {{n}} khối mới nhất, nên bất kỳ thứ gì đến trong đó chưa được tính.",
+    "browserReadyLabel": "Đã cập nhật",
+    "browserReadyDetail": "Đang theo dõi ví này trong trình duyệt. Để gửi, hãy mở trong ứng dụng hoặc qua dịch vụ công cộng."
   },
   "desktopServices": {
     "desktopOnly": "Tính năng này có sẵn trên ứng dụng máy tính."

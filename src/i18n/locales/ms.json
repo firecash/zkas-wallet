@@ -690,7 +690,8 @@
     "managedHere": "Diurus di sini · gRPC {{port}}",
     "removeAria": "Buang {{name}}",
     "stageRestarting": "Memulakan semula enjin dompet · {{s}}s",
-    "stageLoadingScan": "Memuat status imbasan…"
+    "stageLoadingScan": "Memuat status imbasan…",
+    "labelBrowser": "Pelayar ini"
   },
   "walletSwitcher": {
     "defaultLabel": "Dompet 1",
@@ -926,7 +927,8 @@
     "thisComputer": "komputer ini",
     "publicService": "perkhidmatan awam (wallet.zkas.info)",
     "chosenService": "perkhidmatan yang anda pilih",
-    "intro": "Dompet anda akan menyegerak melalui <b>{{where}}</b>. Ia melihat baki, sejarah dan destinasi hantaran anda — tidak pernah kunci anda, dan ia tidak boleh berbelanja."
+    "intro": "Dompet anda akan menyegerak melalui <b>{{where}}</b>. Ia melihat baki, sejarah dan destinasi hantaran anda — tidak pernah kunci anda, dan ia tidak boleh berbelanja.",
+    "browser": "Dompet anda berjalan <b>dalam pelayar ini</b>. Tiada perkhidmatan melihat kunci, baki atau sejarah anda; data rantaian awam datang dari zkas.info."
   },
   "status": {
     "offlineLabel": "Tidak dapat mencapai rangkaian",
@@ -958,7 +960,9 @@
     "aboutHours_other": "lebih kurang {{count}} jam",
     "behindDetail_one": "Anda boleh hantar sekarang — semua yang diperlukan pembayaran sudah kelihatan. Dompet masih membaca {{n}} blok terbaru, jadi apa-apa yang tiba di dalamnya belum dikira.",
     "behindDetail_other": "Anda boleh hantar sekarang — semua yang diperlukan pembayaran sudah kelihatan. Dompet masih membaca {{n}} blok terbaru, jadi apa-apa yang tiba di dalamnya belum dikira.",
-    "behindDetailBare": "Anda boleh hantar sekarang — semua yang diperlukan pembayaran sudah kelihatan. Dompet masih membaca blok terbaru, jadi apa-apa yang tiba di dalamnya belum dikira."
+    "behindDetailBare": "Anda boleh hantar sekarang — semua yang diperlukan pembayaran sudah kelihatan. Dompet masih membaca blok terbaru, jadi apa-apa yang tiba di dalamnya belum dikira.",
+    "browserReadyLabel": "Terkini",
+    "browserReadyDetail": "Dompet ini dipantau dalam pelayar ini. Untuk menghantar, buka dalam aplikasi atau dengan perkhidmatan awam."
   },
   "desktopServices": {
     "desktopOnly": "Kawalan ini ada dalam aplikasi desktop."

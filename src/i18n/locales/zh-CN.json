@@ -699,7 +699,8 @@
     "nodeNotInstalled": "托管本地节点尚未安装。挖矿和节点页面可自动安装已验证版本。",
     "close": "关闭",
     "stageRestarting": "重启钱包引擎中 · {{s}}秒",
-    "stageLoadingScan": "加载扫描状态…"
+    "stageLoadingScan": "加载扫描状态…",
+    "labelBrowser": "此浏览器"
   },
   "walletSwitcher": {
     "defaultLabel": "钱包 1",
@@ -926,7 +927,8 @@
     "thisComputer": "此电脑",
     "publicService": "公共服务（wallet.zkas.info）",
     "chosenService": "你选择的服务",
-    "intro": "你的钱包将通过<b>{{where}}</b>同步。它能查看你的余额、历史记录和发送去向——永远看不到你的密钥，也无法支付。"
+    "intro": "你的钱包将通过<b>{{where}}</b>同步。它能查看你的余额、历史记录和发送去向——永远看不到你的密钥，也无法支付。",
+    "browser": "你的钱包<b>在此浏览器中</b>运行。任何钱包服务都看不到你的密钥、余额或记录；公开链数据来自 zkas.info。"
   },
   "api": {
     "unauthorized": "钱包服务可达，但拒绝了访问令牌。请从运行它的电脑的“主机”屏幕复制令牌。",
@@ -992,7 +994,9 @@
     "warmingDetail": "余额已是最新。钱包正在准备支付——首次较慢，后续只需数秒。",
     "warmingDetailWaited": "余额已是最新。钱包正在准备支付（已等待{{waited}}）——首次较慢，后续只需数秒。",
     "readyLabel": "就绪",
-    "readyDetail": "余额已是最新。"
+    "readyDetail": "余额已是最新。",
+    "browserReadyLabel": "已是最新",
+    "browserReadyDetail": "正在此浏览器中查看此钱包。如需发送，请在应用或公共服务中打开。"
   },
   "desktopServices": {
     "desktopOnly": "此控件仅在桌面应用可用。"

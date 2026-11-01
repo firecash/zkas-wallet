@@ -20,7 +20,8 @@ class FakeEngine implements EngineLike {
   constructor(public cursor: number, public pagesLeft = 2, public reorgOnce = false) {}
   low() { return `b${this.cursor}`; }
   scanned() { return BigInt(this.cursor); }
-  ingest_segment(_b: Uint8Array, index: bigint, from: string) {
+  ingest_segment(_b: Uint8Array, index: bigint, from: string, to: string) {
+    if (JSON.parse(to).daa !== MANIFEST.segments.find((x) => BigInt(x.index) === index)!.to.daa) throw new Error("wrong segment end");
     const s = MANIFEST.segments.find((x) => BigInt(x.index) === index)!;
     if (from !== this.low() && this.cursor !== s.from.daa) throw new Error("this segment does not continue the wallet's cursor");
     this.cursor = s.to.daa;

@@ -690,7 +690,8 @@
     "managedHere": "Dikelola di sini · gRPC {{port}}",
     "removeAria": "Hapus {{name}}",
     "stageRestarting": "Memulai ulang mesin dompet · {{s}}d",
-    "stageLoadingScan": "Memuat status pindai…"
+    "stageLoadingScan": "Memuat status pindai…",
+    "labelBrowser": "Browser ini"
   },
   "walletSwitcher": {
     "defaultLabel": "Dompet 1",
@@ -926,7 +927,8 @@
     "thisComputer": "komputer ini",
     "publicService": "layanan publik (wallet.zkas.info)",
     "chosenService": "layanan yang Anda pilih",
-    "intro": "Dompet Anda akan menyinkronkan melalui <b>{{where}}</b>. Ini melihat saldo, riwayat, dan tujuan kirim Anda — tidak pernah kunci Anda, dan tidak bisa membelanjakan."
+    "intro": "Dompet Anda akan menyinkronkan melalui <b>{{where}}</b>. Ini melihat saldo, riwayat, dan tujuan kirim Anda — tidak pernah kunci Anda, dan tidak bisa membelanjakan.",
+    "browser": "Dompet Anda berjalan <b>di browser ini</b>. Tak ada layanan yang melihat kunci, saldo, atau riwayat Anda; data rantai publik berasal dari zkas.info."
   },
   "status": {
     "offlineLabel": "Tidak dapat menjangkau jaringan",
@@ -958,7 +960,9 @@
     "behindDetail_one": "Anda bisa kirim sekarang — semua yang dibutuhkan pembayaran sudah terlihat. Dompet masih membaca {{n}} blok terbaru, jadi apapun yang tiba di dalamnya belum terhitung.",
     "behindDetail_other": "Anda bisa kirim sekarang — semua yang dibutuhkan pembayaran sudah terlihat. Dompet masih membaca {{n}} blok terbaru, jadi apapun yang tiba di dalamnya belum terhitung.",
     "behindDetailBare": "Anda bisa kirim sekarang — semua yang dibutuhkan pembayaran sudah terlihat. Dompet masih membaca blok terbaru, jadi apapun yang tiba di dalamnya belum terhitung.",
-    "etaLeft": "{{duration}} lagi"
+    "etaLeft": "{{duration}} lagi",
+    "browserReadyLabel": "Terbaru",
+    "browserReadyDetail": "Dompet ini dipantau di browser ini. Untuk mengirim, buka di aplikasi atau dengan layanan publik."
   },
   "desktopServices": {
     "desktopOnly": "Kontrol ini tersedia di aplikasi desktop."

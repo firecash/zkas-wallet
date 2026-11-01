@@ -2,10 +2,11 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const __wbg_engine_free: (a: number, b: number) => void;
+export const address_of_fvk: (a: number, b: number, c: number) => void;
 export const engine_checkpoint: (a: number, b: number) => void;
 export const engine_history: (a: number, b: number, c: number, d: number) => void;
 export const engine_ingest_page: (a: number, b: number, c: number, d: number) => void;
-export const engine_ingest_segment: (a: number, b: number, c: number, d: number, e: bigint, f: number, g: number) => void;
+export const engine_ingest_segment: (a: number, b: number, c: number, d: number, e: bigint, f: number, g: number, h: number, i: number) => void;
 export const engine_low: (a: number, b: number) => void;
 export const engine_new: (a: number, b: number, c: number, d: number, e: number, f: bigint) => void;
 export const engine_restore: (a: number, b: number, c: number, d: number, e: number) => void;

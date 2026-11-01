@@ -699,7 +699,8 @@
     "nodeNotInstalled": "Beheerde lokale node is nog niet geïnstalleerd. De schermen Mine en Node kunnen de goedgekeurde versie automatisch installeren.",
     "close": "Sluiten",
     "stageRestarting": "Wallet-engine herstarten · {{s}}s",
-    "stageLoadingScan": "Scanstatus laden…"
+    "stageLoadingScan": "Scanstatus laden…",
+    "labelBrowser": "Deze browser"
   },
   "walletSwitcher": {
     "defaultLabel": "Wallet 1",
@@ -861,7 +862,8 @@
     "thisComputer": "deze computer",
     "publicService": "de openbare service (wallet.zkas.info)",
     "chosenService": "de gekozen service",
-    "intro": "Je wallet synchroniseert via <b>{{where}}</b>. Die ziet je saldo, geschiedenis en bestemmingen — nooit je sleutels, en kan niet uitgeven."
+    "intro": "Je wallet synchroniseert via <b>{{where}}</b>. Die ziet je saldo, geschiedenis en bestemmingen — nooit je sleutels, en kan niet uitgeven.",
+    "browser": "Je wallet draait <b>in deze browser</b>. Geen walletdienst ziet je sleutels, saldo of geschiedenis; openbare chaindata komt van zkas.info."
   },
   "onboard": {
     "errHasKey": "Dit apparaat heeft al een portemonneesleutel. Herstel die portemonnee in plaats daarvan — of gebruik de portemonnee-wisselaar met 'Andere portemonnee toevoegen' zodat niets wordt overschreven.",
@@ -992,7 +994,9 @@
     "warmingDetail": "Je saldo is actueel. De portemonnee maakt zich klaar om te betalen — de eerste betaling duurt langer, latere duren seconden.",
     "warmingDetailWaited": "Je saldo is actueel. De portemonnee maakt zich klaar om te betalen ({{waited}} tot nu) — de eerste betaling duurt langer, latere duren seconden.",
     "readyLabel": "Klaar",
-    "readyDetail": "Je saldo is actueel."
+    "readyDetail": "Je saldo is actueel.",
+    "browserReadyLabel": "Bijgewerkt",
+    "browserReadyDetail": "Deze wallet wordt in deze browser gevolgd. Open hem in de app of via de openbare dienst om te verzenden."
   },
   "desktopServices": {
     "desktopOnly": "Dit onderdeel is beschikbaar in de desktop-app."

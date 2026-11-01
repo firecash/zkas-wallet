@@ -8,6 +8,7 @@ export function verify_manifest(json: string): string;
  * Does a downloaded segment match its manifest entry (size and SHA-256)?
  */
 export function segment_matches(bytes: Uint8Array, sha256_hex: string, size: bigint): boolean;
+export function address_of_fvk(fvk_hex: string): string;
 /**
  * Configuration for the WASM32 bindings runtime interface.
  * @see {@link IWASM32BindingsConfig}
@@ -219,7 +220,7 @@ export class Engine {
   /**
    * See [`Engine::segment`].
    */
-  ingest_segment(bytes: Uint8Array, index: bigint, from_block_hex: string): string;
+  ingest_segment(bytes: Uint8Array, index: bigint, from_block_hex: string, to_boundary_json: string): string;
   low(): string;
   /**
    * A new wallet watching `fvk_hex`, starting at a manifest segment boundary (`from` of the
@@ -325,10 +326,11 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_engine_free: (a: number, b: number) => void;
+  readonly address_of_fvk: (a: number, b: number, c: number) => void;
   readonly engine_checkpoint: (a: number, b: number) => void;
   readonly engine_history: (a: number, b: number, c: number, d: number) => void;
   readonly engine_ingest_page: (a: number, b: number, c: number, d: number) => void;
-  readonly engine_ingest_segment: (a: number, b: number, c: number, d: number, e: bigint, f: number, g: number) => void;
+  readonly engine_ingest_segment: (a: number, b: number, c: number, d: number, e: bigint, f: number, g: number, h: number, i: number) => void;
   readonly engine_low: (a: number, b: number) => void;
   readonly engine_new: (a: number, b: number, c: number, d: number, e: number, f: bigint) => void;
   readonly engine_restore: (a: number, b: number, c: number, d: number, e: number) => void;

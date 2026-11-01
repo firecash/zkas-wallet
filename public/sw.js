@@ -14,7 +14,7 @@ const CACHE = "zkas-wallet-shell-__SW_BUILD_VERSION__";
 // carries its own copy as a data URI (nothing to fetch on first paint); this
 // entry is for the React BootLoader, so a reopened wallet with no network still
 // shows the brand instead of a broken image.
-const SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/icon-512-maskable.png", "/apple-touch-icon.png", "/zkas-mark.png"];
+const SHELL = ["/", "/boot-probe.js", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/icon-512-maskable.png", "/apple-touch-icon.png", "/zkas-mark.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));

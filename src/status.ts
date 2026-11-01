@@ -24,6 +24,9 @@
 import i18n from "./i18n";
 
 export interface StatusInput {
+  /// The wallet runs in this browser ("Run in this browser"): it syncs and watches, and cannot
+  /// send yet — so "about to be able to pay" is never the honest state there.
+  browserMode?: boolean;
   /// Daemon reachable and answering at all.
   online: boolean;
   synced: boolean;
@@ -331,6 +334,20 @@ export function walletStatus(s: StatusInput): WalletStatusView {
   // It is a real state with a real cause (the wallet's mirror of the chain tree is not
   // valid yet), it resolves on its own in seconds, and the only honest thing to do is
   // name it instead of claiming readiness the daemon will not honour.
+  if (s.browserMode) {
+    return {
+      phase: "ready",
+      label: i18n.t("status.browserReadyLabel"),
+      detail: i18n.t("status.browserReadyDetail"),
+      pct: null,
+      pctFine: null,
+      progress: null,
+      eta: null,
+      tone: "ok",
+      balanceIsFinal: true,
+      canSpend: false,
+    };
+  }
   if (!walletCanSpend(s)) {
     return {
       phase: "almost-ready",

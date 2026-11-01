@@ -39,7 +39,7 @@ import { byNewest, isConsolidationRow, usableTime } from "./history";
 import { tickedConfirmations } from "./confirmations";
 import { looksLikeAddress, networkOf, parsePaymentUri, pasteText, sanitizeAmountInput, shortAddr, trimTrailingZeros } from "./lib/utils";
 import { readLocal, writeLocal } from "./lib/safestore";
-import { birthdayAheadOfTip } from "./lib/birthday";
+import { birthdayAheadOfTip, birthdayFromDate } from "./lib/birthday";
 import { skipPollWhileFailing } from "./lib/pollbackoff";
 import { MEMO_MAX_BYTES, clampUtf8Bytes } from "./lib/safetext";
 import { SEED_REQUIRED, getDeviceSeed, setDeviceSeed, resolveDeviceSeed, deviceCanSign, isSecretShaped, isPhraseSecret, keyForWallet, bindResolvedKey, findOrphanedSeed, birthdayOfToken, addressBirthday, knownBirthday, rememberBirthday, walletBirthday, networkOfAddress, secretOwnsAddress, phraseAccountFor, markBackupPending, backupPending, clearBackupPending } from "./lib/deviceseed";
@@ -108,7 +108,7 @@ import { captureScanReceipt, adoptScanReceipt, haveScanReceipt } from "./scanrec
 import { rotatePublicNode, setEmbeddedBackupNode, type FastSync } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { RunInBrowserOption } from "./RunInBrowserOption";
-import { setBrowserModeChosen } from "./webengine";
+import { browserModeChosen, setBrowserModeChosen } from "./webengine";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
 import { adoptViewKey } from "./lib/watchadopt";
@@ -2358,7 +2358,7 @@ function ConnectionButton() {
   });
   const label = desktop
     ? onion ? t("connectionButton.labelTor") : hosted ? t("connectionButton.labelPublicService") : cfg?.mode === "local" ? t("connectionButton.labelMyNode") : cfg?.mode === "custom" ? currentProfile?.name ?? t("connectionButton.labelMyNode") : t("connectionButton.labelThisComputer")
-    : embeddedChosen() ? t("connectionButton.labelOnPhone") : onion ? t("connectionButton.labelTor") : hosted ? t("connectionButton.labelWeb") : currentProfile?.name ?? t("connectionButton.labelMyWalletd");
+    : embeddedChosen() ? t("connectionButton.labelOnPhone") : browserModeChosen() ? t("connectionButton.labelBrowser") : onion ? t("connectionButton.labelTor") : hosted ? t("connectionButton.labelWeb") : currentProfile?.name ?? t("connectionButton.labelMyWalletd");
 
   // No page reload after a switch: `setNodeSource` has already re-pointed the
   // app at the restarted engine, and the 1 s status poll reads the base afresh on
@@ -2474,8 +2474,8 @@ function ConnectionButton() {
               {!embeddedAvailable() && !desktop && (
                 <RunInBrowserOption busy={busy !== null} onStart={() => { setBrowserModeChosen(true); location.reload(); }} />
               )}
-              <button className={`connection-option ${!embeddedChosen() && hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
-                <span><b>{t("connectionButton.publicService")}</b><small>{desktop ? t("connectionButton.publicDescDesktop") : t("connectionButton.publicDescMobile")}</small></span><span>{busy === "hosted" ? t("connectionButton.checking") : hosted && !onion ? t("connectionButton.connected") : t("connectionButton.use")}</span>
+              <button className={`connection-option ${!embeddedChosen() && !browserModeChosen() && hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
+                <span><b>{t("connectionButton.publicService")}</b><small>{desktop ? t("connectionButton.publicDescDesktop") : t("connectionButton.publicDescMobile")}</small></span><span>{busy === "hosted" ? t("connectionButton.checking") : hosted && !onion && !browserModeChosen() ? t("connectionButton.connected") : t("connectionButton.use")}</span>
               </button>
               {desktop && (
                 /* The embedded engine. It has to scan the chain on THIS computer,
@@ -2834,10 +2834,7 @@ function RecoverHistoryDialog({
     // Only while "I know roughly when" is selected: the height is pre-filled from
     // `known`, so "Not sure" must not silently send it as the start of the scan.
     if (when === "date" && height.trim()) return Math.max(0, Math.floor(Number(height.trim()))) || undefined;
-    if (when === "date" && createdDate && daaScore) {
-      const ageSec = Math.floor((Date.now() - new Date(createdDate + "T00:00:00").getTime()) / 1000);
-      if (ageSec > 0) return Math.max(0, Math.floor(daaScore - ageSec - 2 * 86400));
-    }
+    if (when === "date" && createdDate) return birthdayFromDate(createdDate, daaScore) || undefined;
     return undefined;
   };
   const from = birthday();
@@ -3358,6 +3355,7 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
   // spend-ready — from the device that holds the seed. This one does not, so the
   // card would offer a figure that Send is not even there to accept.
   const view = walletStatus({
+    browserMode: browserModeChosen(),
     online: true, // this card only renders once a poll has produced a status
     synced: status.synced,
     spendReady: isWatchOnly() ? false : status.spend_ready,
@@ -4129,10 +4127,7 @@ export function RecoverWallet({ onRecovered, onStartOver }: { onRecovered: () =>
   const birthdayToUse = (): number => {
     if (known > 0) return known;
     if (height.trim()) return Math.max(0, Math.floor(Number(height.trim()))) || 0;
-    if (createdDate && cached?.daa_score) {
-      const ageSec = Math.floor((Date.now() - new Date(createdDate + "T00:00:00").getTime()) / 1000);
-      if (ageSec > 0) return Math.max(0, Math.floor(cached.daa_score - ageSec - 2 * 86400));
-    }
+    if (createdDate) return birthdayFromDate(createdDate, cached?.daa_score ?? 0);
     return 0;
   };
   const recover = async () => {
@@ -4333,7 +4328,11 @@ function SyncDestination() {
             and the chip drops below it. This is the first screen a new user
             sees. */}
         <span className="muted small" style={{ flex: "1 1 260px", minWidth: 0 }}>
-          <Trans i18nKey="syncDestination.intro" values={{ where }} components={{ b: <b /> }} />
+          {browserModeChosen() ? (
+            <Trans i18nKey="syncDestination.browser" components={{ b: <b /> }} />
+          ) : (
+            <Trans i18nKey="syncDestination.intro" values={{ where }} components={{ b: <b /> }} />
+          )}
         </span>
         <ConnectionButton />
       </div>
@@ -4510,10 +4509,7 @@ function Onboard({
   const birthdayAhead = (): number | null => birthdayAheadOfTip(birthday, knownTip);
   const birthdayFromInputs = (): number => {
     if (birthday.trim()) return Number(birthday.trim()); // exact height wins
-    if (createdDate && status?.daa_score) {
-      const ageSec = Math.floor((Date.now() - new Date(createdDate + "T00:00:00").getTime()) / 1000);
-      if (ageSec > 0) return Math.max(0, Math.floor(status.daa_score - ageSec - 2 * 86400));
-    }
+    if (createdDate) return birthdayFromDate(createdDate, status?.daa_score ?? 0);
     return 0;
   };
   const doImport = async () => {
@@ -7754,7 +7750,9 @@ const History = memo(function History({
               ? t("history.recovering")
               : t("history.empty")}
         </p>
-        {chain !== null && !recovering && (
+        {/* A browser-mode wallet already holds its whole history since its birthday, and the
+            rescan this asks a wallet service for is exactly what that mode never contacts. */}
+        {chain !== null && !recovering && !browserModeChosen() && (
           <button className="btn ghost small" onClick={() => setAskRecover(true)} disabled={busy}>
             {busy ? t("history.starting") : t("history.recoverFull")}
           </button>
@@ -8117,6 +8115,7 @@ function AutoConsolidationCard() {
 /// Short state for the Network privacy row's collapsed summary.
 function networkPrivacyLabel(): string {
   if (embeddedChosen()) return i18n.t("networkPrivacyLabel.phone");
+  if (browserModeChosen()) return i18n.t("connectionButton.labelBrowser");
   const base = getBase();
   if (isOnionAddress(base)) return i18n.t("networkPrivacyLabel.tor");
   if (!base || /wallet\.zkas\.info/i.test(base) || base.endsWith("/daemon")) return i18n.t("networkPrivacyLabel.public");
@@ -8359,8 +8358,9 @@ function NetworkPrivacyCard() {
   const { t } = useTranslation();
   const base = getBase();
   const onion = isOnionAddress(base);
-  const current: "phone" | "public" | "tor" | "custom" =
+  const current: "phone" | "browser" | "public" | "tor" | "custom" =
     embeddedChosen() ? "phone"
+    : browserModeChosen() ? "browser"
     : onion ? "tor" : !base || /wallet\.zkas\.info/i.test(base) || base.endsWith("/daemon") ? "public" : "custom";
 
   const [busy, setBusy] = useState<null | "phone" | "public" | "tor" | "custom">(null);

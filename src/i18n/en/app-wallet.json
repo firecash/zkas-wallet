@@ -159,7 +159,8 @@
     "thisComputer": "this computer",
     "publicService": "the public service (wallet.zkas.info)",
     "chosenService": "the service you chose",
-    "intro": "Your wallet will sync through <b>{{where}}</b>. It sees your balance, your history and where you send — never your keys, and it cannot spend."
+    "intro": "Your wallet will sync through <b>{{where}}</b>. It sees your balance, your history and where you send — never your keys, and it cannot spend.",
+    "browser": "Your wallet runs <b>in this browser</b>. No wallet service sees your keys, balance or history; public chain data comes from zkas.info."
   },
   "onboard": {
     "errHasKey": "This device already holds a wallet key. Restore that wallet instead — or use the wallet switcher's 'Add another wallet' so nothing is overwritten.",

@@ -690,7 +690,8 @@
     "managedHere": "Géré ici · gRPC {{port}}",
     "removeAria": "Retirer {{name}}",
     "stageRestarting": "Redémarrage du moteur · {{s}}s",
-    "stageLoadingScan": "Chargement de l’état de scan…"
+    "stageLoadingScan": "Chargement de l’état de scan…",
+    "labelBrowser": "Ce navigateur"
   },
   "walletSwitcher": {
     "defaultLabel": "Portefeuille 1",
@@ -834,7 +835,8 @@
     "thisComputer": "cet ordinateur",
     "publicService": "le service public (wallet.zkas.info)",
     "chosenService": "le service choisi",
-    "intro": "Votre portefeuille se synchronisera via <b>{{where}}</b>. Il voit votre solde, votre historique et vos envois — jamais vos clés, et il ne peut pas dépenser."
+    "intro": "Votre portefeuille se synchronisera via <b>{{where}}</b>. Il voit votre solde, votre historique et vos envois — jamais vos clés, et il ne peut pas dépenser.",
+    "browser": "Votre portefeuille tourne <b>dans ce navigateur</b>. Aucun service ne voit vos clés, votre solde ni votre historique ; les données publiques de la chaîne viennent de zkas.info."
   },
   "onboard": {
     "errHasKey": "Cet appareil contient déjà une clé de portefeuille. Restaurez ce portefeuille — ou utilisez « Ajouter un portefeuille » pour ne rien écraser.",
@@ -958,7 +960,9 @@
     "behindDetail_one": "Vous pouvez envoyer maintenant — tout ce qu'il faut est déjà visible. Le portefeuille lit encore le {{n}} bloc le plus récent, donc ce qui y est arrivé n'est pas encore compté.",
     "behindDetail_other": "Vous pouvez envoyer maintenant — tout ce qu'il faut est déjà visible. Le portefeuille lit encore les {{n}} blocs les plus récents, donc ce qui y est arrivé n'est pas encore compté.",
     "behindDetailBare": "Vous pouvez envoyer maintenant — tout ce qu'il faut est déjà visible. Le portefeuille lit encore les derniers blocs, ce qui y est arrivé n'est pas encore compté.",
-    "etaLeft": "{{duration}} restante"
+    "etaLeft": "{{duration}} restante",
+    "browserReadyLabel": "À jour",
+    "browserReadyDetail": "Portefeuille suivi dans ce navigateur. Pour envoyer, ouvrez-le dans l’app ou avec le service public."
   },
   "desktopServices": {
     "desktopOnly": "Cette option est disponible dans l'appli de bureau."

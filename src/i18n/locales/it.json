@@ -699,7 +699,8 @@
     "nodeNotInstalled": "Il nodo locale gestito non è installato. Le schermate Mine e Node possono installare la release verificata automaticamente.",
     "close": "Chiudi",
     "stageRestarting": "Riavvio motore portafoglio · {{s}}s",
-    "stageLoadingScan": "Caricamento stato scansione…"
+    "stageLoadingScan": "Caricamento stato scansione…",
+    "labelBrowser": "Questo browser"
   },
   "walletSwitcher": {
     "defaultLabel": "Portafoglio 1",
@@ -861,7 +862,8 @@
     "thisComputer": "questo computer",
     "publicService": "il servizio pubblico (wallet.zkas.info)",
     "chosenService": "il servizio scelto",
-    "intro": "Il tuo portafoglio si sincronizzerà tramite <b>{{where}}</b>. Vede il tuo saldo, la cronologia e dove invii — mai le tue chiavi, e non può spendere."
+    "intro": "Il tuo portafoglio si sincronizzerà tramite <b>{{where}}</b>. Vede il tuo saldo, la cronologia e dove invii — mai le tue chiavi, e non può spendere.",
+    "browser": "Il tuo wallet funziona <b>in questo browser</b>. Nessun servizio vede le tue chiavi, il saldo o la cronologia; i dati pubblici della catena arrivano da zkas.info."
   },
   "onboard": {
     "errHasKey": "Questo dispositivo ha già una chiave. Ripristina quel portafoglio o usa 'Aggiungi portafoglio' per non sovrascrivere.",
@@ -958,7 +960,9 @@
     "behindDetail_one": "Puoi già inviare: tutto il necessario è visibile. Il wallet sta ancora leggendo il nuovo blocco {{n}}, quindi quanto arrivato lì non è ancora conteggiato.",
     "behindDetail_other": "Puoi già inviare: tutto il necessario è visibile. Il wallet sta ancora leggendo i nuovi {{n}} blocchi, quindi quanto arrivato lì non è ancora conteggiato.",
     "behindDetailBare": "Puoi già inviare: tutto il necessario è visibile. Il wallet sta ancora leggendo i nuovi blocchi, quindi quanto arrivato lì non è ancora conteggiato.",
-    "etaLeft": "{{duration}} rimanenti"
+    "etaLeft": "{{duration}} rimanenti",
+    "browserReadyLabel": "Aggiornato",
+    "browserReadyDetail": "Wallet osservato in questo browser. Per inviare, aprilo nell’app o con il servizio pubblico."
   },
   "desktopServices": {
     "desktopOnly": "Questo controllo è disponibile nell'app desktop."

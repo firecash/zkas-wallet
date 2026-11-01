@@ -699,7 +699,8 @@
     "nodeNotInstalled": "El nodo local gestionado no está instalado. Las pantallas Minería y Nodo pueden instalar la versión verificada automáticamente.",
     "close": "Cerrar",
     "stageRestarting": "Reiniciando motor de billetera · {{s}}s",
-    "stageLoadingScan": "Cargando estado de escaneo…"
+    "stageLoadingScan": "Cargando estado de escaneo…",
+    "labelBrowser": "Este navegador"
   },
   "walletSwitcher": {
     "defaultLabel": "Cartera 1",
@@ -899,7 +900,8 @@
     "thisComputer": "esta computadora",
     "publicService": "el servicio público (wallet.zkas.info)",
     "chosenService": "el servicio elegido",
-    "intro": "Tu billetera se sincronizará a través de <b>{{where}}</b>. Ve tu saldo, tu historial y a dónde envías — nunca tus claves, y no puede gastar."
+    "intro": "Tu billetera se sincronizará a través de <b>{{where}}</b>. Ve tu saldo, tu historial y a dónde envías — nunca tus claves, y no puede gastar.",
+    "browser": "Tu billetera funciona <b>en este navegador</b>. Ningún servicio ve tus claves, tu saldo ni tu historial; los datos públicos de la cadena vienen de zkas.info."
   },
   "addAccountWallet": {
     "noPhrase": "Esta billetera no tiene frase de recuperación, así que no se puede derivar una cuenta. Usa “Agregar billetera aparte” — obtiene su propia frase de recuperación, que debes respaldar.",
@@ -958,7 +960,9 @@
     "behindDetail_one": "Ya puedes enviar — todo lo necesario está visible. La billetera aún lee el último bloque ({{n}}), así que lo que llegó en él aún no se cuenta.",
     "behindDetail_other": "Ya puedes enviar — todo lo necesario está visible. La billetera aún lee los {{n}} bloques más nuevos, así que lo que llegó en ellos aún no se cuenta.",
     "behindDetailBare": "Ya puedes enviar — todo lo necesario está visible. La billetera aún lee los bloques más nuevos, así que lo que llegó en ellos aún no se cuenta.",
-    "etaLeft": "{{duration}} restante"
+    "etaLeft": "{{duration}} restante",
+    "browserReadyLabel": "Al día",
+    "browserReadyDetail": "Viendo esta billetera en este navegador. Para enviar, ábrela en la app o con el servicio público."
   },
   "desktopServices": {
     "desktopOnly": "Este control está disponible en la app de escritorio."

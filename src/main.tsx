@@ -2,21 +2,39 @@
 // from the accessor itself, and one unguarded read anywhere took the whole
 // wallet down with an unrecoverable error screen.
 import "./lib/storage-shim";
-import { setBrowserWalletResolver } from "./webengine";
-import { resolveDeviceSeed, knownBirthday } from "./lib/deviceseed";
+import { browserBirthday, browserRegistered, setBrowserWalletResolver } from "./webengine";
+import { resolveDeviceSeed, knownBirthday, findOrphanedSeed, setDeviceSeed } from "./lib/deviceseed";
 import { addressFromSeed } from "./signer";
 
 // "Run in this browser": how the in-page engine finds the active wallet — the same seed the send
-// screen resolves, its address derived here, and the birthday this device recorded for it.
+// screen resolves, its address derived here (once per seed: this runs on every status poll), and
+// the EARLIEST birthday recorded for it, so neither record can make the scan skip history.
+const addressBySeed = new Map<string, string>();
 setBrowserWalletResolver(async () => {
   let seedHex: string;
   try {
     seedHex = await resolveDeviceSeed();
   } catch {
-    return null; // no wallet on this device yet; the engine starts once there is one
+    // A seed filed under another token (the browser-mode token bug above, or a stale token) is
+    // found by the address this browser last showed and moved to the current token — the same
+    // repair the hosted path runs. Otherwise there is no wallet here yet: the welcome screen.
+    const addr = loadStatusCache()?.address;
+    const orphan = addr ? await findOrphanedSeed(addr).catch(() => null) : null;
+    if (!orphan) return null;
+    setDeviceSeed(orphan);
+    seedHex = orphan;
   }
-  const address = await addressFromSeed(seedHex, "mainnet");
-  return { seedHex, address, birthday: knownBirthday(address) };
+  let address = addressBySeed.get(seedHex);
+  if (!address) {
+    address = await addressFromSeed(seedHex, "mainnet");
+    addressBySeed.set(seedHex, address);
+  }
+  // Not registered here yet (mid-create, or an existing wallet just switched to this mode): no
+  // wallet for now, as a service reports one it was never told about. The app then registers it
+  // (its own create step, or its re-register of a known wallet with the known birthday).
+  if (!browserRegistered(address)) return null;
+  const known = [knownBirthday(address), browserBirthday(address)].filter((b) => b > 0);
+  return { seedHex, address, birthday: known.length ? Math.min(...known) : 0 };
 });
 // SECOND: the diagnostic log, so the boot sequence below is on the record. Local only;
 // everything it keeps is redacted (src/diag/redact.ts). See src/diag/instrument.ts.

@@ -40,28 +40,43 @@ self.onmessage = async (ev: MessageEvent<StartMessage | { type: "stop" } | { typ
   stopped = false;
   ready ??= init({ module_or_path: wasmUrl });
   await ready;
-  try {
-    await runSync({
-      fetch: (u) => fetch(u),
-      verifyManifest: verify_manifest,
-      segmentMatches: segment_matches,
-      create: (boundary, birthday) => new Engine(msg.fvkHex, boundary, birthday),
-      restore: (bytes) => Engine.restore(msg.fvkHex, bytes),
-      load: () => loadCheckpoint(msg.id),
-      save: (b) => saveCheckpoint(msg.id, b),
-      files: msg.files,
-      gateway: msg.gateway,
-      birthday: msg.birthday,
-      onStatus: post,
-      onEngine: (e) => {
-        live = e;
-      },
-      shouldStop: () => stopped,
-    });
-  } catch (e) {
-    // A tree that disagrees with the node is never kept: the next start rebuilds from the
-    // birthday. Any other failure keeps the checkpoint and is reported for a retry.
-    if (String(e).includes("tree differs")) await deleteCheckpoint(msg.id);
-    post({ phase: "error", scanned: 0, tip: 0, birthday: msg.birthday, balanceSompi: "0", notes: 0, verified: null, error: String(e) });
+  // Run until stopped. A failed run — a mirror or the gateway unreachable for a moment, the
+  // gateway answering "busy" — is retried with backoff and resumes from the saved checkpoint; it
+  // used to end syncing for the whole session. The last good numbers stay on screen meanwhile:
+  // an error report with a zero balance read as "your money is gone".
+  let last: BrowserSyncStatus | null = null;
+  let backoff = 2_000;
+  while (!stopped) {
+    try {
+      await runSync({
+        fetch: (u) => fetch(u),
+        verifyManifest: verify_manifest,
+        segmentMatches: segment_matches,
+        create: (boundary, birthday) => new Engine(msg.fvkHex, boundary, birthday),
+        restore: (bytes) => Engine.restore(msg.fvkHex, bytes),
+        load: () => loadCheckpoint(msg.id),
+        save: (b) => saveCheckpoint(msg.id, b),
+        files: msg.files,
+        gateway: msg.gateway,
+        birthday: msg.birthday,
+        onStatus: (st) => {
+          last = st;
+          backoff = 2_000;
+          post(st);
+        },
+        onEngine: (e) => {
+          live = e;
+        },
+        shouldStop: () => stopped,
+      });
+      return; // only a stop ends a run cleanly
+    } catch (e) {
+      // A tree that disagrees with the node is never kept: the retry rebuilds from the birthday.
+      if (String(e).includes("tree differs")) await deleteCheckpoint(msg.id);
+      const prev: BrowserSyncStatus = last ?? { phase: "starting", scanned: 0, tip: 0, birthday: msg.birthday, balanceSompi: "0", notes: 0, verified: null };
+      post({ ...prev, phase: "error", error: String(e) });
+      await new Promise((r) => setTimeout(r, backoff));
+      backoff = Math.min(backoff * 2, 60_000);
+    }
   }
 };

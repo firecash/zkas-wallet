@@ -690,7 +690,8 @@
     "managedHere": "Inasimamiwa hapa · gRPC {{port}}",
     "removeAria": "Ondoa {{name}}",
     "stageRestarting": "Inaanzisha upya injini ya pochi · {{s}}s",
-    "stageLoadingScan": "Inapakia hali ya uchunguzi…"
+    "stageLoadingScan": "Inapakia hali ya uchunguzi…",
+    "labelBrowser": "Kivinjari hiki"
   },
   "walletSwitcher": {
     "defaultLabel": "Pochi 1",
@@ -899,7 +900,8 @@
     "thisComputer": "kompyuta hii",
     "publicService": "huduma ya umma (wallet.zkas.info)",
     "chosenService": "huduma uliyochagua",
-    "intro": "Pochi yako itasawazisha kupitia <b>{{where}}</b>. Inaona salio lako, historia yako na unakotuma — kamwe haioni funguo zako, na haiwezi kutumia."
+    "intro": "Pochi yako itasawazisha kupitia <b>{{where}}</b>. Inaona salio lako, historia yako na unakotuma — kamwe haioni funguo zako, na haiwezi kutumia.",
+    "browser": "Pochi yako inaendeshwa <b>kwenye kivinjari hiki</b>. Hakuna huduma inayoona funguo, salio au historia yako; data ya umma ya mnyororo inatoka zkas.info."
   },
   "addAccountWallet": {
     "noPhrase": "Mkoba huu hauna maneno ya kurejesha, kwa hivyo akaunti haiwezi kutolewa kutoka kwake. Tumia \"Ongeza mkoba tofauti\" — unapata maneno yake ya kurejesha, ambayo lazima uyahifadhi rudufu.",
@@ -958,7 +960,9 @@
     "behindDetail_one": "Unaweza kutuma sasa — kila kitu kinachohitajika kwa malipo kiko mbele. Mkoba bado unasoma kizuizi kipya cha {{n}}, hivyo chochote kilichofika ndani yake hakijahesabiwa bado.",
     "behindDetail_other": "Unaweza kutuma sasa — kila kitu kinachohitajika kwa malipo kiko mbele. Mkoba bado unasoma vizuizi vipya {{n}}, hivyo chochote kilichofika ndani yake hakijahesabiwa bado.",
     "behindDetailBare": "Unaweza kutuma sasa — kila kitu kinachohitajika kwa malipo kiko mbele. Mkoba bado unasoma vizuizi vipya, hivyo chochote kilichofika ndani yake hakijahesabiwa bado.",
-    "etaLeft": "{{duration}} imesalia"
+    "etaLeft": "{{duration}} imesalia",
+    "browserReadyLabel": "Imesasishwa",
+    "browserReadyDetail": "Pochi hii inafuatiliwa kwenye kivinjari hiki. Ili kutuma, ifungue kwenye programu au kwa huduma ya umma."
   },
   "desktopServices": {
     "desktopOnly": "Kidhibiti hiki kinapatikana kwenye programu ya kompyuta."
