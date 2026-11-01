@@ -303,20 +303,29 @@ export async function runSync(d: SyncDeps): Promise<void> {
     // At the tip: the matured anchor (the node's frontier well below the tip, so a spend rooted
     // there is final when mined: the consensus depth is 600 blue, ~1000 DAA leaves room) and the
     // mempool (an incoming payment shows a second after it is sent). Both best-effort.
-    if (tip > ANCHOR_DEPTH_DAA) {
-      try {
-        const a = await (await get(`${d.gateway}/tree?below=${tip - ANCHOR_DEPTH_DAA}`)).json();
-        if (typeof a?.block === "string") eng.set_anchor?.(JSON.stringify(a));
-      } catch {
-        /* the previous anchor stands */
-      }
-    }
-    try {
-      const m = await (await get(`${d.gateway}/mempool`)).json();
-      if (Array.isArray(m)) eng.set_mempool?.(JSON.stringify(m));
-    } catch {
-      /* no mempool preview this round */
-    }
+    // In parallel: through a proxy each request costs a round trip (~1 s measured on
+    // wallet.zkas.info), and the two do not depend on each other.
+    const live = eng;
+    await Promise.all([
+      tip > ANCHOR_DEPTH_DAA
+        ? get(`${d.gateway}/tree?below=${tip - ANCHOR_DEPTH_DAA}`)
+            .then((r) => r.json())
+            .then((a) => {
+              if (typeof a?.block === "string") live.set_anchor?.(JSON.stringify(a));
+            })
+            .catch(() => {
+              /* the previous anchor stands */
+            })
+        : Promise.resolve(),
+      get(`${d.gateway}/mempool`)
+        .then((r) => r.json())
+        .then((m) => {
+          if (Array.isArray(m)) live.set_mempool?.(JSON.stringify(m));
+        })
+        .catch(() => {
+          /* no mempool preview this round */
+        }),
+    ]);
     report("synced");
     everSynced = true;
     await sleep((d.pollSecs ?? 5) * 1000);

@@ -96,6 +96,27 @@ describe("browser sync loop", () => {
     expect(t.statuses.filter((x) => x === "synced").length).toBe(3);
   });
 
+  it("asks for the anchor and the mempool at the same time", async () => {
+    // Through a proxy each request is a round trip; one after the other cost ~1 s a round.
+    const t = deps();
+    const fetch0 = t.d.fetch;
+    let inFlight = 0;
+    let overlap = 0;
+    t.d.fetch = (async (u: string) => {
+      if (u.endsWith("/tip")) return new Response(JSON.stringify({ virtual_daa_score: 50_000 }));
+      if (u.includes("/tree?below=") || u.endsWith("/mempool")) {
+        inFlight++;
+        overlap = Math.max(overlap, inFlight);
+        await new Promise((r) => setTimeout(r, 20));
+        inFlight--;
+        return new Response(u.endsWith("/mempool") ? "[]" : JSON.stringify({ block: "b1", size: 1, leaf: "l", ommers: [] }));
+      }
+      return fetch0(u);
+    }) as typeof fetch;
+    await runSync(t.d);
+    expect(overlap).toBe(2);
+  });
+
   it("saves during a long gateway catch-up, not only at the tip", async () => {
     // 5 gateway pages at 20 s each: a reload part-way must resume near there, not at the files' end.
     const t = deps({ create: () => new FakeEngine(0, 5) });
