@@ -963,7 +963,14 @@
     "behindDetailBare": "Unaweza kutuma sasa — kila kitu kinachohitajika kwa malipo kiko mbele. Mkoba bado unasoma vizuizi vipya, hivyo chochote kilichofika ndani yake hakijahesabiwa bado.",
     "etaLeft": "{{duration}} imesalia",
     "browserReadyLabel": "Imesasishwa",
-    "browserReadyDetail": "Salio lako limesasishwa. Sarafu unazopokea zinaweza kutumika hapa takriban dakika 10 baada ya kuchimbwa."
+    "browserReadyDetail": "Salio lako limesasishwa. Sarafu unazopokea zinaweza kutumika hapa takriban dakika 10 baada ya kuchimbwa.",
+    "loadingReason": {
+      "node_slow": "Nodi inajibu polepole. Pochi inahifadhi maendeleo na itajaribu tena hivi karibuni.",
+      "node_behind": "Nodi bado haijafika mahali pochi hii ilipolandanishwa mwisho. Itaendelea ikifika.",
+      "node_history_short": "Nodi hii haina historia ya pochi hii. Unganisha kwa nodi yenye historia kamili au subiri.",
+      "node_unverifiable": "Nodi bado haiwezi kuthibitisha nafasi iliyohifadhiwa. Maendeleo yamehifadhiwa; jaribio jingine hivi karibuni.",
+      "checkpoint_io": "Maendeleo yaliyohifadhiwa hayakusomeka kwenye kifaa hiki. Jaribio jingine hivi karibuni."
+    }
   },
   "desktopServices": {
     "desktopOnly": "Kidhibiti hiki kinapatikana kwenye programu ya kompyuta."

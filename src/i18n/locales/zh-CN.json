@@ -997,7 +997,14 @@
     "readyLabel": "就绪",
     "readyDetail": "余额已是最新。",
     "browserReadyLabel": "已是最新",
-    "browserReadyDetail": "余额已是最新。收到的币在被打包约 10 分钟后即可在此花费。"
+    "browserReadyDetail": "余额已是最新。收到的币在被打包约 10 分钟后即可在此花费。",
+    "loadingReason": {
+      "node_slow": "节点响应缓慢。钱包保留进度，稍后重试。",
+      "node_behind": "节点尚未到达此钱包上次同步的位置，到达后继续。",
+      "node_history_short": "此节点没有该钱包的历史。请连接具有完整历史的节点，或等待其补全。",
+      "node_unverifiable": "节点暂时无法确认已保存的位置。进度已保留，稍后重试。",
+      "checkpoint_io": "无法在此设备上读取已保存的进度，稍后重试。"
+    }
   },
   "desktopServices": {
     "desktopOnly": "此控件仅在桌面应用可用。"

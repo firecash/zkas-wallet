@@ -3365,6 +3365,7 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
     scanFrom,
     warming: !!status.warming,
     loading: !!status.loading,
+    loadingReason: status.loading_reason ?? null,
     nodeConnected: status.node_connected,
     blocksBehind: status.blocks_behind,
     haveConfirmedBalance: !!snap,

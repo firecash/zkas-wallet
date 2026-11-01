@@ -963,7 +963,14 @@
     "behindDetailBare": "Ya puedes enviar — todo lo necesario está visible. La billetera aún lee los bloques más nuevos, así que lo que llegó en ellos aún no se cuenta.",
     "etaLeft": "{{duration}} restante",
     "browserReadyLabel": "Al día",
-    "browserReadyDetail": "Tu saldo está al día. Las monedas recibidas se pueden gastar aquí unos 10 minutos después de minarse."
+    "browserReadyDetail": "Tu saldo está al día. Las monedas recibidas se pueden gastar aquí unos 10 minutos después de minarse.",
+    "loadingReason": {
+      "node_slow": "El nodo responde lento. La billetera conserva su progreso e intenta de nuevo en breve.",
+      "node_behind": "El nodo aún no llega a donde esta billetera se sincronizó por última vez. Seguirá cuando llegue.",
+      "node_history_short": "Este nodo no tiene el historial de esta billetera. Conéctate a un nodo con historial completo o espera.",
+      "node_unverifiable": "El nodo aún no puede confirmar la posición guardada. Se conserva el progreso; reintenta en breve.",
+      "checkpoint_io": "No se pudo leer el progreso guardado en este dispositivo. Reintenta en breve."
+    }
   },
   "desktopServices": {
     "desktopOnly": "Este control está disponible en la app de escritorio."

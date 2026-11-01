@@ -955,7 +955,14 @@
     "behindDetailBare": "Você já pode enviar — tudo que um pagamento precisa já está visível. A carteira ainda está lendo os blocos mais novos, então o que chegou neles ainda não foi contado.",
     "etaLeft": "{{duration}} restantes",
     "browserReadyLabel": "Atualizada",
-    "browserReadyDetail": "Seu saldo está atualizado. Moedas recebidas ficam disponíveis aqui cerca de 10 minutos após serem mineradas."
+    "browserReadyDetail": "Seu saldo está atualizado. Moedas recebidas ficam disponíveis aqui cerca de 10 minutos após serem mineradas.",
+    "loadingReason": {
+      "node_slow": "O nó está respondendo devagar. A carteira mantém o progresso e tenta de novo em breve.",
+      "node_behind": "O nó ainda não chegou onde esta carteira foi sincronizada por último. Continua quando chegar.",
+      "node_history_short": "Este nó não tem o histórico desta carteira. Conecte a um nó com histórico completo ou aguarde.",
+      "node_unverifiable": "O nó ainda não consegue confirmar a posição salva. O progresso é mantido; tenta de novo em breve.",
+      "checkpoint_io": "Não foi possível ler o progresso salvo neste dispositivo. Tenta de novo em breve."
+    }
   },
   "desktopServices": {
     "desktopOnly": "Este controle está disponível no app para desktop."

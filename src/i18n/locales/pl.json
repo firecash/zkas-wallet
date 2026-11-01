@@ -997,7 +997,14 @@
     "readyLabel": "Gotowe",
     "readyDetail": "Twoje saldo jest aktualne.",
     "browserReadyLabel": "Aktualny",
-    "browserReadyDetail": "Saldo jest aktualne. Otrzymane monety można tu wydać około 10 minut po wydobyciu."
+    "browserReadyDetail": "Saldo jest aktualne. Otrzymane monety można tu wydać około 10 minut po wydobyciu.",
+    "loadingReason": {
+      "node_slow": "Węzeł odpowiada wolno. Portfel zachowuje postęp i zaraz spróbuje ponownie.",
+      "node_behind": "Węzeł nie dotarł jeszcze do miejsca ostatniej synchronizacji. Portfel ruszy, gdy dotrze.",
+      "node_history_short": "Ten węzeł nie ma historii tego portfela. Połącz się z pełnym węzłem lub poczekaj.",
+      "node_unverifiable": "Węzeł nie może jeszcze potwierdzić zapisanej pozycji. Postęp zostaje; zaraz kolejna próba.",
+      "checkpoint_io": "Nie udało się odczytać zapisanego postępu na tym urządzeniu. Zaraz kolejna próba."
+    }
   },
   "desktopServices": {
     "desktopOnly": "Ta opcja jest dostępna w aplikacji desktopowej."

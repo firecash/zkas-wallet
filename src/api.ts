@@ -483,6 +483,8 @@ export interface Status {
   // unknown rather than zero, and `address` may be absent for the same reason. Never a
   // sign the wallet was forgotten. Older daemons omit it.
   loading?: boolean;
+  /// While `loading`: why the last open attempt did not complete (walletd reason code).
+  loading_reason?: string;
   // The wallet's view was rebuilt through a node that has PRUNED part of its
   // history: notes older than the node's pruning point exist on-chain but cannot
   // be seen here, so the balance is a lower bound. The UI must say so — silence

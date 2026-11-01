@@ -963,7 +963,14 @@
     "behindDetail_other": "Anda boleh hantar sekarang — semua yang diperlukan pembayaran sudah kelihatan. Dompet masih membaca {{n}} blok terbaru, jadi apa-apa yang tiba di dalamnya belum dikira.",
     "behindDetailBare": "Anda boleh hantar sekarang — semua yang diperlukan pembayaran sudah kelihatan. Dompet masih membaca blok terbaru, jadi apa-apa yang tiba di dalamnya belum dikira.",
     "browserReadyLabel": "Terkini",
-    "browserReadyDetail": "Baki anda terkini. Syiling yang diterima boleh dibelanjakan di sini kira-kira 10 minit selepas dilombong."
+    "browserReadyDetail": "Baki anda terkini. Syiling yang diterima boleh dibelanjakan di sini kira-kira 10 minit selepas dilombong.",
+    "loadingReason": {
+      "node_slow": "Nod membalas perlahan. Dompet menyimpan kemajuannya dan cuba lagi sebentar lagi.",
+      "node_behind": "Nod belum sampai ke titik segerak terakhir dompet ini. Ia diteruskan apabila nod sampai.",
+      "node_history_short": "Nod ini tiada sejarah dompet ini. Sambung ke nod bersejarah penuh atau tunggu.",
+      "node_unverifiable": "Nod belum dapat mengesahkan kedudukan tersimpan. Kemajuan kekal; cuba lagi sebentar lagi.",
+      "checkpoint_io": "Kemajuan tersimpan tidak dapat dibaca pada peranti ini. Cuba lagi sebentar lagi."
+    }
   },
   "desktopServices": {
     "desktopOnly": "Kawalan ini ada dalam aplikasi desktop."

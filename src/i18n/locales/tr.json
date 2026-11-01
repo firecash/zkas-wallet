@@ -929,7 +929,14 @@
     "behindDetail_other": "Artık gönderebilirsiniz — bir ödeme için gereken her şey görünürde. Cüzdan hâlâ en yeni {{n}} bloğu okuyor, bu nedenle bu bloklarda gelenler henüz sayılmaz.",
     "behindDetailBare": "Artık gönderebilirsiniz — bir ödeme için gereken her şey görünürde. Cüzdan hâlâ en yeni blokları okuyor, bu nedenle bu bloklarda gelenler henüz sayılmaz.",
     "browserReadyLabel": "Güncel",
-    "browserReadyDetail": "Bakiyeniz güncel. Alınan coinler, blokta işlendikten yaklaşık 10 dakika sonra burada harcanabilir."
+    "browserReadyDetail": "Bakiyeniz güncel. Alınan coinler, blokta işlendikten yaklaşık 10 dakika sonra burada harcanabilir.",
+    "loadingReason": {
+      "node_slow": "Düğüm yavaş yanıt veriyor. Cüzdan ilerlemesini korur ve birazdan tekrar dener.",
+      "node_behind": "Düğüm bu cüzdanın son eşitlendiği yere henüz ulaşmadı. Ulaşınca devam eder.",
+      "node_history_short": "Bu düğümde bu cüzdanın geçmişi yok. Tam geçmişli bir düğüme bağlanın veya bekleyin.",
+      "node_unverifiable": "Düğüm kayıtlı konumu henüz doğrulayamıyor. İlerleme korunur; birazdan tekrar denenir.",
+      "checkpoint_io": "Kayıtlı ilerleme bu cihazda okunamadı. Birazdan tekrar denenir."
+    }
   },
   "desktopServices": {
     "desktopOnly": "Bu kontrol yalnızca masaüstü uygulamasında kullanılabilir."

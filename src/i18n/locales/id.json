@@ -963,7 +963,14 @@
     "behindDetailBare": "Anda bisa kirim sekarang — semua yang dibutuhkan pembayaran sudah terlihat. Dompet masih membaca blok terbaru, jadi apapun yang tiba di dalamnya belum terhitung.",
     "etaLeft": "{{duration}} lagi",
     "browserReadyLabel": "Terbaru",
-    "browserReadyDetail": "Saldo Anda terbaru. Koin yang diterima bisa dibelanjakan di sini sekitar 10 menit setelah ditambang."
+    "browserReadyDetail": "Saldo Anda terbaru. Koin yang diterima bisa dibelanjakan di sini sekitar 10 menit setelah ditambang.",
+    "loadingReason": {
+      "node_slow": "Node merespons lambat. Dompet menyimpan kemajuannya dan segera mencoba lagi.",
+      "node_behind": "Node belum sampai ke titik sinkron terakhir dompet ini. Lanjut begitu node sampai.",
+      "node_history_short": "Node ini tidak punya riwayat dompet ini. Sambungkan ke node berriwayat lengkap atau tunggu.",
+      "node_unverifiable": "Node belum bisa mengonfirmasi posisi tersimpan. Kemajuan tetap; segera dicoba lagi.",
+      "checkpoint_io": "Kemajuan tersimpan tidak bisa dibaca di perangkat ini. Segera dicoba lagi."
+    }
   },
   "desktopServices": {
     "desktopOnly": "Kontrol ini tersedia di aplikasi desktop."

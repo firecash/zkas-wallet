@@ -23,7 +23,18 @@
 
 import i18n from "./i18n";
 
+/** Why a wallet the service could not open yet is still opening (walletd `loading_reason`). */
+export const LOADING_REASONS = ["node_slow", "node_behind", "node_history_short", "node_unverifiable", "checkpoint_io"] as const;
+export type LoadingReason = (typeof LOADING_REASONS)[number];
+
+function loadingDetail(s: { loading?: boolean; loadingReason?: string | null }, fallback: string): string {
+  const r = s.loading ? s.loadingReason : null;
+  return r && (LOADING_REASONS as readonly string[]).includes(r) ? i18n.t(`status.loadingReason.${r}`) : fallback;
+}
+
 export interface StatusInput {
+  /// walletd's reason the last open attempt did not complete (see LOADING_REASONS).
+  loadingReason?: string | null;
   /// The wallet runs in this browser ("Run in this browser"): it syncs and watches, and cannot
   /// send yet — so "about to be able to pay" is never the honest state there.
   browserMode?: boolean;
@@ -236,7 +247,7 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     return {
       phase: "opening",
       label: i18n.t("status.openingLabel"),
-      detail: i18n.t("status.openingDetail"),
+      detail: loadingDetail(s, i18n.t("status.openingDetail")),
       pct: null,
       pctFine: null,
       progress: null,
@@ -303,7 +314,7 @@ export function walletStatus(s: StatusInput): WalletStatusView {
       return {
         phase: "setting-up",
         label: i18n.t("status.settingUpLabel"),
-        detail: i18n.t("status.settingUpDetail"),
+        detail: loadingDetail(s, i18n.t("status.settingUpDetail")),
         pct,
         pctFine,
         progress,
@@ -317,7 +328,7 @@ export function walletStatus(s: StatusInput): WalletStatusView {
     return {
       phase: "catching-up",
       label: i18n.t("status.catchingUpLabel"),
-      detail: i18n.t("status.catchingUpDetail"),
+      detail: loadingDetail(s, i18n.t("status.catchingUpDetail")),
       pct,
       pctFine,
       progress,

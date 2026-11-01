@@ -997,7 +997,14 @@
     "readyLabel": "Klaar",
     "readyDetail": "Je saldo is actueel.",
     "browserReadyLabel": "Bijgewerkt",
-    "browserReadyDetail": "Je saldo is bijgewerkt. Ontvangen munten zijn hier ongeveer 10 minuten na het minen uit te geven."
+    "browserReadyDetail": "Je saldo is bijgewerkt. Ontvangen munten zijn hier ongeveer 10 minuten na het minen uit te geven.",
+    "loadingReason": {
+      "node_slow": "De node antwoordt traag. De wallet houdt zijn voortgang en probeert het zo opnieuw.",
+      "node_behind": "De node is nog niet waar deze wallet het laatst gesynchroniseerd was. Hij gaat verder zodra de node daar is.",
+      "node_history_short": "Deze node heeft de geschiedenis van deze wallet niet. Verbind met een node met volledige geschiedenis of wacht.",
+      "node_unverifiable": "De node kan de opgeslagen positie nog niet bevestigen. Voortgang blijft; zo een nieuwe poging.",
+      "checkpoint_io": "De opgeslagen voortgang kon op dit apparaat niet worden gelezen. Zo een nieuwe poging."
+    }
   },
   "desktopServices": {
     "desktopOnly": "Dit onderdeel is beschikbaar in de desktop-app."

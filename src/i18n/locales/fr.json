@@ -963,7 +963,14 @@
     "behindDetailBare": "Vous pouvez envoyer maintenant — tout ce qu'il faut est déjà visible. Le portefeuille lit encore les derniers blocs, ce qui y est arrivé n'est pas encore compté.",
     "etaLeft": "{{duration}} restante",
     "browserReadyLabel": "À jour",
-    "browserReadyDetail": "Votre solde est à jour. Les pièces reçues sont dépensables ici environ 10 minutes après leur minage."
+    "browserReadyDetail": "Votre solde est à jour. Les pièces reçues sont dépensables ici environ 10 minutes après leur minage.",
+    "loadingReason": {
+      "node_slow": "Le nœud répond lentement. Le portefeuille garde sa progression et réessaie bientôt.",
+      "node_behind": "Le nœud n’a pas encore atteint le point de la dernière synchro. Il continue dès qu’il y arrive.",
+      "node_history_short": "Ce nœud n’a pas l’historique de ce portefeuille. Connectez-vous à un nœud complet ou patientez.",
+      "node_unverifiable": "Le nœud ne peut pas encore confirmer la position enregistrée. La progression est gardée ; nouvel essai bientôt.",
+      "checkpoint_io": "La progression enregistrée n’a pas pu être lue sur cet appareil. Nouvel essai bientôt."
+    }
   },
   "desktopServices": {
     "desktopOnly": "Cette option est disponible dans l'appli de bureau."

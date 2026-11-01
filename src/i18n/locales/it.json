@@ -963,7 +963,14 @@
     "behindDetailBare": "Puoi già inviare: tutto il necessario è visibile. Il wallet sta ancora leggendo i nuovi blocchi, quindi quanto arrivato lì non è ancora conteggiato.",
     "etaLeft": "{{duration}} rimanenti",
     "browserReadyLabel": "Aggiornato",
-    "browserReadyDetail": "Il saldo è aggiornato. Le monete ricevute sono spendibili qui circa 10 minuti dopo essere state minate."
+    "browserReadyDetail": "Il saldo è aggiornato. Le monete ricevute sono spendibili qui circa 10 minuti dopo essere state minate.",
+    "loadingReason": {
+      "node_slow": "Il nodo risponde lentamente. Il wallet mantiene i progressi e riprova a breve.",
+      "node_behind": "Il nodo non ha ancora raggiunto l’ultima sincronizzazione di questo wallet. Continua appena ci arriva.",
+      "node_history_short": "Questo nodo non ha la cronologia di questo wallet. Collegati a un nodo completo o attendi.",
+      "node_unverifiable": "Il nodo non può ancora confermare la posizione salvata. I progressi restano; riprova a breve.",
+      "checkpoint_io": "Non è stato possibile leggere i progressi salvati su questo dispositivo. Riprova a breve."
+    }
   },
   "desktopServices": {
     "desktopOnly": "Questo controllo è disponibile nell'app desktop."

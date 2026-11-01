@@ -65,7 +65,14 @@
     "readyLabel": "Ready",
     "readyDetail": "Your balance is up to date.",
     "browserReadyLabel": "Up to date",
-    "browserReadyDetail": "Your balance is up to date. Coins you receive become spendable here about 10 minutes after they are mined."
+    "browserReadyDetail": "Your balance is up to date. Coins you receive become spendable here about 10 minutes after they are mined.",
+    "loadingReason": {
+      "node_slow": "The node is answering slowly. The wallet keeps its saved progress and tries again shortly.",
+      "node_behind": "The node has not caught up to where this wallet was last synced. It continues once the node gets there.",
+      "node_history_short": "This node does not hold this wallet's history. Connect to a node with full history, or wait while it fills in.",
+      "node_unverifiable": "The node cannot confirm the wallet's saved position yet. Progress is kept; it tries again shortly.",
+      "checkpoint_io": "The wallet's saved progress could not be read on this device. It tries again shortly."
+    }
   },
   "desktopServices": {
     "desktopOnly": "This control is available in the desktop app."
