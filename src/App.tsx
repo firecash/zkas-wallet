@@ -1303,7 +1303,10 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
       // On-device engine: hold the foreground service while the wallet is still
       // syncing so Android does not freeze/kill the process when the screen goes
       // dark; release it the moment the wallet is synced.
-      if (embeddedChosen()) void engineKeepAlive(!s.synced);
+      // Any wallet the engine is catching up keeps the background service, not just the one
+      // on screen: a second wallet syncing behind a synced one was frozen by Android the
+      // moment the screen went off.
+      if (embeddedChosen()) void engineKeepAlive(!s.synced || !!s.engine_syncing);
       if (s.has_wallet && s.synced && s.scanned_blocks > 0 && snapshotDirty(s)) {
         saveSnapshot({
           balanceFc: parseFloat(s.balance_fc || "0"),

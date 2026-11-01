@@ -486,6 +486,9 @@ export interface Status {
   history_from_daa?: number;
   /// Published chain files the engine reads catch-up from (absent: node only, or older engine).
   chain_files?: { source: string; disabled: boolean; pages_served: number; segments_loaded: number; downloaded_mb: number; refetched_segments: number };
+  /// Some wallet in this on-device engine is still catching up (not necessarily this one).
+  /// Absent from hosted daemons and older engines.
+  engine_syncing?: boolean;
   // Watch-only wallet: the daemon holds the viewing key only. Surfaced as a badge
   // so a restored/read-only wallet never looks like it can spend. Older daemons omit it.
   watch_only?: boolean;
