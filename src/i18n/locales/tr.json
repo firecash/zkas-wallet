@@ -2109,5 +2109,12 @@
     "net": "Uygulama istekleri",
     "app": "Uygulama ve performans",
     "libs": "Kütüphaneler"
+  },
+  "runInBrowserOption": {
+    "title": "Bu tarayıcıda çalıştır",
+    "desc": "Web’de en gizlisi: anahtarlarınız bu tarayıcıdan hiç çıkmaz ve hiçbir cüzdan hizmeti cüzdanınızı görmez. Buradan gönderim henüz yok."
+  },
+  "browserEngine": {
+    "notInBrowser": "Cüzdan bu tarayıcıda çalışırken kullanılamaz. Bunun için uygulamayı veya genel hizmeti kullanın."
   }
 }

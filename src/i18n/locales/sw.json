@@ -2109,5 +2109,12 @@
     "net": "Maombi ya programu",
     "app": "Programu na utendaji",
     "libs": "Maktaba"
+  },
+  "runInBrowserOption": {
+    "title": "Endesha kwenye kivinjari hiki",
+    "desc": "Faragha zaidi kwenye wavuti: funguo zako haziondoki kwenye kivinjari hiki na hakuna huduma inayoona pochi yako. Kutuma bado hakupatikani hapa."
+  },
+  "browserEngine": {
+    "notInBrowser": "Haipatikani wakati pochi inaendeshwa kwenye kivinjari hiki. Tumia programu au huduma ya umma kwa hili."
   }
 }

@@ -2109,5 +2109,12 @@
     "net": "App 請求",
     "app": "App 與效能",
     "libs": "程式庫"
+  },
+  "runInBrowserOption": {
+    "title": "在此瀏覽器中執行",
+    "desc": "網頁上最私密的方式：你的金鑰從不離開此瀏覽器，任何服務都看不到你的錢包。此處暫時無法傳送。"
+  },
+  "browserEngine": {
+    "notInBrowser": "錢包在此瀏覽器中執行時無法使用。請改用 App 或公開服務。"
   }
 }

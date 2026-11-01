@@ -2109,5 +2109,12 @@
     "net": "App-verzoeken",
     "app": "App & prestaties",
     "libs": "Bibliotheken"
+  },
+  "runInBrowserOption": {
+    "title": "In deze browser uitvoeren",
+    "desc": "Het meest privé op het web: je sleutels verlaten deze browser nooit en geen walletdienst ziet je wallet. Verzenden kan hier nog niet."
+  },
+  "browserEngine": {
+    "notInBrowser": "Niet beschikbaar zolang de wallet in deze browser draait. Gebruik hiervoor de app of de openbare dienst."
   }
 }

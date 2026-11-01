@@ -2109,5 +2109,12 @@
     "net": "Permintaan aplikasi",
     "app": "Aplikasi & prestasi",
     "libs": "Pustaka"
+  },
+  "runInBrowserOption": {
+    "title": "Jalankan dalam pelayar ini",
+    "desc": "Paling peribadi di web: kunci anda tidak pernah meninggalkan pelayar ini dan tiada perkhidmatan melihat dompet anda. Menghantar belum tersedia di sini."
+  },
+  "browserEngine": {
+    "notInBrowser": "Tidak tersedia semasa dompet berjalan dalam pelayar ini. Gunakan aplikasi atau perkhidmatan awam untuk ini."
   }
 }

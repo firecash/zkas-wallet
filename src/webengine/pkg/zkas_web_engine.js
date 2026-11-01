@@ -813,6 +813,30 @@ export class Engine {
         }
     }
     /**
+     * This wallet's history in walletd's `/api/wallet/history` shape, newest first, so the app's
+     * history view reads it unchanged. Recipient addresses and the per-address breakdown are not
+     * rendered here yet (they need the address encoding), and stay null / empty.
+     * @param {number} limit
+     * @param {number} offset
+     * @returns {string}
+     */
+    history(limit, offset) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.engine_history(retptr, this.__wbg_ptr, limit, offset);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export_1(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * A wallet restored from `checkpoint()` bytes.
      * @param {string} fvk_hex
      * @param {Uint8Array} bytes

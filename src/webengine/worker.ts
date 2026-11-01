@@ -17,13 +17,24 @@ export interface StartMessage {
 
 let stopped = false;
 let ready: Promise<unknown> | null = null;
+let live: { history?(limit: number, offset: number): string } | null = null;
 
 const post = (status: BrowserSyncStatus) => (self as unknown as Worker).postMessage({ type: "status", status });
 
-self.onmessage = async (ev: MessageEvent<StartMessage | { type: "stop" }>) => {
+self.onmessage = async (ev: MessageEvent<StartMessage | { type: "stop" } | { type: "history"; id: number; limit: number; offset: number }>) => {
   const msg = ev.data;
   if (msg.type === "stop") {
     stopped = true;
+    return;
+  }
+  if (msg.type === "history") {
+    let json = JSON.stringify({ recoverableHistory: true, total: 0, rows: [] });
+    try {
+      if (live?.history) json = live.history(msg.limit, msg.offset);
+    } catch {
+      /* the empty answer stands */
+    }
+    (self as unknown as Worker).postMessage({ type: "history", id: msg.id, json });
     return;
   }
   stopped = false;
@@ -42,6 +53,9 @@ self.onmessage = async (ev: MessageEvent<StartMessage | { type: "stop" }>) => {
       gateway: msg.gateway,
       birthday: msg.birthday,
       onStatus: post,
+      onEngine: (e) => {
+        live = e;
+      },
       shouldStop: () => stopped,
     });
   } catch (e) {

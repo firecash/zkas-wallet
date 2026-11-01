@@ -9,9 +9,15 @@ import type { BrowserSyncStatus } from "./sync";
 
 export type { BrowserSyncStatus } from "./sync";
 
-/** Chain-file mirrors, in order (the engine falls back from one to the next). */
-export const BROWSER_CHAIN_FILES = ["https://pub-ae5ed92258b2437e985b69ab9947ef60.r2.dev", "https://zkas.info/shielded-chain"];
-export const BROWSER_GATEWAY = "https://zkas.info/chain-gateway";
+/** Where the engine reads public chain data. On wallet.zkas.info both are served from the page's
+ *  own origin (proxied there to zkas.info), so the site's strict CSP needs no new source; any
+ *  other origin (development, a self-hosted copy) reads zkas.info directly. */
+export function browserSources(origin: string = globalThis.location?.origin ?? ""): { files: string[]; gateway: string } {
+  if (/^https:\/\/wallet\.zkas\.info$/.test(origin)) {
+    return { files: [`${origin}/shielded-chain`], gateway: `${origin}/chain-gateway` };
+  }
+  return { files: ["https://zkas.info/shielded-chain"], gateway: "https://zkas.info/chain-gateway" };
+}
 
 let worker: Worker | null = null;
 
@@ -32,7 +38,8 @@ export async function startBrowserEngine(seedHex: string, birthday: number, onSt
   w.onmessage = (ev: MessageEvent<{ type: string; status: BrowserSyncStatus }>) => {
     if (ev.data?.type === "status") onStatus(ev.data.status);
   };
-  w.postMessage({ type: "start", id, fvkHex: fvk, birthday, files: BROWSER_CHAIN_FILES, gateway: BROWSER_GATEWAY });
+  const src = browserSources();
+  w.postMessage({ type: "start", id, fvkHex: fvk, birthday, files: src.files, gateway: src.gateway });
   worker = w;
 }
 
@@ -41,4 +48,134 @@ export function stopBrowserEngine(): void {
   worker.postMessage({ type: "stop" });
   worker.terminate();
   worker = null;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Browser mode: the app's wallet-service calls answered by the in-page engine.
+// ---------------------------------------------------------------------------------------------
+
+const MODE_KEY = "wallet_browser_engine";
+
+/** Did the user choose "Run in this browser"? */
+export function browserModeChosen(): boolean {
+  try {
+    return localStorage.getItem(MODE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setBrowserModeChosen(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(MODE_KEY, "1");
+    else localStorage.removeItem(MODE_KEY);
+  } catch {
+    /* a session-only choice */
+  }
+}
+
+let latest: BrowserSyncStatus | null = null;
+let latestAddress: string | null = null;
+let historyId = 0;
+const historyWaiters = new Map<number, (json: string) => void>();
+
+/** The engine's last reported state, or null before it has said anything. */
+export function browserStatus(): BrowserSyncStatus | null {
+  return latest;
+}
+
+/** Start (or restart) the engine for the active wallet. */
+export async function startBrowserMode(seedHex: string, address: string, birthday: number): Promise<void> {
+  latestAddress = address;
+  await startBrowserEngine(seedHex, birthday, (s) => {
+    latest = s;
+  });
+  worker!.addEventListener("message", (ev: MessageEvent<{ type: string; id: number; json: string }>) => {
+    if (ev.data?.type === "history") {
+      historyWaiters.get(ev.data.id)?.(ev.data.json);
+      historyWaiters.delete(ev.data.id);
+    }
+  });
+}
+
+/** The engine's history in the wallet service's `/api/wallet/history` shape. */
+export function browserHistory(limit: number, offset: number): Promise<string> {
+  const w = worker;
+  if (!w) return Promise.resolve(JSON.stringify({ recoverableHistory: true, total: 0, rows: [] }));
+  const id = ++historyId;
+  return new Promise((resolve) => {
+    historyWaiters.set(id, resolve);
+    w.postMessage({ type: "history", id, limit, offset });
+    setTimeout(() => {
+      if (historyWaiters.delete(id)) resolve(JSON.stringify({ recoverableHistory: true, total: 0, rows: [] }));
+    }, 10_000);
+  });
+}
+
+const fc = (sompi: string) => {
+  const v = BigInt(sompi || "0");
+  return `${v / 100_000_000n}.${(v % 100_000_000n).toString().padStart(8, "0")}`;
+};
+
+export interface BrowserWallet {
+  seedHex: string;
+  address: string;
+  birthday: number;
+}
+let resolver: (() => Promise<BrowserWallet | null>) | null = null;
+let starting = false;
+
+/** How the engine finds the active wallet (registered by the app, which knows where seeds live). */
+export function setBrowserWalletResolver(fn: () => Promise<BrowserWallet | null>): void {
+  resolver = fn;
+}
+
+/** Start the engine if browser mode is on and nothing runs yet. Safe to call on every poll. */
+export function ensureBrowserEngine(): void {
+  if (!browserModeChosen() || worker || starting || !resolver) return;
+  starting = true;
+  void resolver()
+    .then((w) => (w && w.seedHex ? startBrowserMode(w.seedHex, w.address, w.birthday) : undefined))
+    .catch((e) => {
+      latest = { phase: "error", scanned: 0, tip: 0, birthday: 0, balanceSompi: "0", notes: 0, verified: null, error: String(e) };
+    })
+    .finally(() => {
+      starting = false;
+    });
+}
+
+/** The engine's state as the wallet service's `/api/status` answer, so every screen reads it
+ *  unchanged. Sending is reported as unavailable (`spend_ready: false`) until the browser can
+ *  prove payments itself. */
+export function browserStatusAsServiceStatus(): Record<string, unknown> {
+  ensureBrowserEngine();
+  const s = latest;
+  const bal = s?.balanceSompi ?? "0";
+  return {
+    has_wallet: true,
+    address: latestAddress,
+    birthday: s?.birthday,
+    network: "mainnet",
+    node_connected: !!s && s.phase !== "error",
+    daa_score: s?.tip ?? 0,
+    synced: s?.phase === "synced",
+    spend_ready: false,
+    loading: !s || s.phase === "starting",
+    scanned_blocks: s?.scanned ?? 0,
+    chain_len: s?.tip ?? 0,
+    balance_sompi: bal,
+    balance_fc: fc(bal),
+    spendable_sompi: bal,
+    spendable_fc: fc(bal),
+    maturing_sompi: "0",
+    maturing_fc: "0.00000000",
+    pending_in_sompi: "0",
+    pending_in_fc: "0.00000000",
+    pending_out_sompi: "0",
+    pending_out_fc: "0.00000000",
+    note_count: s?.notes ?? 0,
+    updated_unix: Math.floor(Date.now() / 1000),
+    error: s?.phase === "error" ? (s.error ?? "error") : null,
+    watch_only: false,
+  };
 }

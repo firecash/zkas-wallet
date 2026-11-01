@@ -2109,5 +2109,12 @@
     "net": "App-Anfragen",
     "app": "App & Leistung",
     "libs": "Bibliotheken"
+  },
+  "runInBrowserOption": {
+    "title": "In diesem Browser ausführen",
+    "desc": "Am privatesten im Web: Deine Schlüssel verlassen diesen Browser nie, und kein Wallet-Dienst sieht dein Wallet. Senden ist hier noch nicht möglich."
+  },
+  "browserEngine": {
+    "notInBrowser": "Nicht verfügbar, solange das Wallet in diesem Browser läuft. Nutze dafür die App oder den öffentlichen Dienst."
   }
 }

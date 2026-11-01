@@ -2109,5 +2109,12 @@
     "net": "Yêu cầu của ứng dụng",
     "app": "Ứng dụng & hiệu năng",
     "libs": "Thư viện"
+  },
+  "runInBrowserOption": {
+    "title": "Chạy trong trình duyệt này",
+    "desc": "Riêng tư nhất trên web: khóa của bạn không bao giờ rời trình duyệt này và không dịch vụ nào thấy ví của bạn. Chưa thể gửi từ đây."
+  },
+  "browserEngine": {
+    "notInBrowser": "Không khả dụng khi ví chạy trong trình duyệt này. Hãy dùng ứng dụng hoặc dịch vụ công cộng cho việc này."
   }
 }

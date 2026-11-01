@@ -16,6 +16,7 @@ import { WALLET_SERVICE_PORT } from "./ports";
 import { desktopRemoteBase } from "./desktop";
 import i18n from "./i18n";
 import { publicEndpoint, privacyMode, isOnionHost} from "./lib/privacy";
+import { browserModeChosen, browserStatusAsServiceStatus, browserHistory, setBrowserModeChosen, stopBrowserEngine } from "./webengine";
 import { clearTombstone } from "./wallets";
 // The diagnostic log's network observer. net.ts imports nothing from the app, so no cycle.
 import { claimSignal, recordRequest } from "./diag/net";
@@ -95,6 +96,12 @@ export function isNative(): boolean {
   return !!cap?.isNativePlatform?.();
 }
 export function setBase(url: string) {
+  // Choosing any wallet service leaves "Run in this browser". Only the Android engine's boot calls
+  // this unprompted, and browser mode never exists there, so this is always the user's choice.
+  if (browserModeChosen()) {
+    setBrowserModeChosen(false);
+    stopBrowserEngine();
+  }
   // Paired with the safe read above: writeLocal holds the choice for the session when
   // storage refuses it, so a daemon the user picked still applies until they reload,
   // instead of every call snapping back to the default.
@@ -699,6 +706,19 @@ async function req<T>(method: string, path: string, body?: unknown, timeoutMs = 
 }
 
 async function reqInner<T>(method: string, path: string, body: unknown, timeoutMs: number, asToken: string | undefined, meta: ReqMeta): Promise<T> {
+  // "Run in this browser": no wallet service is contacted at all — not to register the wallet,
+  // not to prepare a payment, not with the viewing key. Status and history are answered by the
+  // in-page engine; everything else is refused here, in one place, so no screen can reach a
+  // service by a route nobody checked.
+  if (browserModeChosen() && /^\/api\//.test(path)) {
+    if (path === "/api/status") return browserStatusAsServiceStatus() as unknown as T;
+    const h = /^\/api\/wallet\/history(?:\?(.*))?$/.exec(path);
+    if (h) {
+      const q = new URLSearchParams(h[1] ?? "");
+      return JSON.parse(await browserHistory(Number(q.get("limit") ?? 500), Number(q.get("offset") ?? 0))) as T;
+    }
+    throw new Error(i18n.t("browserEngine.notInBrowser"));
+  }
   let status: number;
   let statusText = "";
   let text: string;

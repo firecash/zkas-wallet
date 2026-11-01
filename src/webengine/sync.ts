@@ -14,6 +14,7 @@ export interface EngineLike {
   tip_frontier(): string | undefined;
   checkpoint(): Uint8Array;
   status(): string;
+  history?(limit: number, offset: number): string;
   free?(): void;
 }
 
@@ -62,6 +63,8 @@ export interface SyncDeps {
   gateway: string;
   birthday: number;
   onStatus(s: BrowserSyncStatus): void;
+  /** Called with the live engine whenever it is created or replaced (history reads use it). */
+  onEngine?(e: EngineLike): void;
   shouldStop(): boolean;
   /** Seconds between tip polls once synced (default 10). */
   pollSecs?: number;
@@ -151,6 +154,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
     const start = [...segs].reverse().find((s) => s.from.daa <= d.birthday) ?? segs[0];
     eng = d.create(JSON.stringify(start.from), BigInt(d.birthday));
   }
+  d.onEngine?.(eng);
 
   // 1. Published segments.
   let sinceSave = 0;
@@ -198,6 +202,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
           if (!ck) throw e;
           eng.free?.();
           eng = d.restore(ck);
+          d.onEngine?.(eng);
           continue;
         }
         throw e;

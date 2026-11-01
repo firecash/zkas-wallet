@@ -2109,5 +2109,12 @@
     "net": "Richieste dell’app",
     "app": "App e prestazioni",
     "libs": "Librerie"
+  },
+  "runInBrowserOption": {
+    "title": "Esegui in questo browser",
+    "desc": "Il più privato sul web: le tue chiavi non lasciano mai questo browser e nessun servizio vede il tuo wallet. Qui non è ancora possibile inviare."
+  },
+  "browserEngine": {
+    "notInBrowser": "Non disponibile mentre il wallet funziona in questo browser. Usa l’app o il servizio pubblico per questo."
   }
 }

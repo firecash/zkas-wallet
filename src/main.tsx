@@ -2,6 +2,22 @@
 // from the accessor itself, and one unguarded read anywhere took the whole
 // wallet down with an unrecoverable error screen.
 import "./lib/storage-shim";
+import { setBrowserWalletResolver } from "./webengine";
+import { resolveDeviceSeed, knownBirthday } from "./lib/deviceseed";
+import { addressFromSeed } from "./signer";
+
+// "Run in this browser": how the in-page engine finds the active wallet — the same seed the send
+// screen resolves, its address derived here, and the birthday this device recorded for it.
+setBrowserWalletResolver(async () => {
+  let seedHex: string;
+  try {
+    seedHex = await resolveDeviceSeed();
+  } catch {
+    return null; // no wallet on this device yet; the engine starts once there is one
+  }
+  const address = await addressFromSeed(seedHex, "mainnet");
+  return { seedHex, address, birthday: knownBirthday(address) };
+});
 // SECOND: the diagnostic log, so the boot sequence below is on the record. Local only;
 // everything it keeps is redacted (src/diag/redact.ts). See src/diag/instrument.ts.
 import { error as diagError, event as diagEvent, installDiagnostics, markFirstRender, span as diagSpan, useScreenLog } from "./diag";

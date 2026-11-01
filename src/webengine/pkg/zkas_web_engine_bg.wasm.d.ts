@@ -3,6 +3,7 @@
 export const memory: WebAssembly.Memory;
 export const __wbg_engine_free: (a: number, b: number) => void;
 export const engine_checkpoint: (a: number, b: number) => void;
+export const engine_history: (a: number, b: number, c: number, d: number) => void;
 export const engine_ingest_page: (a: number, b: number, c: number, d: number) => void;
 export const engine_ingest_segment: (a: number, b: number, c: number, d: number, e: bigint, f: number, g: number) => void;
 export const engine_low: (a: number, b: number) => void;

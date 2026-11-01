@@ -2109,5 +2109,12 @@
     "net": "Requêtes de l’app",
     "app": "App et performances",
     "libs": "Bibliothèques"
+  },
+  "runInBrowserOption": {
+    "title": "Exécuter dans ce navigateur",
+    "desc": "Le plus privé sur le web : vos clés ne quittent jamais ce navigateur et aucun service ne voit votre portefeuille. L’envoi n’est pas encore possible ici."
+  },
+  "browserEngine": {
+    "notInBrowser": "Indisponible tant que le portefeuille tourne dans ce navigateur. Utilisez l’app ou le service public pour cela."
   }
 }

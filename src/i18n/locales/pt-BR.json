@@ -2109,5 +2109,12 @@
     "net": "Requisições do app",
     "app": "App e desempenho",
     "libs": "Bibliotecas"
+  },
+  "runInBrowserOption": {
+    "title": "Executar neste navegador",
+    "desc": "O mais privado na web: suas chaves nunca saem deste navegador e nenhum serviço vê sua carteira. Ainda não é possível enviar daqui."
+  },
+  "browserEngine": {
+    "notInBrowser": "Indisponível enquanto a carteira roda neste navegador. Use o app ou o serviço público para isso."
   }
 }

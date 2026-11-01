@@ -228,6 +228,12 @@ export class Engine {
   constructor(fvk_hex: string, boundary_json: string, birthday: bigint);
   status(): string;
   /**
+   * This wallet's history in walletd's `/api/wallet/history` shape, newest first, so the app's
+   * history view reads it unchanged. Recipient addresses and the per-address breakdown are not
+   * rendered here yet (they need the address encoding), and stay null / empty.
+   */
+  history(limit: number, offset: number): string;
+  /**
    * A wallet restored from `checkpoint()` bytes.
    */
   static restore(fvk_hex: string, bytes: Uint8Array): Engine;
@@ -320,6 +326,7 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_engine_free: (a: number, b: number) => void;
   readonly engine_checkpoint: (a: number, b: number) => void;
+  readonly engine_history: (a: number, b: number, c: number, d: number) => void;
   readonly engine_ingest_page: (a: number, b: number, c: number, d: number) => void;
   readonly engine_ingest_segment: (a: number, b: number, c: number, d: number, e: bigint, f: number, g: number) => void;
   readonly engine_low: (a: number, b: number) => void;

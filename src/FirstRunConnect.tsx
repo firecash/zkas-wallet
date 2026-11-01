@@ -23,6 +23,8 @@ import { OrbotHelp } from "./OrbotHelp";
 import { embeddedAvailable, setEmbeddedChosen, ensureEmbedded, setEmbeddedBackupNode, type FastSync } from "./embedded";
 import { markBackgroundPromptPending } from "./bgsync";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
+import { RunInBrowserOption } from "./RunInBrowserOption";
+import { setBrowserModeChosen } from "./webengine";
 import { showAccessTokenField } from "./lib/accesstoken";
 
 export function FirstRunConnect({ onDone }: { onDone: () => void }) {
@@ -106,6 +108,9 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
         <div className="connection-list firstrun-conn">
           {embeddedAvailable() && (
             <RunOnPhoneOption busy={!!busy} starting={busy === "phone"} tag={<span className="chip on">{t("firstRunConnect.recommended")}</span>} onStart={(n, useTor, backup, fast) => connectPhone(n, useTor, backup, fast)} />
+          )}
+          {!embeddedAvailable() && (
+            <RunInBrowserOption busy={!!busy} onStart={() => { setBrowserModeChosen(true); finish(); }} />
           )}
           <button className="connection-option" disabled={!!busy} onClick={connectPublic}>
             <span><b>{t("firstRunConnect.publicTitle")}</b><small>{t("firstRunConnect.publicDesc")}</small></span>

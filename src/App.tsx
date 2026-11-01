@@ -107,6 +107,8 @@ import { embeddedAvailable, embeddedChosen, setEmbeddedChosen, ensureEmbedded, s
 import { captureScanReceipt, adoptScanReceipt, haveScanReceipt } from "./scanreceipt";
 import { rotatePublicNode, setEmbeddedBackupNode, type FastSync } from "./embedded";
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
+import { RunInBrowserOption } from "./RunInBrowserOption";
+import { setBrowserModeChosen } from "./webengine";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
 import { adoptViewKey } from "./lib/watchadopt";
@@ -2468,6 +2470,9 @@ function ConnectionButton() {
             <div className="connection-list">
               {embeddedAvailable() && (
                 <RunOnPhoneOption active={embeddedChosen()} busy={busy !== null} starting={busy === "phone"} tag={busy === "phone" ? t("connectionButton.starting") : embeddedChosen() ? t("connectionButton.on") : t("connectionButton.use")} onStart={(n, tor, backup, fast) => connectEmbedded(n, tor, backup, fast)} />
+              )}
+              {!embeddedAvailable() && !desktop && (
+                <RunInBrowserOption busy={busy !== null} onStart={() => { setBrowserModeChosen(true); location.reload(); }} />
               )}
               <button className={`connection-option ${!embeddedChosen() && hosted && !onion ? "active" : ""}`} disabled={busy !== null} onClick={() => desktop ? void connectHosted() : void switchWalletd("", "hosted", "")}>
                 <span><b>{t("connectionButton.publicService")}</b><small>{desktop ? t("connectionButton.publicDescDesktop") : t("connectionButton.publicDescMobile")}</small></span><span>{busy === "hosted" ? t("connectionButton.checking") : hosted && !onion ? t("connectionButton.connected") : t("connectionButton.use")}</span>
@@ -8432,6 +8437,9 @@ function NetworkPrivacyCard() {
       <div className="connection-list">
         {embeddedAvailable() && (
           <RunOnPhoneOption active={current === "phone"} busy={!!busy} tag={tag("phone")} onStart={(n, tor, backup, fast) => startOnPhone(n, tor, backup, fast)} />
+        )}
+        {!embeddedAvailable() && !isDesktop() && (
+          <RunInBrowserOption busy={!!busy} onStart={() => { setBrowserModeChosen(true); location.reload(); }} />
         )}
         <button className={"connection-option" + (current === "public" ? " active" : "")} disabled={!!busy} onClick={usePublic}>
           <span><b>{t("networkPrivacyCard.publicTitle")}</b><small>{t("networkPrivacyCard.publicHint")}</small></span><span>{tag("public")}</span>

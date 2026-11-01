@@ -186,5 +186,12 @@
   "bootGuard": {
     "couldNotStart": "The wallet could not start. It needs site storage (cookies / site data) enabled for this site — your wallet and its settings live there. Allow it for {{host}}, then reload.",
     "thisSite": "this site"
+  },
+  "runInBrowserOption": {
+    "title": "Run in this browser",
+    "desc": "Most private on the web: your keys never leave this browser and no wallet service sees your wallet. Sending is not available here yet."
+  },
+  "browserEngine": {
+    "notInBrowser": "Not available while the wallet runs in this browser. Use the app, or the public service, for this."
   }
 }
