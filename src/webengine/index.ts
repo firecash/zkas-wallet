@@ -471,7 +471,10 @@ export async function browserServiceStatus(): Promise<Record<string, unknown>> {
           starting = null;
         });
     }
-    await starting;
+    // With a saved report there is something true to show now: answer from it while the
+    // engine starts (worker, key derivation ~1 s on a phone) instead of holding the first
+    // status, and so the balance, behind that start.
+    if (!lastReported(w.address)) await starting;
   }
   // Until the engine reports, its last report for this wallet (marked not synced).
   const s = latest ?? (() => {

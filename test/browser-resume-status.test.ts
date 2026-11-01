@@ -4,9 +4,10 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 // synced, that flashed "Catching up 0.0%" over a wallet that was up to date a second earlier
 // (seen end-to-end in Chromium, 1 in 4 reloads). A recent synced report at the same position
 // keeps the wallet up to date, though not spend-ready until the engine re-checks the tip.
+let hang = false;
 vi.mock("../src/signer", async (orig) => {
   const actual = await orig<typeof import("../src/signer")>();
-  return { ...actual, fvkHex: async () => "ab".repeat(96) };
+  return { ...actual, fvkHex: () => (hang ? new Promise<string>(() => {}) : Promise.resolve("ab".repeat(96))) };
 });
 vi.mock("../src/webengine/store", async (orig) => {
   const actual = await orig<typeof import("../src/webengine/store")>();
@@ -37,6 +38,19 @@ beforeEach(() => {
 });
 
 describe("a reloaded browser wallet", () => {
+  it("answers from the saved report without waiting for the engine to start", async () => {
+    hang = true;
+    try {
+      last("synced", 1_000);
+      const st = await Promise.race([browserServiceStatus(), new Promise((r) => setTimeout(() => r("held"), 500))]);
+      expect(st).not.toBe("held");
+      expect((st as Record<string, unknown>).balance_sompi).toBe("5");
+    } finally {
+      hang = false;
+      stopBrowserEngine();
+    }
+  });
+
   it("stays up to date while the engine restarts where it was", async () => {
     last("synced", 2_000);
     const st = await browserServiceStatus();
