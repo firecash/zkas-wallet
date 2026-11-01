@@ -6501,6 +6501,9 @@ function QrScanner({ onResult, onClose }: { onResult: (text: string) => void; on
 /// choose on a Confirm screen still showing the first one's figures.
 const WALLET_CHANGED = "wallet-changed-mid-send";
 
+/** How long the send form must stay valid and unchanged before browser mode proves it ahead. */
+const EARLY_PROVE_PAUSE_MS = 800;
+
 function Send({
   status,
   onSent,
@@ -6726,6 +6729,23 @@ function Send({
     // field — and the field's own sanitiser turned that into "17" on the next keystroke.
     setAmount(max > 0 ? trimTrailingZeros(max.toFixed(8)) : "0");
   };
+
+  // In browser mode, start even earlier: once the form has been valid and unchanged for a
+  // moment. A user log showed 0.6 s between Review and Confirm, so a proof started at Confirm
+  // had no head start and the payment waited the whole proof (~7 s single-threaded). The pause
+  // keeps half-typed amounts from being proven: the worker proves one payment at a time, and a
+  // stale one would make the real send wait behind it. The send uses this proof only if it is
+  // exactly the payment confirmed and its coins are still unspent.
+  useEffect(() => {
+    if (!browserModeChosen() || confirming || busy || fragmented || !canProceed) return;
+    const timer = setTimeout(() => {
+      void resolveDeviceSeed(status?.address ?? undefined)
+        .then((seed) => browserPrepareAhead(seed.trim(), to.trim(), amt, memo))
+        .catch(() => undefined);
+    }, EARLY_PROVE_PAUSE_MS);
+    return () => clearTimeout(timer);
+    // Re-armed by any edit; status changes alone (every poll) must not restart the wait.
+  }, [to, amt, memo, canProceed, confirming, busy, fragmented]);
 
   // Start proving the moment the Confirm screen opens. Nothing about the witness
   // lookup and Halo2 proof depends on the tap, so the seconds spent reading the

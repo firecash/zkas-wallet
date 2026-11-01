@@ -91,6 +91,10 @@ function prove(msg: SendMessage): Prepared | { error: string } {
 /** Prove now and keep it for the matching send. Errors are dropped: the send proves again and
  *  reports them. */
 function prepareAhead(msg: SendMessage): void {
+  // Already holding this exact payment, still usable: the form proved it ahead and Confirm then
+  // asked again. Proving twice would queue the real send behind the duplicate.
+  const eng = live;
+  if (eng && aheadUsable(ahead, keyOf(msg), Date.now(), (ps) => eng.unspent?.(JSON.stringify(ps)) ?? false)) return;
   const p = prove(msg);
   ahead = "error" in p ? null : { key: keyOf(msg), at: Date.now(), positions: p.positions, prepared: p };
 }

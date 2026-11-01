@@ -27,3 +27,25 @@ describe("prove-ahead reuse", () => {
     expect(aheadUsable(null, key, 2_000, all)).toBe(false);
   });
 });
+
+describe("proving ahead from the send form (browser mode)", () => {
+  const fs = require("node:fs") as typeof import("node:fs");
+  const app = fs.readFileSync("src/App.tsx", "utf8");
+  const worker = fs.readFileSync("src/webengine/worker.ts", "utf8");
+
+  it("starts once the form is valid and unchanged, re-armed only by edits", () => {
+    const i = app.indexOf("EARLY_PROVE_PAUSE_MS);");
+    expect(i).toBeGreaterThan(0);
+    const block = app.slice(app.lastIndexOf("useEffect(", i), app.indexOf("]);", i) + 3);
+    expect(block).toContain("browserModeChosen()");
+    expect(block).toContain("!canProceed");
+    expect(block).toContain("clearTimeout(timer)");
+    // Status polls (every second) must not restart the pause, or it would never fire.
+    expect(block).toMatch(/\[to, amt, memo, canProceed, confirming, busy, fragmented\]/);
+  });
+
+  it("the worker does not prove a payment it already holds", () => {
+    const i = worker.indexOf("function prepareAhead(");
+    expect(worker.slice(i, i + 500)).toMatch(/aheadUsable\(ahead, keyOf\(msg\)[\s\S]*\)\) return;\s*const p = prove\(msg\)/);
+  });
+});
