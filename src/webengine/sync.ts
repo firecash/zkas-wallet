@@ -154,6 +154,19 @@ export async function runSync(d: SyncDeps): Promise<void> {
     }
   };
 
+  // Resume FIRST, before any network: a reloaded page reports where the wallet really is (and its
+  // balance) at once. It used to fetch the tip and the manifest first — seconds over the proxy —
+  // reporting nothing meanwhile, so the page fell back to the birthday and showed 0% between the
+  // cached 99% and the real 99%.
+  const saved = await d.load();
+  if (saved) {
+    try {
+      eng = d.restore(saved);
+      d.onEngine?.(eng);
+    } catch {
+      eng = null;
+    }
+  }
   report("starting");
   await refreshTip();
   const manifest: Manifest = await fromMirrors(
@@ -163,15 +176,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
   );
   const segs = manifest.segments;
 
-  // Resume, or start at the signed boundary of the segment the birthday falls in.
-  const saved = await d.load();
-  if (saved) {
-    try {
-      eng = d.restore(saved);
-    } catch {
-      eng = null;
-    }
-  }
+  // Or start at the signed boundary of the segment the birthday falls in.
   // A wallet born after the last published segment (every new wallet) starts at the node's own
   // frontier at its birthday, as the phone engine's fast sync does, instead of replaying up to a
   // whole 12-hour segment it cannot hold notes in. The frontier is checked against the node again

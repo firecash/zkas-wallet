@@ -138,11 +138,31 @@ export async function browserSend(secret: string, to: string, amountFc: number, 
   return { txid: result.txid, fee_sompi: result.feeSompi };
 }
 
+const LAST_KEY = (address: string) => `browser_last_status:${address}`;
+
+/** The engine's last report for `address`, kept so a reloaded page shows where the wallet was
+ *  (not its birthday, i.e. 0%) during the second before the engine speaks. */
+function lastReported(address: string): BrowserSyncStatus | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(LAST_KEY(address)) || "null");
+    return v && typeof v.scanned === "number" ? (v as BrowserSyncStatus) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function startFor(w: BrowserWallet): Promise<void> {
   latest = null;
   running = { seedHex: w.seedHex, address: w.address };
   await startBrowserEngine(w.seedHex, w.birthday, (st) => {
     latest = st;
+    if (st.scanned > 0 && st.phase !== "error") {
+      try {
+        localStorage.setItem(LAST_KEY(w.address), JSON.stringify(st));
+      } catch {
+        /* a convenience only */
+      }
+    }
   });
   worker?.addEventListener("message", onWorkerMessage);
 }
@@ -301,7 +321,11 @@ export async function browserServiceStatus(): Promise<Record<string, unknown>> {
     }
     await starting;
   }
-  const s = latest;
+  // Until the engine reports, its last report for this wallet (marked not synced).
+  const s = latest ?? (() => {
+    const last = lastReported(w.address);
+    return last ? { ...last, phase: "starting" as const } : null;
+  })();
   const tip = s?.tip || (await gatewayTip());
   const bal = s?.balanceSompi ?? "0";
   const spendable = s?.spendableSompi ?? "0";
@@ -318,7 +342,8 @@ export async function browserServiceStatus(): Promise<Record<string, unknown>> {
     daa_score: tip,
     synced: s?.phase === "synced",
     spend_ready: s?.phase === "synced" && !!s.spendReady,
-    loading: !s || s.phase === "starting",
+    // "Starting" with a restored checkpoint already knows its position: not "opening".
+    loading: !s || (s.phase === "starting" && !(s.scanned > 0)),
     scanned_blocks: s?.scanned || w.birthday,
     chain_len: tip,
     balance_sompi: bal,

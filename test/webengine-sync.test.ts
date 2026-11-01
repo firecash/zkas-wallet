@@ -102,6 +102,24 @@ describe("browser sync loop", () => {
     expect(t.statuses.at(-1)).toBe("error");
   });
 
+  it("a reloaded page reports the saved position before any network request", async () => {
+    const t = deps();
+    const order: string[] = [];
+    const fetch0 = t.d.fetch;
+    t.d.fetch = (async (u: string) => {
+      order.push("fetch");
+      return fetch0(u as never);
+    }) as typeof fetch;
+    t.d.load = async () => new Uint8Array([150]);
+    const onStatus0 = t.d.onStatus;
+    t.d.onStatus = (st) => {
+      order.push(`status:${st.scanned}`);
+      onStatus0(st);
+    };
+    await runSync(t.d);
+    expect(order[0]).toBe("status:150");
+  });
+
   it("goes back to the last checkpoint on a reorg and carries on", async () => {
     const t = deps();
     t.d.create = () => {
