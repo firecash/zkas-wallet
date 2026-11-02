@@ -7631,10 +7631,16 @@ const History = memo(function History({
   // The arriving amount, held until the history row it becomes has loaded. The row went from
   // "Arriving" to "Nothing yet" for ~12 s on a wallet whose payment had just settled: the
   // balance had it, the history list had not been fetched again yet (test wallet, 2 Nov).
-  const heldArriving = useRef<{ amount: number; at: number; rows: number } | null>(null);
+  // The 30 s run from when the amount went to zero, not from the last render that showed it:
+  // History is memoised and does not re-render while the amount stays the same, so that time
+  // could be minutes old and the hold expired at once.
+  const heldArriving = useRef<{ amount: number; rows: number; goneAt: number | null } | null>(null);
   const rowCount = chain?.rows?.length ?? 0;
-  if (arrivingZkas > 0) heldArriving.current = { amount: arrivingZkas, at: Date.now(), rows: rowCount };
-  else if (heldArriving.current && (rowCount > heldArriving.current.rows || Date.now() - heldArriving.current.at > 30_000)) heldArriving.current = null;
+  if (arrivingZkas > 0) heldArriving.current = { amount: arrivingZkas, rows: rowCount, goneAt: null };
+  else if (heldArriving.current) {
+    heldArriving.current.goneAt ??= Date.now();
+    if (rowCount > heldArriving.current.rows || Date.now() - heldArriving.current.goneAt > 30_000) heldArriving.current = null;
+  }
   arrivingZkas = arrivingZkas > 0 ? arrivingZkas : (heldArriving.current?.amount ?? 0);
   const setChain = useCallback(
     (h: ChainHistory) => {
@@ -7781,10 +7787,18 @@ const History = memo(function History({
   // `chain` without discarding them. Safe to accumulate: these rows are older than the newest
   // page and a confirmed transaction does not change. A wallet switch reloads the app (every
   // `switchWallet` call site does), so they cannot leak between wallets.
-  const allRows = useMemo(
-    () => (older.length ? [...(chain?.rows ?? NO_ROWS), ...older] : (chain?.rows ?? NO_ROWS)),
-    [chain?.rows, older],
-  );
+  const allRows = useMemo(() => {
+    const rows = older.length ? [...(chain?.rows ?? NO_ROWS), ...older] : (chain?.rows ?? NO_ROWS);
+    // A sent row that folds the fee into the amount (an engine that saw only compact records
+    // knows what left the wallet, not how it split): "-0.53" for a payment of 0.5 + 0.03 fee
+    // (test wallet, 2 Nov). This device recorded the payment itself; use its amount and fee.
+    const mine = new Map(txs.map((t) => [t.txid, t]));
+    return rows.map((r) => {
+      const l = r.kind === "sent" ? mine.get(r.txid) : undefined;
+      if (!l || !(l.feeFc > 0) || Math.abs(r.amountZkas - (l.amountFc + l.feeFc)) > 1e-8) return r;
+      return { ...r, amountZkas: l.amountFc, amountSompi: Math.round(l.amountFc * 1e8), feeSompi: Math.round(l.feeFc * 1e8) };
+    });
+  }, [chain?.rows, older, txs]);
   // Search covers what a person actually remembers about a payment: who, what it
   // was for, and roughly how much — not the txid they never read.
   const needle = q.trim().toLowerCase();
