@@ -2130,7 +2130,7 @@
   },
   "runInBrowserOption": {
     "title": "在此瀏覽器中執行",
-    "desc": "網頁上最私密的方式：你的金鑰從不離開此瀏覽器，任何服務都看不到你的錢包。 從 ZKas 及其 Cloudflare CDN 下載鏈檔案。它們看得到你的 IP，看不到你的錢包。"
+    "desc": "網頁上最私密的方式：你的金鑰從不離開此瀏覽器，任何服務都看不到你的錢包。從 ZKas 及其 Cloudflare CDN 下載鏈檔案。它們看得到你的 IP，看不到你的錢包。"
   },
   "browserEngine": {
     "notInBrowser": "錢包在此瀏覽器中執行時無法使用。請改用 App 或公開服務。"
