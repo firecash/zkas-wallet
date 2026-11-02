@@ -96,6 +96,85 @@ describe("browser sync loop", () => {
     expect(t.statuses.filter((x) => x === "synced").length).toBe(3);
   });
 
+  it("downloads the next gateway page while this one is ingested", async () => {
+    // Pages used to be fetched and ingested in turn, the network idle during each ingest.
+    const order: string[] = [];
+    const t = deps({ create: () => new FakeEngine(0, 4) });
+    const fetch0 = t.d.fetch;
+    let lastAfter = "";
+    t.d.fetch = (async (u: string) => {
+      if (u.includes("/blocks?after=")) {
+        lastAfter = u.split("after=")[1].split("&")[0];
+        order.push(`fetch ${lastAfter}`);
+      }
+      return fetch0(u);
+    }) as typeof fetch;
+    // The fake page "ends" where the fake engine will stop after ingesting it (+10 blocks).
+    t.d.pageCursor = () => JSON.stringify({ last: `b${Number(lastAfter.slice(1)) + 10}`, count: 1000, reorged: false });
+    const eng = { ingest: FakeEngine.prototype.ingest_page };
+    FakeEngine.prototype.ingest_page = function (this: FakeEngine) {
+      order.push(`ingest ${this.low()}`);
+      return eng.ingest.call(this);
+    };
+    try {
+      await runSync(t.d);
+    } finally {
+      FakeEngine.prototype.ingest_page = eng.ingest;
+    }
+    // The page after b200 was asked for before b200's page was ingested, and so on.
+    expect(order.indexOf("fetch b210")).toBeLessThan(order.indexOf("ingest b200"));
+    expect(order.indexOf("fetch b220")).toBeLessThan(order.indexOf("ingest b210"));
+    // Every cursor fetched once: the read-ahead page was used, not fetched again.
+    const fetches = order.filter((x) => x.startsWith("fetch"));
+    expect(new Set(fetches).size).toBe(fetches.length);
+  });
+
+  it("never uses a read-ahead page when the engine stopped short of its end", async () => {
+    const t = deps({ create: () => new FakeEngine(0, 3) });
+    const asked: string[] = [];
+    const fetch0 = t.d.fetch;
+    t.d.fetch = (async (u: string) => {
+      if (u.includes("/blocks?after=")) asked.push(u.split("after=")[1].split("&")[0]);
+      return fetch0(u);
+    }) as typeof fetch;
+    // Claims every page ends 500 blocks on: the engine (+10 per page) never stops there.
+    t.d.pageCursor = () => JSON.stringify({ last: "b999999", count: 1000, reorged: false });
+    await runSync(t.d);
+    // Each ingest resumed from the engine's real cursor (b200, b210, b220), never from b999999.
+    expect(asked.filter((a) => a !== "b999999")).toEqual(expect.arrayContaining(["b200", "b210", "b220"]));
+    expect(t.statuses.at(-1)).toBe("synced");
+  });
+
+  it("says synced as soon as the tree is checked, not after the save, tip, anchor and mempool", async () => {
+    // Every save takes a moment. Before, "synced" came only after the tip save had finished (one
+    // step after another); now it goes out while that save is still running.
+    const t = deps();
+    const events: string[] = [];
+    t.d.onStatus = (st) => {
+      t.statuses.push(st.phase);
+      events.push(st.phase);
+    };
+    t.d.save = async () => {
+      events.push("save-start");
+      await new Promise((r) => setTimeout(r, 30));
+      events.push("save-done");
+      return true;
+    };
+    let synced = 0;
+    const orig = t.d.onStatus;
+    t.d.onStatus = (st) => {
+      orig(st);
+      if (st.phase === "synced") synced++;
+    };
+    t.d.shouldStop = () => synced >= 2;
+    await runSync(t.d);
+    const first = events.indexOf("synced");
+    // This fixture saves twice while catching up (two segments, then the files' end). The tip
+    // save used to finish before "synced" too (three); now it starts right after it.
+    expect(events.slice(0, first).filter((e) => e === "save-done").length).toBe(2);
+    expect(events[first + 1]).toBe("save-start");
+  });
+
   it("asks for the anchor and the mempool at the same time", async () => {
     // Through a proxy each request is a round trip; one after the other cost ~1 s a round.
     const t = deps();

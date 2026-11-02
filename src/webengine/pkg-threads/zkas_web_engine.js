@@ -186,10 +186,75 @@ function debugString(val) {
     // TODO we could test for more things here, like `Set`s and `Map`s.
     return className;
 }
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
 /**
  * Build the Halo 2 proving key now (a few seconds, once per page): called when the wallet is
  * idle at the tip, so the first payment does not pay for it. Later calls return at once.
+ * Where a gateway page ends, read before it is ingested: `{last, count, reorged}` with `last` the
+ * page's final block in the form `Engine::low` uses (null for an empty page). Lets the browser
+ * ask for the next page while this one is ingested, instead of leaving the network idle.
+ * The index of block `hash_hex` in a gateway page, or -1.
+ * @param {Uint8Array} bytes
+ * @param {string} hash_hex
+ * @returns {number}
  */
+export function page_index_of(bytes, hash_hex) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_export_3);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(hash_hex, wasm.__wbindgen_export_3, wasm.__wbindgen_export_4);
+        const len1 = WASM_VECTOR_LEN;
+        wasm.page_index_of(retptr, ptr0, len0, ptr1, len1);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return r0;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {Uint8Array} bytes
+ * @returns {string}
+ */
+export function page_cursor(bytes) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_export_3);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.page_cursor(retptr, ptr0, len0);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        var ptr2 = r0;
+        var len2 = r1;
+        if (r3) {
+            ptr2 = 0; len2 = 0;
+            throw takeObject(r2);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        wasm.__wbindgen_export_2(deferred3_0, deferred3_1, 1);
+    }
+}
+
 export function warm_prover() {
     wasm.warm_prover();
 }
@@ -257,12 +322,6 @@ export function verify_manifest(json) {
     }
 }
 
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
 /**
  * Does a downloaded segment match its manifest entry (size and SHA-256)?
  * @param {Uint8Array} bytes
@@ -927,6 +986,40 @@ export class Engine {
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
             wasm.__wbindgen_export_2(deferred5_0, deferred5_1, 1);
+        }
+    }
+    /**
+     * [`Engine::ingest_page`] up to and including block `stop_hex` (the whole page when absent).
+     * @param {Uint8Array} bytes
+     * @param {string} stop_hex
+     * @returns {string}
+     */
+    ingest_page_until(bytes, stop_hex) {
+        let deferred4_0;
+        let deferred4_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_export_3);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(stop_hex, wasm.__wbindgen_export_3, wasm.__wbindgen_export_4);
+            const len1 = WASM_VECTOR_LEN;
+            wasm.engine_ingest_page_until(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+            var ptr3 = r0;
+            var len3 = r1;
+            if (r3) {
+                ptr3 = 0; len3 = 0;
+                throw takeObject(r2);
+            }
+            deferred4_0 = ptr3;
+            deferred4_1 = len3;
+            return getStringFromWasm0(ptr3, len3);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export_2(deferred4_0, deferred4_1, 1);
         }
     }
     /**

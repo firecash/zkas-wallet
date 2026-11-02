@@ -11,6 +11,8 @@ export interface EngineLike {
   scanned(): bigint;
   ingest_segment(bytes: Uint8Array, index: bigint, fromBlock: string, toBoundaryJson: string): string;
   ingest_page(bytes: Uint8Array): string;
+  /** `ingest_page` up to and including block `stop` (parallel page streams). */
+  ingest_page_until?(bytes: Uint8Array, stop: string): string;
   tip_frontier(): string | undefined;
   checkpoint(): Uint8Array;
   status(): string;
@@ -77,6 +79,12 @@ export interface SyncDeps {
   shouldStop(): boolean;
   /** Seconds between tip polls once synced (default 10). */
   pollSecs?: number;
+  /** Where a gateway page ends (`page_cursor`): lets the next page download during this ingest. */
+  pageCursor?(page: Uint8Array): string;
+  /** Where block `hash` sits in a gateway page, or -1 (`page_index_of`): parallel page streams. */
+  pageIndexOf?(page: Uint8Array, hash: string): number;
+  /** Timing of each sync phase, for the diagnostic log (what a slow catch-up spent its time on). */
+  onPhase?(ev: string, fields: Record<string, number | string | boolean>): void;
   sleep?(ms: number): Promise<void>;
 }
 
@@ -89,6 +97,19 @@ export const SEGMENT_READ_AHEAD = 2;
 
 /** Checkpoint every this many segments while catching up. */
 const SAVE_EVERY_SEGMENTS = 2;
+/** Blocks per gateway page (the gateway's maximum). */
+const PAGE_LIMIT = 1000;
+
+/** A gateway stretch at least this long (DAA) is fetched as parallel page streams. Pages one at a
+ *  time pay a proxy round trip each (~1.3 s through wallet.zkas.info) before their transfer: a
+ *  user log (2 Nov) moved ~23k DAA in 51 s on a link that carried the 7 MB segment at 2 Mbit/s. */
+export const STREAM_MIN_DAA = 6_000;
+/** Streams in flight at once. */
+export const STREAMS = 4;
+/** The streams end this far below the tip; the plain loop takes the rest (and the tip margin). */
+export const STREAM_STOP_BEFORE_TIP = 3_000;
+/** At most this much (DAA) per stream at once: bounds the pages held while earlier ones ingest. */
+export const STREAM_MAX_DAA = 25_000;
 /** During a gateway catch-up, save at most this often (a reload resumes from here). */
 const GATEWAY_SAVE_MS = 15_000;
 
@@ -161,6 +182,15 @@ export async function runSync(d: SyncDeps): Promise<void> {
   // balance) at once. It used to fetch the tip and the manifest first — seconds over the proxy —
   // reporting nothing meanwhile, so the page fell back to the birthday and showed 0% between the
   // cached 99% and the real 99%.
+  const phase = (ev: string, fields: Record<string, number | string | boolean>) => {
+    try {
+      d.onPhase?.(ev, fields);
+    } catch {
+      /* diagnostics never break a sync */
+    }
+  };
+  const ms = (t0: number) => Math.round(performance.now() - t0);
+  let t = performance.now();
   const saved = await d.load();
   if (saved) {
     try {
@@ -171,12 +201,22 @@ export async function runSync(d: SyncDeps): Promise<void> {
     }
   }
   report("starting");
+  phase("resume", { ms: ms(t), checkpoint_kb: saved ? Math.round(saved.length / 1024) : 0, scanned: eng ? Number(eng.scanned()) : 0 });
+  t = performance.now();
   await refreshTip();
+  phase("tip_fetch", { ms: ms(t), tip });
+  t = performance.now();
+  let manifestBytes = 0;
   const manifest: Manifest = await fromMirrors(
     (b) => `${b}/manifest-v2.json`,
     0,
-    async (r) => JSON.parse(d.verifyManifest(await r.text())),
+    async (r) => {
+      const text = await r.text();
+      manifestBytes = text.length;
+      return JSON.parse(d.verifyManifest(text));
+    },
   );
+  phase("manifest", { ms: ms(t), kb: Math.round(manifestBytes / 1024), segments: manifest.segments.length });
   const segs = manifest.segments;
 
   // Or start at the signed boundary of the segment the birthday falls in.
@@ -217,9 +257,11 @@ export async function runSync(d: SyncDeps): Promise<void> {
     );
   const pending = segs.filter((s) => s.to.daa > Number(eng!.scanned()));
   const inflight = new Map<number, Promise<Uint8Array>>();
+  const started = new Map<number, number>();
   const ensure = (i: number) => {
     const s = pending[i];
     if (s && !inflight.has(i)) {
+      started.set(i, performance.now());
       const p = fetchSegment(s);
       p.catch(() => undefined); // awaited (and rethrown) when its turn comes
       inflight.set(i, p);
@@ -230,8 +272,11 @@ export async function runSync(d: SyncDeps): Promise<void> {
     const s = pending[i];
     if (d.shouldStop()) return;
     for (let k = 0; k <= SEGMENT_READ_AHEAD; k++) ensure(i + k);
+    const tWait = performance.now();
     const bytes = await inflight.get(i)!;
     inflight.delete(i);
+    const waited = ms(tWait);
+    const tIngest = performance.now();
     try {
       // The segment's signed end frontier: an engine holding no note adopts it instead of
       // hashing the segment's leaves.
@@ -242,6 +287,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
       if (String(e).includes("does not continue")) break;
       throw e;
     }
+    phase("segment", { index: s.index, kb: Math.round(bytes.length / 1024), download_ms: Math.round(performance.now() - (started.get(i) ?? tWait)) - ms(tIngest), waited_ms: waited, ingest_ms: ms(tIngest) });
     if (++sinceSave >= SAVE_EVERY_SEGMENTS) {
       sinceSave = 0;
       await d.save(eng.checkpoint());
@@ -252,15 +298,147 @@ export async function runSync(d: SyncDeps): Promise<void> {
 
   // 2. The gateway to the tip margin; then the node check; then keep following the tip.
   let lastGatewaySave = Date.now();
+  const fetchPage = async (after: string) => new Uint8Array(await (await get(`${d.gateway}/blocks?after=${after}&limit=${PAGE_LIMIT}`)).arrayBuffer());
+  // The page after the one being ingested, already downloading (catch-up only), and the cursor it
+  // was asked from: used only if ingest stops exactly there (at the margin it stops earlier, and
+  // that page would skip the blocks in between).
+  let ahead: { after: string; page: Promise<Uint8Array> } | null = null;
+  let catchup = { pages: 0, kb: 0, waitMs: 0, ingestMs: 0, startedAt: performance.now(), from: Number(eng.scanned()) };
+
+  // Parallel page streams for a long stretch: the range is split at chain blocks the gateway names
+  // (public, cached; asking reveals nothing about the wallet), every stream downloads at once, and
+  // the pages are ingested strictly in order, each stream ending exactly on the block the next one
+  // starts after. Anything unexpected (a missing boundary, a reorg flag, a stream that does not
+  // end where it must) stops the streams; the plain loop below then continues from wherever the
+  // wallet really is, so a failure costs time, never correctness.
+  const streamed = async (): Promise<void> => {
+    const e = eng!;
+    if (!d.pageIndexOf || !d.pageCursor || !e.ingest_page_until) return;
+    const from = Number(e.scanned());
+    const end = Math.min(tip - STREAM_STOP_BEFORE_TIP, from + STREAMS * STREAM_MAX_DAA);
+    if (end - from < STREAM_MIN_DAA) return;
+    const t0 = performance.now();
+    const step = (end - from) / STREAMS;
+    let bounds: { block: string; daa: number }[];
+    try {
+      bounds = await Promise.all(
+        Array.from({ length: STREAMS }, (_, i) => Math.round(from + step * (i + 1))).map(async (x) => {
+          const b = await (await get(`${d.gateway}/tree?below=${x}`)).json();
+          if (typeof b?.block !== "string" || typeof b?.daa !== "number") throw new Error("no boundary");
+          return { block: b.block as string, daa: b.daa as number };
+        }),
+      );
+    } catch {
+      return;
+    }
+    // Strictly ascending and past the wallet, or no streams.
+    if (bounds.some((b, i) => b.daa <= (i ? bounds[i - 1].daa : from))) return;
+    const starts = [e.low(), ...bounds.slice(0, -1).map((b) => b.block)];
+    let failed = false;
+    // Each stream: its pages, in order, as they arrive.
+    const streams = starts.map((start, i) => {
+      const stop = bounds[i].block;
+      const pages: { page: Uint8Array; until: boolean }[] = [];
+      const sig: { wake: (() => void) | null } = { wake: null };
+      let done = false;
+      // A 1000-block page spans at least 1000 DAA: a stream needs at most span/1000 + 1 pages. A
+      // boundary that is somehow not where the stream expects it must not run on into its
+      // neighbours' ranges.
+      const span = bounds[i].daa - (i ? bounds[i - 1].daa : from);
+      const maxPages = Math.ceil(span / PAGE_LIMIT) + 2;
+      const run = (async () => {
+        let after = start;
+        for (let guard = 0; guard < maxPages && !failed; guard++) {
+          const page = await fetchPage(after);
+          const hit = d.pageIndexOf!(page, stop) >= 0;
+          pages.push({ page, until: hit });
+          sig.wake?.();
+          if (hit) return;
+          const c = JSON.parse(d.pageCursor!(page));
+          if (typeof c.last !== "string" || c.reorged || !c.count) throw new Error("stream cannot continue");
+          after = c.last;
+        }
+        throw new Error("stream did not reach its end");
+      })()
+        .catch(() => {
+          failed = true;
+        })
+        .finally(() => {
+          done = true;
+          sig.wake?.();
+        });
+      const next = async (): Promise<{ page: Uint8Array; until: boolean } | null> => {
+        for (;;) {
+          if (pages.length) return pages.shift()!;
+          if (done || failed) return null;
+          await new Promise<void>((r) => (sig.wake = r));
+          sig.wake = null;
+        }
+      };
+      return { stop, next, run };
+    });
+    let pagesIn = 0;
+    let kb = 0;
+    let ingestMs = 0;
+    try {
+      for (const s of streams) {
+        for (;;) {
+          if (d.shouldStop()) {
+            failed = true;
+            return;
+          }
+          const item = await s.next();
+          if (!item) break;
+          const ti = performance.now();
+          const res = JSON.parse(item.until ? e.ingest_page_until!(item.page, s.stop) : e.ingest_page(item.page));
+          ingestMs += ms(ti);
+          pagesIn++;
+          kb += item.page.length / 1024;
+          if (res.at_margin) failed = true;
+          report("tip");
+          if (item.until || failed) break;
+        }
+        if (failed || e.low() !== s.stop) {
+          failed = true;
+          break;
+        }
+      }
+    } catch {
+      failed = true; // a reorg or a bad page: the plain loop takes over from the wallet's cursor
+    }
+    failed = true; // stop any stream still running
+    await Promise.all(streams.map((s) => s.run));
+    phase("streamed_catchup", { streams: streams.length, pages: pagesIn, blocks: Number(e.scanned()) - from, kb: Math.round(kb), ms: ms(t0), ingest_ms: Math.round(ingestMs), complete: e.low() === bounds[bounds.length - 1].block });
+  };
+  if (!everSynced) await streamed();
+
   for (;;) {
     if (d.shouldStop()) return;
     for (;;) {
       if (d.shouldStop()) return;
-      const page = new Uint8Array(await (await get(`${d.gateway}/blocks?after=${eng.low()}&limit=1000`)).arrayBuffer());
+      const low = eng.low();
+      const tWait = performance.now();
+      const page = ahead && ahead.after === low ? await ahead.page : await fetchPage(low);
+      ahead = null;
+      const waited = ms(tWait);
+      if (d.pageCursor && !everSynced) {
+        try {
+          const c = JSON.parse(d.pageCursor(page));
+          if (typeof c.last === "string" && c.count >= PAGE_LIMIT && !c.reorged) {
+            const p = fetchPage(c.last);
+            p.catch(() => undefined); // awaited (and rethrown) only if used
+            ahead = { after: c.last, page: p };
+          }
+        } catch {
+          /* no read-ahead for this page */
+        }
+      }
+      const tIngest = performance.now();
       let res: { ingested: number; at_margin: boolean };
       try {
         res = JSON.parse(eng.ingest_page(page));
       } catch (e) {
+        ahead = null;
         if (String(e).includes("reorged")) {
           // The cursor left the selected chain: go back to the last saved checkpoint.
           const ck = await d.load();
@@ -276,8 +454,17 @@ export async function runSync(d: SyncDeps): Promise<void> {
       // reporting it as "tip" flipped the status to not-synced and NOT SPEND-READY for a moment
       // on every new block page (seen in a user log every few seconds, Send greyed out). The
       // "synced" report a moment later carries the new balance.
+      if (!everSynced) {
+        catchup.pages++;
+        catchup.kb += page.length / 1024;
+        catchup.waitMs += waited;
+        catchup.ingestMs += ms(tIngest);
+      }
       if (!(res.at_margin && everSynced)) report("tip");
-      if (res.at_margin) break;
+      if (res.at_margin) {
+        ahead = null;
+        break;
+      }
       // Long gateway catch-ups (a wallet back after days, or the stretch past the last chain
       // file) used to save only at the margin, so a reload mid-way restarted from the files'
       // end and the screen went back to an early percentage.
@@ -286,6 +473,19 @@ export async function runSync(d: SyncDeps): Promise<void> {
         await d.save(eng.checkpoint());
       }
     }
+    if (!everSynced && catchup.pages > 0) {
+      phase("gateway_catchup", {
+        pages: catchup.pages,
+        blocks: Number(eng.scanned()) - catchup.from,
+        kb: Math.round(catchup.kb),
+        ms: ms(catchup.startedAt),
+        network_wait_ms: Math.round(catchup.waitMs),
+        ingest_ms: Math.round(catchup.ingestMs),
+      });
+      catchup = { pages: 0, kb: 0, waitMs: 0, ingestMs: 0, startedAt: performance.now(), from: Number(eng.scanned()) };
+    }
+    t = performance.now();
+    let verifyMs = 0;
     if (verified === null) {
       const mine = eng.tip_frontier();
       if (mine) {
@@ -297,21 +497,33 @@ export async function runSync(d: SyncDeps): Promise<void> {
           throw new Error("tree differs from the node");
         }
       }
+      verifyMs = ms(t);
     }
-    await d.save(eng.checkpoint());
-    await refreshTip();
-    // At the tip: the matured anchor (the node's frontier well below the tip, so a spend rooted
-    // there is final when mined: the consensus depth is 600 blue, ~1000 DAA leaves room) and the
-    // mempool (an incoming payment shows a second after it is sent). Both best-effort.
-    // In parallel: through a proxy each request costs a round trip (~1 s measured on
-    // wallet.zkas.info), and the two do not depend on each other.
+    // The balance is current now: say so at once. A user log (2 Nov) showed ~25 s between
+    // reaching the tip and "synced" while the save, the tip, the anchor and the mempool went
+    // one after another through the proxy. Spend-ready follows with the anchor (the engine's
+    // own status says so), reported again below.
+    if (!everSynced) report("synced");
+    // The rest in parallel: the checkpoint write, the tip, then the matured anchor (the node's
+    // frontier well below the tip, so a spend rooted there is final when mined: the consensus
+    // depth is 600 blue, ~1000 DAA leaves room) and the mempool (an incoming payment shows a
+    // second after it is sent). All best-effort but the save.
     const live = eng;
+    const tSave = performance.now();
+    const saving = d.save(live.checkpoint()).then((ok) => ({ ok, ms: ms(tSave) }));
+    const tTip = performance.now();
+    await refreshTip();
+    const tipMs = ms(tTip);
+    const tAnchor = performance.now();
+    let anchorSetMs = 0;
     await Promise.all([
       tip > ANCHOR_DEPTH_DAA
         ? get(`${d.gateway}/tree?below=${tip - ANCHOR_DEPTH_DAA}`)
             .then((r) => r.json())
             .then((a) => {
+              const ts = performance.now();
               if (typeof a?.block === "string") live.set_anchor?.(JSON.stringify(a));
+              anchorSetMs = ms(ts);
             })
             .catch(() => {
               /* the previous anchor stands */
@@ -326,6 +538,10 @@ export async function runSync(d: SyncDeps): Promise<void> {
           /* no mempool preview this round */
         }),
     ]);
+    const saved = await saving;
+    if (!everSynced) {
+      phase("at_tip", { verify_ms: verifyMs, save_ms: saved.ms, save_ok: saved.ok, tip_ms: tipMs, anchor_mempool_ms: ms(tAnchor), anchor_set_ms: anchorSetMs, total_ms: ms(t) });
+    }
     report("synced");
     everSynced = true;
     await sleep((d.pollSecs ?? 5) * 1000);

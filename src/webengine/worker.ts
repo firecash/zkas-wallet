@@ -169,6 +169,8 @@ self.onmessage = async (ev: MessageEvent<StartMessage | SendMessage | { type: "s
   });
   const { m } = await ready;
   const { Engine, segment_matches, verify_manifest, warm_prover } = m;
+  const pageCursor = (m as unknown as { page_cursor?: (b: Uint8Array) => string }).page_cursor;
+  const pageIndexOf = (m as unknown as { page_index_of?: (b: Uint8Array, h: string) => number }).page_index_of;
   // Run until stopped. A failed run — a mirror or the gateway unreachable for a moment, the
   // gateway answering "busy" — is retried with backoff and resumes from the saved checkpoint; it
   // used to end syncing for the whole session. The last good numbers stay on screen meanwhile:
@@ -209,6 +211,9 @@ self.onmessage = async (ev: MessageEvent<StartMessage | SendMessage | { type: "s
           live = e as unknown as LiveEngine;
         },
         shouldStop: () => stopped,
+        pageCursor,
+        pageIndexOf,
+        onPhase: (ev, fields) => (self as unknown as Worker).postMessage({ type: "diag", ev, fields }),
       });
       return; // only a stop ends a run cleanly
     } catch (e) {

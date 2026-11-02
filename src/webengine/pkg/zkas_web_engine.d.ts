@@ -1,5 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
+export function warm_prover(): void;
 /**
  * The page's entry point for [`verify_manifest_str`].
  */
@@ -7,13 +8,18 @@ export function verify_manifest(json: string): string;
 /**
  * Build the Halo 2 proving key now (a few seconds, once per page): called when the wallet is
  * idle at the tip, so the first payment does not pay for it. Later calls return at once.
+ * Where a gateway page ends, read before it is ingested: `{last, count, reorged}` with `last` the
+ * page's final block in the form `Engine::low` uses (null for an empty page). Lets the browser
+ * ask for the next page while this one is ingested, instead of leaving the network idle.
+ * The index of block `hash_hex` in a gateway page, or -1.
  */
-export function warm_prover(): void;
-export function address_of_fvk(fvk_hex: string): string;
+export function page_index_of(bytes: Uint8Array, hash_hex: string): number;
 /**
  * Does a downloaded segment match its manifest entry (size and SHA-256)?
  */
 export function segment_matches(bytes: Uint8Array, sha256_hex: string, size: bigint): boolean;
+export function page_cursor(bytes: Uint8Array): string;
+export function address_of_fvk(fvk_hex: string): string;
 /**
  * Configuration for the WASM32 bindings runtime interface.
  * @see {@link IWASM32BindingsConfig}
@@ -255,6 +261,10 @@ export class Engine {
    * plus `merged` (coins merged) for a consolidation.
    */
   prepare_payment(sk_hex: string, payees_json: string, opts_json: string): string;
+  /**
+   * [`Engine::ingest_page`] up to and including block `stop_hex` (the whole page when absent).
+   */
+  ingest_page_until(bytes: Uint8Array, stop_hex: string): string;
   low(): string;
   /**
    * A new wallet watching `fvk_hex`, starting at a manifest segment boundary (`from` of the
@@ -374,6 +384,7 @@ export interface InitOutput {
   readonly engine_checkpoint: (a: number, b: number) => void;
   readonly engine_history: (a: number, b: number, c: number, d: number) => void;
   readonly engine_ingest_page: (a: number, b: number, c: number, d: number) => void;
+  readonly engine_ingest_page_until: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   readonly engine_ingest_segment: (a: number, b: number, c: number, d: number, e: bigint, f: number, g: number, h: number, i: number) => void;
   readonly engine_low: (a: number, b: number) => void;
   readonly engine_mark_sent: (a: number, b: number, c: number, d: number, e: number, f: number, g: bigint) => void;
@@ -387,6 +398,8 @@ export interface InitOutput {
   readonly engine_status: (a: number, b: number) => void;
   readonly engine_tip_frontier: (a: number, b: number) => void;
   readonly engine_unspent: (a: number, b: number, c: number) => number;
+  readonly page_cursor: (a: number, b: number, c: number) => void;
+  readonly page_index_of: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly segment_matches: (a: number, b: number, c: number, d: number, e: bigint) => number;
   readonly verify_manifest: (a: number, b: number, c: number) => void;
   readonly warm_prover: () => void;

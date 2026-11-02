@@ -4,6 +4,7 @@
 // zkas.info) and the chain gateway, which see this browser's IP, as a node does.
 import { accountSeedHex, fvkHex, looksLikeHexSeed } from "../signer";
 import { clearnetAllowed } from "../lib/privacy";
+import { event as diagEvent } from "../diag";
 import { deleteCheckpoint, walletIdFor } from "./store";
 import type { BrowserSyncStatus } from "./sync";
 
@@ -35,8 +36,10 @@ export async function startBrowserEngine(seedHex: string, birthday: number, onSt
   const fvk = await fvkHex(seedHex);
   const id = await walletIdFor(fvk);
   const w = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
-  w.onmessage = (ev: MessageEvent<{ type: string; status: BrowserSyncStatus }>) => {
+  w.onmessage = (ev: MessageEvent<{ type: string; status: BrowserSyncStatus; ev?: string; fields?: Record<string, unknown> }>) => {
     if (ev.data?.type === "status") onStatus(ev.data.status);
+    // Where a browser sync spends its time, in the diagnostic log (Settings -> Debug logs).
+    if (ev.data?.type === "diag" && ev.data.ev) diagEvent("sync", `browser_${ev.data.ev}`, ev.data.fields ?? {});
   };
   const src = browserSources();
   w.postMessage({ type: "start", id, fvkHex: fvk, birthday, files: src.files, gateway: src.gateway });
@@ -298,24 +301,61 @@ function settleWaiters(): void {
     sendWaiters.delete(id);
     done({ error: "The wallet in this browser was stopped or switched before the payment was sent. Nothing was sent." });
   }
-  const empty = JSON.stringify({ recoverableHistory: true, total: 0, rows: [] });
+  // "" = no answer: each waiter falls back to its wallet's last list (never stored as one).
   for (const [id, done] of historyWaiters) {
     historyWaiters.delete(id);
-    done(empty);
+    done("");
   }
 }
 
 /** The engine's history in the wallet service's `/api/wallet/history` shape. */
+const HISTORY_KEY = (address: string, limit: number, offset: number) => `browser_history:${address}:${limit}:${offset}`;
+/** How long History waits for a busy engine before answering with the last list it gave. */
+export const HISTORY_BUSY_WAIT_MS = 1_500;
+
+function lastHistory(address: string, limit: number, offset: number): string | null {
+  try {
+    return localStorage.getItem(HISTORY_KEY(address, limit, offset));
+  } catch {
+    return null;
+  }
+}
+
+/** The engine's history in the wallet service's `/api/wallet/history` shape.
+ *
+ *  The worker answers between pages: while it ingests or proves, a request waits. It used to
+ *  wait up to 10 s and then answer an EMPTY list, which the History screen shows as "Nothing
+ *  yet" over a wallet with payments (a user log: 10,001 ms, mid catch-up). Now the last list
+ *  this wallet's engine gave is the answer after a short wait, and it is replaced as soon as
+ *  the engine answers. Empty only when there has never been one. */
 export function browserHistory(limit: number, offset: number): Promise<string> {
   const empty = JSON.stringify({ recoverableHistory: true, total: 0, rows: [] });
+  const address = running?.address ?? null;
+  const known = address ? lastHistory(address, limit, offset) : null;
   const w = worker;
-  if (!w) return Promise.resolve(empty);
+  if (!w) return Promise.resolve(known ?? empty);
   const id = ++historyId;
   return new Promise((resolve) => {
-    historyWaiters.set(id, resolve);
+    let settled = false;
+    const done = (json: string) => {
+      if (settled) return;
+      settled = true;
+      resolve(json);
+    };
+    historyWaiters.set(id, (json: string) => {
+      if (address && json) {
+        try {
+          localStorage.setItem(HISTORY_KEY(address, limit, offset), json);
+        } catch {
+          /* a convenience only */
+        }
+      }
+      done(json || known || empty);
+    });
     w.postMessage({ type: "history", id, limit, offset });
+    if (known) setTimeout(() => done(known), HISTORY_BUSY_WAIT_MS);
     setTimeout(() => {
-      if (historyWaiters.delete(id)) resolve(empty);
+      if (historyWaiters.delete(id)) done(known ?? empty);
     }, 10_000);
   });
 }
