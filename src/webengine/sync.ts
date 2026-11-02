@@ -371,10 +371,12 @@ export async function runSync(d: SyncDeps): Promise<void> {
     }
     return out;
   };
+  // Every segment from the first mirror (the CDN), the others only if it fails: rotating by
+  // index sent half the downloads through our own servers.
   const fetchSegment = (s: Segment) =>
     fromMirrors(
       (b) => `${b}/${s.file}`,
-      s.index,
+      0,
       async (r) => {
         const b = await readAll(r, s.index);
         if (!d.segmentMatches(b, s.sha256, BigInt(s.bytes))) throw new Error(`segment ${s.index} does not match the manifest`);
