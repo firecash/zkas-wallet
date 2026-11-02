@@ -18,6 +18,7 @@
 // which shows up as a balance lower than a later scan finds.
 
 import { api, getBase } from "./api";
+import { browserModeChosen } from "./webengine";
 import { elapsedSince } from "./lib/elapsed";
 
 const KEY = "zkas_scan_receipt_v1";
@@ -45,6 +46,9 @@ interface Stashed {
   /// it as not advancing, and the stash — the only copy — would be consumed before the
   /// service it was captured *for* ever saw it.
   from: string;
+  /// The chain block the scan stopped at (newer services name it): what lets an engine that
+  /// reads the chain through the gateway check the receipt, as the browser engine does.
+  lowBlock?: string;
 }
 
 function read(): Stashed | null {
@@ -67,6 +71,7 @@ function read(): Stashed | null {
       scannedDaa: Number(v.scannedDaa ?? 0),
       at,
       from: typeof v.from === "string" ? v.from : "",
+      ...(typeof v.lowBlock === "string" ? { lowBlock: v.lowBlock } : {}),
     };
   } catch {
     return null;
@@ -94,7 +99,7 @@ export async function captureScanReceipt(address?: string | null): Promise<boole
   try {
     const r = await api.scanReceiptExport();
     if (!r?.receipt || r.receipt.length > MAX_STASH_BYTES) return false;
-    const stash: Stashed = { address, receipt: r.receipt, scannedDaa: r.scannedDaa, at: Date.now(), from: getBase() };
+    const stash: Stashed = { address, receipt: r.receipt, scannedDaa: r.scannedDaa, at: Date.now(), from: getBase(), ...(typeof r.lowBlock === "string" ? { lowBlock: r.lowBlock } : {}) };
     localStorage.setItem(KEY, JSON.stringify(stash));
     return true;
   } catch {
@@ -134,6 +139,9 @@ export function forgetScanReceipt(address: string): void {
 }
 
 export async function adoptScanReceipt(address?: string | null): Promise<boolean> {
+  // The wallet running in this browser takes its receipt when its engine starts
+  // (`receiptForEngine`), not through a wallet service.
+  if (browserModeChosen()) return false;
   const stash = read();
   if (!stash || !address || stash.address !== address) return false;
   // Never hand it back to the daemon it came from (see `Stashed.from`).
@@ -147,6 +155,14 @@ export async function adoptScanReceipt(address?: string | null): Promise<boolean
     clear();
     return false;
   }
+}
+
+/** The receipt waiting for `address`, in the form the in-browser engine adopts (it needs the
+ *  block the scan stopped at, which only newer services name). */
+export function receiptForEngine(address: string): { hex: string; lowBlock: string; scannedDaa: number } | null {
+  const stash = read();
+  if (!stash || stash.address !== address || !stash.lowBlock) return null;
+  return { hex: stash.receipt, lowBlock: stash.lowBlock, scannedDaa: stash.scannedDaa };
 }
 
 /** Whether a receipt is waiting for `address` — used to say "carrying your sync across"

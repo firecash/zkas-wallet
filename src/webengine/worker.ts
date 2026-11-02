@@ -24,7 +24,7 @@ async function loadEngine(): Promise<{ m: M; threads: number }> {
   await m.default({ module_or_path: u.default });
   return { m, threads: 1 };
 }
-import { runSync, type BrowserSyncStatus } from "./sync";
+import { runSync, type BrowserSyncStatus, type EngineLike as EngineLikeAny } from "./sync";
 import { aheadKey, aheadUsable } from "./ahead";
 import { deleteCheckpoint, loadCheckpoint, saveCheckpoint } from "./store";
 
@@ -35,6 +35,8 @@ export interface StartMessage {
   birthday: number;
   files: string[];
   gateway: string;
+  /** A wallet service's scan receipt to start from (a "Public service" wallet moving here). */
+  receipt?: { hex: string; lowBlock: string; scannedDaa: number };
 }
 
 let stopped = false;
@@ -213,6 +215,18 @@ self.onmessage = async (ev: MessageEvent<StartMessage | SendMessage | { type: "s
         shouldStop: () => stopped,
         pageCursor,
         pageIndexOf,
+        ...(msg.receipt && (Engine as unknown as { adopt_receipt?: unknown }).adopt_receipt
+          ? {
+              receipt: { bytes: new Uint8Array(msg.receipt.hex.match(/../g)!.map((h) => parseInt(h, 16))), lowBlock: msg.receipt.lowBlock, scannedDaa: msg.receipt.scannedDaa },
+              adopt: (r: Uint8Array, node: string) =>
+                (Engine as unknown as { adopt_receipt(f: string, r: Uint8Array, n: string, b: bigint): EngineLikeAny }).adopt_receipt(msg.fvkHex, r, node, BigInt(msg.birthday)),
+              onReceipt: (adopted: boolean) => {
+                // Used once: a restart (retry after an error) must not adopt it again.
+                msg.receipt = undefined;
+                (self as unknown as Worker).postMessage({ type: "receipt", adopted });
+              },
+            }
+          : {}),
         loadAnchor: async () => {
           const b = await loadCheckpoint(`${msg.id}:anchor`);
           return b ? new TextDecoder().decode(b) : null;

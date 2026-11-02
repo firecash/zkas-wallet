@@ -1263,7 +1263,7 @@ export const api = {
   // of a rescan from birthday. Nothing secret travels: the daemon omits the nullifiers
   // so the importer recomputes them from its own key.
   scanReceiptExport: () =>
-    req<{ receipt: string; bytes: number; notes: number; scannedDaa: number; anchorLeaves: number }>(
+    req<{ receipt: string; bytes: number; notes: number; scannedDaa: number; anchorLeaves: number; lowBlock?: string }>(
       "GET",
       "/api/wallet/scan-receipt",
       undefined,

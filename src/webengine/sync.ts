@@ -93,6 +93,12 @@ export interface SyncDeps {
   pageCursor?(page: Uint8Array): string;
   /** Where block `hash` sits in a gateway page, or -1 (`page_index_of`): parallel page streams. */
   pageIndexOf?(page: Uint8Array, hash: string): number;
+  /** A wallet service's scan receipt to start from instead of the birthday (a "Public service"
+   *  wallet moving onto this device), and how to adopt it (`Engine.adopt_receipt`). */
+  receipt?: { bytes: Uint8Array; lowBlock: string; scannedDaa: number };
+  adopt?(receipt: Uint8Array, nodeBoundaryJson: string): EngineLike;
+  /** Whether the receipt was adopted (the page then drops it either way). */
+  onReceipt?(adopted: boolean): void;
   /** The last matured anchor and when it was taken (JSON), kept across reloads: a reload is
    *  spend-ready at once instead of after a round trip. */
   loadAnchor?(): Promise<string | null>;
@@ -252,6 +258,26 @@ export async function runSync(d: SyncDeps): Promise<void> {
   }
   report("starting");
   phase("resume", { ms: ms(t), checkpoint_kb: saved ? Math.round(saved.length / 1024) : 0, scanned: eng ? Number(eng.scanned()) : 0 });
+  // A wallet service's scan, carried here: start where it stopped (kilobytes) instead of
+  // scanning from the birthday. Checked against the node's tree at the block it names; any
+  // doubt and the wallet scans for itself as before.
+  if (d.receipt && d.adopt && (!eng || Number(eng.scanned()) < d.receipt.scannedDaa)) {
+    const tr = performance.now();
+    try {
+      const node = await (await get(`${d.gateway}/tree?block=${d.receipt.lowBlock}`)).json();
+      const adopted = d.adopt(d.receipt.bytes, JSON.stringify(node));
+      eng?.free?.();
+      eng = adopted;
+      d.onEngine?.(eng);
+      await d.save(eng.checkpoint());
+      phase("receipt", { outcome: "adopted", ms: ms(tr), scanned: Number(eng.scanned()) });
+      d.onReceipt?.(true);
+      report("starting");
+    } catch (e) {
+      phase("receipt", { outcome: "refused", ms: ms(tr), why: String(e).slice(0, 160) });
+      d.onReceipt?.(false);
+    }
+  }
   const resumed = !!eng;
   // A reload costs round trips, each 1.5-7 s through the wallet.zkas.info proxy (measured): it
   // used to make five in a row (tip, manifest, page, tree check, anchor) before "synced". A

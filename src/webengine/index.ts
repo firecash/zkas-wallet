@@ -6,6 +6,7 @@ import { accountSeedHex, fvkHex, looksLikeHexSeed } from "../signer";
 import { clearnetAllowed } from "../lib/privacy";
 import { event as diagEvent } from "../diag";
 import { deleteCheckpoint, walletIdFor } from "./store";
+import { forgetScanReceipt, receiptForEngine } from "../scanreceipt";
 import type { BrowserSyncStatus } from "./sync";
 
 export type { BrowserSyncStatus } from "./sync";
@@ -28,7 +29,13 @@ export function browserEngineAvailable(): boolean {
 }
 
 /** Start syncing the wallet whose seed is `seedHex` from `birthday` (DAA). Restarts if running. */
-export async function startBrowserEngine(seedHex: string, birthday: number, onStatus: (s: BrowserSyncStatus) => void): Promise<void> {
+export async function startBrowserEngine(
+  seedHex: string,
+  birthday: number,
+  onStatus: (s: BrowserSyncStatus) => void,
+  receipt?: { hex: string; lowBlock: string; scannedDaa: number } | null,
+  onReceipt?: (adopted: boolean) => void,
+): Promise<void> {
   // Tor-only and onion modes must not make clearnet requests: a normal browser cannot route these
   // fetches through Tor, so the mode is refused rather than quietly leaking the IP.
   if (!clearnetAllowed()) throw new Error("Run in this browser needs clearnet access; it is off in Tor mode.");
@@ -36,13 +43,14 @@ export async function startBrowserEngine(seedHex: string, birthday: number, onSt
   const fvk = await fvkHex(seedHex);
   const id = await walletIdFor(fvk);
   const w = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
-  w.onmessage = (ev: MessageEvent<{ type: string; status: BrowserSyncStatus; ev?: string; fields?: Record<string, unknown> }>) => {
+  w.onmessage = (ev: MessageEvent<{ type: string; status: BrowserSyncStatus; ev?: string; fields?: Record<string, unknown>; adopted?: boolean }>) => {
     if (ev.data?.type === "status") onStatus(ev.data.status);
+    if (ev.data?.type === "receipt") onReceipt?.(!!ev.data.adopted);
     // Where a browser sync spends its time, in the diagnostic log (Settings -> Debug logs).
     if (ev.data?.type === "diag" && ev.data.ev) diagEvent("sync", `browser_${ev.data.ev}`, ev.data.fields ?? {});
   };
   const src = browserSources();
-  w.postMessage({ type: "start", id, fvkHex: fvk, birthday, files: src.files, gateway: src.gateway });
+  w.postMessage({ type: "start", id, fvkHex: fvk, birthday, files: src.files, gateway: src.gateway, ...(receipt ? { receipt } : {}) });
   worker = w;
 }
 
@@ -274,6 +282,8 @@ function lastReported(address: string): (BrowserSyncStatus & { at?: number }) | 
 async function startFor(w: BrowserWallet): Promise<void> {
   latest = null;
   running = { seedHex: w.seedHex, address: w.address };
+  // A "Public service" wallet moving here: its service's scan, if one was carried.
+  const receipt = receiptForEngine(w.address);
   await startBrowserEngine(w.seedHex, w.birthday, (st) => {
     latest = st;
     if (st.scanned > 0 && st.phase !== "error") {
@@ -284,7 +294,7 @@ async function startFor(w: BrowserWallet): Promise<void> {
         /* a convenience only */
       }
     }
-  });
+  }, receipt, () => forgetScanReceipt(w.address));
   worker?.addEventListener("message", onWorkerMessage);
 }
 

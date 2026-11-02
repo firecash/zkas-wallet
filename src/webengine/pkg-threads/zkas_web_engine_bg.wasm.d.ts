@@ -2,6 +2,7 @@
 /* eslint-disable */
 export const __wbg_engine_free: (a: number, b: number) => void;
 export const address_of_fvk: (a: number, b: number, c: number) => void;
+export const engine_adopt_receipt: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: bigint) => void;
 export const engine_anchor_debug: (a: number, b: number) => void;
 export const engine_checkpoint: (a: number, b: number) => void;
 export const engine_history: (a: number, b: number, c: number, d: number) => void;

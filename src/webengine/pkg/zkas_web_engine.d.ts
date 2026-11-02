@@ -256,6 +256,10 @@ export class Engine {
    */
   tip_frontier(): string | undefined;
   /**
+   * A wallet adopted from a wallet service's scan receipt (see [`Engine::from_receipt`]).
+   */
+  static adopt_receipt(fvk_hex: string, receipt: Uint8Array, node_boundary_json: string, birthday: bigint): Engine;
+  /**
    * See [`Engine::segment`].
    */
   ingest_segment(bytes: Uint8Array, index: bigint, from_block_hex: string, to_boundary_json: string): string;
@@ -388,6 +392,7 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_engine_free: (a: number, b: number) => void;
   readonly address_of_fvk: (a: number, b: number, c: number) => void;
+  readonly engine_adopt_receipt: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: bigint) => void;
   readonly engine_anchor_debug: (a: number, b: number) => void;
   readonly engine_checkpoint: (a: number, b: number) => void;
   readonly engine_history: (a: number, b: number, c: number, d: number) => void;
