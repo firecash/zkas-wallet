@@ -1878,6 +1878,7 @@ export default function App({ routeTab = null, routeSticky = false, onClearRoute
             <Pane visible={tab === "history"}>
               <History
                 txs={txs}
+                arrivingZkas={pendingInFc(status)}
                 justSent={justSent}
                 synced={!!status?.synced}
                 daaScore={status?.daa_score}
@@ -3592,7 +3593,7 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
           : inNotice.shown
             ? ownActivityExplainsRise(txs)
               ? t("balanceHero.changeFromPayment", { amount: noticeAmt(inNotice.amount) })
-              : t("balanceHero.arriving", { amount: noticeAmt(inNotice.amount) })
+              : t("balanceHero.arrivingIncluded", { amount: noticeAmt(inNotice.amount) })
             : ""}
       </div>
       <div className="sub notice-slot" style={{ color: "var(--ember)" }}>
@@ -3614,7 +3615,9 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
             report, 1 Nov). Here only what the line above does NOT explain is "arriving";
             when nothing is left, only the ready-to-spend figure remains. */}
         {arrivingRest > 0.00000001 ? (
-          view.canSpend ? (
+          // "Checking the chain" only while it is: an up-to-date wallet whose anchor is a
+          // moment away said "Up to date" and "checking the chain" at once (test wallet, 2 Nov).
+          view.canSpend || view.phase === "ready" ? (
             <span>
               <Trans
                 i18nKey="balanceHero.readyAndArriving"
@@ -7572,8 +7575,20 @@ function sameHistory(a: ChainHistory, b: ChainHistory): boolean {
 /// status tick — once a second during a scan — and each render re-filtered,
 /// re-sorted and re-read localStorage per row. Its props are primitives plus
 /// lists whose identity the parent already preserves (`sameTxs`).
+/** A confirmed payment still settling, shown at the top of History until it becomes a row. */
+function ArrivingRow({ amount }: { amount: number }) {
+  const { t } = useTranslation();
+  return (
+    <div className="history-arriving appear" role="status">
+      <span className="status-dot busy" aria-hidden="true" />
+      <span>{t("history.arrivingRow", { amount: trimFc(amount.toFixed(8)) })}</span>
+    </div>
+  );
+}
+
 const History = memo(function History({
   txs,
+  arrivingZkas = 0,
   justSent,
   onSendAnother,
   synced,
@@ -7586,6 +7601,9 @@ const History = memo(function History({
   /// Current chain DAA height, so the rescan dialog can turn a calendar date into
   /// a birthday. Optional — without it, exact-height entry still works.
   daaScore?: number;
+  /// Confirmed incoming value still settling (too near the tip to be a history row yet). A paid
+  /// wallet said "Nothing yet" for minutes while the balance above already showed the money.
+  arrivingZkas?: number;
 }) {
   // Chain-derived history (mints, receives, and OVK-recovered sends): fetched
   // from the daemon, so it survives a seed restore and shows on every device.
@@ -7831,13 +7849,17 @@ const History = memo(function History({
             ))}
           </div>
         )}
-        <p className="muted small" style={{ marginTop: 0 }}>
-          {chain === null
-            ? ""
-            : recovering
-              ? t("history.recovering")
-              : t("history.empty")}
-        </p>
+        {arrivingZkas > 0 ? (
+          <ArrivingRow amount={arrivingZkas} />
+        ) : (
+          <p className="muted small" style={{ marginTop: 0 }}>
+            {chain === null
+              ? ""
+              : recovering
+                ? t("history.recovering")
+                : t("history.empty")}
+          </p>
+        )}
         {/* A browser-mode wallet already holds its whole history since its birthday, and the
             rescan this asks a wallet service for is exactly what that mode never contacts. */}
         {chain !== null && !recovering && !browserModeChosen() && (
@@ -7862,6 +7884,7 @@ const History = memo(function History({
       <div className="history-heading">
         <h2>{t("history.title")}</h2>
       </div>
+      {arrivingZkas > 0 && <ArrivingRow amount={arrivingZkas} />}
       {fresh && (
         <div className="sentbanner appear">
           <span className="sent-check small">✓</span>

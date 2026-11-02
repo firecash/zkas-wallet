@@ -48,7 +48,8 @@
     "exportCsv": "CSV Dışa Aktar",
     "truncated": "Toplam {{total}} işlemden en yeni {{shown}} tanesi gösteriliyor.",
     "loadOlder": "Daha eski işlemleri yükle",
-    "loadingOlder": "Yükleniyor…"
+    "loadingOlder": "Yükleniyor…",
+    "arrivingRow": "Geliyor · {{amount}} ZKAS — onaylandı, birkaç dakika içinde burada"
   },
   "send": {
     "scanAria": "QR Tara",
@@ -766,7 +767,8 @@
     "prunedRebuild": "Bu düğüm eski geçmişi budadı, bu nedenle yeniden oluşturulan bakiye <b>alt sınır</b> olabilir. Paralarınız zincirde — tam geçmiş sunan bir düğümden yeniden tarayın. Kendi düğümünüzse ve korumalı geçmişi hâlâ dolduruyorsa, günlüğünde \"shielded history: VERIFIED\" yazmasını bekleyip yeniden tarayın.",
     "prunedRebuildFrom": "Bu düğüm eski geçmişi budadı (blok {{block}}'dan itibaren mevcut), bu nedenle yeniden oluşturulan bakiye <b>alt sınır</b> olabilir. Paralarınız zincirde — tam geçmiş sunan bir düğümden yeniden tarayın. Kendi düğümünüzse ve korumalı geçmişi hâlâ dolduruyorsa, günlüğünde \"shielded history: VERIFIED\" yazmasını bekleyip yeniden tarayın.",
     "notUpdating": "son onaylanan bakiye",
-    "readyOnly": "{{spendable}} harcanmaya hazır"
+    "readyOnly": "{{spendable}} harcanmaya hazır",
+    "arrivingIncluded": "{{amount}} ZKAS gelmekte olan dahil — onaylandı, hesaba geçiyor"
   },
   "addAccountWallet": {
     "noPhrase": "Bu cüzdanın kurtarma ifadesi yok, bu nedenle ondan bir hesap türetilemez. “Ayrı cüzdan ekle”yi kullanın — kendi kurtarma ifadesini alır, onu yedeklemelisiniz.",

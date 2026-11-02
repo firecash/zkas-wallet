@@ -213,6 +213,11 @@ self.onmessage = async (ev: MessageEvent<StartMessage | SendMessage | { type: "s
         shouldStop: () => stopped,
         pageCursor,
         pageIndexOf,
+        loadAnchor: async () => {
+          const b = await loadCheckpoint(`${msg.id}:anchor`);
+          return b ? new TextDecoder().decode(b) : null;
+        },
+        saveAnchor: (json) => saveCheckpoint(`${msg.id}:anchor`, new TextEncoder().encode(json)),
         onPhase: (ev, fields) => (self as unknown as Worker).postMessage({ type: "diag", ev, fields }),
       });
       return; // only a stop ends a run cleanly

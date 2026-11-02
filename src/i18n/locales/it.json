@@ -48,7 +48,8 @@
     "exportCsv": "Esporta CSV",
     "truncated": "Vengono mostrate le {{shown}} transazioni più recenti su {{total}}.",
     "loadOlder": "Carica transazioni precedenti",
-    "loadingOlder": "Caricamento…"
+    "loadingOlder": "Caricamento…",
+    "arrivingRow": "In arrivo · {{amount}} ZKAS — confermati, elencati qui tra pochi minuti"
   },
   "send": {
     "needSeed": "Questo dispositivo non ha ancora la chiave del portafoglio. Inserisci la frase di recupero per abilitare l'invio.",
@@ -800,7 +801,8 @@
     "lowerBound": "Questo saldo è un <b>limite inferiore</b>: la vista del portafoglio è stata ricostruita tramite un nodo che ha potato la cronologia vecchia, quindi monete create molto tempo fa potrebbero mancare. I tuoi fondi sono al sicuro sulla catena — riscansiona solo da un nodo con cronologia completa (ricostruire da questo sarebbe altrettanto cieco). Se è il tuo nodo e sta ancora caricando la cronologia schermata, aspetta che il log dica \"shielded history: VERIFIED\" e poi riscansiona.",
     "lowerBoundFrom": "Questo saldo è un <b>limite inferiore</b>: la vista del portafoglio è stata ricostruita tramite un nodo che ha potato la cronologia vecchia (disponibile dal blocco {{block}}), quindi monete create molto tempo fa potrebbero mancare. I tuoi fondi sono al sicuro sulla catena — riscansiona solo da un nodo con cronologia completa (ricostruire da questo sarebbe altrettanto cieco). Se è il tuo nodo e sta ancora caricando la cronologia schermata, aspetta che il log dica \"shielded history: VERIFIED\" e poi riscansiona.",
     "notUpdating": "ultimo saldo confermato",
-    "readyOnly": "{{spendable}} pronti da spendere"
+    "readyOnly": "{{spendable}} pronti da spendere",
+    "arrivingIncluded": "Include {{amount}} ZKAS in arrivo — confermati, in accredito"
   },
   "addAccountWallet": {
     "noPhrase": "Questo portafoglio non ha una frase di recupero, quindi non si può derivare un account. Usa “Aggiungi portafoglio separato” — ha la sua frase di recupero, di cui fare backup.",

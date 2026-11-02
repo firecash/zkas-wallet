@@ -134,7 +134,8 @@
     "exportCsv": "导出 CSV",
     "truncated": "正在显示 {{total}} 笔交易中最近的 {{shown}} 笔。",
     "loadOlder": "加载更早的交易",
-    "loadingOlder": "加载中…"
+    "loadingOlder": "加载中…",
+    "arrivingRow": "到账中 · {{amount}} ZKAS — 已确认，几分钟后显示在此"
   },
   "vaultSetting": {
     "title": "安全与备份",
@@ -766,7 +767,8 @@
     "prunedRebuild": "此节点已裁剪旧历史，重建余额可能为<b>下限</b>。你的币在链上——从提供完整历史的节点重新扫描即可查看全部。若这是你自己的节点且仍在填充屏蔽历史，请等待日志显示\"shielded history: VERIFIED\"后重新扫描。",
     "prunedRebuildFrom": "此节点已裁剪旧历史（可用区块从{{block}}开始），重建余额可能为<b>下限</b>。你的币在链上——从提供完整历史的节点重新扫描即可查看全部。若这是你自己的节点且仍在填充屏蔽历史，请等待日志显示\"shielded history: VERIFIED\"后重新扫描。",
     "notUpdating": "最后确认的余额",
-    "readyOnly": "{{spendable}} 可用"
+    "readyOnly": "{{spendable}} 可用",
+    "arrivingIncluded": "含 {{amount}} ZKAS 到账中 — 已确认，正在入账"
   },
   "addAccountWallet": {
     "noPhrase": "此钱包无助记词，无法派生账户。请使用“添加独立钱包” — 它将生成自己的助记词，需备份。",

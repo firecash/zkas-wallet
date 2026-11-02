@@ -3844,3 +3844,7 @@ input#tx-label { min-height: 44px; }
 }
 .pane-back { margin-bottom: 12px; }
 .setrow-chev-go { transform: rotate(-90deg); }
+
+/* A confirmed payment still settling, at the top of History. */
+.history-arriving { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 0 0 10px; border: 1px dashed color-mix(in srgb, var(--ember) 55%, transparent); border-radius: 12px; color: var(--ember-text, var(--ember)); font-size: 14px; }
+.history-arriving .status-dot { flex: none; }

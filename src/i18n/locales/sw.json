@@ -48,7 +48,8 @@
     "exportCsv": "Hamisha CSV",
     "truncated": "Inaonyesha miamala {{shown}} ya hivi punde kati ya {{total}}.",
     "loadOlder": "Pakia miamala ya zamani",
-    "loadingOlder": "Inapakia…"
+    "loadingOlder": "Inapakia…",
+    "arrivingRow": "Zinawasili · {{amount}} ZKAS — zimethibitishwa, zitaonekana hapa baada ya dakika chache"
   },
   "send": {
     "needSeed": "Kifaa hiki bado hakina ufunguo wa mkoba huu. Weka kifungu chako cha urejeshaji mara moja ili ufungue kutuma hapa.",
@@ -791,7 +792,8 @@
     "lowerBound": "Salio hili ni <b>kiwango cha chini</b>: mwonekano wa pochi ulijengwa upya kupitia nodi ambayo imekata historia ya zamani, kwa hivyo sarafu zilizoundwa zamani sana zinaweza kukosekana. Sarafu zako ziko salama kwenye mnyororo — chunguza tena tu kutoka kwa nodi inayotoa historia kamili (kujenga upya kupitia hii kungekuwa na upofu sawa). Kama hii ni nodi yako mwenyewe na bado inajaza historia iliyofichwa, subiri kumbukumbu yake iseme \"historia iliyofichwa: IMETHIBITISHWA\" kisha chunguza tena.",
     "lowerBoundFrom": "Salio hili ni <b>kiwango cha chini</b>: mwonekano wa pochi ulijengwa upya kupitia nodi ambayo imekata historia ya zamani (inapatikana kutoka bloku {{block}}), kwa hivyo sarafu zilizoundwa zamani sana zinaweza kukosekana. Sarafu zako ziko salama kwenye mnyororo — chunguza tena tu kutoka kwa nodi inayotoa historia kamili (kujenga upya kupitia hii kungekuwa na upofu sawa). Kama hii ni nodi yako mwenyewe na bado inajaza historia iliyofichwa, subiri kumbukumbu yake iseme \"historia iliyofichwa: IMETHIBITISHWA\" kisha chunguza tena.",
     "notUpdating": "salio la mwisho lililothibitishwa",
-    "readyOnly": "{{spendable}} tayari kutumika"
+    "readyOnly": "{{spendable}} tayari kutumika",
+    "arrivingIncluded": "Inajumuisha {{amount}} ZKAS zinazowasili — zimethibitishwa, zinaingia kwenye pochi"
   },
   "iosInstallNotice": {
     "installedCopy": "Una mkoba kwenye Safari? Haujashirikiwa na nakala hii iliyosakinishwa — rejesha hapa kwa maneno yake ya kurejesha.",

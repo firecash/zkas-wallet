@@ -48,7 +48,8 @@
     "exportCsv": "Exporteer CSV",
     "truncated": "De {{shown}} meest recente van {{total}} transacties worden weergegeven.",
     "loadOlder": "Oudere transacties laden",
-    "loadingOlder": "Laden…"
+    "loadingOlder": "Laden…",
+    "arrivingRow": "Onderweg · {{amount}} ZKAS — bevestigd, staat hier over een paar minuten"
   },
   "send": {
     "needSeed": "Dit apparaat heeft de sleutel van deze portemonnee nog niet. Voer je herstelzin eenmalig in om hier te kunnen verzenden.",
@@ -800,7 +801,8 @@
     "lowerBound": "Dit saldo is een <b>ondergrens</b>: het overzicht van de wallet is opnieuw opgebouwd via een node die oude geschiedenis heeft gesnoeid, dus lang geleden aangemaakte munten kunnen ontbreken. Je munten zijn veilig op de keten — scan alleen opnieuw vanaf een node die de volledige geschiedenis aanbiedt (opnieuw opbouwen via deze zou net zo blind uitkomen). Als dit je eigen node is en deze nog steeds de afgeschermde geschiedenis aanvult, wacht dan tot het logboek \"shielded history: VERIFIED\" zegt en scan dan opnieuw.",
     "lowerBoundFrom": "Dit saldo is een <b>ondergrens</b>: het overzicht van de wallet is opnieuw opgebouwd via een node die oude geschiedenis heeft gesnoeid (beschikbaar vanaf blok {{block}}), dus lang geleden aangemaakte munten kunnen ontbreken. Je munten zijn veilig op de keten — scan alleen opnieuw vanaf een node die de volledige geschiedenis aanbiedt (opnieuw opbouwen via deze zou net zo blind uitkomen). Als dit je eigen node is en deze nog steeds de afgeschermde geschiedenis aanvult, wacht dan tot het logboek \"shielded history: VERIFIED\" zegt en scan dan opnieuw.",
     "notUpdating": "laatst bevestigde saldo",
-    "readyOnly": "{{spendable}} klaar om uit te geven"
+    "readyOnly": "{{spendable}} klaar om uit te geven",
+    "arrivingIncluded": "Inclusief {{amount}} ZKAS onderweg — bevestigd, wordt bijgeschreven"
   },
   "addAccountWallet": {
     "noPhrase": "Deze portemonnee heeft geen herstelzin, dus er kan geen account van worden afgeleid. Gebruik 'Aparte portemonnee toevoegen' — die krijgt een eigen herstelzin, die u moet back-uppen.",

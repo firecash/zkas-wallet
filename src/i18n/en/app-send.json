@@ -134,7 +134,8 @@
     "exportCsv": "Export CSV",
     "truncated": "Showing the most recent {{shown}} of {{total}} transactions.",
     "loadOlder": "Load older transactions",
-    "loadingOlder": "Loading…"
+    "loadingOlder": "Loading…",
+    "arrivingRow": "Arriving · {{amount}} ZKAS — confirmed, listed here in a few minutes"
   },
   "vaultSetting": {
     "title": "Security & backup",

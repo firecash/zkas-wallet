@@ -48,7 +48,8 @@
     "exportCsv": "Xuất CSV",
     "truncated": "Đang hiển thị {{shown}} giao dịch gần nhất trong tổng số {{total}}.",
     "loadOlder": "Tải các giao dịch cũ hơn",
-    "loadingOlder": "Đang tải…"
+    "loadingOlder": "Đang tải…",
+    "arrivingRow": "Đang đến · {{amount}} ZKAS — đã xác nhận, sẽ hiện ở đây sau vài phút"
   },
   "send": {
     "scanAria": "Quét mã QR",
@@ -791,7 +792,8 @@
     "lowerBound": "Số dư này là <b>giới hạn dưới</b>: chế độ xem của ví được xây dựng lại qua một nút đã cắt bớt lịch sử cũ, nên các đồng được tạo từ lâu có thể bị thiếu. Tiền của bạn vẫn an toàn trên chuỗi — chỉ quét lại từ một nút phục vụ lịch sử đầy đủ (xây dựng lại qua nút này cũng sẽ mù tương tự). Nếu đây là nút của bạn và nó vẫn đang điền lịch sử ẩn danh, hãy chờ nhật ký của nó báo \"shielded history: VERIFIED\" rồi quét lại.",
     "lowerBoundFrom": "Số dư này là <b>giới hạn dưới</b>: chế độ xem của ví được xây dựng lại qua một nút đã cắt bớt lịch sử cũ (có sẵn từ khối {{block}}), nên các đồng được tạo từ lâu có thể bị thiếu. Tiền của bạn vẫn an toàn trên chuỗi — chỉ quét lại từ một nút phục vụ lịch sử đầy đủ (xây dựng lại qua nút này cũng sẽ mù tương tự). Nếu đây là nút của bạn và nó vẫn đang điền lịch sử ẩn danh, hãy chờ nhật ký của nó báo \"shielded history: VERIFIED\" rồi quét lại.",
     "notUpdating": "số dư đã xác nhận gần nhất",
-    "readyOnly": "{{spendable}} sẵn sàng để chi"
+    "readyOnly": "{{spendable}} sẵn sàng để chi",
+    "arrivingIncluded": "Gồm {{amount}} ZKAS đang đến — đã xác nhận, đang ghi vào ví"
   },
   "addAccountWallet": {
     "noPhrase": "Ví này không có cụm từ khôi phục, nên không thể tạo tài khoản từ nó. Dùng “Thêm ví riêng” — ví đó có cụm từ riêng, bạn phải sao lưu.",

@@ -97,7 +97,8 @@
     "lowerBound": "This balance is a <b>lower bound</b>: the wallet's view was rebuilt through a node that has pruned old history, so notes created long ago may be missing from it. Your coins are safe on-chain — rescan only from a node that serves full history (rebuilding through this one would come out just as blind). If this is your own node and it is still filling in shielded history, wait for its log to say \"shielded history: VERIFIED\" and rescan then.",
     "lowerBoundFrom": "This balance is a <b>lower bound</b>: the wallet's view was rebuilt through a node that has pruned old history (available from block {{block}}), so notes created long ago may be missing from it. Your coins are safe on-chain — rescan only from a node that serves full history (rebuilding through this one would come out just as blind). If this is your own node and it is still filling in shielded history, wait for its log to say \"shielded history: VERIFIED\" and rescan then.",
     "notUpdating": "last confirmed balance",
-    "readyOnly": "{{spendable}} ready to spend"
+    "readyOnly": "{{spendable}} ready to spend",
+    "arrivingIncluded": "Includes {{amount}} ZKAS arriving — confirmed, settling into your wallet"
   },
   "addAccountWallet": {
     "noPhrase": "This wallet has no recovery phrase, so an account cannot be derived from it. Use “Add separate wallet” — it gets its own recovery phrase, which you must back up.",

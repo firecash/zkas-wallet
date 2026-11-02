@@ -134,7 +134,8 @@
     "exportCsv": "Eksportuj CSV",
     "truncated": "Wyświetlane są {{shown}} najnowsze z {{total}} transakcji.",
     "loadOlder": "Wczytaj starsze transakcje",
-    "loadingOlder": "Wczytywanie…"
+    "loadingOlder": "Wczytywanie…",
+    "arrivingRow": "W drodze · {{amount}} ZKAS — potwierdzone, pojawi się tu za kilka minut"
   },
   "vaultSetting": {
     "title": "Bezpieczeństwo i kopia",
@@ -766,7 +767,8 @@
     "prunedRebuild": "Ten węzeł przyciął starszą historię, więc odbudowane saldo może być <b>dolnym ograniczeniem</b>. Twoje monety są w łańcuchu — przeskanuj ponownie z węzła udostępniającego pełną historię, aby zobaczyć wszystko. Jeśli to twój własny węzeł i wciąż uzupełnia historię chronioną, poczekaj, aż w logu pojawi się \"shielded history: VERIFIED\" i przeskanuj ponownie.",
     "prunedRebuildFrom": "Ten węzeł przyciął starszą historię (dostępną od bloku {{block}}), więc odbudowane saldo może być <b>dolnym ograniczeniem</b>. Twoje monety są w łańcuchu — przeskanuj ponownie z węzła udostępniającego pełną historię, aby zobaczyć wszystko. Jeśli to twój własny węzeł i wciąż uzupełnia historię chronioną, poczekaj, aż w logu pojawi się \"shielded history: VERIFIED\" i przeskanuj ponownie.",
     "notUpdating": "ostatnie potwierdzone saldo",
-    "readyOnly": "{{spendable}} gotowe do wydania"
+    "readyOnly": "{{spendable}} gotowe do wydania",
+    "arrivingIncluded": "W tym {{amount}} ZKAS w drodze — potwierdzone, księgowane"
   },
   "addAccountWallet": {
     "noPhrase": "Ten portfel nie ma frazy odzyskiwania, więc nie można z niego wyprowadzić konta. Użyj „Dodaj osobny portfel” — ma własną frazę odzyskiwania, którą musisz utworzyć kopię zapasową.",

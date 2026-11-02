@@ -48,7 +48,8 @@
     "exportCsv": "CSV exportieren",
     "truncated": "Es werden die neuesten {{shown}} von {{total}} Transaktionen angezeigt.",
     "loadOlder": "Ältere Transaktionen laden",
-    "loadingOlder": "Wird geladen…"
+    "loadingOlder": "Wird geladen…",
+    "arrivingRow": "Im Eingang · {{amount}} ZKAS – bestätigt, erscheint hier in wenigen Minuten"
   },
   "send": {
     "scanAria": "QR scannen",
@@ -788,7 +789,8 @@
     "prunedRebuild": "Dieser Node hat alte History gekürzt, daher kann das neu aufgebaute Guthaben eine <b>Untergrenze</b> sein. Deine Coins sind on-chain – scanne von einem Node mit vollständiger History erneut, um alles zu sehen. Falls dies dein eigener Node ist und er noch die abgeschirmte History füllt, warte, bis im Log „shielded history: VERIFIED“ steht, und scanne erneut.",
     "prunedRebuildFrom": "Dieser Node hat alte History gekürzt (verfügbar ab Block {{block}}), daher kann das neu aufgebaute Guthaben eine <b>Untergrenze</b> sein. Deine Coins sind on-chain – scanne von einem Node mit vollständiger History erneut, um alles zu sehen. Falls dies dein eigener Node ist und er noch die abgeschirmte History füllt, warte, bis im Log „shielded history: VERIFIED“ steht, und scanne erneut.",
     "notUpdating": "letztes bestätigtes Guthaben",
-    "readyOnly": "{{spendable}} sofort ausgebbar"
+    "readyOnly": "{{spendable}} sofort ausgebbar",
+    "arrivingIncluded": "Enthält {{amount}} ZKAS im Eingang – bestätigt, wird gutgeschrieben"
   },
   "addAccountWallet": {
     "noPhrase": "Dieses Wallet hat keine Wiederherstellungsphrase, daher kann kein Konto abgeleitet werden. Nutze „Separates Wallet hinzufügen“ – es bekommt eine eigene Wiederherstellungsphrase, die du sichern musst.",

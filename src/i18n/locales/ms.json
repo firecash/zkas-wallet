@@ -48,7 +48,8 @@
     "exportCsv": "Eksport CSV",
     "truncated": "Memaparkan {{shown}} transaksi terkini daripada {{total}}.",
     "loadOlder": "Muatkan transaksi lebih lama",
-    "loadingOlder": "Memuatkan…"
+    "loadingOlder": "Memuatkan…",
+    "arrivingRow": "Sedang masuk · {{amount}} ZKAS — disahkan, dipaparkan di sini dalam beberapa minit"
   },
   "vaultSetting": {
     "title": "Keselamatan & sandaran",
@@ -791,7 +792,8 @@
     "lowerBound": "Baki ini adalah <b>batas bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama, jadi syiling yang dicipta lama dahulu mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (membina semula melalui yang ini akan sama butanya). Jika ini nod anda sendiri dan ia masih mengisi sejarah terlindung, tunggu lognya menyatakan \"shielded history: VERIFIED\" dan imbas semula kemudian.",
     "lowerBoundFrom": "Baki ini adalah <b>batas bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama (tersedia dari blok {{block}}), jadi syiling yang dicipta lama dahulu mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (membina semula melalui yang ini akan sama butanya). Jika ini nod anda sendiri dan ia masih mengisi sejarah terlindung, tunggu lognya menyatakan \"shielded history: VERIFIED\" dan imbas semula kemudian.",
     "notUpdating": "baki disahkan terakhir",
-    "readyOnly": "{{spendable}} sedia dibelanjakan"
+    "readyOnly": "{{spendable}} sedia dibelanjakan",
+    "arrivingIncluded": "Termasuk {{amount}} ZKAS yang sedang masuk — disahkan, sedang dikreditkan"
   },
   "addAccountWallet": {
     "noPhrase": "Dompet ini tiada frasa pemulihan, jadi akaun tidak boleh diterbitkan daripadanya. Guna “Tambah dompet berasingan” — ia ada frasa pemulihan sendiri, yang mesti anda sandarkan.",

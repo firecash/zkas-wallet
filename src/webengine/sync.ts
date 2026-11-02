@@ -86,6 +86,10 @@ export interface SyncDeps {
   pageCursor?(page: Uint8Array): string;
   /** Where block `hash` sits in a gateway page, or -1 (`page_index_of`): parallel page streams. */
   pageIndexOf?(page: Uint8Array, hash: string): number;
+  /** The last matured anchor and when it was taken (JSON), kept across reloads: a reload is
+   *  spend-ready at once instead of after a round trip. */
+  loadAnchor?(): Promise<string | null>;
+  saveAnchor?(json: string): Promise<unknown>;
   /** Timing of each sync phase, for the diagnostic log (what a slow catch-up spent its time on). */
   onPhase?(ev: string, fields: Record<string, number | string | boolean>): void;
   sleep?(ms: number): Promise<void>;
@@ -100,6 +104,11 @@ export const SEGMENT_READ_AHEAD = 2;
 
 /** Checkpoint every this many segments while catching up. */
 const SAVE_EVERY_SEGMENTS = 2;
+/** Below this gap (DAA) a resumed wallet skips the chain-file manifest: no segment is worth it. */
+export const MANIFEST_MIN_GAP = 20_000;
+/** A cached anchor younger than this is used on resume (it is still deep and final). */
+export const ANCHOR_CACHE_MS = 10 * 60_000;
+
 /** How often a segment download reports its progress. */
 const DOWNLOAD_REPORT_MS = 700;
 
@@ -126,6 +135,23 @@ export async function runSync(d: SyncDeps): Promise<void> {
   let tip = 0;
   let verified: boolean | null = null;
   let everSynced = false;
+  let verifyJob: Promise<boolean> | null = null;
+  // Waits for the tree check if one is running; a mismatch reports and stops (the caller rebuilds).
+  const settleVerify = async () => {
+    if (!verifyJob) return;
+    const job = verifyJob;
+    verifyJob = null;
+    try {
+      verified = await job;
+    } catch {
+      verified = null; // could not ask: asked again at the next tip
+      return;
+    }
+    if (!verified) {
+      report("error", "this wallet's tree does not equal the node's: its data is discarded and rebuilt");
+      throw new Error("tree differs from the node");
+    }
+  };
   let downloading: { done: number; total: number } | null = null;
 
   const report = (phase: BrowserSyncStatus["phase"], error?: string) => {
@@ -210,22 +236,45 @@ export async function runSync(d: SyncDeps): Promise<void> {
   }
   report("starting");
   phase("resume", { ms: ms(t), checkpoint_kb: saved ? Math.round(saved.length / 1024) : 0, scanned: eng ? Number(eng.scanned()) : 0 });
+  const resumed = !!eng;
+  // A reload costs round trips, each 1.5-7 s through the wallet.zkas.info proxy (measured): it
+  // used to make five in a row (tip, manifest, page, tree check, anchor) before "synced". A
+  // resumed wallet now asks for its next page and the tip at once, uses its cached anchor, skips
+  // the manifest when the gap is short, and checks its tree in the background.
+  const fetchPage = async (after: string) => new Uint8Array(await (await get(`${d.gateway}/blocks?after=${after}&limit=${PAGE_LIMIT}`)).arrayBuffer());
+  let firstPage: { after: string; page: Promise<Uint8Array> } | null = null;
+  if (eng) {
+    const low = eng.low();
+    const page = fetchPage(low);
+    page.catch(() => undefined); // awaited (and rethrown) in the gateway loop
+    firstPage = { after: low, page };
+    try {
+      const cached = JSON.parse((await d.loadAnchor?.()) ?? "null");
+      if (cached && typeof cached.at === "number" && Date.now() - cached.at < ANCHOR_CACHE_MS && cached.anchor) eng.set_anchor?.(JSON.stringify(cached.anchor));
+    } catch {
+      /* fetched at the tip as before */
+    }
+  }
   t = performance.now();
   await refreshTip();
   phase("tip_fetch", { ms: ms(t), tip });
-  t = performance.now();
-  let manifestBytes = 0;
-  const manifest: Manifest = await fromMirrors(
-    (b) => `${b}/manifest-v2.json`,
-    0,
-    async (r) => {
-      const text = await r.text();
-      manifestBytes = text.length;
-      return JSON.parse(d.verifyManifest(text));
-    },
-  );
-  phase("manifest", { ms: ms(t), kb: Math.round(manifestBytes / 1024), segments: manifest.segments.length });
-  const segs = manifest.segments;
+  const shortGap = !!eng && tip > 0 && tip - Number(eng.scanned()) < MANIFEST_MIN_GAP;
+  let segs: Segment[] = [];
+  if (!shortGap) {
+    t = performance.now();
+    let manifestBytes = 0;
+    const manifest: Manifest = await fromMirrors(
+      (b) => `${b}/manifest-v2.json`,
+      0,
+      async (r) => {
+        const text = await r.text();
+        manifestBytes = text.length;
+        return JSON.parse(d.verifyManifest(text));
+      },
+    );
+    phase("manifest", { ms: ms(t), kb: Math.round(manifestBytes / 1024), segments: manifest.segments.length });
+    segs = manifest.segments;
+  }
 
   // Or start at the signed boundary of the segment the birthday falls in.
   // A wallet born after the last published segment (every new wallet) starts at the node's own
@@ -335,15 +384,14 @@ export async function runSync(d: SyncDeps): Promise<void> {
     }
     report("files");
   }
-  await d.save(eng.checkpoint());
+  if (pending.length) await d.save(eng.checkpoint());
 
   // 2. The gateway to the tip margin; then the node check; then keep following the tip.
   let lastGatewaySave = Date.now();
-  const fetchPage = async (after: string) => new Uint8Array(await (await get(`${d.gateway}/blocks?after=${after}&limit=${PAGE_LIMIT}`)).arrayBuffer());
   // The page after the one being ingested, already downloading (catch-up only), and the cursor it
   // was asked from: used only if ingest stops exactly there (at the margin it stops earlier, and
   // that page would skip the blocks in between).
-  let ahead: { after: string; page: Promise<Uint8Array> } | null = null;
+  let ahead: { after: string; page: Promise<Uint8Array> } | null = firstPage;
   let catchup = { pages: 0, kb: 0, waitMs: 0, ingestMs: 0, startedAt: performance.now(), from: Number(eng.scanned()) };
 
   // Parallel page streams for a long stretch: the range is split at chain blocks the gateway names
@@ -527,16 +575,18 @@ export async function runSync(d: SyncDeps): Promise<void> {
     }
     t = performance.now();
     let verifyMs = 0;
-    if (verified === null) {
+    if (verified === null && !verifyJob) {
       const mine = eng.tip_frontier();
       if (mine) {
         const m = JSON.parse(mine);
-        const node = await (await get(`${d.gateway}/tree?block=${eng.low()}`)).json();
-        verified = node.block === m.block && node.size === m.size && node.leaf === m.leaf && JSON.stringify(node.ommers) === JSON.stringify(m.ommers);
-        if (!verified) {
-          report("error", "this wallet's tree does not equal the node's: its data is discarded and rebuilt");
-          throw new Error("tree differs from the node");
-        }
+        verifyJob = get(`${d.gateway}/tree?block=${eng.low()}`)
+          .then((r) => r.json())
+          .then((node) => node.block === m.block && node.size === m.size && node.leaf === m.leaf && JSON.stringify(node.ommers) === JSON.stringify(m.ommers));
+        verifyJob.catch(() => undefined);
+        // A wallet resumed from its own checkpoint was checked when it last reached the tip:
+        // its check runs while it is shown up to date, and a mismatch still stops it a moment
+        // later (below), discards its data and rebuilds. A new wallet waits for its check.
+        if (!(resumed && !everSynced)) await settleVerify();
       }
       verifyMs = ms(t);
     }
@@ -563,7 +613,10 @@ export async function runSync(d: SyncDeps): Promise<void> {
             .then((r) => r.json())
             .then((a) => {
               const ts = performance.now();
-              if (typeof a?.block === "string") live.set_anchor?.(JSON.stringify(a));
+              if (typeof a?.block === "string") {
+                live.set_anchor?.(JSON.stringify(a));
+                void d.saveAnchor?.(JSON.stringify({ anchor: a, at: Date.now() }))?.catch?.(() => undefined);
+              }
               anchorSetMs = ms(ts);
             })
             .catch(() => {
@@ -580,6 +633,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
         }),
     ]);
     const saved = await saving;
+    await settleVerify();
     if (!everSynced) {
       phase("at_tip", { verify_ms: verifyMs, save_ms: saved.ms, save_ok: saved.ok, tip_ms: tipMs, anchor_mempool_ms: ms(tAnchor), anchor_set_ms: anchorSetMs, total_ms: ms(t) });
     }

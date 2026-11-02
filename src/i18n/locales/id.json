@@ -48,7 +48,8 @@
     "exportCsv": "Ekspor CSV",
     "truncated": "Menampilkan {{shown}} transaksi terbaru dari {{total}}.",
     "loadOlder": "Muat transaksi lebih lama",
-    "loadingOlder": "Memuat…"
+    "loadingOlder": "Memuat…",
+    "arrivingRow": "Masuk · {{amount}} ZKAS — terkonfirmasi, tampil di sini dalam beberapa menit"
   },
   "send": {
     "needSeed": "Perangkat ini belum memiliki kunci dompet. Masukkan frasa pemulihan sekali untuk mengirim.",
@@ -800,7 +801,8 @@
     "lowerBound": "Saldo ini adalah <b>batas bawah</b>: tampilan dompet dibangun ulang melalui node yang telah memangkas riwayat lama, jadi koin yang dibuat lama mungkin hilang darinya. Koin Anda aman di rantai — pindai ulang hanya dari node yang menyajikan riwayat penuh (membangun ulang melalui yang ini akan sama butanya). Jika ini node Anda sendiri dan masih mengisi riwayat terlindungi, tunggu log-nya mengatakan \"shielded history: VERIFIED\" lalu pindai ulang.",
     "lowerBoundFrom": "Saldo ini adalah <b>batas bawah</b>: tampilan dompet dibangun ulang melalui node yang telah memangkas riwayat lama (tersedia dari blok {{block}}), jadi koin yang dibuat lama mungkin hilang darinya. Koin Anda aman di rantai — pindai ulang hanya dari node yang menyajikan riwayat penuh (membangun ulang melalui yang ini akan sama butanya). Jika ini node Anda sendiri dan masih mengisi riwayat terlindungi, tunggu log-nya mengatakan \"shielded history: VERIFIED\" lalu pindai ulang.",
     "notUpdating": "saldo terkonfirmasi terakhir",
-    "readyOnly": "{{spendable}} siap dibelanjakan"
+    "readyOnly": "{{spendable}} siap dibelanjakan",
+    "arrivingIncluded": "Termasuk {{amount}} ZKAS yang masuk — terkonfirmasi, sedang dikreditkan"
   },
   "addAccountWallet": {
     "noPhrase": "Dompet ini tidak punya frasa pemulihan, jadi akun tidak bisa diturunkan darinya. Gunakan “Tambah dompet terpisah” — dompet itu punya frasa pemulihan sendiri yang harus Anda cadangkan.",
