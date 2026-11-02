@@ -2,7 +2,8 @@
 // "Run on this phone". Applied the way the engine reads it — at start — so while the wallet runs
 // on this phone, Apply restarts the engine with the new choice (and only a start that succeeds
 // stores it); otherwise the choice is stored for the next start.
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { desktopConfigCached, desktopWalletConfig, isDesktop, setDesktopFastSync } from "./desktop";
 import { useTranslation } from "react-i18next";
 import {
   DEFAULT_CHAIN_FILES_URL,
@@ -21,6 +22,94 @@ import {
 import { setBase } from "./api";
 
 export function FastSyncSettings() {
+  return isDesktop() ? <DesktopFastSyncSettings /> : <PhoneFastSyncSettings />;
+}
+
+/** Desktop: the same choice, held by the desktop shell (it starts the wallet engine). Used with
+ *  the public node or a custom address; a local node is read directly and never uses files. */
+function DesktopFastSyncSettings() {
+  const { t } = useTranslation();
+  const [cfg, setCfg] = useState(() => desktopConfigCached());
+  const [fast, setFast] = useState(() => cfg?.fast_sync ?? true);
+  const [url, setUrl] = useState(() => cfg?.chain_files_url || DEFAULT_CHAIN_FILES_URL);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => {
+    void desktopWalletConfig()
+      .then((c) => {
+        setCfg(c);
+        setFast(c.fast_sync ?? true);
+        setUrl(c.chain_files_url || DEFAULT_CHAIN_FILES_URL);
+      })
+      .catch(() => undefined);
+  }, []);
+  const supported = cfg?.fast_sync !== undefined;
+  const urlOk = validChainFilesUrl(url);
+  const customUrl = normalizeChainFilesUrl(url) !== "";
+  const applies = cfg?.mode !== "local" && (cfg?.mode === "remote" || customUrl);
+  const unchanged = fast === (cfg?.fast_sync ?? true) && normalizeChainFilesUrl(url) === normalizeChainFilesUrl(cfg?.chain_files_url ?? "");
+  const apply = async () => {
+    if (fast && !urlOk) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const c = await setDesktopFastSync(fast, normalizeChainFilesUrl(url));
+      setCfg(c);
+      setMsg({ ok: true, text: t("fastSyncSettings.applied") });
+    } catch (e) {
+      setMsg({ ok: false, text: t("fastSyncSettings.failed", { error: String((e as Error)?.message ?? e) }) });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="card">
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <label className="row" style={{ gap: 10, alignItems: "center", cursor: "pointer" }}>
+          <input type="checkbox" checked={fast} disabled={busy || !supported} onChange={(e) => setFast(e.target.checked)} />
+          <b>{t("runOnPhoneOption.fastTitle")}</b>
+        </label>
+        {fast && (
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder={t("runOnPhoneOption.fastUrlPlaceholder")}
+            aria-label={t("runOnPhoneOption.fastUrlLabel")}
+            disabled={busy || !supported}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            inputMode="url"
+          />
+        )}
+        <span className="muted small">
+          {!fast
+            ? t("runOnPhoneOption.fastOff")
+            : !urlOk
+              ? t("runOnPhoneOption.fastBadUrl")
+              : !applies
+                ? t("runOnPhoneOption.fastOffOwnNode")
+                : customUrl
+                  ? t("runOnPhoneOption.fastHint")
+                  : t("runOnPhoneOption.fastHintDefault")}
+        </span>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <button type="button" className="btn" disabled={busy || !supported || unchanged || (fast && !urlOk)} onClick={() => void apply()}>
+            {busy ? t("fastSyncSettings.applying") : t("fastSyncSettings.apply")}
+          </button>
+          {fast && customUrl && (
+            <button type="button" className="btn ghost" disabled={busy} onClick={() => setUrl(DEFAULT_CHAIN_FILES_URL)}>
+              {t("fastSyncSettings.useDefault")}
+            </button>
+          )}
+        </div>
+        {msg && <div className={"msg" + (msg.ok ? "" : " err")}>{msg.text}</div>}
+      </div>
+    </div>
+  );
+}
+
+function PhoneFastSyncSettings() {
   const { t } = useTranslation();
   const tor = embeddedTor();
   const [fast, setFast] = useState(() => embeddedFastSync());
@@ -105,5 +194,6 @@ export function FastSyncSettings() {
 
 /** The Settings row summary: On / Off. */
 export function fastSyncSummary(on: string, off: string): string {
+  if (isDesktop()) return desktopConfigCached()?.fast_sync === false ? off : on;
   return embeddedFastSync() && !embeddedTor() ? on : off;
 }

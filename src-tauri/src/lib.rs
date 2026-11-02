@@ -235,6 +235,11 @@ pub struct Settings {
     pub wallet_access: String,
     pub wallet_access_port: u16,
     pub wallet_public_url: String,
+    /// Fast sync: catch up from published chain files instead of paging the node.
+    pub fast_sync: bool,
+    /// Where the chain files come from. Empty = ZKas's public mirrors (CDN first), used only
+    /// against ZKas's public nodes; an http(s) URL = the user's own choice, used as given.
+    pub chain_files_url: String,
 }
 
 impl Default for Settings {
@@ -267,6 +272,8 @@ impl Default for Settings {
             wallet_access: "device".into(),
             wallet_access_port: 8501,
             wallet_public_url: String::new(),
+            fast_sync: true,
+            chain_files_url: String::new(),
         }
     }
 }
@@ -848,7 +855,7 @@ impl Engine {
                     // Published chain files: catch-up reads the 12-hour segments over HTTPS
                     // instead of paging the node. Only against ZKas's own public nodes, never
                     // against a node the user runs (see `default_for_node`).
-                    r.chain_files = zkas_walletd::chain_files::default_for_node(&node_rpc);
+                    r.chain_files = chain_files_choice(self.settings.fast_sync, &self.settings.chain_files_url, &node_rpc);
                 }
                 r
             },
@@ -1245,6 +1252,9 @@ struct WalletConfig {
     /// birthday 0 on another service is scanned from genesis. `None` when there is no
     /// wallet file yet.
     birthday: Option<u64>,
+    /// Settings -> Fast sync (see `Settings::fast_sync`, `Settings::chain_files_url`).
+    fast_sync: bool,
+    chain_files_url: String,
 }
 
 /// Response from the narrow desktop-only wallet API bridge.
@@ -1322,6 +1332,20 @@ mod api_path_tests {
     }
 }
 
+/// The chain-file source walletd starts with (Settings -> Fast sync): off, the user's own URL, or
+/// ZKas's public mirrors, which `default_for_node` hands out only for ZKas's own public nodes.
+fn chain_files_choice(on: bool, url: &str, node_rpc: &str) -> Option<String> {
+    if !on {
+        return None;
+    }
+    let url = url.trim().trim_end_matches('/');
+    let ours = url.is_empty() || url == zkas_walletd::chain_files::PUBLIC_CHAIN_FILES || url == "https://zkas.info/shielded-chain";
+    if !ours && (url.starts_with("https://") || url.starts_with("http://")) {
+        return Some(url.to_string());
+    }
+    zkas_walletd::chain_files::default_for_node(node_rpc)
+}
+
 fn config_of(e: &mut Engine) -> WalletConfig {
     WalletConfig {
         base: format!("http://127.0.0.1:{}", e.port),
@@ -1334,6 +1358,8 @@ fn config_of(e: &mut Engine) -> WalletConfig {
         node_binary: e.settings.node_binary.clone(),
         node_running: e.services.zkas_node.running(),
         birthday: wallet_birthday_of(&e.wallet_dir(), &e.token),
+        fast_sync: e.settings.fast_sync,
+        chain_files_url: e.settings.chain_files_url.clone(),
     }
 }
 
@@ -2000,6 +2026,48 @@ async fn set_node_source(
         }
         let _ = wait_walletd_ready_unlocked(&app, WALLETD_START_GRACE).await;
         return Err(format!("{error}; restored the previous wallet connection"));
+    }
+    let mut e = engine(&state);
+    e.save_settings();
+    Ok(config_of(&mut e))
+}
+
+/// Settings -> Fast sync. Restarts the wallet engine with the new choice; a start that does not
+/// come up restores the previous choice and its running engine (as `set_node_source` does).
+#[tauri::command]
+async fn set_fast_sync(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, Mutex<Engine>>,
+    on: bool,
+    url: String,
+) -> Result<WalletConfig, String> {
+    let url = url.trim().trim_end_matches('/').to_string();
+    if !url.is_empty() && !(url.starts_with("https://") || url.starts_with("http://")) {
+        return Err("the chain files address must start with https:// or http://".into());
+    }
+    let previous = {
+        let mut e = engine(&state);
+        if e.settings.fast_sync == on && e.settings.chain_files_url == url {
+            return Ok(config_of(&mut e));
+        }
+        let previous = e.settings.clone();
+        e.settings.fast_sync = on;
+        e.settings.chain_files_url = url;
+        e.start_walletd();
+        previous
+    };
+    if let Err(error) = wait_walletd_ready_unlocked(&app, WALLETD_START_GRACE).await {
+        {
+            let mut e = engine(&state);
+            if e.walletd_alive() {
+                e.save_settings();
+                return Ok(config_of(&mut e));
+            }
+            e.settings = previous;
+            e.start_walletd();
+        }
+        let _ = wait_walletd_ready_unlocked(&app, WALLETD_START_GRACE).await;
+        return Err(format!("{error}; restored the previous fast sync setting"));
     }
     let mut e = engine(&state);
     e.save_settings();
@@ -4244,6 +4312,7 @@ pub fn run() {
             wallet_config,
             wallet_api_request,
             set_node_source,
+            set_fast_sync,
             control_config,
             install_local_components,
             node_status,

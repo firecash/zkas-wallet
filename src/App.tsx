@@ -5614,7 +5614,7 @@ function SettingsPane({ status }: { status: Status }) {
       <Collapsible title={t("settingsPane.networkPrivacy")} summary={networkPrivacyLabel()}>
         <NetworkPrivacyCard />
       </Collapsible>
-      {embeddedAvailable() && (
+      {(embeddedAvailable() || isDesktop()) && (
         <Collapsible title={t("runOnPhoneOption.fastTitle")} summary={fastSyncSummary(t("settingsPane.on"), t("settingsPane.off"))}>
           <FastSyncSettings />
         </Collapsible>

@@ -22,6 +22,31 @@ export interface DesktopConfig {
   node_running: boolean;
   /** The embedded daemon's recorded scan birthday for `token`; absent on older shells. */
   birthday?: number | null;
+  /** Settings -> Fast sync; absent on shells older than the setting. */
+  fast_sync?: boolean;
+  chain_files_url?: string;
+}
+
+let lastConfig: DesktopConfig | null = null;
+
+/** The shell's last reported config (for the Settings row summary). */
+export function desktopConfigCached(): DesktopConfig | null {
+  return lastConfig;
+}
+
+/** Read the shell's config afresh. */
+export async function desktopWalletConfig(): Promise<DesktopConfig> {
+  lastConfig = await invoke<DesktopConfig>("wallet_config");
+  return lastConfig;
+}
+
+/** Settings -> Fast sync: restarts the wallet engine with the choice (the shell rolls back if it
+ *  does not come up). `url` "" = ZKas's public mirrors. */
+export async function setDesktopFastSync(on: boolean, url: string): Promise<DesktopConfig> {
+  const cfg = await invoke<DesktopConfig>("set_fast_sync", { on, url });
+  lastConfig = cfg;
+  applyDaemonBase(cfg);
+  return cfg;
 }
 
 /** True when running inside the Tauri desktop shell. */
@@ -100,6 +125,7 @@ function adoptShellBirthday(cfg: DesktopConfig): void {
 export async function initDesktop(): Promise<DesktopConfig | null> {
   if (!isDesktop()) return null;
   const cfg = await invoke<DesktopConfig>("wallet_config");
+  lastConfig = cfg;
   applyDaemonBase(cfg);
   if (cfg.wallet_bearer) writeLocal("walletd_bearer", cfg.wallet_bearer);
   else removeLocal("walletd_bearer");
