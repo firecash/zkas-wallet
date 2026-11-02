@@ -63,5 +63,16 @@ export function minRelayFeeForSpends(n: number): number {
  * round; under-reserving costs the whole operation.
  */
 export function feeReserveSompi(maxSpendsPerTx: number): number {
-  return minRelayFeeForSpends(maxSpendsPerTx);
+  return chunkFeeSompi(maxSpendsPerTx);
+}
+
+/// The wallet's fee floor for a shielded payment. Mirrors `DEFAULT_FEE_SOMPI`: both the wallet
+/// service and the in-browser engine charge `max(this, relay minimum)` when no fee is chosen
+/// (`chunk_fee`), so a quote of the relay minimum alone was 0.018554 on a payment that then
+/// paid 0.03 - over the "Total <=" the confirm screen promised (test wallet, 2 Nov).
+export const WALLET_FEE_FLOOR_SOMPI = 3_000_000;
+
+/** What a payment spending `n` notes is charged when no fee is chosen. Mirrors `chunk_fee`. */
+export function chunkFeeSompi(n: number): number {
+  return Math.max(WALLET_FEE_FLOOR_SOMPI, minRelayFeeForSpends(n));
 }

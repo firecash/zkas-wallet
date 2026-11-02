@@ -27,7 +27,7 @@ import {
 } from "./localtx";
 import { ensureSigner, fvkHex, generateMnemonicWallet, accountSeedHex, signLocal, verifyLocal, type Network } from "./signer";
 import { consolidateNonCustodial, FragmentedWalletError, sendNonCustodial, prepareAhead, prepareAheadUsable, PartialSendError, MAX_CONSOLIDATION_ROUNDS, MAX_NOTES_PER_TX, MIN_NOTES_PER_MERGE, type PreparedAhead, type SendPart, type SendStage, type SendProgress } from "./noncustodial";
-import { scanFraction, signerCanSign, walletCanSpend, walletStatus } from "./status";
+import { scanFraction, signerCanSign, walletCanSpend, walletStatus, formatDuration } from "./status";
 import { useZkasPrice, fmtFiat } from "./price";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
 import { feeReserveSompi } from "./fees";
@@ -3619,9 +3619,11 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
           // moment away said "Up to date" and "checking the chain" at once (test wallet, 2 Nov).
           view.canSpend || view.phase === "ready" ? (
             <span>
+              {/* With an estimate (browser mode measures it), say WHEN: "0.5 arriving · 0 ready to
+                  spend" sat unchanged for 17 minutes on a received coin (test wallet, 2 Nov). */}
               <Trans
-                i18nKey="balanceHero.readyAndArriving"
-                values={{ spendable: noticeAmt(Math.max(0, spendable)), maturing: noticeAmt(arrivingRest) }}
+                i18nKey={status.maturing_eta_secs ? "balanceHero.maturingEta" : "balanceHero.readyAndArriving"}
+                values={{ spendable: noticeAmt(Math.max(0, spendable)), maturing: noticeAmt(arrivingRest), eta: formatDuration(status.maturing_eta_secs ?? 0) }}
                 components={{ em: <span style={{ color: "var(--ember)" }} /> }}
               />
             </span>
@@ -7626,6 +7628,14 @@ const History = memo(function History({
   const hide = useHideBalances();
   const historyKey = activeToken() ?? "default";
   const [chain, setChainState] = useState<ChainHistory | null>(() => historyCache.get(historyKey) ?? null);
+  // The arriving amount, held until the history row it becomes has loaded. The row went from
+  // "Arriving" to "Nothing yet" for ~12 s on a wallet whose payment had just settled: the
+  // balance had it, the history list had not been fetched again yet (test wallet, 2 Nov).
+  const heldArriving = useRef<{ amount: number; at: number; rows: number } | null>(null);
+  const rowCount = chain?.rows?.length ?? 0;
+  if (arrivingZkas > 0) heldArriving.current = { amount: arrivingZkas, at: Date.now(), rows: rowCount };
+  else if (heldArriving.current && (rowCount > heldArriving.current.rows || Date.now() - heldArriving.current.at > 30_000)) heldArriving.current = null;
+  arrivingZkas = arrivingZkas > 0 ? arrivingZkas : (heldArriving.current?.amount ?? 0);
   const setChain = useCallback(
     (h: ChainHistory) => {
       historyCache.set(historyKey, h);

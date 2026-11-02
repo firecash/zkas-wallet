@@ -532,7 +532,10 @@ export async function browserServiceStatus(): Promise<Record<string, unknown>> {
   const resumed = !!was && s!.scanned >= was.scanned && Date.now() - was.at < RESUME_FRESH_MS;
   const bal = s?.balanceSompi ?? "0";
   const spendable = s?.spendableSompi ?? "0";
-  const maturing = s?.maturingSompi ?? "0";
+  // Without an anchor the engine cannot tell matured coins from maturing ones (spendable reads
+  // 0): saying the whole balance was still "arriving" was false for a coin 50 minutes old (test
+  // wallet, 2 Nov). Nothing is called maturing until the anchor is known, a second or two.
+  const maturing = s?.spendReady || s?.anchorKnown ? (s?.maturingSompi ?? "0") : "0";
   const pin = s?.pendingInSompi ?? "0";
   const pout = s?.pendingOutSompi ?? "0";
   const pchange = s?.pendingChangeSompi ?? "0";
@@ -549,6 +552,7 @@ export async function browserServiceStatus(): Promise<Record<string, unknown>> {
     loading: !s || (s.phase === "starting" && !(s.scanned > 0)),
     scanned_blocks: s?.scanned || w.birthday,
     // A chain file is downloading: the only progress there is to show until it is whole.
+    maturing_eta_secs: s?.maturingEtaSecs ?? null,
     download_pct: s?.downloadTotal ? Math.min(99, Math.floor((100 * (s.downloadDone ?? 0)) / s.downloadTotal)) : null,
     chain_len: tip,
     balance_sompi: bal,

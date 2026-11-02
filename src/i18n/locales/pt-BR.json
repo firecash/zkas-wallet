@@ -795,7 +795,8 @@
     "lowerBoundFrom": "Este saldo é um <b>limite inferior</b>: a visualização da carteira foi reconstruída por um nó que podou o histórico antigo (disponível a partir do bloco {{block}}), então moedas criadas há muito tempo podem estar faltando. Suas moedas estão seguras na cadeia — reescaneie apenas de um nó que sirva o histórico completo (reconstruir por este seria igualmente cego). Se este for seu próprio nó e ele ainda estiver preenchendo o histórico blindado, aguarde o log mostrar \"shielded history: VERIFIED\" e reescaneie então.",
     "notUpdating": "último saldo confirmado",
     "readyOnly": "{{spendable}} prontos para gastar",
-    "arrivingIncluded": "Inclui {{amount}} ZKAS chegando — confirmado, sendo creditado"
+    "arrivingIncluded": "Inclui {{amount}} ZKAS chegando — confirmado, sendo creditado",
+    "maturingEta": "<em>{{maturing}} amadurecendo</em> · disponível em {{eta}} · {{spendable}} pronto agora"
   },
   "addAccountWallet": {
     "noPhrase": "Esta carteira não tem frase de recuperação, então não é possível derivar uma conta. Use “Adicionar carteira separada” — ela tem sua própria frase, da qual você deve fazer backup.",

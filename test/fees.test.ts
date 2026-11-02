@@ -52,3 +52,16 @@ describe("the fee ceiling the device will sign", () => {
     expect(maxFeeForSpends(2)).toBeLessThan(maxFeeForSpends(38));
   });
 });
+
+describe("the fee a payment is charged when none is chosen (chunk_fee)", () => {
+  it("is the wallet floor for a small payment, not the lower relay minimum", async () => {
+    const { chunkFeeSompi, feeReserveSompi, minRelayFeeForSpends, WALLET_FEE_FLOOR_SOMPI } = await import("../src/fees");
+    // The confirm screen quoted 0.018554 and promised "Total <=" that; the payment paid 0.03.
+    expect(minRelayFeeForSpends(1)).toBeLessThan(WALLET_FEE_FLOOR_SOMPI);
+    expect(chunkFeeSompi(1)).toBe(3_000_000);
+    expect(feeReserveSompi(1)).toBe(3_000_000);
+    // Large transactions are priced by size, above the floor.
+    expect(chunkFeeSompi(38)).toBe(minRelayFeeForSpends(38));
+    expect(chunkFeeSompi(38)).toBeGreaterThan(3_000_000);
+  });
+});

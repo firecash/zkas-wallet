@@ -804,7 +804,8 @@
     "lowerBoundFrom": "Este saldo es una <b>cota inferior</b>: la vista de la billetera se reconstruyó con un nodo que ha podado el historial antiguo (disponible desde el bloque {{block}}), por lo que pueden faltar monedas creadas hace mucho. Tus fondos están seguros en la cadena — reescanea solo desde un nodo que sirva el historial completo (reconstruir con este daría el mismo resultado ciego). Si es tu propio nodo y aún está llenando el historial blindado, espera a que su registro diga \"shielded history: VERIFIED\" y reescanea entonces.",
     "notUpdating": "último saldo confirmado",
     "readyOnly": "{{spendable}} listos para gastar",
-    "arrivingIncluded": "Incluye {{amount}} ZKAS entrantes — confirmado, acreditándose"
+    "arrivingIncluded": "Incluye {{amount}} ZKAS entrantes — confirmado, acreditándose",
+    "maturingEta": "<em>{{maturing}} madurando</em> · gastable en {{eta}} · {{spendable}} listo ahora"
   },
   "onboard": {
     "pastedFromClipboard": "pegado del portapapeles",

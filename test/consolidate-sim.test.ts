@@ -8,7 +8,9 @@
 // round that did not merge anything.
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { minRelayFeeForSpends } from "../src/fees";
+// The daemon charges chunk_fee = max(DEFAULT_FEE_SOMPI, relay minimum) (select_spend_count);
+// modelling the relay minimum alone was the same mistake the Send screen made.
+import { chunkFeeSompi } from "../src/fees";
 
 type Round = { spent: number; amount: bigint; fee: bigint };
 
@@ -35,10 +37,10 @@ function makeDaemon(notes: bigint[], cap: number) {
       let sum = 0n;
       for (let i = 0; i < Math.min(matured.length, cap); i++) {
         sum += matured[i];
-        const f = BigInt(minRelayFeeForSpends(i + 1));
+        const f = BigInt(chunkFeeSompi(i + 1));
         if (sum >= amount + f) { k = i + 1; break; }
       }
-      const fee = BigInt(minRelayFeeForSpends(k || 1));
+      const fee = BigInt(chunkFeeSompi(k || 1));
       const selected = matured.slice(0, k).reduce((a, b) => a + b, 0n);
       const need = amount + fee;
       let paid: bigint;

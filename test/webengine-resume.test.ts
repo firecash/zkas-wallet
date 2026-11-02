@@ -13,7 +13,9 @@ class Eng implements EngineLike {
   tip_frontier() { return JSON.stringify({ block: this.low(), size: this.cursor, leaf: "l", ommers: [] }); }
   checkpoint() { return new Uint8Array([this.cursor % 256]); }
   status() { return JSON.stringify({ balance_sompi: "7", notes: 1 }); }
-  set_anchor(j: string) { this.anchors.push(j); }
+  rejectAnchor = false;
+  set_anchor(j: string) { this.anchors.push(j); return this.rejectAnchor ? "below_base" : undefined; }
+  anchor_debug() { return JSON.stringify({ tree: 1_000_900, base: 1_000_850, anchor: 0, unmatured_needs: 1_000_860, notes: 1 }); }
 }
 
 function deps(opts: { treeMs?: number; badTree?: boolean; anchorAgeMs?: number } = {}) {
@@ -59,6 +61,23 @@ function deps(opts: { treeMs?: number; badTree?: boolean; anchorAgeMs?: number }
   };
   return { d, eng, log };
 }
+
+describe("a coin newer than any acceptable anchor", () => {
+  it("is known to be maturing, with an estimate of when it is spendable", async () => {
+    const t = deps();
+    t.eng.rejectAnchor = true;
+    let last: { anchorKnown?: boolean; maturingEtaSecs?: number } = {};
+    const on = t.d.onStatus;
+    t.d.onStatus = (s) => {
+      on(s);
+      last = s;
+    };
+    await runSync(t.d);
+    expect(last.anchorKnown).toBe(true);
+    // Candidate anchor size 1 (fake /tree?below), coin at 1,000,859: ~1M leaves at 1.5/s.
+    expect(last.maturingEtaSecs).toBeGreaterThan(0);
+  });
+});
 
 describe("resuming a wallet a short way behind", () => {
   it("asks for the next page and the tip at once, and never for the manifest", async () => {

@@ -770,7 +770,8 @@
     "prunedRebuildFrom": "Ten węzeł przyciął starszą historię (dostępną od bloku {{block}}), więc odbudowane saldo może być <b>dolnym ograniczeniem</b>. Twoje monety są w łańcuchu — przeskanuj ponownie z węzła udostępniającego pełną historię, aby zobaczyć wszystko. Jeśli to twój własny węzeł i wciąż uzupełnia historię chronioną, poczekaj, aż w logu pojawi się \"shielded history: VERIFIED\" i przeskanuj ponownie.",
     "notUpdating": "ostatnie potwierdzone saldo",
     "readyOnly": "{{spendable}} gotowe do wydania",
-    "arrivingIncluded": "W tym {{amount}} ZKAS w drodze — potwierdzone, księgowane"
+    "arrivingIncluded": "W tym {{amount}} ZKAS w drodze — potwierdzone, księgowane",
+    "maturingEta": "<em>{{maturing}} dojrzewa</em> · do wydania za {{eta}} · {{spendable}} gotowe teraz"
   },
   "addAccountWallet": {
     "noPhrase": "Ten portfel nie ma frazy odzyskiwania, więc nie można z niego wyprowadzić konta. Użyj „Dodaj osobny portfel” — ma własną frazę odzyskiwania, którą musisz utworzyć kopię zapasową.",

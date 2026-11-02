@@ -770,7 +770,8 @@
     "prunedRebuildFrom": "Bu düğüm eski geçmişi budadı (blok {{block}}'dan itibaren mevcut), bu nedenle yeniden oluşturulan bakiye <b>alt sınır</b> olabilir. Paralarınız zincirde — tam geçmiş sunan bir düğümden yeniden tarayın. Kendi düğümünüzse ve korumalı geçmişi hâlâ dolduruyorsa, günlüğünde \"shielded history: VERIFIED\" yazmasını bekleyip yeniden tarayın.",
     "notUpdating": "son onaylanan bakiye",
     "readyOnly": "{{spendable}} harcanmaya hazır",
-    "arrivingIncluded": "{{amount}} ZKAS gelmekte olan dahil — onaylandı, hesaba geçiyor"
+    "arrivingIncluded": "{{amount}} ZKAS gelmekte olan dahil — onaylandı, hesaba geçiyor",
+    "maturingEta": "<em>{{maturing}} olgunlaşıyor</em> · {{eta}} içinde harcanabilir · {{spendable}} şimdi hazır"
   },
   "addAccountWallet": {
     "noPhrase": "Bu cüzdanın kurtarma ifadesi yok, bu nedenle ondan bir hesap türetilemez. “Ayrı cüzdan ekle”yi kullanın — kendi kurtarma ifadesini alır, onu yedeklemelisiniz.",

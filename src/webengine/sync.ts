@@ -61,6 +61,10 @@ export interface BrowserSyncStatus {
   spendReady?: boolean;
   /** The wallet tree equalled the node's at the cursor (null: not checked yet this session). */
   verified: boolean | null;
+  /** An anchor has been evaluated (taken or not): matured vs maturing is known. */
+  anchorKnown?: boolean;
+  /** Seconds until the oldest maturing coin is spendable (anchor lag / observed leaf rate). */
+  maturingEtaSecs?: number;
   /** While a chain file downloads (nothing can be ingested until it is whole): bytes so far / total. */
   downloadDone?: number;
   downloadTotal?: number;
@@ -141,6 +145,11 @@ export async function runSync(d: SyncDeps): Promise<void> {
   let verifyJob: Promise<boolean> | null = null;
   let lastAnchorWhy = "";
   let lastAnchorLog = 0;
+  let anchorKnown = false;
+  let maturingEtaSecs: number | null = null;
+  // Leaves added per second, from the tree's growth between rounds (default: measured ~1.5/s).
+  let leafRate = 1.5;
+  let lastTree: { leaves: number; at: number } | null = null;
   // Waits for the tree check if one is running; a mismatch reports and stops (the caller rebuilds).
   const settleVerify = async () => {
     if (!verifyJob) return;
@@ -181,6 +190,8 @@ export async function runSync(d: SyncDeps): Promise<void> {
       spendReady: st.spend_ready as boolean | undefined,
       verified,
       ...(downloading ? { downloadDone: downloading.done, downloadTotal: downloading.total } : {}),
+      ...(anchorKnown ? { anchorKnown } : {}),
+      ...(maturingEtaSecs !== null ? { maturingEtaSecs } : {}),
       ...(error ? { error } : {}),
     });
   };
@@ -257,6 +268,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
       const cached = JSON.parse((await d.loadAnchor?.()) ?? "null");
       if (cached && typeof cached.at === "number" && Date.now() - cached.at < ANCHOR_CACHE_MS && cached.anchor) {
         const why = eng.set_anchor?.(JSON.stringify(cached.anchor));
+        anchorKnown = true;
         phase("anchor_cached", { outcome: why || "taken", age_s: Math.round((Date.now() - cached.at) / 1000) });
       }
     } catch {
@@ -623,6 +635,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
               const ts = performance.now();
               if (typeof a?.block === "string") {
                 const why = live.set_anchor?.(JSON.stringify(a)) || "taken";
+                anchorKnown = true;
                 // Why a coin is not spendable yet, when it should be: each change of outcome, and
                 // once a minute while a coin is still maturing (counts only, no positions).
                 let dbg: Record<string, number> = {};
@@ -631,6 +644,18 @@ export async function runSync(d: SyncDeps): Promise<void> {
                 } catch {
                   /* older engine */
                 }
+                // When the oldest maturing coin becomes spendable: the leaves between it and this
+                // candidate anchor (whether or not it was taken), at the rate the tree grows.
+                const now = Date.now();
+                if (typeof dbg.tree === "number") {
+                  if (lastTree && now - lastTree.at > 5_000 && dbg.tree > lastTree.leaves) {
+                    const r = (dbg.tree - lastTree.leaves) / ((now - lastTree.at) / 1000);
+                    leafRate = leafRate * 0.7 + r * 0.3;
+                  }
+                  lastTree = { leaves: dbg.tree, at: now };
+                }
+                const needs = (dbg.unmatured_needs ?? 0) > 0 ? Math.max(0, dbg.unmatured_needs + (dbg.anchor ?? 0) - (Number(a.size) || 0)) : 0;
+                maturingEtaSecs = needs > 0 && leafRate > 0 ? Math.round(needs / leafRate) : null;
                 if (why !== lastAnchorWhy || ((dbg.unmatured_needs ?? 0) > 0 && Date.now() - lastAnchorLog > 60_000)) {
                   lastAnchorWhy = why;
                   lastAnchorLog = Date.now();

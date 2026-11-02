@@ -795,7 +795,8 @@
     "lowerBoundFrom": "Baki ini adalah <b>batas bawah</b>: pandangan dompet dibina semula melalui nod yang telah memangkas sejarah lama (tersedia dari blok {{block}}), jadi syiling yang dicipta lama dahulu mungkin tiada. Syiling anda selamat di rantaian — imbas semula hanya dari nod yang menyediakan sejarah penuh (membina semula melalui yang ini akan sama butanya). Jika ini nod anda sendiri dan ia masih mengisi sejarah terlindung, tunggu lognya menyatakan \"shielded history: VERIFIED\" dan imbas semula kemudian.",
     "notUpdating": "baki disahkan terakhir",
     "readyOnly": "{{spendable}} sedia dibelanjakan",
-    "arrivingIncluded": "Termasuk {{amount}} ZKAS yang sedang masuk — disahkan, sedang dikreditkan"
+    "arrivingIncluded": "Termasuk {{amount}} ZKAS yang sedang masuk — disahkan, sedang dikreditkan",
+    "maturingEta": "<em>{{maturing}} sedang matang</em> · boleh dibelanjakan dalam {{eta}} · {{spendable}} sedia sekarang"
   },
   "addAccountWallet": {
     "noPhrase": "Dompet ini tiada frasa pemulihan, jadi akaun tidak boleh diterbitkan daripadanya. Guna “Tambah dompet berasingan” — ia ada frasa pemulihan sendiri, yang mesti anda sandarkan.",

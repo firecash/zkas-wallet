@@ -792,7 +792,8 @@
     "prunedRebuildFrom": "Dieser Node hat alte History gekürzt (verfügbar ab Block {{block}}), daher kann das neu aufgebaute Guthaben eine <b>Untergrenze</b> sein. Deine Coins sind on-chain – scanne von einem Node mit vollständiger History erneut, um alles zu sehen. Falls dies dein eigener Node ist und er noch die abgeschirmte History füllt, warte, bis im Log „shielded history: VERIFIED“ steht, und scanne erneut.",
     "notUpdating": "letztes bestätigtes Guthaben",
     "readyOnly": "{{spendable}} sofort ausgebbar",
-    "arrivingIncluded": "Enthält {{amount}} ZKAS im Eingang – bestätigt, wird gutgeschrieben"
+    "arrivingIncluded": "Enthält {{amount}} ZKAS im Eingang – bestätigt, wird gutgeschrieben",
+    "maturingEta": "<em>{{maturing}} reifen</em> · ausgebbar in {{eta}} · {{spendable}} jetzt bereit"
   },
   "addAccountWallet": {
     "noPhrase": "Dieses Wallet hat keine Wiederherstellungsphrase, daher kann kein Konto abgeleitet werden. Nutze „Separates Wallet hinzufügen“ – es bekommt eine eigene Wiederherstellungsphrase, die du sichern musst.",

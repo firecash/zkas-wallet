@@ -804,7 +804,8 @@
     "lowerBoundFrom": "Ce solde est une <b>borne inférieure</b> : la vue du portefeuille a été reconstruite via un nœud qui a élagué l’historique ancien (disponible à partir du bloc {{block}}), donc des pièces créées il y a longtemps peuvent manquer. Vos fonds sont en sécurité sur la chaîne — réanalysez uniquement depuis un nœud qui sert l’historique complet (reconstruire via celui-ci donnerait le même résultat aveugle). Si c’est votre propre nœud et qu’il remplit encore l’historique protégé, attendez que son journal indique « shielded history: VERIFIED » puis réanalysez.",
     "notUpdating": "dernier solde confirmé",
     "readyOnly": "{{spendable}} disponibles",
-    "arrivingIncluded": "Dont {{amount}} ZKAS en arrivée — confirmé, en cours de crédit"
+    "arrivingIncluded": "Dont {{amount}} ZKAS en arrivée — confirmé, en cours de crédit",
+    "maturingEta": "<em>{{maturing}} en maturation</em> · dépensable dans {{eta}} · {{spendable}} prêt"
   },
   "recoverWallet": {
     "watchIntro": "Affiche le solde et l'historique sans phrase de récupération. Impossible d'envoyer : une clé de visualisation n'autorise pas les dépenses.",
