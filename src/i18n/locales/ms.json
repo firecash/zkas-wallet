@@ -2130,7 +2130,7 @@
   },
   "runInBrowserOption": {
     "title": "Jalankan dalam pelayar ini",
-    "desc": "Paling peribadi di web: kunci anda tidak pernah meninggalkan pelayar ini dan tiada perkhidmatan melihat dompet anda."
+    "desc": "Paling peribadi di web: kunci anda tidak pernah meninggalkan pelayar ini dan tiada perkhidmatan melihat dompet anda. Memuat turun fail rantaian dari ZKas dan CDN Cloudflarenya. Mereka melihat IP anda, bukan dompet anda."
   },
   "browserEngine": {
     "notInBrowser": "Tidak tersedia semasa dompet berjalan dalam pelayar ini. Gunakan aplikasi atau perkhidmatan awam untuk ini."

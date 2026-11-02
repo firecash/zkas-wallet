@@ -2130,7 +2130,7 @@
   },
   "runInBrowserOption": {
     "title": "Chạy trong trình duyệt này",
-    "desc": "Riêng tư nhất trên web: khóa của bạn không bao giờ rời trình duyệt này và không dịch vụ nào thấy ví của bạn."
+    "desc": "Riêng tư nhất trên web: khóa của bạn không bao giờ rời trình duyệt này và không dịch vụ nào thấy ví của bạn. Tải tệp chuỗi từ ZKas và CDN Cloudflare của nó. Họ thấy IP của bạn, không thấy ví của bạn."
   },
   "browserEngine": {
     "notInBrowser": "Không khả dụng khi ví chạy trong trình duyệt này. Hãy dùng ứng dụng hoặc dịch vụ công cộng cho việc này."

@@ -2130,7 +2130,7 @@
   },
   "runInBrowserOption": {
     "title": "Uruchom w tej przeglądarce",
-    "desc": "Najbardziej prywatnie w sieci: klucze nigdy nie opuszczają tej przeglądarki, a żadna usługa nie widzi portfela."
+    "desc": "Najbardziej prywatnie w sieci: klucze nigdy nie opuszczają tej przeglądarki, a żadna usługa nie widzi portfela. Pobiera pliki łańcucha z ZKas i jego CDN Cloudflare. Widzą Twoje IP, nie Twój portfel."
   },
   "browserEngine": {
     "notInBrowser": "Niedostępne, gdy portfel działa w tej przeglądarce. Użyj do tego aplikacji lub usługi publicznej."

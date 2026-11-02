@@ -2130,7 +2130,7 @@
   },
   "runInBrowserOption": {
     "title": "In deze browser uitvoeren",
-    "desc": "Het meest privé op het web: je sleutels verlaten deze browser nooit en geen walletdienst ziet je wallet."
+    "desc": "Het meest privé op het web: je sleutels verlaten deze browser nooit en geen walletdienst ziet je wallet. Downloadt chainbestanden van ZKas en zijn Cloudflare-CDN. Zij zien je IP, niet je wallet."
   },
   "browserEngine": {
     "notInBrowser": "Niet beschikbaar zolang de wallet in deze browser draait. Gebruik hiervoor de app of de openbare dienst."

@@ -2130,7 +2130,7 @@
   },
   "runInBrowserOption": {
     "title": "Bu tarayıcıda çalıştır",
-    "desc": "Web’de en gizlisi: anahtarlarınız bu tarayıcıdan hiç çıkmaz ve hiçbir cüzdan hizmeti cüzdanınızı görmez."
+    "desc": "Web’de en gizlisi: anahtarlarınız bu tarayıcıdan hiç çıkmaz ve hiçbir cüzdan hizmeti cüzdanınızı görmez. Zincir dosyalarını ZKas ve Cloudflare CDN’sinden indirir. IP’nizi görürler, cüzdanınızı değil."
   },
   "browserEngine": {
     "notInBrowser": "Cüzdan bu tarayıcıda çalışırken kullanılamaz. Bunun için uygulamayı veya genel hizmeti kullanın."

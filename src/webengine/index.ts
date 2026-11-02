@@ -14,9 +14,15 @@ export type { BrowserSyncStatus } from "./sync";
 /** Where the engine reads public chain data. On wallet.zkas.info both are served from the page's
  *  own origin (proxied there to zkas.info), so the site's strict CSP needs no new source; any
  *  other origin (development, a self-hosted copy) reads zkas.info directly. */
+/** The chain files' Cloudflare R2 mirror: allowed by wallet.zkas.info's CSP and by the bucket's
+ *  CORS rule for that origin only. Every segment is checked against the signed manifest, so the
+ *  CDN cannot change what the wallet ingests; it sees the visitor's IP (disclosed in the UI). */
+export const CHAIN_FILES_CDN = "https://pub-ae5ed92258b2437e985b69ab9947ef60.r2.dev";
+
 export function browserSources(origin: string = globalThis.location?.origin ?? ""): { files: string[]; gateway: string } {
   if (/^https:\/\/wallet\.zkas\.info$/.test(origin)) {
-    return { files: [`${origin}/shielded-chain`], gateway: `${origin}/chain-gateway` };
+    // CDN first, the site's own copy (VPS2 -> zkas.info) as the fallback mirror.
+    return { files: [CHAIN_FILES_CDN, `${origin}/shielded-chain`], gateway: `${origin}/chain-gateway` };
   }
   return { files: ["https://zkas.info/shielded-chain"], gateway: "https://zkas.info/chain-gateway" };
 }

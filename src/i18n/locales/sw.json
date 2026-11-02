@@ -2130,7 +2130,7 @@
   },
   "runInBrowserOption": {
     "title": "Endesha kwenye kivinjari hiki",
-    "desc": "Faragha zaidi kwenye wavuti: funguo zako haziondoki kwenye kivinjari hiki na hakuna huduma inayoona pochi yako."
+    "desc": "Faragha zaidi kwenye wavuti: funguo zako haziondoki kwenye kivinjari hiki na hakuna huduma inayoona pochi yako. Hupakua faili za mnyororo kutoka ZKas na CDN yake ya Cloudflare. Wanaona IP yako, si pochi yako."
   },
   "browserEngine": {
     "notInBrowser": "Haipatikani wakati pochi inaendeshwa kwenye kivinjari hiki. Tumia programu au huduma ya umma kwa hili."

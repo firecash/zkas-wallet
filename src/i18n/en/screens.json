@@ -189,7 +189,7 @@
   },
   "runInBrowserOption": {
     "title": "Run in this browser",
-    "desc": "Most private on the web: your keys never leave this browser and no wallet service sees your wallet."
+    "desc": "Most private on the web: your keys never leave this browser and no wallet service sees your wallet. Downloads chain files from ZKas and its Cloudflare CDN. They see your IP, not your wallet."
   },
   "browserEngine": {
     "notInBrowser": "Not available while the wallet runs in this browser. Use the app, or the public service, for this."

@@ -2130,7 +2130,7 @@
   },
   "runInBrowserOption": {
     "title": "Executar neste navegador",
-    "desc": "O mais privado na web: suas chaves nunca saem deste navegador e nenhum serviço vê sua carteira."
+    "desc": "O mais privado na web: suas chaves nunca saem deste navegador e nenhum serviço vê sua carteira. Baixa arquivos da cadeia do ZKas e da sua CDN Cloudflare. Eles veem seu IP, não sua carteira."
   },
   "browserEngine": {
     "notInBrowser": "Indisponível enquanto a carteira roda neste navegador. Use o app ou o serviço público para isso."

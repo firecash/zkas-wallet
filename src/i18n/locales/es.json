@@ -2130,7 +2130,7 @@
   },
   "runInBrowserOption": {
     "title": "Ejecutar en este navegador",
-    "desc": "Lo más privado en la web: tus claves nunca salen de este navegador y ningún servicio de billetera ve tu billetera."
+    "desc": "Lo más privado en la web: tus claves nunca salen de este navegador y ningún servicio de billetera ve tu billetera. Descarga archivos de la cadena de ZKas y su CDN de Cloudflare. Ven tu IP, no tu billetera."
   },
   "browserEngine": {
     "notInBrowser": "No disponible mientras la billetera funciona en este navegador. Usa la app o el servicio público para esto."

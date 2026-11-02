@@ -2130,7 +2130,7 @@
   },
   "runInBrowserOption": {
     "title": "Esegui in questo browser",
-    "desc": "Il più privato sul web: le tue chiavi non lasciano mai questo browser e nessun servizio vede il tuo wallet."
+    "desc": "Il più privato sul web: le tue chiavi non lasciano mai questo browser e nessun servizio vede il tuo wallet. Scarica i file della catena da ZKas e dalla sua CDN Cloudflare. Vedono il tuo IP, non il tuo wallet."
   },
   "browserEngine": {
     "notInBrowser": "Non disponibile mentre il wallet funziona in questo browser. Usa l’app o il servizio pubblico per questo."
