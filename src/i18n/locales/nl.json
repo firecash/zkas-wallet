@@ -244,7 +244,13 @@
     "onNotePassphrase": "<b>Aan.</b> Elke portemonneesleutel op dit apparaat is versleuteld en de app vraagt om je wachtwoord bij het openen. Hij vergrendelt zichzelf na een paar minuten op de achtergrond.",
     "offIntro": "Je portemonneesleutels worden <b>onversleuteld</b> op dit apparaat opgeslagen. Schakel een pincode of wachtwoord in; dan worden ze allemaal versleuteld opgeslagen en vraagt de app ernaar bij het openen — zodat iemand met dit apparaat of een back-up van de gegevens er niets mee kan uitgeven.",
     "setSecret": "Stel pincode of wachtwoord in",
-    "nothingToLock": "Er is nog geen sleutel op dit apparaat om te vergrendelen. Een alleen-bekijken-wallet bevat alleen een kijksleutel. Maak eerst een wallet aan of importeer er een."
+    "nothingToLock": "Er is nog geen sleutel op dit apparaat om te vergrendelen. Een alleen-bekijken-wallet bevat alleen een kijksleutel. Maak eerst een wallet aan of importeer er een.",
+    "lockAfterLabel": "Vergrendelen na (seconden)",
+    "lockAfterHint": "Vergrendelt wanneer de app zo lang op de achtergrond was, of open en onaangeraakt. 0 vergrendelt zodra je de app verlaat. Leeg: alleen {{n}} s op de achtergrond.",
+    "lockAfterSave": "Opslaan",
+    "lockAfterSaved": "Opgeslagen: vergrendelt na {{n}} s.",
+    "lockAfterSavedDefault": "Opgeslagen: standaard, {{n}} s op de achtergrond.",
+    "lockAfterBad": "Vul hele seconden in van 0 tot {{max}}, of laat het leeg."
   },
   "switchWallet": {
     "title": "Wallets",
@@ -1854,15 +1860,17 @@
     "eyebrow": "Nieuw",
     "title": "Wat is er nieuw",
     "switchFailed": "Kon de on-device-engine niet starten. Je zit nog op de vorige dienst.",
-    "fastTitle": "Snelle sync",
-    "fastDesc": "Op deze telefoon duurt bijwerken seconden in plaats van minuten. De app downloadt chainbestanden van ZKas en zijn Cloudflare-CDN en controleert ze bij de node. Zij zien je IP, niet je wallet.",
     "fixTitle": "Opgelost",
-    "fixDesc": "Meerdere wallets die tegelijk synchroniseren downloaden niet meer steeds dezelfde bestanden.",
-    "logsTitle": "Kortere logs",
-    "logsDesc": "Instellingen → Debuglogs: zet onderdelen uit die je niet nodig hebt.",
     "disableFast": "Snelle sync uitzetten",
     "disabling": "Uitzetten…",
-    "ok": "OK"
+    "ok": "OK",
+    "publicTitle": "Openbare dienst: direct",
+    "publicDesc": "Je wallet opent in een fractie van een seconde en is na uren afwezigheid binnen enkele seconden bij. Een volledige herscan duurt één tot drie minuten in plaats van ongeveer vijftien.",
+    "cdnTitle": "Snellere downloads",
+    "cdnDesc": "Chainbestanden komen nu eerst van het Cloudflare-CDN van ZKas, met de eigen server van ZKas als reserve, en worden gecontroleerd met de handtekening van ZKas. Zij zien je IP, niet je wallet.",
+    "switchTitle": "Je scan gaat mee",
+    "switchDesc": "Overstappen van de openbare dienst naar deze browser of deze telefoon neemt je voltooide scan mee in plaats van opnieuw te scannen.",
+    "fixesDesc": "‘{{button}}’ in {{tools}} werkt nu in elke modus, en overstappen van deze browser naar de openbare dienst werkt."
   },
   "mainRoot": {
     "opening": "Openen…"

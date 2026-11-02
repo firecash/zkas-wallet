@@ -244,7 +244,13 @@
     "onNotePassphrase": "<b>Aktif.</b> Kunci setiap dompet di perangkat ini dienkripsi, dan aplikasi meminta kata sandi Anda untuk membuka. Terkunci sendiri setelah beberapa menit di latar belakang.",
     "offIntro": "Kunci dompet Anda disimpan di perangkat ini <b>tanpa enkripsi</b>. Aktifkan PIN atau kata sandi dan semuanya dienkripsi saat diam, dan aplikasi memintanya saat dibuka — sehingga orang yang memegang perangkat ini, atau cadangan datanya, tidak bisa membelanjakannya.",
     "setSecret": "Atur PIN atau kata sandi",
-    "nothingToLock": "Belum ada kunci di perangkat ini untuk dikunci. Dompet hanya lihat hanya menyimpan kunci lihat. Buat atau impor dompet dulu."
+    "nothingToLock": "Belum ada kunci di perangkat ini untuk dikunci. Dompet hanya lihat hanya menyimpan kunci lihat. Buat atau impor dompet dulu.",
+    "lockAfterLabel": "Kunci setelah (detik)",
+    "lockAfterHint": "Terkunci saat aplikasi berada di latar belakang, atau terbuka tanpa disentuh, selama ini. 0 mengunci begitu Anda meninggalkan aplikasi. Kosong: hanya {{n}} dtk di latar belakang.",
+    "lockAfterSave": "Simpan",
+    "lockAfterSaved": "Tersimpan: terkunci setelah {{n}} dtk.",
+    "lockAfterSavedDefault": "Tersimpan: bawaan, {{n}} dtk di latar belakang.",
+    "lockAfterBad": "Masukkan detik bulat dari 0 sampai {{max}}, atau kosongkan."
   },
   "switchWallet": {
     "title": "Dompet",
@@ -1875,15 +1881,17 @@
     "eyebrow": "Baru",
     "title": "Yang baru",
     "switchFailed": "Gagal memulai mesin di perangkat. Anda masih di layanan sebelumnya.",
-    "fastTitle": "Sinkron cepat",
-    "fastDesc": "Di ponsel ini, mengejar ketertinggalan butuh detik, bukan menit. Aplikasi mengunduh file rantai dari ZKas dan CDN Cloudflare-nya dan memeriksanya dengan node. Mereka melihat IP Anda, bukan dompet Anda.",
     "fixTitle": "Diperbaiki",
-    "fixDesc": "Beberapa dompet yang sinkron bersamaan tidak lagi mengunduh file yang sama berulang-ulang.",
-    "logsTitle": "Log lebih pendek",
-    "logsDesc": "Pengaturan → Log debug: matikan bagian yang tidak Anda perlukan.",
     "disableFast": "Matikan sinkron cepat",
     "disabling": "Mematikan…",
-    "ok": "OK"
+    "ok": "OK",
+    "publicTitle": "Layanan publik: instan",
+    "publicDesc": "Dompetmu terbuka dalam sepersekian detik dan menyusul dalam beberapa detik setelah berjam-jam tidak dibuka. Pindai ulang penuh butuh satu sampai tiga menit, bukan sekitar lima belas.",
+    "cdnTitle": "Unduhan lebih cepat",
+    "cdnDesc": "File rantai kini datang lebih dulu dari CDN Cloudflare ZKas, dengan server ZKas sendiri sebagai cadangan, dan diperiksa dengan tanda tangan ZKas. Mereka melihat IP Anda, bukan dompet Anda.",
+    "switchTitle": "Pindaianmu ikut",
+    "switchDesc": "Pindah dari layanan publik ke browser ini atau ponsel ini membawa pindaianmu yang sudah selesai, tanpa memindai ulang.",
+    "fixesDesc": "“{{button}}” di {{tools}} kini berfungsi di semua mode, dan pindah dari browser ini ke layanan publik kini berlaku."
   },
   "mainRoot": {
     "opening": "Membuka…"

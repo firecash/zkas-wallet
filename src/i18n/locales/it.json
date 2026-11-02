@@ -244,7 +244,13 @@
     "onNotePassphrase": "<b>Attivo.</b> La chiave di ogni portafoglio su questo dispositivo è criptata e l'app chiede la frase per aprirsi. Si blocca dopo qualche minuto in background.",
     "offIntro": "Le chiavi del portafoglio sono salvate su questo dispositivo <b>non criptate</b>. Attiva un PIN o una frase per criptarle tutte a riposo: l'app lo chiederà all'apertura, così chi ha il dispositivo o un backup non può spenderle.",
     "setSecret": "Imposta un PIN o una password",
-    "nothingToLock": "Non c'è ancora nessuna chiave da bloccare su questo dispositivo. Un portafoglio solo osservazione ha solo una chiave di sola lettura. Prima crea o importa un portafoglio."
+    "nothingToLock": "Non c'è ancora nessuna chiave da bloccare su questo dispositivo. Un portafoglio solo osservazione ha solo una chiave di sola lettura. Prima crea o importa un portafoglio.",
+    "lockAfterLabel": "Blocca dopo (secondi)",
+    "lockAfterHint": "Si blocca quando l'app resta in background, o aperta senza essere toccata, per questo tempo. 0 blocca appena esci dall'app. Vuoto: solo {{n}} s in background.",
+    "lockAfterSave": "Salva",
+    "lockAfterSaved": "Salvato: si blocca dopo {{n}} s.",
+    "lockAfterSavedDefault": "Salvato: predefinito, {{n}} s in background.",
+    "lockAfterBad": "Inserisci secondi interi da 0 a {{max}} oppure lascia vuoto."
   },
   "switchWallet": {
     "title": "Portafogli",
@@ -1875,15 +1881,17 @@
     "eyebrow": "Novità",
     "title": "Novità",
     "switchFailed": "Impossibile avviare il motore locale. Sei ancora sul servizio precedente.",
-    "fastTitle": "Sincronizzazione rapida",
-    "fastDesc": "Su questo telefono, mettersi in pari richiede secondi invece di minuti. L’app scarica i file della catena da ZKas e dalla sua CDN Cloudflare e li verifica con il nodo. Vedono il tuo IP, non il tuo wallet.",
     "fixTitle": "Risolto",
-    "fixDesc": "Più wallet che si sincronizzano insieme non scaricano più gli stessi file di continuo.",
-    "logsTitle": "Log più brevi",
-    "logsDesc": "Impostazioni → Log di debug: disattiva le parti che non ti servono.",
     "disableFast": "Disattiva sincronizzazione rapida",
     "disabling": "Disattivazione…",
-    "ok": "OK"
+    "ok": "OK",
+    "publicTitle": "Servizio pubblico: istantaneo",
+    "publicDesc": "Il wallet si apre in una frazione di secondo e dopo ore di assenza si aggiorna in pochi secondi. Una nuova scansione completa richiede da uno a tre minuti invece di circa quindici.",
+    "cdnTitle": "Download più veloci",
+    "cdnDesc": "I file della catena ora arrivano prima dalla CDN Cloudflare di ZKas, con il server di ZKas come riserva, e vengono verificati con la firma di ZKas. Vedono il tuo IP, non il tuo wallet.",
+    "switchTitle": "La scansione ti segue",
+    "switchDesc": "Passando dal servizio pubblico a questo browser o a questo telefono, la scansione completata viene portata con te invece di ripartire.",
+    "fixesDesc": "«{{button}}» in {{tools}} ora funziona in ogni modalità e il passaggio da questo browser al servizio pubblico ha effetto."
   },
   "mainRoot": {
     "opening": "Apertura…"

@@ -94,7 +94,7 @@ import {
   updateContact,
   type Contact,
 } from "./contacts";
-import { disableLock, enableLock, forgetWalletLock, forgetMnemonicLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed } from "./applock";
+import { disableLock, enableLock, forgetWalletLock, forgetMnemonicLock, isLockEnabled, lockKind, sealNewSeed, unlock, unlockedDeviceSeed, lockAfterSetting, setLockAfterSetting, DEFAULT_LOCK_AFTER_S, MAX_LOCK_AFTER_S } from "./applock";
 import { disableBiometricUnlock, enableBiometricUnlock, isBiometricAvailable, isBiometricConfigured } from "./biometric";
 import { bgSyncAvailable, bgSyncDisable, bgSyncEnable, bgSyncEnabled, bgSyncNow, bgSyncReconfigure, bgShouldPromptForBackground, bgRequestBackground, bgSuppressPrompt, markBackgroundPromptPending, takeBackgroundPromptPending } from "./bgsync";
 import { startPrewarm, stopPrewarm } from "./prewarm";
@@ -9031,6 +9031,7 @@ function AppLockSetting() {
             )}
           </p>
           <BiometricToggle />
+          <LockAfterSetting />
           <button className="btn ghost" onClick={() => setMode("disable")}>
             {t("appLockSetting.turnOff")}
           </button>
@@ -9045,6 +9046,49 @@ function AppLockSetting() {
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+/// Settings -> App lock -> "Lock after": how many seconds away from the app (or, once chosen,
+/// untouched while open) before it locks. Empty = the default (90 s away only).
+function LockAfterSetting() {
+  const { t } = useTranslation();
+  const [value, setValue] = useState(() => {
+    const v = lockAfterSetting();
+    return v === null ? "" : String(v);
+  });
+  const [saved, setSaved] = useState<string | null>(null);
+  const trimmed = value.trim();
+  const valid = trimmed === "" || (/^\d+$/.test(trimmed) && Number(trimmed) <= MAX_LOCK_AFTER_S);
+  const current = lockAfterSetting();
+  const unchanged = trimmed === (current === null ? "" : String(current));
+  const save = () => {
+    if (!valid) return;
+    setLockAfterSetting(trimmed === "" ? null : Number(trimmed));
+    setSaved(trimmed === "" ? t("appLockSetting.lockAfterSavedDefault", { n: DEFAULT_LOCK_AFTER_S }) : t("appLockSetting.lockAfterSaved", { n: Number(trimmed) }));
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "12px 0" }}>
+      <label htmlFor="lock-after-s">{t("appLockSetting.lockAfterLabel")}</label>
+      <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <input
+          id="lock-after-s"
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setSaved(null);
+          }}
+          placeholder={String(DEFAULT_LOCK_AFTER_S)}
+          style={{ maxWidth: 140 }}
+        />
+        <button type="button" className="btn ghost" disabled={!valid || unchanged} onClick={save}>
+          {t("appLockSetting.lockAfterSave")}
+        </button>
+      </div>
+      <span className="muted small">{valid ? t("appLockSetting.lockAfterHint", { n: DEFAULT_LOCK_AFTER_S }) : t("appLockSetting.lockAfterBad", { max: MAX_LOCK_AFTER_S })}</span>
+      {saved && <div className="msg">{saved}</div>}
     </div>
   );
 }

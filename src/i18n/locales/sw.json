@@ -202,7 +202,13 @@
     "onNotePassphrase": "<b>Imewashwa.</b> Ufunguo wa kila mkoba kwenye kifaa hiki umesimbwa, na programu inahitaji nenosiri lako ili kufungua. Inajifunga tena baada ya dakika chache ikiwa chinichini.",
     "offIntro": "Funguo za mkoba wako zimehifadhiwa kwenye kifaa hiki <b>bila kusimbwa</b>. Washa PIN au nenosiri na kila moja itasimbwa inapohifadhiwa, na programu itaihitaji inapofunguliwa — ili mtu aliye na kifaa hiki, au nakala rudufu ya data yake, asiweze kutumia fedha zake.",
     "setSecret": "Weka PIN au nenosiri",
-    "nothingToLock": "Hakuna ufunguo kwenye kifaa hiki cha kufunga bado. Pochi ya kutazama tu ina ufunguo wa kutazama pekee. Unda au ingiza pochi kwanza."
+    "nothingToLock": "Hakuna ufunguo kwenye kifaa hiki cha kufunga bado. Pochi ya kutazama tu ina ufunguo wa kutazama pekee. Unda au ingiza pochi kwanza.",
+    "lockAfterLabel": "Funga baada ya (sekunde)",
+    "lockAfterHint": "Inafungwa programu ikikaa nyuma, au ikiwa wazi bila kuguswa, kwa muda huu. 0 inafunga mara tu unapotoka kwenye programu. Tupu: sekunde {{n}} nyuma pekee.",
+    "lockAfterSave": "Hifadhi",
+    "lockAfterSaved": "Imehifadhiwa: inafunga baada ya sekunde {{n}}.",
+    "lockAfterSavedDefault": "Imehifadhiwa: chaguo-msingi, sekunde {{n}} nyuma.",
+    "lockAfterBad": "Weka sekunde kamili kuanzia 0 hadi {{max}}, au acha tupu."
   },
   "switchWallet": {
     "title": "Pochi",
@@ -1838,15 +1844,17 @@
     "eyebrow": "Mpya",
     "title": "Mapya",
     "switchFailed": "Haikuweza kuanzisha injini ya kifaa. Bado uko kwenye huduma ya awali.",
-    "fastTitle": "Usawazishaji wa haraka",
-    "fastDesc": "Kwenye simu hii, kufikia hali ya sasa huchukua sekunde badala ya dakika. Programu hupakua faili za mnyororo kutoka ZKas na CDN yake ya Cloudflare na kuzikagua na nodi. Wanaona IP yako, si pochi yako.",
     "fixTitle": "Imerekebishwa",
-    "fixDesc": "Pochi kadhaa zinazosawazisha pamoja hazipakui tena faili zilezile mara kwa mara.",
-    "logsTitle": "Kumbukumbu fupi",
-    "logsDesc": "Mipangilio → Kumbukumbu za utatuzi: zima sehemu usizohitaji.",
     "disableFast": "Zima usawazishaji wa haraka",
     "disabling": "Inazima…",
-    "ok": "Sawa"
+    "ok": "Sawa",
+    "publicTitle": "Huduma ya umma: papo hapo",
+    "publicDesc": "Pochi yako inafunguka kwa sehemu ya sekunde na baada ya saa nyingi inasawazika kwa sekunde chache. Uchanganuzi kamili upya unachukua dakika moja hadi tatu badala ya takriban kumi na tano.",
+    "cdnTitle": "Upakuaji wa haraka",
+    "cdnDesc": "Faili za mnyororo sasa zinatoka kwanza kwenye CDN ya Cloudflare ya ZKas, seva ya ZKas ikiwa akiba, na zinakaguliwa kwa sahihi ya ZKas. Wanaona IP yako, si pochi yako.",
+    "switchTitle": "Uchanganuzi wako unakuja nawe",
+    "switchDesc": "Kuhama kutoka huduma ya umma kwenda kivinjari hiki au simu hii kunahamisha uchanganuzi wako uliokamilika badala ya kuchanganua upya.",
+    "fixesDesc": "“{{button}}” katika {{tools}} sasa inafanya kazi katika kila hali, na kuhama kutoka kivinjari hiki kwenda huduma ya umma kunatekelezwa."
   },
   "mainRoot": {
     "opening": "Inafungua…"

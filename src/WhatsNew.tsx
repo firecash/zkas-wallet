@@ -13,10 +13,11 @@ import { embeddedAvailable, embeddedFastSync } from "./embedded";
 import { isNewerVersion } from "./desktop";
 import { APP_VERSION } from "./version";
 
-/// The release this notice describes. rc25: fast sync now also downloads from ZKas's Cloudflare
-/// CDN — a third party that sees the device's IP — so everyone sees the notice (and its
-/// "Disable fast sync") again, including those who dismissed it for rc22-rc24.
-export const NOTICE_SINCE = "1.0.52-rc25";
+/// The release this notice describes. rc28: the Public service opens at once, chain files come
+/// from the Cloudflare CDN first (a third party that sees the device's IP, so phones keep the
+/// "Disable fast sync" choice), a switch carries the scan, and the fixes. Shown on every
+/// platform: the Public service is what most web users run.
+export const NOTICE_SINCE = "1.0.52-rc28";
 /// The app version that last ran on this device (written at every boot).
 const LAST_VERSION_KEY = "app_last_seen_version";
 /// Dismissal keys of the card before this mechanism, and the version each one was for.
@@ -46,7 +47,6 @@ function recordVersion(v: string): void {
  * Records this boot's version unless the notice is still owed, so a later notice compares
  * against the version the user actually last ran. */
 export function shouldShowWhatsNew(hasWalletHistory: boolean, version: string = APP_VERSION): boolean {
-  if (!embeddedAvailable()) return false;
   if (!hasWalletHistory) {
     recordVersion(version);
     return false;
@@ -68,7 +68,7 @@ export function WhatsNew({ onClose, onDisableFastSync }: { onClose: () => void; 
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const fastOn = embeddedFastSync();
+  const fastOn = embeddedAvailable() && embeddedFastSync();
   const done = () => {
     markWhatsNewSeen();
     onClose();
@@ -95,9 +95,10 @@ export function WhatsNew({ onClose, onDisableFastSync }: { onClose: () => void; 
         <span className="eyebrow">{t("whatsNew.eyebrow")}</span>
         <h2 style={{ margin: "6px 0 12px" }}>{t("whatsNew.title")}</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {item(t("whatsNew.fastTitle"), t("whatsNew.fastDesc"))}
-          {item(t("whatsNew.fixTitle"), t("whatsNew.fixDesc"))}
-          {item(t("whatsNew.logsTitle"), t("whatsNew.logsDesc"))}
+          {item(t("whatsNew.publicTitle"), t("whatsNew.publicDesc"))}
+          {item(t("whatsNew.cdnTitle"), t("whatsNew.cdnDesc"))}
+          {item(t("whatsNew.switchTitle"), t("whatsNew.switchDesc"))}
+          {item(t("whatsNew.fixTitle"), t("whatsNew.fixesDesc", { button: t("walletMaintenance.consolidateOnce"), tools: t("appShell.tabTools") }))}
           {err && <span className="small" style={{ color: "var(--bad, #fca5a5)" }}>{err}</span>}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {fastOn && (

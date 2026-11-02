@@ -303,7 +303,13 @@
     "onNotePassphrase": "<b>Hidup.</b> Setiap kunci dompet pada peranti ini disulitkan, dan aplikasi meminta kata laluan anda untuk dibuka. Ia mengunci semula selepas beberapa minit di latar belakang.",
     "offIntro": "Kunci dompet anda disimpan pada peranti ini <b>tanpa disulitkan</b>. Hidupkan PIN atau kata laluan untuk menyulitkan setiap satu dalam storan, dan aplikasi memintanya apabila dibuka — jadi sesiapa yang memegang peranti ini, atau sandaran datanya, tidak boleh membuat perbelanjaan daripadanya.",
     "setSecret": "Tetapkan PIN atau kata laluan",
-    "nothingToLock": "Tiada kunci pada peranti ini untuk dikunci lagi. Dompet lihat sahaja hanya memegang kunci lihat. Cipta atau import dompet dahulu."
+    "nothingToLock": "Tiada kunci pada peranti ini untuk dikunci lagi. Dompet lihat sahaja hanya memegang kunci lihat. Cipta atau import dompet dahulu.",
+    "lockAfterLabel": "Kunci selepas (saat)",
+    "lockAfterHint": "Dikunci apabila aplikasi berada di latar belakang, atau terbuka tanpa disentuh, selama ini. 0 mengunci sebaik anda meninggalkan aplikasi. Kosong: hanya {{n}} s di latar belakang.",
+    "lockAfterSave": "Simpan",
+    "lockAfterSaved": "Disimpan: dikunci selepas {{n}} s.",
+    "lockAfterSavedDefault": "Disimpan: lalai, {{n}} s di latar belakang.",
+    "lockAfterBad": "Masukkan saat penuh dari 0 hingga {{max}}, atau biarkan kosong."
   },
   "backupWallet": {
     "minChars": "Guna sekurang-kurangnya 8 aksara.",
@@ -1841,15 +1847,17 @@
     "eyebrow": "Baru",
     "title": "Apa yang baharu",
     "switchFailed": "Gagal memulakan enjin pada peranti. Anda masih menggunakan perkhidmatan sebelumnya.",
-    "fastTitle": "Segerak pantas",
-    "fastDesc": "Di telefon ini, mengejar rantaian mengambil masa saat, bukan minit. Aplikasi memuat turun fail rantaian dari ZKas dan CDN Cloudflarenya dan menyemaknya dengan nod. Mereka melihat IP anda, bukan dompet anda.",
     "fixTitle": "Dibaiki",
-    "fixDesc": "Beberapa dompet yang bersegerak serentak tidak lagi memuat turun fail yang sama berulang kali.",
-    "logsTitle": "Log lebih pendek",
-    "logsDesc": "Tetapan → Log nyahpepijat: matikan bahagian yang tidak diperlukan.",
     "disableFast": "Matikan segerak pantas",
     "disabling": "Mematikan…",
-    "ok": "OK"
+    "ok": "OK",
+    "publicTitle": "Perkhidmatan awam: serta-merta",
+    "publicDesc": "Dompet anda dibuka dalam sekelip mata dan mengejar dalam beberapa saat selepas berjam-jam tidak dibuka. Imbasan semula penuh mengambil satu hingga tiga minit, bukan kira-kira lima belas.",
+    "cdnTitle": "Muat turun lebih pantas",
+    "cdnDesc": "Fail rantai kini datang dahulu dari CDN Cloudflare ZKas, dengan pelayan ZKas sendiri sebagai sandaran, dan disemak dengan tandatangan ZKas. Mereka melihat IP anda, bukan dompet anda.",
+    "switchTitle": "Imbasan anda dibawa bersama",
+    "switchDesc": "Beralih dari perkhidmatan awam ke pelayar ini atau telefon ini membawa imbasan anda yang siap, tanpa mengimbas semula.",
+    "fixesDesc": "“{{button}}” dalam {{tools}} kini berfungsi dalam semua mod, dan beralih dari pelayar ini ke perkhidmatan awam kini berkesan."
   },
   "mainRoot": {
     "opening": "Membuka…"

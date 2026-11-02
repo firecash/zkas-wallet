@@ -153,15 +153,17 @@
     "eyebrow": "New",
     "title": "What's new",
     "switchFailed": "Could not start the on-device engine. You are still on the previous service.",
-    "fastTitle": "Fast sync",
-    "fastDesc": "On this phone, catching up takes seconds instead of minutes. The app downloads chain files from ZKas and its Cloudflare CDN and checks them against the node. They see your IP, not your wallet.",
     "fixTitle": "Fixed",
-    "fixDesc": "Several wallets syncing at once no longer download the same files again and again.",
-    "logsTitle": "Shorter logs",
-    "logsDesc": "Settings → Debug logs: switch off the parts you don't need.",
     "disableFast": "Disable fast sync",
     "disabling": "Turning off…",
-    "ok": "OK"
+    "ok": "OK",
+    "publicTitle": "Public service: instant",
+    "publicDesc": "Your wallet opens in a fraction of a second and catches up after hours away in a few seconds. A full rescan takes one to three minutes instead of about fifteen.",
+    "cdnTitle": "Faster downloads",
+    "cdnDesc": "Chain files now come from ZKas's Cloudflare CDN first, with ZKas's own server as backup, and are checked against ZKas's signature. They see your IP, not your wallet.",
+    "switchTitle": "Your scan comes along",
+    "switchDesc": "Moving from the Public service to this browser or this phone carries your finished scan over instead of scanning again.",
+    "fixesDesc": "“{{button}}” in {{tools}} now works in every mode, and switching from this browser to the Public service takes effect."
   },
   "mainRoot": {
     "opening": "Opening…"

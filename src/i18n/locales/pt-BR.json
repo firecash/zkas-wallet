@@ -244,7 +244,13 @@
     "onNotePassphrase": "<b>Ativo.</b> A chave de toda carteira neste dispositivo está criptografada, e o app pede sua senha para abrir. Ele se bloqueia novamente após alguns minutos em segundo plano.",
     "offIntro": "As chaves da sua carteira estão armazenadas neste dispositivo <b>sem criptografia</b>. Ative um PIN ou senha e cada uma delas será criptografada em repouso, e o app a pedirá ao abrir — assim, alguém com este dispositivo ou um backup de seus dados não pode gastar a partir dele.",
     "setSecret": "Definir um PIN ou senha",
-    "nothingToLock": "Ainda não há chave neste dispositivo para bloquear. Uma carteira somente leitura só tem uma chave de visualização. Crie ou importe uma carteira primeiro."
+    "nothingToLock": "Ainda não há chave neste dispositivo para bloquear. Uma carteira somente leitura só tem uma chave de visualização. Crie ou importe uma carteira primeiro.",
+    "lockAfterLabel": "Bloquear após (segundos)",
+    "lockAfterHint": "Bloqueia quando o app ficou em segundo plano, ou aberto sem uso, por esse tempo. 0 bloqueia assim que você sai do app. Vazio: só {{n}} s em segundo plano.",
+    "lockAfterSave": "Salvar",
+    "lockAfterSaved": "Salvo: bloqueia após {{n}} s.",
+    "lockAfterSavedDefault": "Salvo: o padrão, {{n}} s em segundo plano.",
+    "lockAfterBad": "Digite segundos inteiros de 0 a {{max}} ou deixe vazio."
   },
   "switchWallet": {
     "title": "Carteiras",
@@ -1803,15 +1809,17 @@
     "eyebrow": "Novo",
     "title": "Novidades",
     "switchFailed": "Não foi possível iniciar o motor local. Você ainda está no serviço anterior.",
-    "fastTitle": "Sincronização rápida",
-    "fastDesc": "Neste celular, atualizar leva segundos em vez de minutos. O app baixa arquivos da cadeia do ZKas e da sua CDN Cloudflare e os confere com o nó. Eles veem seu IP, não sua carteira.",
     "fixTitle": "Corrigido",
-    "fixDesc": "Várias carteiras sincronizando ao mesmo tempo não baixam mais os mesmos arquivos repetidamente.",
-    "logsTitle": "Logs mais curtos",
-    "logsDesc": "Configurações → Logs de depuração: desligue as partes de que não precisa.",
     "disableFast": "Desativar sincronização rápida",
     "disabling": "Desativando…",
-    "ok": "OK"
+    "ok": "OK",
+    "publicTitle": "Serviço público: instantâneo",
+    "publicDesc": "Sua carteira abre em uma fração de segundo e se atualiza em poucos segundos depois de horas fora. Um reescaneamento completo leva de um a três minutos em vez de cerca de quinze.",
+    "cdnTitle": "Downloads mais rápidos",
+    "cdnDesc": "Os arquivos da cadeia agora vêm primeiro da CDN Cloudflare do ZKas, com o servidor do ZKas como reserva, e são verificados com a assinatura do ZKas. Eles veem seu IP, não sua carteira.",
+    "switchTitle": "Seu escaneamento vem junto",
+    "switchDesc": "Ao passar do serviço público para este navegador ou este celular, seu escaneamento concluído é levado junto em vez de escanear de novo.",
+    "fixesDesc": "“{{button}}” em {{tools}} agora funciona em todos os modos, e a troca deste navegador para o serviço público passa a valer."
   },
   "mainRoot": {
     "opening": "Abrindo…"

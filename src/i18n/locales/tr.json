@@ -346,7 +346,13 @@
     "onNotePassphrase": "<b>Açık.</b> Bu cihazdaki her cüzdanın anahtarı şifrelidir ve uygulama açılmak için parolanızı ister. Birkaç dakika arka planda kalınca kendini yeniden kilitler.",
     "offIntro": "Cüzdan anahtarlarınız bu cihazda <b>şifresiz</b> saklanıyor. Bir PIN veya parola açın, her biri beklemedeyken şifrelenir ve uygulama açılışta sorar — böylece bu cihazı veya verilerinin yedeğini elinde bulunduran biri harcama yapamaz.",
     "setSecret": "PIN veya parola belirleyin",
-    "nothingToLock": "Bu cihazda henüz kilitlenecek bir anahtar yok. Salt izleme cüzdanı yalnızca bir görüntüleme anahtarı tutar. Önce bir cüzdan oluşturun veya içe aktarın."
+    "nothingToLock": "Bu cihazda henüz kilitlenecek bir anahtar yok. Salt izleme cüzdanı yalnızca bir görüntüleme anahtarı tutar. Önce bir cüzdan oluşturun veya içe aktarın.",
+    "lockAfterLabel": "Şu kadar sonra kilitle (saniye)",
+    "lockAfterHint": "Uygulama bu süre boyunca arka planda kaldığında ya da açıkken dokunulmadığında kilitlenir. 0, uygulamadan çıkar çıkmaz kilitler. Boş: yalnızca arka planda {{n}} sn.",
+    "lockAfterSave": "Kaydet",
+    "lockAfterSaved": "Kaydedildi: {{n}} sn sonra kilitlenir.",
+    "lockAfterSavedDefault": "Kaydedildi: varsayılan, arka planda {{n}} sn.",
+    "lockAfterBad": "0 ile {{max}} arasında tam saniye girin veya boş bırakın."
   },
   "txDetail": {
     "save": "Kaydet",
@@ -1841,15 +1847,17 @@
     "eyebrow": "Yeni",
     "title": "Yenilikler",
     "switchFailed": "Cihaz içi motor başlatılamadı. Hâlâ önceki hizmeti kullanıyorsunuz.",
-    "fastTitle": "Hızlı eşitleme",
-    "fastDesc": "Bu telefonda yetişmek dakikalar yerine saniyeler sürüyor. Uygulama zincir dosyalarını ZKas ve Cloudflare CDN’sinden indirir ve düğümle doğrular. IP’nizi görürler, cüzdanınızı değil.",
     "fixTitle": "Düzeltildi",
-    "fixDesc": "Aynı anda eşitlenen birden çok cüzdan artık aynı dosyaları tekrar tekrar indirmiyor.",
-    "logsTitle": "Daha kısa günlükler",
-    "logsDesc": "Ayarlar → Hata ayıklama günlükleri: ihtiyacınız olmayan bölümleri kapatın.",
     "disableFast": "Hızlı eşitlemeyi kapat",
     "disabling": "Kapatılıyor…",
-    "ok": "Tamam"
+    "ok": "Tamam",
+    "publicTitle": "Herkese açık servis: anında",
+    "publicDesc": "Cüzdanın saniyenin küçük bir kısmında açılır ve saatlerce uzak kaldıktan sonra birkaç saniyede güncellenir. Tam yeniden tarama yaklaşık on beş dakika yerine bir ila üç dakika sürer.",
+    "cdnTitle": "Daha hızlı indirme",
+    "cdnDesc": "Zincir dosyaları artık önce ZKas'ın Cloudflare CDN'inden, yedek olarak ZKas'ın kendi sunucusundan gelir ve ZKas imzasıyla doğrulanır. IP'nizi görürler, cüzdanınızı değil.",
+    "switchTitle": "Taraman seninle gelir",
+    "switchDesc": "Herkese açık servisten bu tarayıcıya veya bu telefona geçerken biten taraman yeniden taranmak yerine aktarılır.",
+    "fixesDesc": "{{tools}} içindeki “{{button}}” artık her modda çalışıyor ve bu tarayıcıdan herkese açık servise geçiş uygulanıyor."
   },
   "mainRoot": {
     "opening": "Açılıyor…"

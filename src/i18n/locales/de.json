@@ -244,7 +244,13 @@
     "onNotePassphrase": "<b>An.</b> Jeder Wallet-Key auf diesem Gerät ist verschlüsselt, die App fragt nach Passphrase zum Öffnen. Sie sperrt sich nach einigen Minuten im Hintergrund wieder.",
     "offIntro": "Deine Wallet-Keys sind auf diesem Gerät <b>unverschlüsselt</b> gespeichert. Aktiviere eine PIN oder Passphrase – dann werden alle ruhend verschlüsselt, und die App fragt beim Öffnen danach. Jemand mit dem Gerät oder einem Daten-Backup kann dann nicht ausgeben.",
     "setSecret": "PIN oder Passwort festlegen",
-    "nothingToLock": "Auf diesem Gerät gibt es noch keinen Schlüssel zum Sperren. Ein Beobachtungs-Wallet hat nur einen Betrachtungsschlüssel. Erstelle oder importiere zuerst ein Wallet."
+    "nothingToLock": "Auf diesem Gerät gibt es noch keinen Schlüssel zum Sperren. Ein Beobachtungs-Wallet hat nur einen Betrachtungsschlüssel. Erstelle oder importiere zuerst ein Wallet.",
+    "lockAfterLabel": "Sperren nach (Sekunden)",
+    "lockAfterHint": "Sperrt, wenn die App so lange im Hintergrund war oder geöffnet unberührt blieb. 0 sperrt, sobald du die App verlässt. Leer: nur {{n}} s im Hintergrund.",
+    "lockAfterSave": "Speichern",
+    "lockAfterSaved": "Gespeichert: sperrt nach {{n}} s.",
+    "lockAfterSavedDefault": "Gespeichert: Standard, {{n}} s im Hintergrund.",
+    "lockAfterBad": "Gib ganze Sekunden von 0 bis {{max}} ein oder lass das Feld leer."
   },
   "switchWallet": {
     "title": "Wallets",
@@ -1657,15 +1663,17 @@
     "eyebrow": "Neu",
     "title": "Neu in dieser Version",
     "switchFailed": "Konnte die On-Device-Engine nicht starten. Du bist noch beim vorherigen Dienst.",
-    "fastTitle": "Schnell-Sync",
-    "fastDesc": "Auf diesem Handy dauert das Aufholen Sekunden statt Minuten. Die App lädt Chain-Dateien von ZKas und seinem Cloudflare-CDN und prüft sie gegen den Node. Sie sehen deine IP, nicht dein Wallet.",
     "fixTitle": "Behoben",
-    "fixDesc": "Mehrere Wallets, die gleichzeitig synchronisieren, laden nicht mehr immer wieder dieselben Dateien.",
-    "logsTitle": "Kürzere Logs",
-    "logsDesc": "Einstellungen → Debug-Logs: Schalte Teile ab, die du nicht brauchst.",
     "disableFast": "Schnell-Sync deaktivieren",
     "disabling": "Wird ausgeschaltet…",
-    "ok": "OK"
+    "ok": "OK",
+    "publicTitle": "Öffentlicher Dienst: sofort",
+    "publicDesc": "Dein Wallet öffnet sich in Sekundenbruchteilen und holt nach Stunden Abwesenheit in wenigen Sekunden auf. Ein kompletter Rescan dauert ein bis drei Minuten statt etwa fünfzehn.",
+    "cdnTitle": "Schnellere Downloads",
+    "cdnDesc": "Chain-Dateien kommen jetzt zuerst vom Cloudflare-CDN von ZKas, mit dem eigenen ZKas-Server als Reserve, und werden gegen die Signatur von ZKas geprüft. Sie sehen deine IP, nicht dein Wallet.",
+    "switchTitle": "Dein Scan kommt mit",
+    "switchDesc": "Beim Wechsel vom öffentlichen Dienst zu diesem Browser oder diesem Telefon wird dein fertiger Scan übernommen, statt neu zu scannen.",
+    "fixesDesc": "„{{button}}“ unter {{tools}} funktioniert jetzt in jedem Modus, und der Wechsel von diesem Browser zum öffentlichen Dienst greift."
   },
   "mainRoot": {
     "opening": "Öffnen…"

@@ -307,7 +307,13 @@
     "onNotePassphrase": "<b>Activé.</b> La clé de chaque portefeuille sur cet appareil est chiffrée, et l'app demande votre mot de passe pour s'ouvrir. Elle se verrouille après quelques minutes en arrière-plan.",
     "offIntro": "Vos clés de portefeuille sont stockées <b>non chiffrées</b> sur cet appareil. Activez un PIN ou un mot de passe pour les chiffrer au repos et les demander à l'ouverture : personne ayant cet appareil ou une sauvegarde de ses données ne pourra rien dépenser.",
     "setSecret": "Définir un PIN ou une phrase secrète",
-    "nothingToLock": "Aucune clé à verrouiller sur cet appareil. Un portefeuille en lecture seule ne contient qu'une clé de visualisation. Créez ou importez d'abord un portefeuille."
+    "nothingToLock": "Aucune clé à verrouiller sur cet appareil. Un portefeuille en lecture seule ne contient qu'une clé de visualisation. Créez ou importez d'abord un portefeuille.",
+    "lockAfterLabel": "Verrouiller après (secondes)",
+    "lockAfterHint": "Verrouille quand l'app est restée en arrière-plan, ou ouverte sans être touchée, aussi longtemps. 0 verrouille dès que vous quittez l'app. Vide : seulement {{n}} s en arrière-plan.",
+    "lockAfterSave": "Enregistrer",
+    "lockAfterSaved": "Enregistré : verrouille après {{n}} s.",
+    "lockAfterSavedDefault": "Enregistré : par défaut, {{n}} s en arrière-plan.",
+    "lockAfterBad": "Saisissez des secondes entières de 0 à {{max}}, ou laissez vide."
   },
   "switchWallet": {
     "title": "Portefeuilles",
@@ -1875,15 +1881,17 @@
     "eyebrow": "Nouveau",
     "title": "Nouveautés",
     "switchFailed": "Impossible de démarrer le moteur sur l'appareil. Vous êtes toujours sur le service précédent.",
-    "fastTitle": "Synchro rapide",
-    "fastDesc": "Sur ce téléphone, le rattrapage prend quelques secondes au lieu de minutes. L’app télécharge les fichiers de la chaîne depuis ZKas et son CDN Cloudflare et les vérifie auprès du nœud. Ils voient votre IP, pas votre portefeuille.",
     "fixTitle": "Corrigé",
-    "fixDesc": "Plusieurs portefeuilles qui se synchronisent en même temps ne retéléchargent plus les mêmes fichiers en boucle.",
-    "logsTitle": "Journaux plus courts",
-    "logsDesc": "Réglages → Journaux de débogage : désactivez les parties inutiles.",
     "disableFast": "Désactiver la synchro rapide",
     "disabling": "Désactivation…",
-    "ok": "OK"
+    "ok": "OK",
+    "publicTitle": "Service public : instantané",
+    "publicDesc": "Votre portefeuille s'ouvre en une fraction de seconde et se met à jour en quelques secondes après des heures d'absence. Un rescan complet prend une à trois minutes au lieu d'environ quinze.",
+    "cdnTitle": "Téléchargements plus rapides",
+    "cdnDesc": "Les fichiers de la chaîne viennent désormais d'abord du CDN Cloudflare de ZKas, avec le serveur de ZKas en secours, et sont vérifiés avec la signature de ZKas. Ils voient votre IP, pas votre portefeuille.",
+    "switchTitle": "Votre scan vous suit",
+    "switchDesc": "Passer du service public à ce navigateur ou à ce téléphone reprend votre scan terminé au lieu de tout rescanner.",
+    "fixesDesc": "« {{button}} » dans {{tools}} fonctionne maintenant dans tous les modes, et passer de ce navigateur au service public prend effet."
   },
   "mainRoot": {
     "opening": "Ouverture…"

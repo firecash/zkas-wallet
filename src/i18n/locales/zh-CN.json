@@ -202,7 +202,13 @@
     "onNotePassphrase": "<b>已开启。</b> 本设备上每个钱包的密钥均已加密，应用打开时需输入密码。后台运行几分钟后会自动重新锁定。",
     "offIntro": "你的钱包密钥以<b>未加密</b>状态存储在此设备上。开启PIN码或密码后，所有密钥都将静态加密，应用打开时需输入——这样即使他人拿到设备或数据备份，也无法从中转账。",
     "setSecret": "设置PIN码或密码",
-    "nothingToLock": "此设备上尚无密钥可锁定。仅观察钱包仅持有查看密钥。请先创建或导入钱包。"
+    "nothingToLock": "此设备上尚无密钥可锁定。仅观察钱包仅持有查看密钥。请先创建或导入钱包。",
+    "lockAfterLabel": "锁定前等待（秒）",
+    "lockAfterHint": "应用在后台或打开后无操作达到这个时间就会锁定。0 表示一离开应用就锁定。留空：仅在后台 {{n}} 秒后锁定。",
+    "lockAfterSave": "保存",
+    "lockAfterSaved": "已保存：{{n}} 秒后锁定。",
+    "lockAfterSavedDefault": "已保存：默认，在后台 {{n}} 秒。",
+    "lockAfterBad": "请输入 0 到 {{max}} 之间的整数秒，或留空。"
   },
   "switchWallet": {
     "title": "钱包",
@@ -1875,15 +1881,17 @@
     "eyebrow": "新",
     "title": "新功能",
     "switchFailed": "无法启动设备端引擎。你仍在使用之前的服务。",
-    "fastTitle": "快速同步",
-    "fastDesc": "在这部手机上，追上进度只需几秒而不是几分钟。应用从 ZKas 及其 Cloudflare CDN 下载链文件并与节点核对。它们能看到你的 IP，看不到你的钱包。",
     "fixTitle": "已修复",
-    "fixDesc": "多个钱包同时同步时，不再反复下载相同的文件。",
-    "logsTitle": "更短的日志",
-    "logsDesc": "设置 → 调试日志：关闭不需要的部分。",
     "disableFast": "关闭快速同步",
     "disabling": "正在关闭…",
-    "ok": "好"
+    "ok": "好",
+    "publicTitle": "公共服务：即时",
+    "publicDesc": "钱包瞬间打开，离开几个小时后也能在几秒内跟上。完整重新扫描从约十五分钟缩短到一到三分钟。",
+    "cdnTitle": "更快的下载",
+    "cdnDesc": "链文件现在优先从 ZKas 的 Cloudflare CDN 获取，ZKas 自己的服务器作为备用，并用 ZKas 的签名校验。它们能看到你的 IP，看不到你的钱包。",
+    "switchTitle": "扫描结果随你迁移",
+    "switchDesc": "从公共服务切换到此浏览器或此手机时，已完成的扫描会一并带过来，无需重新扫描。",
+    "fixesDesc": "{{tools}}中的“{{button}}”现在在所有模式下都可用，从此浏览器切换到公共服务也会生效。"
   },
   "mainRoot": {
     "opening": "打开中…"

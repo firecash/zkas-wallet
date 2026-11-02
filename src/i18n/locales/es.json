@@ -202,7 +202,13 @@
     "onNotePassphrase": "<b>Activado.</b> La clave de cada billetera en este dispositivo está cifrada, y la app pide tu contraseña para abrirse. Se vuelve a bloquear tras unos minutos en segundo plano.",
     "offIntro": "Las claves de tus billeteras están almacenadas en este dispositivo <b>sin cifrar</b>. Activa un PIN o contraseña y cada una se cifrará en reposo, y la app lo pedirá al abrirse — así, alguien con este dispositivo, o una copia de seguridad de sus datos, no podrá gastar desde él.",
     "setSecret": "Establecer PIN o frase de contraseña",
-    "nothingToLock": "Aún no hay una clave en este dispositivo que bloquear. Una billetera de solo lectura solo tiene una clave de visualización. Crea o importa una billetera primero."
+    "nothingToLock": "Aún no hay una clave en este dispositivo que bloquear. Una billetera de solo lectura solo tiene una clave de visualización. Crea o importa una billetera primero.",
+    "lockAfterLabel": "Bloquear tras (segundos)",
+    "lockAfterHint": "Se bloquea cuando la app ha estado en segundo plano, o abierta sin tocarla, ese tiempo. 0 bloquea en cuanto sales de la app. Vacío: solo {{n}} s en segundo plano.",
+    "lockAfterSave": "Guardar",
+    "lockAfterSaved": "Guardado: se bloquea tras {{n}} s.",
+    "lockAfterSavedDefault": "Guardado: lo predeterminado, {{n}} s en segundo plano.",
+    "lockAfterBad": "Escribe segundos enteros de 0 a {{max}} o déjalo vacío."
   },
   "switchWallet": {
     "title": "Billeteras",
@@ -1875,15 +1881,17 @@
     "eyebrow": "Nuevo",
     "title": "Novedades",
     "switchFailed": "No se pudo iniciar el motor local. Sigues en el servicio anterior.",
-    "fastTitle": "Sincronización rápida",
-    "fastDesc": "En este teléfono, ponerse al día tarda segundos en vez de minutos. La app descarga archivos de la cadena de ZKas y su CDN de Cloudflare y los comprueba con el nodo. Ven tu IP, no tu billetera.",
     "fixTitle": "Corregido",
-    "fixDesc": "Varias billeteras sincronizando a la vez ya no descargan los mismos archivos una y otra vez.",
-    "logsTitle": "Registros más cortos",
-    "logsDesc": "Ajustes → Registros de depuración: desactiva las partes que no necesites.",
     "disableFast": "Desactivar sincronización rápida",
     "disabling": "Desactivando…",
-    "ok": "Aceptar"
+    "ok": "Aceptar",
+    "publicTitle": "Servicio público: instantáneo",
+    "publicDesc": "Tu billetera se abre en una fracción de segundo y se pone al día tras horas de ausencia en pocos segundos. Un reescaneo completo tarda de uno a tres minutos en lugar de unos quince.",
+    "cdnTitle": "Descargas más rápidas",
+    "cdnDesc": "Los archivos de la cadena ahora vienen primero de la CDN de Cloudflare de ZKas, con el servidor propio de ZKas como respaldo, y se verifican con la firma de ZKas. Ven tu IP, no tu billetera.",
+    "switchTitle": "Tu escaneo te acompaña",
+    "switchDesc": "Al pasar del servicio público a este navegador o a este teléfono, tu escaneo terminado se traslada en lugar de escanear de nuevo.",
+    "fixesDesc": "«{{button}}» en {{tools}} ahora funciona en todos los modos, y el cambio de este navegador al servicio público se aplica."
   },
   "mainRoot": {
     "opening": "Abriendo…"

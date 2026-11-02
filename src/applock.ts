@@ -466,29 +466,85 @@ export function forgetWalletLock(token: string): void {
   dropIfEmpty(rec);
 }
 
+/// Settings -> App lock -> "Lock after": seconds. Absent = the default below, which locks only
+/// after time AWAY from the app (never mid-use). A value the user entered also locks after that
+/// long without a touch, click or key while the app is open; 0 locks the moment the app is left.
+const LOCK_AFTER_KEY = "app_lock_after_s";
+/** The away time that locks when the user has not chosen one (the behaviour before the setting). */
+export const DEFAULT_LOCK_AFTER_S = 90;
+/** Upper bound accepted for the setting: a day. */
+export const MAX_LOCK_AFTER_S = 86_400;
+
+/** The user's "Lock after" in seconds, or null when they never set one. */
+export function lockAfterSetting(): number | null {
+  try {
+    const v = localStorage.getItem(LOCK_AFTER_KEY);
+    if (v === null || v.trim() === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? Math.min(Math.floor(n), MAX_LOCK_AFTER_S) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Store "Lock after" (whole seconds, 0..a day); null returns to the default. */
+export function setLockAfterSetting(seconds: number | null): void {
+  try {
+    if (seconds === null) localStorage.removeItem(LOCK_AFTER_KEY);
+    else localStorage.setItem(LOCK_AFTER_KEY, String(Math.min(Math.max(0, Math.floor(seconds)), MAX_LOCK_AFTER_S)));
+  } catch {
+    /* no storage: the default applies */
+  }
+}
+
+/** Whether to lock now. `hiddenFor`: ms the app was away (null while it is open); `idleFor`: ms
+ *  without interaction while open (null when away). Pure, for tests. */
+export function shouldAutoLock(setting: number | null, hiddenFor: number | null, idleFor: number | null): boolean {
+  const limitMs = (setting ?? DEFAULT_LOCK_AFTER_S) * 1000;
+  if (hiddenFor !== null && hiddenFor >= limitMs) return true;
+  // Inactivity while open only counts once the user chose a time (never by default), and 0
+  // means "when I leave", not "at once while I am using it".
+  return idleFor !== null && setting !== null && setting > 0 && idleFor >= limitMs;
+}
+
 /**
- * Compatibility hook for the app boot sequence. Automatic background locking
- * is intentionally disabled; explicit lock still works.
+ * Re-lock after the app has been in the BACKGROUND past the "Lock after" time (default 90 s,
+ * the behaviour a locked wallet is expected to have, like a banking app), and, once the user
+ * chose a time, after that long without interaction while open. A quick tab switch under the
+ * time never relocks.
  */
 export function installAutoLock(onLocked: () => void): void {
-  // Re-lock after the app has been in the BACKGROUND past a grace period — the
-  // behaviour a locked wallet is expected to have (like a banking app), and what
-  // issue #4 flagged as missing. Deliberately not an idle/mousemove timer: that
-  // was the thing the old no-op avoided, because it relocked people mid-use. This
-  // only fires on return-to-foreground when the app was away long enough that
-  // someone else could have picked up the phone — a quick tab switch or glance at
-  // a notification (under the grace) never relocks.
   if (typeof document === "undefined") return;
-  const GRACE_MS = 90_000;
   let hiddenAt = 0;
+  let lastActive = Date.now();
+  const touch = () => {
+    lastActive = Date.now();
+  };
+  const fire = () => {
+    hiddenAt = 0;
+    lastActive = Date.now();
+    lock();
+    onLocked();
+  };
+  for (const ev of ["pointerdown", "keydown", "touchstart", "wheel"]) document.addEventListener(ev, touch, { passive: true, capture: true });
   document.addEventListener("visibilitychange", () => {
-    if (!isLockEnabled()) return;
+    if (!isLockEnabled() || !isUnlocked()) {
+      hiddenAt = 0;
+      return;
+    }
+    const setting = lockAfterSetting();
     if (document.hidden) {
       hiddenAt = Date.now();
-    } else if (hiddenAt && elapsedSince(hiddenAt) >= GRACE_MS) {
+      if (setting === 0) fire();
+    } else if (hiddenAt && shouldAutoLock(setting, elapsedSince(hiddenAt), null)) {
+      fire();
+    } else {
       hiddenAt = 0;
-      lock();
-      onLocked();
+      touch();
     }
   });
+  setInterval(() => {
+    if (document.hidden || !isLockEnabled() || !isUnlocked()) return;
+    if (shouldAutoLock(lockAfterSetting(), null, elapsedSince(lastActive))) fire();
+  }, 1000);
 }

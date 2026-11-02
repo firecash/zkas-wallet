@@ -244,7 +244,13 @@
     "onNotePassphrase": "<b>Włączona.</b> Klucz każdego portfela na tym urządzeniu jest zaszyfrowany, a aplikacja prosi o hasło przy otwarciu. Blokuje się ponownie po kilku minutach w tle.",
     "offIntro": "Klucze portfeli są przechowywane na tym urządzeniu <b>bez szyfrowania</b>. Włącz PIN lub hasło — każdy z nich zostanie zaszyfrowany, a aplikacja poprosi o niego przy otwarciu. Osoba mająca to urządzenie lub kopię danych nie będzie mogła wydać środków.",
     "setSecret": "Ustaw PIN lub hasło",
-    "nothingToLock": "Na tym urządzeniu nie ma jeszcze klucza do zablokowania. Portfel tylko do odczytu przechowuje tylko klucz podglądu. Najpierw utwórz lub zaimportuj portfel."
+    "nothingToLock": "Na tym urządzeniu nie ma jeszcze klucza do zablokowania. Portfel tylko do odczytu przechowuje tylko klucz podglądu. Najpierw utwórz lub zaimportuj portfel.",
+    "lockAfterLabel": "Blokuj po (sekundach)",
+    "lockAfterHint": "Blokuje, gdy aplikacja była tak długo w tle lub otwarta i nieużywana. 0 blokuje od razu po wyjściu z aplikacji. Puste: tylko {{n}} s w tle.",
+    "lockAfterSave": "Zapisz",
+    "lockAfterSaved": "Zapisano: blokuje po {{n}} s.",
+    "lockAfterSavedDefault": "Zapisano: domyślnie, {{n}} s w tle.",
+    "lockAfterBad": "Wpisz pełne sekundy od 0 do {{max}} albo zostaw puste."
   },
   "switchWallet": {
     "title": "Portfele",
@@ -1875,15 +1881,17 @@
     "eyebrow": "Nowość",
     "title": "Co nowego",
     "switchFailed": "Nie udało się uruchomić silnika na urządzeniu. Nadal korzystasz z poprzedniej usługi.",
-    "fastTitle": "Szybka synchronizacja",
-    "fastDesc": "Na tym telefonie nadrabianie trwa sekundy zamiast minut. Aplikacja pobiera pliki łańcucha z ZKas i jego CDN Cloudflare i sprawdza je z węzłem. Widzą Twoje IP, nie Twój portfel.",
     "fixTitle": "Naprawiono",
-    "fixDesc": "Kilka portfeli synchronizujących się naraz nie pobiera już w kółko tych samych plików.",
-    "logsTitle": "Krótsze logi",
-    "logsDesc": "Ustawienia → Logi debugowania: wyłącz części, których nie potrzebujesz.",
     "disableFast": "Wyłącz szybką synchronizację",
     "disabling": "Wyłączanie…",
-    "ok": "OK"
+    "ok": "OK",
+    "publicTitle": "Usługa publiczna: natychmiast",
+    "publicDesc": "Portfel otwiera się w ułamku sekundy, a po godzinach nieobecności nadrabia w kilka sekund. Pełne ponowne skanowanie trwa od jednej do trzech minut zamiast około piętnastu.",
+    "cdnTitle": "Szybsze pobieranie",
+    "cdnDesc": "Pliki łańcucha pobierane są teraz najpierw z CDN Cloudflare ZKas, z własnym serwerem ZKas jako zapasem, i sprawdzane podpisem ZKas. Widzą Twoje IP, nie Twój portfel.",
+    "switchTitle": "Twój skan idzie z Tobą",
+    "switchDesc": "Przejście z usługi publicznej do tej przeglądarki lub tego telefonu przenosi gotowy skan zamiast skanować od nowa.",
+    "fixesDesc": "„{{button}}” w {{tools}} działa teraz w każdym trybie, a przejście z tej przeglądarki do usługi publicznej zostaje zastosowane."
   },
   "mainRoot": {
     "opening": "Otwieranie…"

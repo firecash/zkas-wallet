@@ -244,7 +244,13 @@
     "onNotePassphrase": "<b>Đã bật.</b> Khóa của mọi ví trên thiết bị được mã hóa, ứng dụng yêu cầu mật khẩu để mở. Tự khóa lại sau vài phút ở nền.",
     "offIntro": "Khóa ví của bạn được lưu trên thiết bị <b>không mã hóa</b>. Bật mã PIN hoặc mật khẩu để mã hóa tất cả, ứng dụng sẽ yêu cầu khi mở — người cầm thiết bị hoặc bản sao dữ liệu không thể chi tiêu từ ví.",
     "setSecret": "Đặt PIN hoặc mật khẩu",
-    "nothingToLock": "Chưa có khóa nào trên thiết bị này để khóa. Ví chỉ xem chỉ chứa khóa xem. Hãy tạo hoặc nhập ví trước."
+    "nothingToLock": "Chưa có khóa nào trên thiết bị này để khóa. Ví chỉ xem chỉ chứa khóa xem. Hãy tạo hoặc nhập ví trước.",
+    "lockAfterLabel": "Khóa sau (giây)",
+    "lockAfterHint": "Khóa khi ứng dụng ở nền, hoặc mở mà không chạm, trong khoảng này. 0 khóa ngay khi bạn rời ứng dụng. Để trống: chỉ {{n}} giây ở nền.",
+    "lockAfterSave": "Lưu",
+    "lockAfterSaved": "Đã lưu: khóa sau {{n}} giây.",
+    "lockAfterSavedDefault": "Đã lưu: mặc định, {{n}} giây ở nền.",
+    "lockAfterBad": "Nhập số giây nguyên từ 0 đến {{max}}, hoặc để trống."
   },
   "switchWallet": {
     "title": "Ví",
@@ -1820,15 +1826,17 @@
     "eyebrow": "Mới",
     "title": "Có gì mới",
     "switchFailed": "Không thể khởi động công cụ trên thiết bị. Bạn vẫn đang dùng dịch vụ trước.",
-    "fastTitle": "Đồng bộ nhanh",
-    "fastDesc": "Trên điện thoại này, bắt kịp chỉ mất vài giây thay vì vài phút. Ứng dụng tải tệp chuỗi từ ZKas và CDN Cloudflare của nó và kiểm tra với nút. Họ thấy IP của bạn, không thấy ví của bạn.",
     "fixTitle": "Đã sửa",
-    "fixDesc": "Nhiều ví đồng bộ cùng lúc không còn tải đi tải lại cùng các tệp.",
-    "logsTitle": "Nhật ký ngắn hơn",
-    "logsDesc": "Cài đặt → Nhật ký gỡ lỗi: tắt những phần bạn không cần.",
     "disableFast": "Tắt đồng bộ nhanh",
     "disabling": "Đang tắt…",
-    "ok": "OK"
+    "ok": "OK",
+    "publicTitle": "Dịch vụ công cộng: tức thì",
+    "publicDesc": "Ví mở trong tích tắc và bắt kịp trong vài giây dù đã không mở nhiều giờ. Quét lại toàn bộ chỉ mất một đến ba phút thay vì khoảng mười lăm.",
+    "cdnTitle": "Tải nhanh hơn",
+    "cdnDesc": "Tệp chuỗi giờ được lấy trước từ CDN Cloudflare của ZKas, máy chủ riêng của ZKas làm dự phòng, và được kiểm tra bằng chữ ký của ZKas. Họ thấy IP của bạn, không thấy ví của bạn.",
+    "switchTitle": "Kết quả quét đi cùng bạn",
+    "switchDesc": "Chuyển từ dịch vụ công cộng sang trình duyệt này hoặc điện thoại này sẽ mang theo kết quả quét đã xong thay vì quét lại.",
+    "fixesDesc": "“{{button}}” trong {{tools}} giờ hoạt động ở mọi chế độ, và chuyển từ trình duyệt này sang dịch vụ công cộng có hiệu lực."
   },
   "mainRoot": {
     "opening": "Đang mở…"
