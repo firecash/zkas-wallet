@@ -124,7 +124,9 @@
     "walletChanged": "Pochi inayotumika ilibadilika wakati malipo haya yalipokuwa yakifanywa, kwa hivyo hakuna chochote kilichotumwa. Angalia uko kwenye pochi gani kisha ujaribu tena.",
     "submitOutcomeUnknown": "Huduma ya pochi iliacha kujibu wakati malipo haya yalikuwa yanatangazwa, kwa hivyo pochi haiwezi kujua kama yametoka. Angalia historia kabla ya kujaribu tena — kutuma mara ya pili kunaweza kulipa mara mbili.",
     "feeExceedsAmount": "Ada uliyoweka ({{fee}} ZKAS) ni kubwa kuliko kiasi unachotuma ({{amount}} ZKAS). Iangalie kabla ya kuthibitisha.",
-    "networkNotSignable": "Pochi hii inaweza kutia saini malipo ya mainnet tu, lakini huduma ya pochi iko kwenye {{network}}. Unaweza kupokea hapa, lakini si kutuma."
+    "networkNotSignable": "Pochi hii inaweza kutia saini malipo ya mainnet tu, lakini huduma ya pochi iko kwenye {{network}}. Unaweza kupokea hapa, lakini si kutuma.",
+    "feeSummaryExact": "+ ada {{fee}} = jumla {{total}}",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "Saini ujumbe",

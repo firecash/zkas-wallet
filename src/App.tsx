@@ -3517,7 +3517,7 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
       {/* The note count, where it belongs: small, beside the amount it explains, and
           only when there is something to manage. It used to be a quarter of the action
           grid -- a full-size target for something most people never touch. */}
-      {onManageNotes && (status.note_count ?? 0) > 0 && (
+      {onManageNotes && (status.note_count ?? 0) >= 2 && (
         <button className="balance-notes" onClick={onManageNotes} aria-label={t("app.notesAria")}>
           {/* `count` drives the plural form ("1 note" / "2 notes"); `n` is passed too so
               the non-plural base key still interpolates in locales that have no plural
@@ -3654,9 +3654,11 @@ function BalanceHero({ status, txs, stalled, onManageNotes }: { status: Status; 
             aria-valuemax={100}
             aria-label={t("balanceHero.ariaSync")}
           >
-            <div className="syncbar-fill" style={{ width: `${Math.max(2, pct)}%` }} />
+            {/* Held a few seconds after the scan finishes (no flicker); full meanwhile, and the
+                scanning sentence below goes at once, so nothing contradicts "Up to date". */}
+            <div className="syncbar-fill" style={{ width: `${status.synced ? 100 : Math.max(2, pct)}%` }} />
           </div>
-          <div className="sub" style={{ marginTop: 8, fontSize: 12 }}>
+          <div className="sub" style={{ marginTop: 8, fontSize: 12, visibility: status.synced ? "hidden" : undefined }}>
             {t("balanceHero.scanning")}
             {/* The estimate was computed for every syncing wallet but only ever
                 rendered in the rebuild card, so the plain sync — where a user sits
@@ -5329,7 +5331,7 @@ function Collapsible({
 
 /** A Settings row that opens a wallet pane (`/?tab=…`), for screens a phone cannot reach from
  *  the hidden tab row. */
-function SettingsLink({ title, to, className }: { title: string; to: "signatures" | "tools"; className?: string }) {
+function SettingsLink({ title, to, className }: { title: string; to: "tools"; className?: string }) {
   return (
     <div className={"card setrow" + (className ? ` ${className}` : "")}>
       <button type="button" className="setrow-head" onClick={() => (window.location.hash = `#/?tab=${to}`)}>
@@ -5550,8 +5552,8 @@ function SettingsPane({ status }: { status: Status }) {
         <ContactsCard />
       </Collapsible>
       {/* On a phone the wallet's tab row is hidden (the bottom bar replaces it), and with it
-          the only way to Signatures and, on the web, Wallet tools. They open from here. */}
-      {!viewOnly && <SettingsLink className="phone-only" title={t("appShell.tabSignatures")} to="signatures" />}
+          the only way to Wallet tools on the web. It opens from here. (Signatures has its own
+          card under Preferences on those widths.) */}
       {!viewOnly && !isNative() && <SettingsLink className="phone-only" title={t("walletTools.eyebrow")} to="tools" />}
       {/* Desktop keeps node-source controls (it runs its own daemon). Web/mobile talk
           to the hosted service and do not need — and should not offer — a raw
@@ -5587,6 +5589,9 @@ function SettingsPane({ status }: { status: Status }) {
           happened. The note count then climbs past MAX_NOTES_PER_TX and the
           wallet quietly loses the ability to send its whole balance in one
           payment, which is precisely what this feature promises to prevent. */}
+      {/* Wallet-service settings: with the wallet running in this browser nothing consolidates
+          on its own and there is no service token, so the rows only misled. */}
+      {!browserModeChosen() && (
       <Collapsible
         title={t("settingsPane.autoConsolidation")}
         summary={
@@ -5599,6 +5604,7 @@ function SettingsPane({ status }: { status: Status }) {
       >
         <AutoConsolidationCard />
       </Collapsible>
+      )}
       <Collapsible title={t("settingsPane.networkPrivacy")} summary={networkPrivacyLabel()}>
         <NetworkPrivacyCard />
       </Collapsible>
@@ -5607,9 +5613,11 @@ function SettingsPane({ status }: { status: Status }) {
           <FastSyncSettings />
         </Collapsible>
       )}
-      <Collapsible title={t("settingsPane.accessTokenField")} summary={showAccessTokenField() ? t("settingsPane.shown") : t("settingsPane.hidden")}>
-        <AccessTokenSetting />
-      </Collapsible>
+      {!browserModeChosen() && (
+        <Collapsible title={t("settingsPane.accessTokenField")} summary={showAccessTokenField() ? t("settingsPane.shown") : t("settingsPane.hidden")}>
+          <AccessTokenSetting />
+        </Collapsible>
+      )}
       {/* Renders its own "Debug logs" Collapsible; kept top-level rather than buried
           inside Background sync. Returns null when there's no on-device engine. */}
       <DebugLogsCard status={status} />
@@ -7061,7 +7069,9 @@ function Send({
                 real figure, leaving two screens disagreeing about one payment. */}
             {feeCustomSet && feeCustom >= feeFloorFc
               ? t("send.feeCustom", { fee: feeCustom })
-              : t("send.feeRange", { min: Number(Math.max(feeCustomSet ? feeCustom : 0, feeFloorFc).toFixed(8)), max: Number(feeReserve.toFixed(8)) })}
+              : Number(Math.max(feeCustomSet ? feeCustom : 0, feeFloorFc).toFixed(8)) === Number(feeReserve.toFixed(8))
+                ? t("send.feeExact", { fee: Number(feeReserve.toFixed(8)) })
+                : t("send.feeRange", { min: Number(Math.max(feeCustomSet ? feeCustom : 0, feeFloorFc).toFixed(8)), max: Number(feeReserve.toFixed(8)) })}
           </span>
         </div>
         {feeExceedsAmount && (
@@ -7353,7 +7363,10 @@ function Send({
       )}
       {amtValid && !overspend && (
         <div className="fieldhint muted">
-          {t("send.feeSummary", { min: Number(feeFloorFc.toFixed(8)), max: Number(feeShown.toFixed(8)), total: Number((amt + feeShown).toFixed(8)) })}
+          {/* A range only when there is one: "+ 0.018554–0.018554 fee" (test wallet, 2 Nov). */}
+          {Number(feeFloorFc.toFixed(8)) === Number(feeShown.toFixed(8))
+            ? t("send.feeSummaryExact", { fee: Number(feeShown.toFixed(8)), total: Number((amt + feeShown).toFixed(8)) })
+            : t("send.feeSummary", { min: Number(feeFloorFc.toFixed(8)), max: Number(feeShown.toFixed(8)), total: Number((amt + feeShown).toFixed(8)) })}
         </div>
       )}
 

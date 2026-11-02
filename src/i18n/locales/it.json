@@ -124,7 +124,9 @@
     "walletChanged": "Il portafoglio attivo è cambiato mentre stavi effettuando il pagamento, quindi non è stato inviato nulla. Controlla in quale portafoglio ti trovi e riprova.",
     "submitOutcomeUnknown": "Il servizio portafoglio ha smesso di rispondere mentre questo pagamento veniva trasmesso, quindi il portafoglio non può sapere se è partito. Controlla la cronologia prima di riprovare — inviarlo una seconda volta potrebbe pagare due volte.",
     "feeExceedsAmount": "La commissione impostata ({{fee}} ZKAS) è superiore all'importo che stai inviando ({{amount}} ZKAS). Controllala prima di confermare.",
-    "networkNotSignable": "Questo portafoglio può firmare pagamenti solo su mainnet, mentre il servizio portafoglio è su {{network}}. Qui puoi ricevere, ma non inviare."
+    "networkNotSignable": "Questo portafoglio può firmare pagamenti solo su mainnet, mentre il servizio portafoglio è su {{network}}. Qui puoi ricevere, ma non inviare.",
+    "feeSummaryExact": "+ {{fee}} di commissione = {{total}} in totale",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "Firma messaggio",

@@ -72,7 +72,9 @@
     "walletChanged": "付款進行中，活躍錢包已切換，因此未發送任何內容。請確認您所在的錢包後再試一次。",
     "submitOutcomeUnknown": "這筆付款在廣播期間錢包服務停止回應，因此錢包無法判斷它是否已送出。請在重試前查看歷史記錄——再送一次可能會付兩次款。",
     "feeExceedsAmount": "你設定的手續費（{{fee}} ZKAS）高於你要發送的金額（{{amount}} ZKAS）。請在確認前核對。",
-    "networkNotSignable": "此錢包只能為主網付款簽署，而錢包服務在 {{network}} 上。你可以在這裡接收，但無法發送。"
+    "networkNotSignable": "此錢包只能為主網付款簽署，而錢包服務在 {{network}} 上。你可以在這裡接收，但無法發送。",
+    "feeSummaryExact": "+ 手續費 {{fee}} = 共 {{total}}",
+    "feeExact": "{{fee}} ZKAS"
   },
   "verify": {
     "messagePlaceholder": "已簽名的訊息…",

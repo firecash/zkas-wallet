@@ -124,7 +124,9 @@
     "walletChanged": "La billetera activa cambió mientras se realizaba este pago, así que no se envió nada. Revisa en qué billetera estás e inténtalo de nuevo.",
     "submitOutcomeUnknown": "El servicio de billetera dejó de responder mientras se transmitía este pago, así que la billetera no puede saber si salió. Revisa el historial antes de volver a intentarlo — enviarlo por segunda vez podría pagar dos veces.",
     "feeExceedsAmount": "La comisión que fijaste ({{fee}} ZKAS) es mayor que el monto que estás enviando ({{amount}} ZKAS). Revísala antes de confirmar.",
-    "networkNotSignable": "Esta billetera solo puede firmar pagos en mainnet, y el servicio de billetera está en {{network}}. Aquí puedes recibir, pero no enviar."
+    "networkNotSignable": "Esta billetera solo puede firmar pagos en mainnet, y el servicio de billetera está en {{network}}. Aquí puedes recibir, pero no enviar.",
+    "feeSummaryExact": "+ {{fee}} de comisión = {{total}} en total",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "Firmar mensaje",

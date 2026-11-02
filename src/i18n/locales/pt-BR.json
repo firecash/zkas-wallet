@@ -124,7 +124,9 @@
     "walletChanged": "A carteira ativa mudou enquanto este pagamento era feito, então nada foi enviado. Verifique em qual carteira você está e tente novamente.",
     "submitOutcomeUnknown": "O serviço de carteira parou de responder enquanto este pagamento estava sendo transmitido, então a carteira não tem como saber se ele saiu. Confira o histórico antes de tentar de novo — enviar uma segunda vez pode pagar duas vezes.",
     "feeExceedsAmount": "A taxa que você definiu ({{fee}} ZKAS) é maior que o valor que está enviando ({{amount}} ZKAS). Confira antes de confirmar.",
-    "networkNotSignable": "Esta carteira só assina pagamentos na mainnet, e o serviço de carteira está em {{network}}. Você pode receber aqui, mas não enviar."
+    "networkNotSignable": "Esta carteira só assina pagamentos na mainnet, e o serviço de carteira está em {{network}}. Você pode receber aqui, mas não enviar.",
+    "feeSummaryExact": "+ {{fee}} de taxa = {{total}} no total",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "Assinar mensagem",

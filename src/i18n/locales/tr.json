@@ -124,7 +124,9 @@
     "walletChanged": "Bu ödeme yapılırken aktif cüzdan değişti, bu yüzden hiçbir şey gönderilmedi. Hangi cüzdanda olduğunuzu kontrol edip tekrar deneyin.",
     "submitOutcomeUnknown": "Bu ödeme ağa yayınlanırken cüzdan hizmeti yanıt vermeyi bıraktı, bu yüzden cüzdan ödemenin çıkıp çıkmadığını bilemiyor. Yeniden denemeden önce geçmişi kontrol edin — ikinci kez göndermek iki kez ödemeye yol açabilir.",
     "feeExceedsAmount": "Belirlediğiniz ücret ({{fee}} ZKAS), gönderdiğiniz miktardan ({{amount}} ZKAS) daha yüksek. Onaylamadan önce kontrol edin.",
-    "networkNotSignable": "Bu cüzdan yalnızca mainnet ödemelerini imzalayabilir, cüzdan hizmeti ise {{network}} üzerinde. Burada alabilirsiniz ama gönderemezsiniz."
+    "networkNotSignable": "Bu cüzdan yalnızca mainnet ödemelerini imzalayabilir, cüzdan hizmeti ise {{network}} üzerinde. Burada alabilirsiniz ama gönderemezsiniz.",
+    "feeSummaryExact": "+ {{fee}} ücret = toplam {{total}}",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "Mesaj imzala",

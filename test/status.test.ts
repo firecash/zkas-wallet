@@ -355,3 +355,15 @@ describe("a daemon that is wrong about being synced", () => {
     expect(walletStatus({ ...base, scannedBlocks: 1000, chainLen: 1000 }).balanceIsFinal).toBe(true);
   });
 });
+
+describe("a wallet a page or two behind", () => {
+  it("shows no percentage (it read 'Catching up 0.0%' with its cursor just below its birthday)", () => {
+    const v = walletStatus({ ...base, synced: false, scannedBlocks: 8_546_200, chainLen: 8_546_420, scanFrom: 8_546_400, haveConfirmedBalance: true });
+    expect(v.pctFine).toBeNull();
+    expect(v.pct).toBeNull();
+  });
+  it("a long catch-up still shows one", () => {
+    const v = walletStatus({ ...base, synced: false, scannedBlocks: 8_500_000, chainLen: 8_546_420, scanFrom: 8_400_000, haveConfirmedBalance: true });
+    expect(v.pctFine).not.toBeNull();
+  });
+});

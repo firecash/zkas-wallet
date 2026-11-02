@@ -9,9 +9,11 @@ const app = readFileSync("src/App.tsx", "utf8");
 const css = readFileSync("src/styles.css", "utf8");
 
 describe("Signatures and Wallet tools on a phone", () => {
-  it("Settings links to both (tools not on native, where it was never offered)", () => {
-    expect(app).toContain('<SettingsLink className="phone-only" title={t("appShell.tabSignatures")} to="signatures" />');
+  it("Settings reaches both: Wallet tools by a link (not on native), Signatures by its own card", () => {
     expect(app).toContain('{!viewOnly && !isNative() && <SettingsLink className="phone-only" title={t("walletTools.eyebrow")} to="tools" />}');
+    // Exactly one Signatures entry in Settings on narrow screens (a second one duplicated it).
+    expect(app).toMatch(/\{!roomy && \(\s*<Collapsible title=\{t\("settingsPane\.signatures"\)\}>\s*<Signatures status=\{status\} \/>/);
+    expect(app).not.toContain('to="signatures"');
   });
 
   it("the narrow-screen guard keeps a pane opened that way", () => {

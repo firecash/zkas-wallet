@@ -124,7 +124,9 @@
     "walletChanged": "De actieve wallet is gewijzigd tijdens het maken van deze betaling, dus er is niets verzonden. Controleer in welke wallet je zit en probeer het opnieuw.",
     "submitOutcomeUnknown": "De walletservice gaf geen antwoord meer terwijl deze betaling werd uitgezonden, dus de wallet kan niet vaststellen of hij de deur uit is. Controleer de geschiedenis voordat je het opnieuw probeert — een tweede keer verzenden kan dubbel betalen.",
     "feeExceedsAmount": "De netwerkkosten die je hebt ingesteld ({{fee}} ZKAS) zijn hoger dan het bedrag dat je verzendt ({{amount}} ZKAS). Controleer dit voordat je bevestigt.",
-    "networkNotSignable": "Deze wallet kan alleen betalingen op mainnet ondertekenen, en de walletservice staat op {{network}}. Je kunt hier ontvangen, maar niet verzenden."
+    "networkNotSignable": "Deze wallet kan alleen betalingen op mainnet ondertekenen, en de walletservice staat op {{network}}. Je kunt hier ontvangen, maar niet verzenden.",
+    "feeSummaryExact": "+ {{fee}} kosten = {{total}} totaal",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "Bericht ondertekenen",

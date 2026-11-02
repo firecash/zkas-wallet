@@ -72,7 +72,9 @@
     "walletChanged": "Podczas dokonywania płatności zmienił się aktywny portfel, więc nic nie zostało wysłane. Sprawdź, w którym portfelu jesteś, i spróbuj ponownie.",
     "submitOutcomeUnknown": "Usługa portfela przestała odpowiadać w trakcie rozgłaszania tej płatności, więc portfel nie może ustalić, czy została wysłana. Sprawdź historię przed kolejną próbą — wysłanie drugi raz może zapłacić dwukrotnie.",
     "feeExceedsAmount": "Ustawiona opłata ({{fee}} ZKAS) jest większa niż wysyłana kwota ({{amount}} ZKAS). Sprawdź to przed zatwierdzeniem.",
-    "networkNotSignable": "Ten portfel potrafi podpisywać płatności tylko w mainnecie, a usługa portfela działa na {{network}}. Tutaj możesz odbierać, ale nie wysyłać."
+    "networkNotSignable": "Ten portfel potrafi podpisywać płatności tylko w mainnecie, a usługa portfela działa na {{network}}. Tutaj możesz odbierać, ale nie wysyłać.",
+    "feeSummaryExact": "+ {{fee}} opłaty = {{total}} razem",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "Podpisz wiadomość",

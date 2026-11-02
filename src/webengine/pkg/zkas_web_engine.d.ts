@@ -224,8 +224,10 @@ export class Engine {
    * rooted there is final when mined (the gateway's `/tree?below=<tip - margin>`). Notes
    * below its leaf count are spendable; the rest are maturing. Witnesses are advanced to it
    * here, a little at a time, so a send is a lookup.
+   * Take `boundary_json` as the matured anchor. Returns why not, if not: "ahead" (beyond what
+   * this wallet has ingested) or "below_base" (below the leaves it holds); the last anchor stays.
    */
-  set_anchor(boundary_json: string): void;
+  set_anchor(boundary_json: string): string | undefined;
   /**
    * See [`Engine::page`].
    */
@@ -236,6 +238,11 @@ export class Engine {
    * are skipped, so a payment crossing from mempool to block is counted once.
    */
   set_mempool(payloads_json: string): void;
+  /**
+   * Counts only, for the diagnostic log: where the tree, its base and the anchor are, and how
+   * many leaves the oldest coin not yet under the anchor still needs (0: all spendable).
+   */
+  anchor_debug(): string;
   /**
    * Build and prove a payment of `amount` sompi to `to` (a `zkas:` address) from this
    * wallet's matured notes, rooted at the matured anchor. `sk_hex` is the wallet's 32-byte
@@ -381,6 +388,7 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_engine_free: (a: number, b: number) => void;
   readonly address_of_fvk: (a: number, b: number, c: number) => void;
+  readonly engine_anchor_debug: (a: number, b: number) => void;
   readonly engine_checkpoint: (a: number, b: number) => void;
   readonly engine_history: (a: number, b: number, c: number, d: number) => void;
   readonly engine_ingest_page: (a: number, b: number, c: number, d: number) => void;

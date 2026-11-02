@@ -141,7 +141,9 @@
     "walletChanged": "Dompet aktif bertukar semasa pembayaran ini dibuat, jadi tiada apa-apa dihantar. Periksa dompet anda dan cuba lagi.",
     "submitOutcomeUnknown": "Perkhidmatan dompet berhenti menjawab semasa pembayaran ini disiarkan, jadi dompet tidak dapat memastikan sama ada ia telah keluar. Periksa sejarah sebelum mencuba lagi — menghantar kali kedua boleh membayar dua kali.",
     "feeExceedsAmount": "Fi yang anda tetapkan ({{fee}} ZKAS) lebih besar daripada jumlah yang anda hantar ({{amount}} ZKAS). Periksa dahulu sebelum mengesahkan.",
-    "networkNotSignable": "Dompet ini hanya boleh menandatangani pembayaran di mainnet, manakala perkhidmatan dompet berada di {{network}}. Anda boleh menerima di sini, tetapi tidak boleh menghantar."
+    "networkNotSignable": "Dompet ini hanya boleh menandatangani pembayaran di mainnet, manakala perkhidmatan dompet berada di {{network}}. Anda boleh menerima di sini, tetapi tidak boleh menghantar.",
+    "feeSummaryExact": "+ yuran {{fee}} = jumlah {{total}}",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "Tandatangan mesej",

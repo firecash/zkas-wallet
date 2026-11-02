@@ -209,9 +209,15 @@ function pctFineOf(scanned: number, total: number, from?: number | null): string
   return `${(scanned < total ? Math.min(floored, 99.9) : 100).toFixed(1)}%`;
 }
 
+/** Below this gap (blocks) a catch-up is a page or two: a percentage would only flicker, and a
+ *  wallet whose cursor sits a tip margin below its birthday read "Catching up 0.0%" (test
+ *  wallet, 2 Nov). Applies to a wallet that already has a confirmed balance, not a first scan. */
+export const SHORT_GAP_BLOCKS = 2_000;
+
 export function walletStatus(s: StatusInput): WalletStatusView {
-  const pct = pctOf(s.scannedBlocks, s.chainLen, s.scanFrom);
-  const pctFine = pctFineOf(s.scannedBlocks, s.chainLen, s.scanFrom);
+  const shortGap = !!s.haveConfirmedBalance && s.chainLen > 0 && s.chainLen - s.scannedBlocks < SHORT_GAP_BLOCKS;
+  const pct = shortGap ? null : pctOf(s.scannedBlocks, s.chainLen, s.scanFrom);
+  const pctFine = shortGap ? null : pctFineOf(s.scannedBlocks, s.chainLen, s.scanFrom);
   const progress = s.chainLen > 0 ? { scanned: s.scannedBlocks, total: s.chainLen } : null;
   const eta = s.etaSeconds != null ? i18n.t("status.etaLeft", { duration: formatDuration(s.etaSeconds) }) : null;
 

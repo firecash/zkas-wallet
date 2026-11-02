@@ -124,7 +124,9 @@
     "walletChanged": "Le portefeuille actif a changé pendant ce paiement, donc rien n'a été envoyé. Vérifiez dans quel portefeuille vous êtes et réessayez.",
     "submitOutcomeUnknown": "Le service de portefeuille a cessé de répondre pendant la diffusion de ce paiement, le portefeuille ne peut donc pas savoir s'il est parti. Vérifiez l'historique avant de réessayer — un second envoi risquerait de payer deux fois.",
     "feeExceedsAmount": "Les frais que vous avez fixés ({{fee}} ZKAS) dépassent le montant que vous envoyez ({{amount}} ZKAS). Vérifiez-les avant de confirmer.",
-    "networkNotSignable": "Ce portefeuille ne peut signer des paiements que sur le mainnet, or le service de portefeuille est sur {{network}}. Vous pouvez recevoir ici, mais pas envoyer."
+    "networkNotSignable": "Ce portefeuille ne peut signer des paiements que sur le mainnet, or le service de portefeuille est sur {{network}}. Vous pouvez recevoir ici, mais pas envoyer.",
+    "feeSummaryExact": "+ {{fee}} de frais = {{total}} au total",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "Signer un message",

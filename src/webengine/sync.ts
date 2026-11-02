@@ -17,7 +17,10 @@ export interface EngineLike {
   checkpoint(): Uint8Array;
   status(): string;
   history?(limit: number, offset: number): string;
-  set_anchor?(boundaryJson: string): void;
+  /** Returns why the anchor was not taken ("ahead" / "below_base"), or nothing when it was. */
+  set_anchor?(boundaryJson: string): string | undefined | void;
+  /** Counts only: tree, base, anchor, leaves the oldest unmatured coin still needs. */
+  anchor_debug?(): string;
   set_mempool?(payloadsJson: string): void;
   free?(): void;
 }
@@ -136,6 +139,8 @@ export async function runSync(d: SyncDeps): Promise<void> {
   let verified: boolean | null = null;
   let everSynced = false;
   let verifyJob: Promise<boolean> | null = null;
+  let lastAnchorWhy = "";
+  let lastAnchorLog = 0;
   // Waits for the tree check if one is running; a mismatch reports and stops (the caller rebuilds).
   const settleVerify = async () => {
     if (!verifyJob) return;
@@ -250,7 +255,10 @@ export async function runSync(d: SyncDeps): Promise<void> {
     firstPage = { after: low, page };
     try {
       const cached = JSON.parse((await d.loadAnchor?.()) ?? "null");
-      if (cached && typeof cached.at === "number" && Date.now() - cached.at < ANCHOR_CACHE_MS && cached.anchor) eng.set_anchor?.(JSON.stringify(cached.anchor));
+      if (cached && typeof cached.at === "number" && Date.now() - cached.at < ANCHOR_CACHE_MS && cached.anchor) {
+        const why = eng.set_anchor?.(JSON.stringify(cached.anchor));
+        phase("anchor_cached", { outcome: why || "taken", age_s: Math.round((Date.now() - cached.at) / 1000) });
+      }
     } catch {
       /* fetched at the tip as before */
     }
@@ -614,7 +622,20 @@ export async function runSync(d: SyncDeps): Promise<void> {
             .then((a) => {
               const ts = performance.now();
               if (typeof a?.block === "string") {
-                live.set_anchor?.(JSON.stringify(a));
+                const why = live.set_anchor?.(JSON.stringify(a)) || "taken";
+                // Why a coin is not spendable yet, when it should be: each change of outcome, and
+                // once a minute while a coin is still maturing (counts only, no positions).
+                let dbg: Record<string, number> = {};
+                try {
+                  dbg = JSON.parse(live.anchor_debug?.() ?? "{}");
+                } catch {
+                  /* older engine */
+                }
+                if (why !== lastAnchorWhy || ((dbg.unmatured_needs ?? 0) > 0 && Date.now() - lastAnchorLog > 60_000)) {
+                  lastAnchorWhy = why;
+                  lastAnchorLog = Date.now();
+                  phase("anchor", { outcome: why, anchor_daa: Number(a.daa) || 0, tip, scanned: Number(live.scanned()), ...dbg });
+                }
                 void d.saveAnchor?.(JSON.stringify({ anchor: a, at: Date.now() }))?.catch?.(() => undefined);
               }
               anchorSetMs = ms(ts);

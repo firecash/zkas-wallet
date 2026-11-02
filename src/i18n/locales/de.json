@@ -124,7 +124,9 @@
     "walletChanged": "Das aktive Wallet hat sich während der Zahlung geändert, daher wurde nichts gesendet. Prüfe, in welchem Wallet du bist, und versuche es erneut.",
     "submitOutcomeUnknown": "Der Wallet-Dienst hat während des Sendens dieser Zahlung nicht mehr geantwortet, daher kann die Wallet nicht feststellen, ob sie hinausgegangen ist. Prüfe den Verlauf, bevor du es erneut versuchst — ein zweites Senden könnte doppelt bezahlen.",
     "feeExceedsAmount": "Die eingestellte Gebühr ({{fee}} ZKAS) ist höher als der Betrag, den du sendest ({{amount}} ZKAS). Prüfe das, bevor du bestätigst.",
-    "networkNotSignable": "Diese Wallet kann Zahlungen nur im Mainnet signieren, der Wallet-Dienst läuft aber auf {{network}}. Empfangen ist hier möglich, Senden nicht."
+    "networkNotSignable": "Diese Wallet kann Zahlungen nur im Mainnet signieren, der Wallet-Dienst läuft aber auf {{network}}. Empfangen ist hier möglich, Senden nicht.",
+    "feeSummaryExact": "+ {{fee}} Gebühr = {{total}} gesamt",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "Nachricht signieren",

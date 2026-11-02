@@ -124,7 +124,9 @@
     "walletChanged": "결제 중 활성 지갑이 변경되어 전송되지 않았습니다. 현재 지갑을 확인하고 다시 시도하세요.",
     "submitOutcomeUnknown": "이 결제를 전파하는 동안 지갑 서비스가 응답을 멈췄기 때문에, 지갑은 결제가 전송되었는지 알 수 없습니다. 다시 시도하기 전에 거래 내역을 확인하세요 — 두 번 보내면 두 번 지불될 수 있습니다.",
     "feeExceedsAmount": "설정한 수수료({{fee}} ZKAS)가 보내려는 금액({{amount}} ZKAS)보다 많습니다. 확인 전에 다시 살펴보세요.",
-    "networkNotSignable": "이 지갑은 메인넷 결제만 서명할 수 있지만, 지갑 서비스는 {{network}}에 있습니다. 여기서 받을 수는 있으나 보낼 수는 없습니다."
+    "networkNotSignable": "이 지갑은 메인넷 결제만 서명할 수 있지만, 지갑 서비스는 {{network}}에 있습니다. 여기서 받을 수는 있으나 보낼 수는 없습니다.",
+    "feeSummaryExact": "+ 수수료 {{fee}} = 합계 {{total}}",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "메시지 서명",

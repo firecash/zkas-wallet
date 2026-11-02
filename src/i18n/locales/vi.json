@@ -124,7 +124,9 @@
     "walletChanged": "Ví đang dùng đã thay đổi trong lúc thanh toán nên không gửi được gì. Hãy kiểm tra lại ví và thử lại.",
     "submitOutcomeUnknown": "Dịch vụ ví đã ngừng phản hồi trong lúc khoản thanh toán này được phát lên mạng, nên ví không thể biết nó đã đi hay chưa. Hãy kiểm tra lịch sử trước khi thử lại — gửi lần thứ hai có thể trả tiền hai lần.",
     "feeExceedsAmount": "Phí bạn đặt ({{fee}} ZKAS) lớn hơn số lượng bạn đang gửi ({{amount}} ZKAS). Hãy kiểm tra trước khi xác nhận.",
-    "networkNotSignable": "Ví này chỉ có thể ký các khoản thanh toán trên mainnet, còn dịch vụ ví đang ở {{network}}. Bạn có thể nhận ở đây, nhưng không thể gửi."
+    "networkNotSignable": "Ví này chỉ có thể ký các khoản thanh toán trên mainnet, còn dịch vụ ví đang ở {{network}}. Bạn có thể nhận ở đây, nhưng không thể gửi.",
+    "feeSummaryExact": "+ phí {{fee}} = tổng {{total}}",
+    "feeExact": "{{fee}} ZKAS"
   },
   "sign": {
     "title": "Ký tin nhắn",

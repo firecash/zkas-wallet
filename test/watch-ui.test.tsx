@@ -177,11 +177,21 @@ describe("the version, where a user can find it", () => {
 describe("a device that holds the seed", () => {
   it("keeps every spending feature", async () => {
     asOwner();
+    statusOverride = { note_count: 3 };
     await mountApp();
     await screen.findByText(/Shielded balance/, {}, { timeout: 8000 });
     expect(screen.getByRole("button", { name: "Send ZKAS" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manage wallet notes" })).toBeInTheDocument();
     expect(screen.queryByText("View only")).not.toBeInTheDocument();
+  });
+
+  it("offers coin management only when there are coins to combine", async () => {
+    asOwner();
+    statusOverride = { note_count: 1 };
+    await mountApp();
+    await screen.findByText(/Shielded balance/, {}, { timeout: 8000 });
+    expect(screen.getByRole("button", { name: "Send ZKAS" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manage wallet notes" })).not.toBeInTheDocument();
   });
 
   it("exports the view key itself, not only a link", async () => {

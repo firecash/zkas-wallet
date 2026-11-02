@@ -763,7 +763,10 @@ export class Engine {
      * rooted there is final when mined (the gateway's `/tree?below=<tip - margin>`). Notes
      * below its leaf count are spendable; the rest are maturing. Witnesses are advanced to it
      * here, a little at a time, so a send is a lookup.
+     * Take `boundary_json` as the matured anchor. Returns why not, if not: "ahead" (beyond what
+     * this wallet has ingested) or "below_base" (below the leaves it holds); the last anchor stays.
      * @param {string} boundary_json
+     * @returns {string | undefined}
      */
     set_anchor(boundary_json) {
         try {
@@ -773,9 +776,17 @@ export class Engine {
             wasm.engine_set_anchor(retptr, this.__wbg_ptr, ptr0, len0);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            if (r1) {
-                throw takeObject(r0);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+            if (r3) {
+                throw takeObject(r2);
             }
+            let v2;
+            if (r0 !== 0) {
+                v2 = getStringFromWasm0(r0, r1).slice();
+                wasm.__wbindgen_export_1(r0, r1 * 1, 1);
+            }
+            return v2;
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
@@ -830,6 +841,27 @@ export class Engine {
             }
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Counts only, for the diagnostic log: where the tree, its base and the anchor are, and how
+     * many leaves the oldest coin not yet under the anchor still needs (0: all spendable).
+     * @returns {string}
+     */
+    anchor_debug() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.engine_anchor_debug(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export_1(deferred1_0, deferred1_1, 1);
         }
     }
     /**
