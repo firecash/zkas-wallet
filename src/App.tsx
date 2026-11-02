@@ -109,7 +109,7 @@ import { rotatePublicNode, setEmbeddedBackupNode, type FastSync } from "./embedd
 import { RunOnPhoneOption } from "./RunOnPhoneOption";
 import { RunInBrowserOption } from "./RunInBrowserOption";
 import { FastSyncSettings, fastSyncSummary } from "./FastSyncSettings";
-import { browserModeChosen, browserPrepareAhead, browserSend, setBrowserModeChosen } from "./webengine";
+import { browserModeChosen, browserPrepareAhead, browserSend, setBrowserModeChosen, stopBrowserEngine } from "./webengine";
 import { isWatchOnly, clearWatchKey, isViewKey, watchKey } from "./lib/watchonly";
 import { showAccessTokenField, setShowAccessTokenField } from "./lib/accesstoken";
 import { adoptViewKey } from "./lib/watchadopt";
@@ -4913,6 +4913,10 @@ function Onboard({
                   setEmbeddedChosen(false);
                   await stopEmbedded().catch(() => undefined);
                 }
+                if (browserModeChosen()) {
+                  setBrowserModeChosen(false);
+                  stopBrowserEngine();
+                }
                 if (isDesktop()) {
                   const url = await findReachableDaemon(HOSTED_WALLETD_URL, "", 20_000);
                   setDesktopRemoteBase(url);
@@ -8562,6 +8566,12 @@ function NetworkPrivacyCard() {
       await captureScanReceipt(loadStatusCache()?.address);
       setEmbeddedChosen(false);
       await stopEmbedded();
+    }
+    // Browser mode is a flag too: left set, the reload came straight back into it and the
+    // switch to the Public service, Tor or a custom server did nothing.
+    if (browserModeChosen()) {
+      setBrowserModeChosen(false);
+      stopBrowserEngine();
     }
   };
   const usePublic = () => run("public", async () => { await leaveEngine(); setBase(""); setWalletdBearer(""); });
