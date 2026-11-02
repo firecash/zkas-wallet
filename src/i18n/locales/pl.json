@@ -1004,7 +1004,8 @@
       "node_history_short": "Ten węzeł nie ma historii tego portfela. Połącz się z pełnym węzłem lub poczekaj.",
       "node_unverifiable": "Węzeł nie może jeszcze potwierdzić zapisanej pozycji. Postęp zostaje; zaraz kolejna próba.",
       "checkpoint_io": "Nie udało się odczytać zapisanego postępu na tym urządzeniu. Zaraz kolejna próba."
-    }
+    },
+    "downloadingChain": "Pobieranie danych łańcucha… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "Ta opcja jest dostępna w aplikacji desktopowej."

@@ -970,7 +970,8 @@
       "node_history_short": "Node ini tidak punya riwayat dompet ini. Sambungkan ke node berriwayat lengkap atau tunggu.",
       "node_unverifiable": "Node belum bisa mengonfirmasi posisi tersimpan. Kemajuan tetap; segera dicoba lagi.",
       "checkpoint_io": "Kemajuan tersimpan tidak bisa dibaca di perangkat ini. Segera dicoba lagi."
-    }
+    },
+    "downloadingChain": "Mengunduh data rantai… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "Kontrol ini tersedia di aplikasi desktop."

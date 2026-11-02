@@ -970,7 +970,8 @@
       "node_history_short": "Este nodo no tiene el historial de esta billetera. Conéctate a un nodo con historial completo o espera.",
       "node_unverifiable": "El nodo aún no puede confirmar la posición guardada. Se conserva el progreso; reintenta en breve.",
       "checkpoint_io": "No se pudo leer el progreso guardado en este dispositivo. Reintenta en breve."
-    }
+    },
+    "downloadingChain": "Descargando datos de la cadena… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "Este control está disponible en la app de escritorio."

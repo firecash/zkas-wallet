@@ -485,6 +485,8 @@ export interface Status {
   loading?: boolean;
   /// While `loading`: why the last open attempt did not complete (walletd reason code).
   loading_reason?: string;
+  /// Browser mode: a chain file is downloading, this far (0-99); nothing is scanned until it is whole.
+  download_pct?: number | null;
   // The wallet's view was rebuilt through a node that has PRUNED part of its
   // history: notes older than the node's pruning point exist on-chain but cannot
   // be seen here, so the balance is a lower bound. The UI must say so — silence

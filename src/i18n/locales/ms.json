@@ -970,7 +970,8 @@
       "node_history_short": "Nod ini tiada sejarah dompet ini. Sambung ke nod bersejarah penuh atau tunggu.",
       "node_unverifiable": "Nod belum dapat mengesahkan kedudukan tersimpan. Kemajuan kekal; cuba lagi sebentar lagi.",
       "checkpoint_io": "Kemajuan tersimpan tidak dapat dibaca pada peranti ini. Cuba lagi sebentar lagi."
-    }
+    },
+    "downloadingChain": "Memuat turun data rantai… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "Kawalan ini ada dalam aplikasi desktop."

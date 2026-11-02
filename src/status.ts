@@ -27,7 +27,8 @@ import i18n from "./i18n";
 export const LOADING_REASONS = ["node_slow", "node_behind", "node_history_short", "node_unverifiable", "checkpoint_io"] as const;
 export type LoadingReason = (typeof LOADING_REASONS)[number];
 
-function loadingDetail(s: { loading?: boolean; loadingReason?: string | null }, fallback: string): string {
+function loadingDetail(s: { loading?: boolean; loadingReason?: string | null; downloadPct?: number | null }, fallback: string): string {
+  if (typeof s.downloadPct === "number") return i18n.t("status.downloadingChain", { pct: s.downloadPct });
   const r = s.loading ? s.loadingReason : null;
   return r && (LOADING_REASONS as readonly string[]).includes(r) ? i18n.t(`status.loadingReason.${r}`) : fallback;
 }
@@ -35,6 +36,8 @@ function loadingDetail(s: { loading?: boolean; loadingReason?: string | null }, 
 export interface StatusInput {
   /// walletd's reason the last open attempt did not complete (see LOADING_REASONS).
   loadingReason?: string | null;
+  /// Browser mode: a chain file is downloading (0-99), before anything in it can be scanned.
+  downloadPct?: number | null;
   /// The wallet runs in this browser ("Run in this browser"): it syncs and watches, and cannot
   /// send yet — so "about to be able to pay" is never the honest state there.
   browserMode?: boolean;

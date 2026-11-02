@@ -30,3 +30,10 @@ describe("why a wallet is still opening", () => {
     }
   });
 });
+
+describe("downloading a chain file", () => {
+  it("says so, with how far, instead of a frozen percentage", () => {
+    const v = walletStatus({ ...base, scannedBlocks: 7_000_000, downloadPct: 42 } as never);
+    expect(v.detail).toMatch(/Downloading chain data.*42%/);
+  });
+});

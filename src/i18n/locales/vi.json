@@ -961,7 +961,8 @@
       "node_history_short": "Nút này không có lịch sử của ví. Hãy kết nối nút có lịch sử đầy đủ hoặc chờ.",
       "node_unverifiable": "Nút chưa xác nhận được vị trí đã lưu. Tiến độ được giữ; sẽ thử lại sớm.",
       "checkpoint_io": "Không đọc được tiến độ đã lưu trên thiết bị này. Sẽ thử lại sớm."
-    }
+    },
+    "downloadingChain": "Đang tải dữ liệu chuỗi… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "Tính năng này có sẵn trên ứng dụng máy tính."

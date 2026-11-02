@@ -970,7 +970,8 @@
       "node_history_short": "Ce nœud n’a pas l’historique de ce portefeuille. Connectez-vous à un nœud complet ou patientez.",
       "node_unverifiable": "Le nœud ne peut pas encore confirmer la position enregistrée. La progression est gardée ; nouvel essai bientôt.",
       "checkpoint_io": "La progression enregistrée n’a pas pu être lue sur cet appareil. Nouvel essai bientôt."
-    }
+    },
+    "downloadingChain": "Téléchargement des données de la chaîne… {{pct}} %"
   },
   "desktopServices": {
     "desktopOnly": "Cette option est disponible dans l'appli de bureau."

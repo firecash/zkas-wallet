@@ -936,7 +936,8 @@
       "node_history_short": "Bu düğümde bu cüzdanın geçmişi yok. Tam geçmişli bir düğüme bağlanın veya bekleyin.",
       "node_unverifiable": "Düğüm kayıtlı konumu henüz doğrulayamıyor. İlerleme korunur; birazdan tekrar denenir.",
       "checkpoint_io": "Kayıtlı ilerleme bu cihazda okunamadı. Birazdan tekrar denenir."
-    }
+    },
+    "downloadingChain": "Zincir verisi indiriliyor… %{{pct}}"
   },
   "desktopServices": {
     "desktopOnly": "Bu kontrol yalnızca masaüstü uygulamasında kullanılabilir."

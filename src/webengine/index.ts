@@ -548,6 +548,8 @@ export async function browserServiceStatus(): Promise<Record<string, unknown>> {
     // "Starting" with a restored checkpoint already knows its position: not "opening".
     loading: !s || (s.phase === "starting" && !(s.scanned > 0)),
     scanned_blocks: s?.scanned || w.birthday,
+    // A chain file is downloading: the only progress there is to show until it is whole.
+    download_pct: s?.downloadTotal ? Math.min(99, Math.floor((100 * (s.downloadDone ?? 0)) / s.downloadTotal)) : null,
     chain_len: tip,
     balance_sompi: bal,
     balance_fc: fc(bal),

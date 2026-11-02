@@ -72,7 +72,8 @@
       "node_history_short": "This node does not hold this wallet's history. Connect to a node with full history, or wait while it fills in.",
       "node_unverifiable": "The node cannot confirm the wallet's saved position yet. Progress is kept; it tries again shortly.",
       "checkpoint_io": "The wallet's saved progress could not be read on this device. It tries again shortly."
-    }
+    },
+    "downloadingChain": "Downloading chain data… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "This control is available in the desktop app."

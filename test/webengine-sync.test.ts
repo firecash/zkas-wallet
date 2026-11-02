@@ -175,6 +175,37 @@ describe("browser sync loop", () => {
     expect(events[first + 1]).toBe("save-start");
   });
 
+  it("reports a chain file's download progress while nothing can be ingested yet", async () => {
+    const t = deps();
+    const seen: (number | undefined)[] = [];
+    const fetch0 = t.d.fetch;
+    t.d.fetch = (async (u: string) => {
+      if (u.includes("seg-1.zks")) {
+        // Arrives in three parts over ~2 s.
+        const body = new ReadableStream<Uint8Array>({
+          async start(c) {
+            for (const part of [new Uint8Array([1]), new Uint8Array([2]), new Uint8Array([3])]) {
+              await new Promise((r) => setTimeout(r, 700));
+              c.enqueue(part);
+            }
+            c.close();
+          },
+        });
+        return new Response(body);
+      }
+      return fetch0(u);
+    }) as typeof fetch;
+    const on = t.d.onStatus;
+    t.d.onStatus = (st) => {
+      on(st);
+      if (st.downloadTotal) seen.push(st.downloadDone);
+    };
+    await runSync(t.d);
+    expect(seen.length).toBeGreaterThanOrEqual(2);
+    expect(seen.some((x) => (x ?? 0) > 0)).toBe(true);
+    expect(t.eng!.cursor).toBe(220);
+  });
+
   it("asks for the anchor and the mempool at the same time", async () => {
     // Through a proxy each request is a round trip; one after the other cost ~1 s a round.
     const t = deps();

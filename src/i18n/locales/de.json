@@ -682,7 +682,8 @@
       "node_history_short": "Dieser Node hat den Verlauf dieses Wallets nicht. Verbinde dich mit einem Node mit vollständigem Verlauf oder warte.",
       "node_unverifiable": "Der Node kann die gespeicherte Position noch nicht bestätigen. Der Fortschritt bleibt; neuer Versuch gleich.",
       "checkpoint_io": "Der gespeicherte Fortschritt konnte auf diesem Gerät nicht gelesen werden. Neuer Versuch gleich."
-    }
+    },
+    "downloadingChain": "Lade Chain-Daten… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "Diese Steuerung gibt es nur in der Desktop-App."

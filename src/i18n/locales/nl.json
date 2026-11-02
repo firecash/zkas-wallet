@@ -1004,7 +1004,8 @@
       "node_history_short": "Deze node heeft de geschiedenis van deze wallet niet. Verbind met een node met volledige geschiedenis of wacht.",
       "node_unverifiable": "De node kan de opgeslagen positie nog niet bevestigen. Voortgang blijft; zo een nieuwe poging.",
       "checkpoint_io": "De opgeslagen voortgang kon op dit apparaat niet worden gelezen. Zo een nieuwe poging."
-    }
+    },
+    "downloadingChain": "Chaingegevens downloaden… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "Dit onderdeel is beschikbaar in de desktop-app."

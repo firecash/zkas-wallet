@@ -962,7 +962,8 @@
       "node_history_short": "Este nó não tem o histórico desta carteira. Conecte a um nó com histórico completo ou aguarde.",
       "node_unverifiable": "O nó ainda não consegue confirmar a posição salva. O progresso é mantido; tenta de novo em breve.",
       "checkpoint_io": "Não foi possível ler o progresso salvo neste dispositivo. Tenta de novo em breve."
-    }
+    },
+    "downloadingChain": "Baixando dados da cadeia… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "Este controle está disponível no app para desktop."

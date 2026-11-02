@@ -962,7 +962,8 @@
       "node_history_short": "此節點沒有該錢包的歷史。請連線到具完整歷史的節點，或等待其補齊。",
       "node_unverifiable": "節點暫時無法確認已儲存的位置。進度已保留，稍後重試。",
       "checkpoint_io": "無法在此裝置上讀取已儲存的進度，稍後重試。"
-    }
+    },
+    "downloadingChain": "正在下載鏈資料… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "此功能僅限桌面版應用程式使用。"

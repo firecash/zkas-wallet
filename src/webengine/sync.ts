@@ -58,6 +58,9 @@ export interface BrowserSyncStatus {
   spendReady?: boolean;
   /** The wallet tree equalled the node's at the cursor (null: not checked yet this session). */
   verified: boolean | null;
+  /** While a chain file downloads (nothing can be ingested until it is whole): bytes so far / total. */
+  downloadDone?: number;
+  downloadTotal?: number;
   error?: string;
 }
 
@@ -97,6 +100,9 @@ export const SEGMENT_READ_AHEAD = 2;
 
 /** Checkpoint every this many segments while catching up. */
 const SAVE_EVERY_SEGMENTS = 2;
+/** How often a segment download reports its progress. */
+const DOWNLOAD_REPORT_MS = 700;
+
 /** Blocks per gateway page (the gateway's maximum). */
 const PAGE_LIMIT = 1000;
 
@@ -120,6 +126,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
   let tip = 0;
   let verified: boolean | null = null;
   let everSynced = false;
+  let downloading: { done: number; total: number } | null = null;
 
   const report = (phase: BrowserSyncStatus["phase"], error?: string) => {
     let st: Record<string, string | number | boolean> = { balance_sompi: "0", notes: 0 };
@@ -142,6 +149,7 @@ export async function runSync(d: SyncDeps): Promise<void> {
       pendingChangeSompi: st.pending_change_sompi as string | undefined,
       spendReady: st.spend_ready as boolean | undefined,
       verified,
+      ...(downloading ? { downloadDone: downloading.done, downloadTotal: downloading.total } : {}),
       ...(error ? { error } : {}),
     });
   };
@@ -245,12 +253,35 @@ export async function runSync(d: SyncDeps): Promise<void> {
   // 1. Published segments. Downloads run AHEAD of ingest (up to SEGMENT_READ_AHEAD at once), so
   // the network and the decryption overlap instead of taking turns: each segment used to sit
   // idle on the CPU while the next one downloaded, and the reverse.
+  // Bytes received per segment index, while it downloads (read as a stream, so a 7 MB file on a
+  // slow link shows progress instead of a percentage frozen for half a minute).
+  const received = new Map<number, number>();
+  const readAll = async (r: Response, index: number): Promise<Uint8Array> => {
+    const reader = r.body?.getReader?.();
+    if (!reader) return new Uint8Array(await r.arrayBuffer());
+    const parts: Uint8Array[] = [];
+    let n = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      parts.push(value);
+      n += value.length;
+      received.set(index, n);
+    }
+    const out = new Uint8Array(n);
+    let at = 0;
+    for (const p of parts) {
+      out.set(p, at);
+      at += p.length;
+    }
+    return out;
+  };
   const fetchSegment = (s: Segment) =>
     fromMirrors(
       (b) => `${b}/${s.file}`,
       s.index,
       async (r) => {
-        const b = new Uint8Array(await r.arrayBuffer());
+        const b = await readAll(r, s.index);
         if (!d.segmentMatches(b, s.sha256, BigInt(s.bytes))) throw new Error(`segment ${s.index} does not match the manifest`);
         return b;
       },
@@ -273,7 +304,17 @@ export async function runSync(d: SyncDeps): Promise<void> {
     if (d.shouldStop()) return;
     for (let k = 0; k <= SEGMENT_READ_AHEAD; k++) ensure(i + k);
     const tWait = performance.now();
-    const bytes = await inflight.get(i)!;
+    const tick = setInterval(() => {
+      downloading = { done: received.get(s.index) ?? 0, total: Number(s.bytes) };
+      report("files");
+    }, DOWNLOAD_REPORT_MS);
+    let bytes: Uint8Array;
+    try {
+      bytes = await inflight.get(i)!;
+    } finally {
+      clearInterval(tick);
+      downloading = null;
+    }
     inflight.delete(i);
     const waited = ms(tWait);
     const tIngest = performance.now();

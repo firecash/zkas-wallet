@@ -970,7 +970,8 @@
       "node_history_short": "Nodi hii haina historia ya pochi hii. Unganisha kwa nodi yenye historia kamili au subiri.",
       "node_unverifiable": "Nodi bado haiwezi kuthibitisha nafasi iliyohifadhiwa. Maendeleo yamehifadhiwa; jaribio jingine hivi karibuni.",
       "checkpoint_io": "Maendeleo yaliyohifadhiwa hayakusomeka kwenye kifaa hiki. Jaribio jingine hivi karibuni."
-    }
+    },
+    "downloadingChain": "Inapakua data ya mnyororo… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "Kidhibiti hiki kinapatikana kwenye programu ya kompyuta."

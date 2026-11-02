@@ -970,7 +970,8 @@
       "node_history_short": "Questo nodo non ha la cronologia di questo wallet. Collegati a un nodo completo o attendi.",
       "node_unverifiable": "Il nodo non può ancora confermare la posizione salvata. I progressi restano; riprova a breve.",
       "checkpoint_io": "Non è stato possibile leggere i progressi salvati su questo dispositivo. Riprova a breve."
-    }
+    },
+    "downloadingChain": "Download dei dati della catena… {{pct}}%"
   },
   "desktopServices": {
     "desktopOnly": "Questo controllo è disponibile nell'app desktop."
