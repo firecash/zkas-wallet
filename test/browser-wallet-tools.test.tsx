@@ -17,6 +17,11 @@ vi.mock("../src/lib/deviceseed", async (orig) => {
 });
 const svcSendMany = vi.fn(async () => ({ payees: 1, tx_count: 1 }));
 const svcConsolidate = vi.fn(async () => ({ consolidated: 2, notes_remaining: 1 }));
+const deviceConsolidate = vi.fn(async () => ({ txid: "t2", inputs: 5, amount_sompi: 1, fee_sompi: 1, txids: ["t2"], rounds: 1, more: false }));
+vi.mock("../src/noncustodial", async (orig) => {
+  const actual = await orig<typeof import("../src/noncustodial")>();
+  return { ...actual, consolidateNonCustodial: (...a: unknown[]) => deviceConsolidate(...(a as [])) };
+});
 vi.mock("../src/api", async (orig) => {
   const actual = await orig<typeof import("../src/api")>();
   return { ...actual, api: { ...actual.api, sendMany: (...a: unknown[]) => svcSendMany(...(a as [])), consolidate: () => svcConsolidate() } };
@@ -30,7 +35,7 @@ const status = { has_wallet: true, synced: true, note_count: 6, address: "zkas:x
 const ADDR = "zkas:py82h42m9qjff0knpcmllzq3c7qhurje5auh4tq2ceagf69wjpf23djwwmqr26zhsua8rrglrwdltsh";
 
 beforeEach(() => {
-  [sendMany, consolidate, svcSendMany, svcConsolidate].forEach((f) => f.mockClear());
+  [sendMany, consolidate, svcSendMany, svcConsolidate, deviceConsolidate].forEach((f) => f.mockClear());
 });
 
 function show(tab: string) {
@@ -47,12 +52,17 @@ describe("Wallet tools in browser mode", () => {
     expect(await screen.findByText(/Combined 6 notes/)).toBeInTheDocument();
   });
 
-  it("Combine coins still uses the service outside browser mode", async () => {
+  // Every wallet service holds this wallet watch-only (the app registers it by viewing key), so the
+  // service-side /api/wallet/consolidate can only refuse it: outside browser mode the merge is
+  // proved by the service and signed on this device, like a send, and that endpoint is never used.
+  it("Combine coins outside browser mode merges with the device signing, never the seed-holding endpoint", async () => {
     browser = false;
     show("maintenance");
     fireEvent.click(screen.getByRole("button", { name: /Combine|Consolidate/i }));
-    await waitFor(() => expect(svcConsolidate).toHaveBeenCalled());
+    await waitFor(() => expect(deviceConsolidate).toHaveBeenCalled());
+    expect(svcConsolidate).not.toHaveBeenCalled();
     expect(consolidate).not.toHaveBeenCalled();
+    expect(await screen.findByText(/Combined 5 notes/)).toBeInTheDocument();
   });
 
   it("Batch send builds one transaction in the page", async () => {
