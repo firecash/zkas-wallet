@@ -30,8 +30,32 @@ const POLL_MS = 60_000;
 /// that window is refused with 429 "merging its own notes". A send checks here
 /// first and waits for the round instead of colliding with it. Never rejects.
 let inFlight: Promise<void> | null = null;
+/// A merge the user started (Combine dialog, Wallet tools), while it runs.
+let manualMerge: Promise<void> | null = null;
+/** A merge running now, background or user-started: a payment waits for it before preparing. */
 export function mergeInFlight(): Promise<void> | null {
-  return inFlight;
+  return inFlight ?? manualMerge;
+}
+
+/**
+ * Run a user-started merge so it never overlaps the background one. Two merges of one wallet
+ * at once each picked the same notes and the second was refused by the node as a double spend
+ * after paying for its proof (twice on 3 Nov: a full sweep and a one-third split, seconds
+ * apart). This waits for a background merge already running, and the background one skips its
+ * turn while this runs.
+ */
+export async function exclusiveMerge<T>(run: () => Promise<T>): Promise<T> {
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  manualMerge = gate;
+  try {
+    const background = inFlight;
+    if (background) await background.catch(() => undefined);
+    return await run();
+  } finally {
+    if (manualMerge === gate) manualMerge = null;
+    release();
+  }
 }
 
 export interface MaintenanceOptions {
@@ -63,7 +87,7 @@ export function useMaintenance(options: MaintenanceOptions): void {
 
     const tick = async () => {
       const { status, token, network, busy, getSeed, onMerged } = latest.current;
-      if (running.current || cancelled) return;
+      if (running.current || cancelled || manualMerge) return;
 
       const decision = shouldRunMaintenance({
         status,

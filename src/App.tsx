@@ -31,7 +31,7 @@ import { scanFraction, signerCanSign, walletCanSpend, walletStatus, formatDurati
 import { useZkasPrice, fmtFiat } from "./price";
 import { arrivalAmount, ownActivityExplainsRise, quietUntil } from "./arrivals";
 import { feeReserveSompi } from "./fees";
-import { useMaintenance, mergeInFlight } from "./useMaintenance";
+import { useMaintenance, mergeInFlight, exclusiveMerge } from "./useMaintenance";
 import { isMaintenanceEnabled, setMaintenanceEnabled } from "./maintenance";
 import { estimateDuration, recordDuration, remainingLabel } from "./timing";
 import { forgetReceipts, loadBaseline, recordArrival, saveBaseline } from "./receipts";
@@ -3006,10 +3006,12 @@ function ConsolidateDialog({
       const spendable = BigInt(
         status.spendable_sompi ?? Math.max(0, Math.round(spendableFc(status) * 100_000_000)).toString(),
       );
-      const consolidated = await consolidateNonCustodial(
+      const address = status.address;
+      const noteCount = status.note_count ?? 0;
+      const consolidated = await exclusiveMerge(() => consolidateNonCustodial(
         seed,
         networkOf(status),
-        status.address,
+        address,
         spendable,
         setStage,
         undefined,
@@ -3018,9 +3020,9 @@ function ConsolidateDialog({
           setPassEndedAt((done) => [...done, Date.now()]);
         },
         targetNotes,
-        status.note_count ?? 0,
+        noteCount,
         grow,
-      );
+      ));
       // Each pass is one proof of a known shape (~38 notes), so a single completed
       // run predicts the next one well. Divide by rounds: what we want to learn is
       // the cost of a PASS, not of however many happened to run this time.

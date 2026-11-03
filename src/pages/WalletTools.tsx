@@ -1,6 +1,7 @@
 import { VerifyPayment } from "../PaymentProof";
 import { looksLikeAddress, networkOf } from "../lib/utils";
 import { consolidateNonCustodial, sendNonCustodial } from "../noncustodial";
+import { exclusiveMerge } from "../useMaintenance";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
@@ -126,7 +127,8 @@ function Maintenance({ status, onRefresh }: { status: Status | null; onRefresh: 
         // refused it. Merge the way sends work: the service proves, this device signs.
         if (!status?.address) throw new Error(t("consolidateDialog.errNoAddress"));
         const before = status.note_count ?? 0;
-        const r = await consolidateNonCustodial(seed, networkOf(status), status.address, BigInt(status.spendable_sompi ?? "0"), undefined, 1, undefined, 1, before);
+        const address = status.address;
+        const r = await exclusiveMerge(() => consolidateNonCustodial(seed, networkOf(status), address, BigInt(status.spendable_sompi ?? "0"), undefined, 1, undefined, 1, before));
         setMessage(t("walletMaintenance.combined", { consolidated: r.inputs, remaining: Math.max(1, before - r.inputs + r.txids.length) }));
       }
       onRefresh();
