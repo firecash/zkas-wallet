@@ -517,10 +517,19 @@ export function installAutoLock(onLocked: () => void): void {
   if (typeof document === "undefined") return;
   let hiddenAt = 0;
   let lastActive = Date.now();
+  // Locks while still away, so the seed is wiped from memory when the time passes rather than
+  // when the user comes back. A platform that pauses timers in the background skips it; the
+  // check on return below still applies then.
+  let awayTimer: ReturnType<typeof setTimeout> | null = null;
+  const clearAway = () => {
+    if (awayTimer !== null) clearTimeout(awayTimer);
+    awayTimer = null;
+  };
   const touch = () => {
     lastActive = Date.now();
   };
   const fire = () => {
+    clearAway();
     hiddenAt = 0;
     lastActive = Date.now();
     lock();
@@ -535,8 +544,19 @@ export function installAutoLock(onLocked: () => void): void {
     const setting = lockAfterSetting();
     if (document.hidden) {
       hiddenAt = Date.now();
-      if (setting === 0) fire();
-    } else if (hiddenAt && shouldAutoLock(setting, elapsedSince(hiddenAt), null)) {
+      if (setting === 0) {
+        fire();
+      } else {
+        clearAway();
+        const at = hiddenAt;
+        awayTimer = setTimeout(() => {
+          if (document.hidden && hiddenAt === at && isUnlocked() && shouldAutoLock(lockAfterSetting(), elapsedSince(at), null)) fire();
+        }, (setting ?? DEFAULT_LOCK_AFTER_S) * 1000 + 250);
+      }
+      return;
+    }
+    clearAway();
+    if (hiddenAt && shouldAutoLock(setting, elapsedSince(hiddenAt), null)) {
       fire();
     } else {
       hiddenAt = 0;
