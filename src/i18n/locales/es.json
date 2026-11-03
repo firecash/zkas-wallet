@@ -1195,7 +1195,8 @@
     "reviewSend": "Revisar y enviar {{n}}",
     "paid_one": "Se pagó a {{payees}} destinatarios en {{count}} transacción.",
     "paid_other": "Se pagó a {{payees}} destinatarios en {{count}} transacciones.",
-    "custodial": "El envío en lote necesita un walletd propio con la semilla de esta billetera. Esta app no subirá tu semilla para habilitarlo."
+    "custodial": "El envío en lote necesita un walletd propio con la semilla de esta billetera. Esta app no subirá tu semilla para habilitarlo.",
+    "partial": "Se pagó a {{done}} de {{total}} destinatarios y se detuvo en la línea {{line}}: {{error}}. Quita las líneas pagadas antes de volver a intentarlo."
   },
   "walletMaintenance": {
     "title": "Notas",

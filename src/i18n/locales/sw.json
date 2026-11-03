@@ -1231,7 +1231,8 @@
     "reviewSend": "Kagua na utume {{n}}",
     "paid_one": "Imelipa {{payees}} wapokeaji katika muamala {{count}}.",
     "paid_other": "Imelipa {{payees}} wapokeaji katika muamala {{count}}.",
-    "custodial": "Tuma kwa wingi inahitaji walletd inayojitegemea yenye mbegu ya mkoba huu. Programu hii haitapakia mbegu yako."
+    "custodial": "Tuma kwa wingi inahitaji walletd inayojitegemea yenye mbegu ya mkoba huu. Programu hii haitapakia mbegu yako.",
+    "partial": "Imelipa wapokeaji {{done}} kati ya {{total}}, kisha imesimama kwenye mstari {{line}}: {{error}}. Ondoa mistari iliyolipwa kabla ya kujaribu tena."
   },
   "walletMaintenance": {
     "title": "Sarafu",

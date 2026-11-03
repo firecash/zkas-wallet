@@ -1231,7 +1231,8 @@
     "reviewSend": "검토 후 {{n}}건 보내기",
     "paid_one": "{{count}}건 트랜잭션으로 {{payees}}명 지급 완료.",
     "paid_other": "{{count}}건 트랜잭션으로 {{payees}}명 지급 완료.",
-    "custodial": "일괄 보내기는 이 지갑의 시드를 보유한 자체 호스팅 walletd가 필요합니다. 이 앱은 시드를 업로드하지 않습니다."
+    "custodial": "일괄 보내기는 이 지갑의 시드를 보유한 자체 호스팅 walletd가 필요합니다. 이 앱은 시드를 업로드하지 않습니다.",
+    "partial": "{{total}}명 중 {{done}}명에게 지급한 뒤 {{line}}번째 줄에서 멈췄습니다: {{error}}. 다시 시도하기 전에 지급된 줄을 지우세요."
   },
   "walletMaintenance": {
     "title": "코인",

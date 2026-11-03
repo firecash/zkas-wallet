@@ -83,7 +83,8 @@
     "reviewSend": "Review & send {{n}}",
     "paid_one": "Paid {{payees}} recipients in {{count}} transaction.",
     "paid_other": "Paid {{payees}} recipients in {{count}} transactions.",
-    "custodial": "Batch send needs a self-hosted walletd that holds this wallet's seed. This app will not upload your seed to enable it."
+    "custodial": "Batch send needs a self-hosted walletd that holds this wallet's seed. This app will not upload your seed to enable it.",
+    "partial": "Paid {{done}} of {{total}} recipients, then stopped at line {{line}}: {{error}}. Remove the paid lines before trying again."
   },
   "walletMaintenance": {
     "title": "Notes",

@@ -1194,7 +1194,8 @@
     "reviewSend": "Prüfen & {{n}} senden",
     "paid_one": "{{payees}} Empfänger in {{count}} Transaktion bezahlt.",
     "paid_other": "{{payees}} Empfänger in {{count}} Transaktionen bezahlt.",
-    "custodial": "Stapel-Senden benötigt einen selbst gehosteten walletd, der das Seed dieses Wallets hält. Diese App lädt Ihr Seed nicht hoch, um es zu aktivieren."
+    "custodial": "Stapel-Senden benötigt einen selbst gehosteten walletd, der das Seed dieses Wallets hält. Diese App lädt Ihr Seed nicht hoch, um es zu aktivieren.",
+    "partial": "{{done}} von {{total}} Empfängern bezahlt, dann bei Zeile {{line}} angehalten: {{error}}. Entferne die bezahlten Zeilen, bevor du es erneut versuchst."
   },
   "nodeStartDialog": {
     "inbound": "Eingehende Peers erlauben",

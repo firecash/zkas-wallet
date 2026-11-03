@@ -1391,7 +1391,8 @@
     "reviewSend": "Rivedi e invia {{n}}",
     "paid_one": "Pagati {{payees}} destinatari in {{count}} transazione.",
     "paid_other": "Pagati {{payees}} destinatari in {{count}} transazioni.",
-    "custodial": "L'invio batch richiede un walletd self-hosted che detenga il seed di questo portafoglio. Questa app non caricherà il tuo seed per abilitarlo."
+    "custodial": "L'invio batch richiede un walletd self-hosted che detenga il seed di questo portafoglio. Questa app non caricherà il tuo seed per abilitarlo.",
+    "partial": "Pagati {{done}} destinatari su {{total}}, poi interrotto alla riga {{line}}: {{error}}. Rimuovi le righe pagate prima di riprovare."
   },
   "endpointField": {
     "hint": "IP e porta di un nodo qualsiasi — non deve essere su questo computer. Es. 203.0.113.5:16110",

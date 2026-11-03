@@ -1,6 +1,6 @@
 import { VerifyPayment } from "../PaymentProof";
 import { looksLikeAddress, networkOf } from "../lib/utils";
-import { consolidateNonCustodial } from "../noncustodial";
+import { consolidateNonCustodial, sendNonCustodial } from "../noncustodial";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
@@ -57,11 +57,31 @@ function BatchSend({ status, onRefresh }: { status: Status | null; onRefresh: ()
     setResult("");
     try {
       const payees = parsed.map(({ to, amount_sompi, memo }) => ({ to, amount_sompi: amount_sompi!.toString(), memo }));
-      // In browser mode this page holds the key: one transaction, proven here.
-      const response = browserModeChosen()
-        ? await browserSendMany(await resolveDeviceSeed(status?.address ?? undefined), payees)
-        : await api.sendMany(payees, feeSompi?.toString());
-      setResult(t("batchSend.paid", { payees: response.payees, count: response.tx_count }));
+      const seed = await resolveDeviceSeed(status?.address ?? undefined);
+      if (browserModeChosen()) {
+        // In browser mode this page holds the key: one transaction, proven here.
+        const response = await browserSendMany(seed, payees);
+        setResult(t("batchSend.paid", { payees: response.payees, count: response.tx_count }));
+      } else {
+        // Every wallet service holds this wallet watch-only, so the service-side
+        // /api/wallet/send-many (it needs the seed) only ever refused it. Pay each line as an
+        // ordinary payment instead: the service proves, this device signs. In order, and on a
+        // failure stop and say which line, so a retry never pays anyone twice.
+        let txs = 0;
+        for (let i = 0; i < parsed.length; i++) {
+          const row = parsed[i];
+          try {
+            const r = await sendNonCustodial(seed, networkOf(status), row.to, Number(row.amount_sompi!) / 1e8, feeSompi != null ? Number(feeSompi) : undefined, undefined, row.memo, true);
+            txs += r.txids?.length ?? 1;
+          } catch (e) {
+            if (i === 0) throw e;
+            setError(t("batchSend.partial", { done: i, total: parsed.length, line: row.line, error: (e as Error).message }));
+            onRefresh();
+            return;
+          }
+        }
+        setResult(t("batchSend.paid", { payees: parsed.length, count: txs }));
+      }
       onRefresh();
     } catch (e) {
       const message = (e as Error).message;

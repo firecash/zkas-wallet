@@ -1231,7 +1231,8 @@
     "reviewSend": "Sprawdź i wyślij {{n}}",
     "paid_one": "Zapłacono {{payees}} odbiorcom w {{count}} transakcji.",
     "paid_other": "Zapłacono {{payees}} odbiorcom w {{count}} transakcjach.",
-    "custodial": "Wysyłka zbiorcza wymaga samodzielnego hostowania walletd z ziarnem tego portfela. Ta aplikacja nie prześle Twojego ziarna, aby to umożliwić."
+    "custodial": "Wysyłka zbiorcza wymaga samodzielnego hostowania walletd z ziarnem tego portfela. Ta aplikacja nie prześle Twojego ziarna, aby to umożliwić.",
+    "partial": "Opłacono {{done}} z {{total}} odbiorców, potem zatrzymano na wierszu {{line}}: {{error}}. Usuń opłacone wiersze przed ponowną próbą."
   },
   "walletMaintenance": {
     "title": "Monety",

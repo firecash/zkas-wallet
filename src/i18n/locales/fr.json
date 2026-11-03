@@ -1231,7 +1231,8 @@
     "reviewSend": "Vérifier et envoyer {{n}}",
     "paid_one": "{{payees}} destinataires payés en {{count}} transaction.",
     "paid_other": "{{payees}} destinataires payés en {{count}} transactions.",
-    "custodial": "L'envoi groupé nécessite un walletd auto-hébergé détenant la phrase de récupération de ce portefeuille. Cette app ne la téléversera pas pour l'activer."
+    "custodial": "L'envoi groupé nécessite un walletd auto-hébergé détenant la phrase de récupération de ce portefeuille. Cette app ne la téléversera pas pour l'activer.",
+    "partial": "{{done}} destinataires sur {{total}} payés, puis arrêt à la ligne {{line}} : {{error}}. Retirez les lignes payées avant de réessayer."
   },
   "walletMaintenance": {
     "title": "Notes",

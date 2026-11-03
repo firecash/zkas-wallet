@@ -1231,7 +1231,8 @@
     "reviewSend": "Controleren & {{n}} verzenden",
     "paid_one": "{{payees}} ontvangers betaald in {{count}} transactie.",
     "paid_other": "{{payees}} ontvangers betaald in {{count}} transacties.",
-    "custodial": "Batch verzenden heeft een self-hosted walletd nodig die het seed van deze portemonnee heeft. Deze app uploadt je seed niet om dit in te schakelen."
+    "custodial": "Batch verzenden heeft een self-hosted walletd nodig die het seed van deze portemonnee heeft. Deze app uploadt je seed niet om dit in te schakelen.",
+    "partial": "{{done}} van {{total}} ontvangers betaald, daarna gestopt bij regel {{line}}: {{error}}. Haal de betaalde regels weg voordat je het opnieuw probeert."
   },
   "walletMaintenance": {
     "title": "Munten",

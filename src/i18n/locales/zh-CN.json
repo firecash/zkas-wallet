@@ -1231,7 +1231,8 @@
     "reviewSend": "审核并发送 {{n}}",
     "paid_one": "已支付 {{payees}} 个收款人，共 {{count}} 笔交易。",
     "paid_other": "已支付 {{payees}} 个收款人，共 {{count}} 笔交易。",
-    "custodial": "批量发送需要自托管 walletd 并持有此钱包的种子。本应用不会上传你的种子来启用此功能。"
+    "custodial": "批量发送需要自托管 walletd 并持有此钱包的种子。本应用不会上传你的种子来启用此功能。",
+    "partial": "已向 {{total}} 位收款人中的 {{done}} 位付款，随后在第 {{line}} 行停止：{{error}}。重试前请删除已付款的行。"
   },
   "walletMaintenance": {
     "title": "笔记",

@@ -1153,7 +1153,8 @@
     "reviewSend": "Revisar e enviar {{n}}",
     "paid_one": "{{payees}} destinatários pagos em {{count}} transação.",
     "paid_other": "{{payees}} destinatários pagos em {{count}} transações.",
-    "custodial": "Envio em lote precisa de um walletd próprio que tenha a semente desta carteira. Este app não enviará sua semente para ativá-lo."
+    "custodial": "Envio em lote precisa de um walletd próprio que tenha a semente desta carteira. Este app não enviará sua semente para ativá-lo.",
+    "partial": "Pagos {{done}} de {{total}} destinatários; parou na linha {{line}}: {{error}}. Remova as linhas pagas antes de tentar de novo."
   },
   "walletMaintenance": {
     "title": "Moedas",

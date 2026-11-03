@@ -1129,7 +1129,8 @@
     "reviewSend": "確認して{{n}}件送信",
     "paid_one": "{{payees}} 受取人に {{count}} 取引で支払いました。",
     "paid_other": "{{payees}} 受取人に {{count}} 取引で支払いました。",
-    "custodial": "一括送信には、このウォレットのシードを保持する自己ホスト型walletdが必要です。このアプリはシードをアップロードしません。"
+    "custodial": "一括送信には、このウォレットのシードを保持する自己ホスト型walletdが必要です。このアプリはシードをアップロードしません。",
+    "partial": "{{total}}件中{{done}}件に支払い、{{line}}行目で停止しました：{{error}}。再試行の前に支払い済みの行を削除してください。"
   },
   "walletMaintenance": {
     "title": "コイン",
