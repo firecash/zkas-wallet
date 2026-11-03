@@ -2154,5 +2154,15 @@
     "saved": "Đã lưu. Sẽ dùng lần tới ví chạy trên điện thoại này.",
     "failed": "Không thể áp dụng: {{error}}",
     "useDefault": "Dùng địa chỉ mặc định"
+  },
+  "serverError": {
+    "noNode": "Dịch vụ ví hiện không kết nối được mạng. Hãy thử lại sau ít phút.",
+    "retryShortly": "Chưa sẵn sàng. Hãy thử lại sau vài giây.",
+    "stillSyncing": "Vẫn đang đồng bộ. Bạn có thể thanh toán khi đồng bộ xong.",
+    "alreadySent": "Khoản thanh toán này đã được gửi (giao dịch {{txid}}…). Không gửi lại.",
+    "mergeCooldown": "Lần gộp xu gần nhất đã được chuẩn bị nhưng chưa gửi, nên lần sau phải chờ {{min}} phút. Thanh toán không bị ảnh hưởng.",
+    "notMatured": "Chưa đủ xu có thể chi. Xu nhận được và tiền thừa có thể chi khoảng 10 phút sau khi đến.",
+    "belowMinFee": "Số dư có thể chi thấp hơn phí mạng tối thiểu, nên hiện không thể gửi hay gộp gì.",
+    "badRecipient": "Đây không phải địa chỉ được che chắn ZKas hợp lệ."
   }
 }

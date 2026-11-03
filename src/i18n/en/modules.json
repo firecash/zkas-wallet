@@ -203,5 +203,15 @@
   },
   "watchonly": {
     "invalidViewKey": "That is not a valid view key."
+  },
+  "serverError": {
+    "noNode": "The wallet service cannot reach the network right now. Try again in a moment.",
+    "retryShortly": "Not ready yet. Try again in a few seconds.",
+    "stillSyncing": "Still syncing. You can pay once sync has finished.",
+    "alreadySent": "This payment was already sent (transaction {{txid}}…). It was not sent again.",
+    "mergeCooldown": "Your last coin merge was prepared but never sent, so the next one waits {{min}} min. Payments are not affected.",
+    "notMatured": "Not enough spendable coins yet. Coins you receive, and change, can be spent about 10 minutes after they arrive.",
+    "belowMinFee": "Your spendable balance is below the minimum network fee, so nothing can be sent or merged right now.",
+    "badRecipient": "That is not a valid ZKas shielded address."
   }
 }

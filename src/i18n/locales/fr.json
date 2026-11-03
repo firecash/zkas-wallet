@@ -2154,5 +2154,15 @@
     "saved": "Enregistré. Utilisé au prochain démarrage sur ce téléphone.",
     "failed": "Impossible d’appliquer : {{error}}",
     "useDefault": "Utiliser l’adresse par défaut"
+  },
+  "serverError": {
+    "noNode": "Le service de portefeuille n'atteint pas le réseau pour l'instant. Réessayez dans un moment.",
+    "retryShortly": "Pas encore prêt. Réessayez dans quelques secondes.",
+    "stillSyncing": "Synchronisation en cours. Vous pourrez payer une fois terminée.",
+    "alreadySent": "Ce paiement a déjà été envoyé (transaction {{txid}}…). Il n'a pas été renvoyé.",
+    "mergeCooldown": "Votre dernier regroupement de pièces a été préparé mais jamais envoyé ; le suivant attend donc {{min}} min. Les paiements ne sont pas concernés.",
+    "notMatured": "Pas encore assez de pièces disponibles. Les pièces reçues et la monnaie rendue sont utilisables environ 10 minutes après leur arrivée.",
+    "belowMinFee": "Votre solde disponible est inférieur aux frais réseau minimum ; rien ne peut être envoyé ni regroupé pour l'instant.",
+    "badRecipient": "Ce n'est pas une adresse ZKas protégée valide."
   }
 }

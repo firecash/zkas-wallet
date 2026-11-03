@@ -2154,5 +2154,15 @@
     "saved": "已保存。下次钱包在此手机上运行时使用。",
     "failed": "无法应用：{{error}}",
     "useDefault": "使用默认地址"
+  },
+  "serverError": {
+    "noNode": "钱包服务暂时无法连接网络，请稍后再试。",
+    "retryShortly": "尚未就绪，请几秒后再试。",
+    "stillSyncing": "仍在同步，同步完成后即可付款。",
+    "alreadySent": "这笔付款已经发送过了（交易 {{txid}}…），没有重复发送。",
+    "mergeCooldown": "上一次合并币已准备好但从未发送，因此下一次需等待 {{min}} 分钟。付款不受影响。",
+    "notMatured": "可花费的币还不够。收到的币和找零在到账约 10 分钟后才能花费。",
+    "belowMinFee": "可花费余额低于最低网络手续费，目前无法发送或合并。",
+    "badRecipient": "这不是有效的 ZKas 屏蔽地址。"
   }
 }

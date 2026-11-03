@@ -2154,5 +2154,15 @@
     "saved": "Salvato. Verrà usato al prossimo avvio su questo telefono.",
     "failed": "Impossibile applicare: {{error}}",
     "useDefault": "Usa l’indirizzo predefinito"
+  },
+  "serverError": {
+    "noNode": "Il servizio wallet non raggiunge la rete in questo momento. Riprova tra poco.",
+    "retryShortly": "Non ancora pronto. Riprova tra qualche secondo.",
+    "stillSyncing": "Sincronizzazione in corso. Potrai pagare quando sarà terminata.",
+    "alreadySent": "Questo pagamento è già stato inviato (transazione {{txid}}…). Non è stato inviato di nuovo.",
+    "mergeCooldown": "L'ultima unione di monete è stata preparata ma mai inviata, quindi la prossima attende {{min}} min. I pagamenti non sono interessati.",
+    "notMatured": "Non ci sono ancora abbastanza monete spendibili. Le monete ricevute e il resto sono spendibili circa 10 minuti dopo l'arrivo.",
+    "belowMinFee": "Il saldo spendibile è sotto la commissione minima di rete, quindi ora non si può inviare né unire nulla.",
+    "badRecipient": "Questo non è un indirizzo schermato ZKas valido."
   }
 }

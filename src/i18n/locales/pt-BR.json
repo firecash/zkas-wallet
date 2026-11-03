@@ -2154,5 +2154,15 @@
     "saved": "Salvo. Será usado na próxima vez que a carteira rodar neste telefone.",
     "failed": "Não foi possível aplicar: {{error}}",
     "useDefault": "Usar o endereço padrão"
+  },
+  "serverError": {
+    "noNode": "O serviço de carteira não alcança a rede agora. Tente de novo em instantes.",
+    "retryShortly": "Ainda não está pronto. Tente de novo em alguns segundos.",
+    "stillSyncing": "Ainda sincronizando. Você poderá pagar quando terminar.",
+    "alreadySent": "Este pagamento já foi enviado (transação {{txid}}…). Não foi enviado de novo.",
+    "mergeCooldown": "Sua última junção de moedas foi preparada mas nunca enviada, então a próxima espera {{min}} min. Os pagamentos não são afetados.",
+    "notMatured": "Ainda não há moedas disponíveis suficientes. Moedas recebidas e troco podem ser gastos cerca de 10 minutos após chegarem.",
+    "belowMinFee": "Seu saldo disponível está abaixo da taxa mínima da rede, então nada pode ser enviado ou juntado agora.",
+    "badRecipient": "Esse não é um endereço blindado ZKas válido."
   }
 }

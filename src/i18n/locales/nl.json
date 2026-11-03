@@ -2154,5 +2154,15 @@
     "saved": "Opgeslagen. Gebruikt bij de volgende start op deze telefoon.",
     "failed": "Kon niet worden toegepast: {{error}}",
     "useDefault": "Standaardadres gebruiken"
+  },
+  "serverError": {
+    "noNode": "De walletdienst bereikt het netwerk nu niet. Probeer het zo opnieuw.",
+    "retryShortly": "Nog niet klaar. Probeer het over een paar seconden opnieuw.",
+    "stillSyncing": "Nog aan het synchroniseren. Je kunt betalen zodra dat klaar is.",
+    "alreadySent": "Deze betaling is al verzonden (transactie {{txid}}…). Ze is niet opnieuw verzonden.",
+    "mergeCooldown": "Je laatste muntsamenvoeging is voorbereid maar nooit verzonden, dus de volgende wacht {{min}} min. Betalingen worden niet geraakt.",
+    "notMatured": "Nog niet genoeg besteedbare munten. Ontvangen munten en wisselgeld zijn ongeveer 10 minuten na aankomst besteedbaar.",
+    "belowMinFee": "Je besteedbare saldo ligt onder de minimale netwerkvergoeding, dus er kan nu niets verzonden of samengevoegd worden.",
+    "badRecipient": "Dat is geen geldig afgeschermd ZKas-adres."
   }
 }

@@ -2154,5 +2154,15 @@
     "saved": "Imehifadhiwa. Itatumika pochi itakapoendeshwa tena kwenye simu hii.",
     "failed": "Haikuweza kutumika: {{error}}",
     "useDefault": "Tumia anwani chaguo-msingi"
+  },
+  "serverError": {
+    "noNode": "Huduma ya pochi haiwezi kufikia mtandao sasa. Jaribu tena baada ya muda mfupi.",
+    "retryShortly": "Bado haiko tayari. Jaribu tena baada ya sekunde chache.",
+    "stillSyncing": "Bado inasawazisha. Utaweza kulipa usawazishaji ukimalizika.",
+    "alreadySent": "Malipo haya tayari yametumwa (muamala {{txid}}…). Hayakutumwa tena.",
+    "mergeCooldown": "Uunganishaji wako wa mwisho wa sarafu uliandaliwa lakini haukutumwa, hivyo unaofuata unasubiri dakika {{min}}. Malipo hayaathiriki.",
+    "notMatured": "Bado hakuna sarafu za kutosha za kutumia. Sarafu unazopokea na chenji zinaweza kutumiwa takriban dakika 10 baada ya kufika.",
+    "belowMinFee": "Salio lako la kutumia liko chini ya ada ya chini ya mtandao, hivyo hakuna kinachoweza kutumwa au kuunganishwa sasa.",
+    "badRecipient": "Hiyo si anwani halali ya ZKas iliyolindwa."
   }
 }

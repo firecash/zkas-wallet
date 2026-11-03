@@ -2154,5 +2154,15 @@
     "saved": "Guardado. Se usará la próxima vez que la billetera funcione en este teléfono.",
     "failed": "No se pudo aplicar: {{error}}",
     "useDefault": "Usar la dirección predeterminada"
+  },
+  "serverError": {
+    "noNode": "El servicio de billetera no llega a la red ahora mismo. Inténtalo de nuevo en un momento.",
+    "retryShortly": "Aún no está listo. Inténtalo de nuevo en unos segundos.",
+    "stillSyncing": "Aún sincronizando. Podrás pagar cuando termine la sincronización.",
+    "alreadySent": "Este pago ya se envió (transacción {{txid}}…). No se envió otra vez.",
+    "mergeCooldown": "Tu última combinación de monedas se preparó pero nunca se envió, así que la siguiente espera {{min}} min. Los pagos no se ven afectados.",
+    "notMatured": "Aún no hay suficientes monedas disponibles. Las monedas recibidas y el cambio se pueden gastar unos 10 minutos después de llegar.",
+    "belowMinFee": "Tu saldo disponible está por debajo de la comisión mínima de la red, así que ahora no se puede enviar ni combinar nada.",
+    "badRecipient": "Esa no es una dirección blindada de ZKas válida."
   }
 }

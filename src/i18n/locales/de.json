@@ -2154,5 +2154,15 @@
     "saved": "Gespeichert. Gilt beim nächsten Start auf diesem Telefon.",
     "failed": "Konnte nicht übernommen werden: {{error}}",
     "useDefault": "Standardadresse verwenden"
+  },
+  "serverError": {
+    "noNode": "Der Wallet-Dienst erreicht das Netzwerk gerade nicht. Versuche es gleich noch einmal.",
+    "retryShortly": "Noch nicht bereit. Versuche es in ein paar Sekunden erneut.",
+    "stillSyncing": "Synchronisiert noch. Du kannst zahlen, sobald die Synchronisierung fertig ist.",
+    "alreadySent": "Diese Zahlung wurde bereits gesendet (Transaktion {{txid}}…). Sie wurde nicht erneut gesendet.",
+    "mergeCooldown": "Deine letzte Münzzusammenführung wurde vorbereitet, aber nie gesendet; die nächste wartet daher {{min}} Min. Zahlungen sind nicht betroffen.",
+    "notMatured": "Noch nicht genug ausgebbare Münzen. Empfangene Münzen und Wechselgeld sind etwa 10 Minuten nach Eingang ausgebbar.",
+    "belowMinFee": "Dein ausgebbares Guthaben liegt unter der minimalen Netzwerkgebühr, daher kann gerade nichts gesendet oder zusammengeführt werden.",
+    "badRecipient": "Das ist keine gültige abgeschirmte ZKas-Adresse."
   }
 }

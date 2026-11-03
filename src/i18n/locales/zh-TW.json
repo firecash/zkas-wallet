@@ -2154,5 +2154,15 @@
     "saved": "已儲存。下次錢包在此手機上執行時使用。",
     "failed": "無法套用：{{error}}",
     "useDefault": "使用預設位址"
+  },
+  "serverError": {
+    "noNode": "錢包服務暫時無法連線網路，請稍後再試。",
+    "retryShortly": "尚未就緒，請幾秒後再試。",
+    "stillSyncing": "仍在同步，同步完成後即可付款。",
+    "alreadySent": "這筆付款已經送出過了（交易 {{txid}}…），沒有重複送出。",
+    "mergeCooldown": "上一次合併幣已準備好但從未送出，因此下一次需等待 {{min}} 分鐘。付款不受影響。",
+    "notMatured": "可花費的幣還不夠。收到的幣和找零在到帳約 10 分鐘後才能花費。",
+    "belowMinFee": "可花費餘額低於最低網路手續費，目前無法送出或合併。",
+    "badRecipient": "這不是有效的 ZKas 屏蔽地址。"
   }
 }

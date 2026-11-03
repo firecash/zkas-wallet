@@ -2154,5 +2154,15 @@
     "saved": "Kaydedildi. Cüzdan bu telefonda bir sonraki çalıştığında kullanılır.",
     "failed": "Uygulanamadı: {{error}}",
     "useDefault": "Varsayılan adresi kullan"
+  },
+  "serverError": {
+    "noNode": "Cüzdan servisi şu anda ağa ulaşamıyor. Birazdan tekrar deneyin.",
+    "retryShortly": "Henüz hazır değil. Birkaç saniye sonra tekrar deneyin.",
+    "stillSyncing": "Hâlâ eşitleniyor. Eşitleme bitince ödeme yapabilirsiniz.",
+    "alreadySent": "Bu ödeme zaten gönderildi (işlem {{txid}}…). Tekrar gönderilmedi.",
+    "mergeCooldown": "Son para birleştirmeniz hazırlandı ama gönderilmedi, bu yüzden sonraki {{min}} dk bekliyor. Ödemeler etkilenmez.",
+    "notMatured": "Henüz yeterli harcanabilir para yok. Gelen paralar ve para üstü, gelişten yaklaşık 10 dakika sonra harcanabilir.",
+    "belowMinFee": "Harcanabilir bakiyeniz asgari ağ ücretinin altında, bu yüzden şu anda hiçbir şey gönderilemez veya birleştirilemez.",
+    "badRecipient": "Bu geçerli bir ZKas korumalı adresi değil."
   }
 }

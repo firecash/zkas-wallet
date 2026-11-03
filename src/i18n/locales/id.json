@@ -2154,5 +2154,15 @@
     "saved": "Disimpan. Dipakai saat dompet berjalan lagi di ponsel ini.",
     "failed": "Tidak bisa diterapkan: {{error}}",
     "useDefault": "Pakai alamat bawaan"
+  },
+  "serverError": {
+    "noNode": "Layanan dompet tidak bisa menjangkau jaringan saat ini. Coba lagi sebentar lagi.",
+    "retryShortly": "Belum siap. Coba lagi dalam beberapa detik.",
+    "stillSyncing": "Masih menyinkronkan. Anda bisa membayar setelah sinkronisasi selesai.",
+    "alreadySent": "Pembayaran ini sudah dikirim (transaksi {{txid}}…). Tidak dikirim lagi.",
+    "mergeCooldown": "Penggabungan koin terakhir Anda disiapkan tetapi tidak pernah dikirim, jadi berikutnya menunggu {{min}} mnt. Pembayaran tidak terpengaruh.",
+    "notMatured": "Belum cukup koin yang bisa dibelanjakan. Koin yang diterima dan kembalian bisa dibelanjakan sekitar 10 menit setelah tiba.",
+    "belowMinFee": "Saldo yang bisa dibelanjakan di bawah biaya jaringan minimum, jadi saat ini tidak ada yang bisa dikirim atau digabungkan.",
+    "badRecipient": "Itu bukan alamat terlindung ZKas yang valid."
   }
 }

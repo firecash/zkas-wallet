@@ -2154,5 +2154,15 @@
     "saved": "Zapisano. Użyte przy następnym uruchomieniu na tym telefonie.",
     "failed": "Nie udało się zastosować: {{error}}",
     "useDefault": "Użyj adresu domyślnego"
+  },
+  "serverError": {
+    "noNode": "Usługa portfela nie łączy się teraz z siecią. Spróbuj ponownie za chwilę.",
+    "retryShortly": "Jeszcze nie gotowe. Spróbuj ponownie za kilka sekund.",
+    "stillSyncing": "Trwa synchronizacja. Zapłacisz, gdy się zakończy.",
+    "alreadySent": "Ta płatność została już wysłana (transakcja {{txid}}…). Nie wysłano jej ponownie.",
+    "mergeCooldown": "Ostatnie łączenie monet przygotowano, ale nie wysłano, więc następne czeka {{min}} min. Nie dotyczy to płatności.",
+    "notMatured": "Za mało monet do wydania. Otrzymane monety i reszta są dostępne około 10 minut po nadejściu.",
+    "belowMinFee": "Saldo do wydania jest poniżej minimalnej opłaty sieciowej, więc teraz nie można nic wysłać ani połączyć.",
+    "badRecipient": "To nie jest prawidłowy chroniony adres ZKas."
   }
 }
