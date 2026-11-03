@@ -1192,7 +1192,8 @@
     "paid_one": "Đã trả {{payees}} người nhận trong {{count}} giao dịch.",
     "paid_other": "Đã trả {{payees}} người nhận trong {{count}} giao dịch.",
     "custodial": "Gửi hàng loạt cần walletd tự lưu trữ chứa hạt giống ví này. Ứng dụng sẽ không tải hạt giống lên.",
-    "partial": "Đã trả {{done}} trên {{total}} người nhận, rồi dừng ở dòng {{line}}: {{error}}. Xóa các dòng đã trả trước khi thử lại."
+    "partial": "Đã trả {{done}} trên {{total}} người nhận, rồi dừng ở dòng {{line}}: {{error}}. Xóa các dòng đã trả trước khi thử lại.",
+    "decimalComma": "Dòng {{line}}: dùng dấu chấm cho phần thập phân (1.5, không phải 1,5). Dấu phẩy ngăn cách địa chỉ, số tiền và ghi chú."
   },
   "walletMaintenance": {
     "title": "Đồng",

@@ -1167,7 +1167,8 @@
     "paid_one": "{{payees}} alıcıya {{count}} işlemde ödendi.",
     "paid_other": "{{payees}} alıcıya {{count}} işlemde ödendi.",
     "custodial": "Toplu gönder, bu cüzdanın tohumunu tutan kendi barındırdığınız bir walletd gerektirir. Bu uygulama etkinleştirmek için tohumunuzu yüklemez.",
-    "partial": "{{total}} alıcıdan {{done}} tanesine ödendi, ardından {{line}}. satırda durdu: {{error}}. Tekrar denemeden önce ödenen satırları silin."
+    "partial": "{{total}} alıcıdan {{done}} tanesine ödendi, ardından {{line}}. satırda durdu: {{error}}. Tekrar denemeden önce ödenen satırları silin.",
+    "decimalComma": "Satır {{line}}: ondalık için nokta kullanın (1,5 değil 1.5). Virgüller adresi, tutarı ve notu ayırır."
   },
   "walletMaintenance": {
     "title": "Jetonlar",

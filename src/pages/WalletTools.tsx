@@ -1,5 +1,5 @@
 import { VerifyPayment } from "../PaymentProof";
-import { looksLikeAddress, networkOf } from "../lib/utils";
+import { looksLikeAddress, networkOf, sanitizeAmountInput } from "../lib/utils";
 import { consolidateNonCustodial, sendNonCustodial } from "../noncustodial";
 import { exclusiveMerge } from "../useMaintenance";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -11,11 +11,10 @@ import { resolveDeviceSeed } from "../lib/deviceseed";
 
 type ToolTab = "batch" | "maintenance" | "verify";
 
-function cleanAmount(value: string): string {
-  const stripped = value.replace(/[^0-9.]/g, "");
-  const [whole, ...rest] = stripped.split(".");
-  return rest.length ? `${whole}.${rest.join("").slice(0, 8)}` : whole;
-}
+// The fee field goes through the app's one money sanitiser. This file had its own, which
+// deleted every non-[0-9.] character: a comma-decimal "0,03" became "003", a 3 ZKAS fee, and
+// a fee the user chose also raises the signing ceiling.
+const cleanAmount = sanitizeAmountInput;
 
 function parseSompi(value: string): bigint | null {
   const match = value.trim().match(/^(\d+)(?:\.(\d{1,8}))?$/);
@@ -39,8 +38,12 @@ function BatchSend({ status, onRefresh }: { status: Status | null; onRefresh: ()
   const [error, setError] = useState("");
   const parsed = useMemo(() => rows.split(/\r?\n/).map((line, index) => {
     const [to = "", rawAmount = "", ...memo] = line.split(",");
-    const amount_sompi = parseSompi(rawAmount);
-    return { line: index + 1, to: to.trim(), amount_sompi, memo: memo.join(",").trim() || undefined };
+    // Lines are comma-separated, so a decimal comma cannot be told from a separator:
+    // "address,1,5" read as 1 ZKAS with memo "5" and paid 1 instead of 1.5. A whole amount
+    // followed by a memo of only digits is refused as ambiguous: write 1.5 (or 1.0).
+    const ambiguous = !rawAmount.includes(".") && /^\s*\d{1,8}\s*$/.test(memo[0] ?? "");
+    const amount_sompi = ambiguous ? null : parseSompi(rawAmount);
+    return { line: index + 1, to: to.trim(), amount_sompi, memo: memo.join(",").trim() || undefined, ambiguous };
   }).filter((row) => row.to || row.amount_sompi != null), [rows]);
   // looksLikeAddress, not a local regex. This file had its own —
   // `/^(zkas|firecash):[a-z0-9]{50,100}$/i` — which accepts `b`, `i`, `o` and `1`: the four
@@ -97,7 +100,7 @@ function BatchSend({ status, onRefresh }: { status: Status | null; onRefresh: ()
       <p><Trans i18nKey="batchSend.intro" components={{ code: <code /> }} /></p>
       <textarea className="control-input mono batch-input" rows={9} value={rows} onChange={(event) => setRows(event.target.value)} placeholder={t("batchSend.placeholder")} />
       <div className="batch-summary"><span>{t("batchSend.recipients", { n: parsed.length })}</span><strong>{t("batchSend.totalZkas", { amount: formatSompi(total) })}</strong></div>
-      {invalid && <div className="control-error">{t("batchSend.invalidLine", { line: invalid.line })}</div>}
+      {invalid && <div className="control-error">{invalid.ambiguous ? t("batchSend.decimalComma", { line: invalid.line }) : t("batchSend.invalidLine", { line: invalid.line })}</div>}
       {fee && feeSompi == null && <div className="control-error">{t("batchSend.feeError")}</div>}
       <details className="advanced-details"><summary>{t("batchSend.advancedFee")}</summary><label className="field-label">{t("batchSend.feePerTx")}<input className="control-input short-field" inputMode="decimal" value={fee} onChange={(event) => setFee(cleanAmount(event.target.value))} placeholder={t("batchSend.automatic")} /></label><p className="subtle">{t("batchSend.feeNote")}</p></details>
       {error && <div className="control-error">{error}</div>}

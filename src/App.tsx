@@ -7334,7 +7334,7 @@ function Send({
         <div id="fee-config">
           <input
             value={customFee}
-            onChange={(e) => setCustomFee(e.target.value.replace(/[^0-9.]/g, ""))}
+            onChange={(e) => setCustomFee(sanitizeAmountInput(e.target.value))}
             placeholder={t("send.feePlaceholder", { min: Number(feeFloorFc.toFixed(8)), max: Number(feeReserve.toFixed(8)) })}
             inputMode="decimal"
             autoFocus

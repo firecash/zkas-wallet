@@ -1199,7 +1199,8 @@
     "paid_one": "Se pagó a {{payees}} destinatarios en {{count}} transacción.",
     "paid_other": "Se pagó a {{payees}} destinatarios en {{count}} transacciones.",
     "custodial": "El envío en lote necesita un walletd propio con la semilla de esta billetera. Esta app no subirá tu semilla para habilitarlo.",
-    "partial": "Se pagó a {{done}} de {{total}} destinatarios y se detuvo en la línea {{line}}: {{error}}. Quita las líneas pagadas antes de volver a intentarlo."
+    "partial": "Se pagó a {{done}} de {{total}} destinatarios y se detuvo en la línea {{line}}: {{error}}. Quita las líneas pagadas antes de volver a intentarlo.",
+    "decimalComma": "Línea {{line}}: usa punto para los decimales (1.5, no 1,5). Las comas separan dirección, importe y nota."
   },
   "walletMaintenance": {
     "title": "Notas",

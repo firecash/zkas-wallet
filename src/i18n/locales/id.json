@@ -1235,7 +1235,8 @@
     "paid_one": "Dibayar {{payees}} penerima dalam {{count}} transaksi.",
     "paid_other": "Dibayar {{payees}} penerima dalam {{count}} transaksi.",
     "custodial": "Kirim massal butuh walletd mandiri yang menyimpan seed dompet ini. Aplikasi tidak akan unggah seed Anda.",
-    "partial": "Membayar {{done}} dari {{total}} penerima, lalu berhenti di baris {{line}}: {{error}}. Hapus baris yang sudah dibayar sebelum mencoba lagi."
+    "partial": "Membayar {{done}} dari {{total}} penerima, lalu berhenti di baris {{line}}: {{error}}. Hapus baris yang sudah dibayar sebelum mencoba lagi.",
+    "decimalComma": "Baris {{line}}: gunakan titik untuk desimal (1.5, bukan 1,5). Koma memisahkan alamat, jumlah, dan catatan."
   },
   "walletMaintenance": {
     "title": "Koin",

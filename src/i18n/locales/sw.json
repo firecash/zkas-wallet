@@ -1235,7 +1235,8 @@
     "paid_one": "Imelipa {{payees}} wapokeaji katika muamala {{count}}.",
     "paid_other": "Imelipa {{payees}} wapokeaji katika muamala {{count}}.",
     "custodial": "Tuma kwa wingi inahitaji walletd inayojitegemea yenye mbegu ya mkoba huu. Programu hii haitapakia mbegu yako.",
-    "partial": "Imelipa wapokeaji {{done}} kati ya {{total}}, kisha imesimama kwenye mstari {{line}}: {{error}}. Ondoa mistari iliyolipwa kabla ya kujaribu tena."
+    "partial": "Imelipa wapokeaji {{done}} kati ya {{total}}, kisha imesimama kwenye mstari {{line}}: {{error}}. Ondoa mistari iliyolipwa kabla ya kujaribu tena.",
+    "decimalComma": "Mstari {{line}}: tumia nukta kwa desimali (1.5, si 1,5). Koma hutenganisha anwani, kiasi na maelezo."
   },
   "walletMaintenance": {
     "title": "Sarafu",

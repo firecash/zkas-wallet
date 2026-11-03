@@ -1201,7 +1201,8 @@
     "paid_one": "Dibayar {{payees}} penerima dalam {{count}} transaksi.",
     "paid_other": "Dibayar {{payees}} penerima dalam {{count}} transaksi.",
     "custodial": "Hantar kelompok perlukan walletd sendiri yang pegang benih dompet ini. Aplikasi ini tak akan muat naik benih anda untuk mengaktifkannya.",
-    "partial": "Membayar {{done}} daripada {{total}} penerima, kemudian berhenti di baris {{line}}: {{error}}. Buang baris yang sudah dibayar sebelum mencuba lagi."
+    "partial": "Membayar {{done}} daripada {{total}} penerima, kemudian berhenti di baris {{line}}: {{error}}. Buang baris yang sudah dibayar sebelum mencuba lagi.",
+    "decimalComma": "Baris {{line}}: guna titik untuk perpuluhan (1.5, bukan 1,5). Koma memisahkan alamat, jumlah dan nota."
   },
   "walletMaintenance": {
     "title": "Syiling",
