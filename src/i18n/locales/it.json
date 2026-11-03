@@ -2185,6 +2185,16 @@
     "mergeCooldown": "L'ultima unione di monete è stata preparata ma mai inviata, quindi la prossima attende {{min}} min. I pagamenti non sono interessati.",
     "notMatured": "Non ci sono ancora abbastanza monete spendibili. Le monete ricevute e il resto sono spendibili circa 10 minuti dopo l'arrivo.",
     "belowMinFee": "Il saldo spendibile è sotto la commissione minima di rete, quindi ora non si può inviare né unire nulla.",
-    "badRecipient": "Questo non è un indirizzo schermato ZKas valido."
+    "badRecipient": "Questo non è un indirizzo schermato ZKas valido.",
+    "alreadyClaimed": "Alcune di queste monete sono già state spese. Attendi che il saldo si aggiorni, poi riprova.",
+    "refused": "La rete ha rifiutato questo pagamento. Non è stato inviato nulla.",
+    "browserStarting": "Il wallet in questo browser si sta ancora avviando. Riprova tra un momento.",
+    "browserSlow": "Il pagamento ha impiegato troppo a prepararsi in questo browser. Controlla la cronologia prima di riprovare.",
+    "browserStopped": "Il wallet in questo browser è stato fermato o cambiato prima che il pagamento partisse. Non è stato inviato nulla.",
+    "browserOutdated": "Il motore del wallet di questo browser non è aggiornato. Ricarica la pagina.",
+    "browserUnknown": "La connessione si è interrotta durante l'invio, quindi non si sa se il pagamento è partito. Controlla la cronologia tra un minuto. Le sue monete restano trattenute nel frattempo, quindi riprovare non può pagare due volte.",
+    "browserNoWallet": "In questo browser non c'è alcun wallet.",
+    "browserStorage": "Questo browser non ha salvato l'impostazione.",
+    "browserClearnet": "Esegui in questo browser richiede l'accesso clearnet, disattivato in modalità Tor."
   }
 }

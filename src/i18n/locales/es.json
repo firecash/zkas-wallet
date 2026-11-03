@@ -2185,6 +2185,16 @@
     "mergeCooldown": "Tu última combinación de monedas se preparó pero nunca se envió, así que la siguiente espera {{min}} min. Los pagos no se ven afectados.",
     "notMatured": "Aún no hay suficientes monedas disponibles. Las monedas recibidas y el cambio se pueden gastar unos 10 minutos después de llegar.",
     "belowMinFee": "Tu saldo disponible está por debajo de la comisión mínima de la red, así que ahora no se puede enviar ni combinar nada.",
-    "badRecipient": "Esa no es una dirección blindada de ZKas válida."
+    "badRecipient": "Esa no es una dirección blindada de ZKas válida.",
+    "alreadyClaimed": "Algunas de estas monedas ya se gastaron. Espera a que se actualice el saldo y vuelve a intentarlo.",
+    "refused": "La red rechazó este pago. No se envió nada.",
+    "browserStarting": "La billetera de este navegador aún se está iniciando. Inténtalo de nuevo en un momento.",
+    "browserSlow": "El pago tardó demasiado en prepararse en este navegador. Revisa el historial antes de reintentar.",
+    "browserStopped": "La billetera de este navegador se detuvo o se cambió antes de que saliera el pago. No se envió nada.",
+    "browserOutdated": "El motor de billetera de este navegador está desactualizado. Recarga la página.",
+    "browserUnknown": "La conexión se cortó al enviar, así que no se sabe si el pago salió. Revisa el historial en un minuto. Sus monedas quedan retenidas mientras tanto, así que reintentar no puede pagar dos veces.",
+    "browserNoWallet": "No hay ninguna billetera en este navegador.",
+    "browserStorage": "Este navegador no guardó el ajuste.",
+    "browserClearnet": "Ejecutar en este navegador necesita acceso a clearnet, que está desactivado en modo Tor."
   }
 }

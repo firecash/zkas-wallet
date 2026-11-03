@@ -2170,6 +2170,16 @@
     "mergeCooldown": "Penggabungan syiling terakhir anda disediakan tetapi tidak dihantar, jadi yang seterusnya menunggu {{min}} min. Pembayaran tidak terjejas.",
     "notMatured": "Belum cukup syiling yang boleh dibelanjakan. Syiling yang diterima dan baki boleh dibelanjakan kira-kira 10 minit selepas tiba.",
     "belowMinFee": "Baki yang boleh dibelanjakan di bawah yuran rangkaian minimum, jadi tiada apa boleh dihantar atau digabungkan sekarang.",
-    "badRecipient": "Itu bukan alamat terlindung ZKas yang sah."
+    "badRecipient": "Itu bukan alamat terlindung ZKas yang sah.",
+    "alreadyClaimed": "Sebahagian syiling ini sudah dibelanjakan. Tunggu sebentar sehingga baki dikemas kini, kemudian cuba lagi.",
+    "refused": "Rangkaian menolak pembayaran ini. Tiada apa dihantar.",
+    "browserStarting": "Dompet dalam pelayar ini masih bermula. Cuba lagi sebentar lagi.",
+    "browserSlow": "Pembayaran terlalu lama disediakan dalam pelayar ini. Semak Sejarah sebelum mencuba lagi.",
+    "browserStopped": "Dompet dalam pelayar ini dihentikan atau ditukar sebelum pembayaran keluar. Tiada apa dihantar.",
+    "browserOutdated": "Enjin dompet pelayar ini sudah lapuk. Muat semula halaman.",
+    "browserUnknown": "Sambungan terputus semasa menghantar, jadi tidak diketahui sama ada pembayaran keluar. Semak Sejarah dalam seminit. Syilingnya ditahan buat sementara, jadi mencuba lagi tidak boleh membayar dua kali.",
+    "browserNoWallet": "Tiada dompet dalam pelayar ini.",
+    "browserStorage": "Pelayar ini tidak menyimpan tetapan.",
+    "browserClearnet": "Jalankan dalam pelayar ini memerlukan akses clearnet, yang dimatikan dalam mod Tor."
   }
 }

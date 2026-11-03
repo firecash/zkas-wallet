@@ -2170,6 +2170,16 @@
     "mergeCooldown": "Deine letzte Münzzusammenführung wurde vorbereitet, aber nie gesendet; die nächste wartet daher {{min}} Min. Zahlungen sind nicht betroffen.",
     "notMatured": "Noch nicht genug ausgebbare Münzen. Empfangene Münzen und Wechselgeld sind etwa 10 Minuten nach Eingang ausgebbar.",
     "belowMinFee": "Dein ausgebbares Guthaben liegt unter der minimalen Netzwerkgebühr, daher kann gerade nichts gesendet oder zusammengeführt werden.",
-    "badRecipient": "Das ist keine gültige abgeschirmte ZKas-Adresse."
+    "badRecipient": "Das ist keine gültige abgeschirmte ZKas-Adresse.",
+    "alreadyClaimed": "Einige dieser Münzen wurden bereits ausgegeben. Warte kurz, bis sich das Guthaben aktualisiert, und versuche es erneut.",
+    "refused": "Das Netzwerk hat diese Zahlung abgelehnt. Es wurde nichts gesendet.",
+    "browserStarting": "Die Wallet in diesem Browser startet noch. Versuche es gleich noch einmal.",
+    "browserSlow": "Die Zahlung hat in diesem Browser zu lange zur Vorbereitung gebraucht. Prüfe den Verlauf, bevor du es erneut versuchst.",
+    "browserStopped": "Die Wallet in diesem Browser wurde gestoppt oder gewechselt, bevor die Zahlung rausging. Es wurde nichts gesendet.",
+    "browserOutdated": "Die Wallet-Engine dieses Browsers ist veraltet. Lade die Seite neu.",
+    "browserUnknown": "Die Verbindung brach beim Senden ab, daher ist unklar, ob die Zahlung rausging. Prüfe in einer Minute den Verlauf. Ihre Münzen bleiben solange zurückgehalten, ein erneuter Versuch kann also nicht doppelt zahlen.",
+    "browserNoWallet": "In diesem Browser gibt es keine Wallet.",
+    "browserStorage": "Dieser Browser hat die Einstellung nicht gespeichert.",
+    "browserClearnet": "„In diesem Browser ausführen“ braucht Clearnet-Zugang, der im Tor-Modus aus ist."
   }
 }

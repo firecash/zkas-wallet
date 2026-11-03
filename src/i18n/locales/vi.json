@@ -2170,6 +2170,16 @@
     "mergeCooldown": "Lần gộp xu gần nhất đã được chuẩn bị nhưng chưa gửi, nên lần sau phải chờ {{min}} phút. Thanh toán không bị ảnh hưởng.",
     "notMatured": "Chưa đủ xu có thể chi. Xu nhận được và tiền thừa có thể chi khoảng 10 phút sau khi đến.",
     "belowMinFee": "Số dư có thể chi thấp hơn phí mạng tối thiểu, nên hiện không thể gửi hay gộp gì.",
-    "badRecipient": "Đây không phải địa chỉ được che chắn ZKas hợp lệ."
+    "badRecipient": "Đây không phải địa chỉ được che chắn ZKas hợp lệ.",
+    "alreadyClaimed": "Một số xu này đã được chi. Chờ số dư cập nhật rồi thử lại.",
+    "refused": "Mạng đã từ chối khoản thanh toán này. Không có gì được gửi.",
+    "browserStarting": "Ví trong trình duyệt này vẫn đang khởi động. Hãy thử lại sau giây lát.",
+    "browserSlow": "Khoản thanh toán chuẩn bị quá lâu trong trình duyệt này. Hãy xem Lịch sử trước khi thử lại.",
+    "browserStopped": "Ví trong trình duyệt này đã bị dừng hoặc chuyển trước khi thanh toán được gửi. Không có gì được gửi.",
+    "browserOutdated": "Bộ máy ví của trình duyệt này đã cũ. Hãy tải lại trang.",
+    "browserUnknown": "Kết nối bị ngắt khi đang gửi nên không rõ thanh toán đã đi chưa. Hãy xem Lịch sử sau một phút. Trong lúc đó các xu của nó bị giữ lại, nên thử lại không thể trả hai lần.",
+    "browserNoWallet": "Không có ví nào trong trình duyệt này.",
+    "browserStorage": "Trình duyệt này không lưu cài đặt.",
+    "browserClearnet": "Chạy trong trình duyệt này cần truy cập clearnet, vốn bị tắt ở chế độ Tor."
   }
 }

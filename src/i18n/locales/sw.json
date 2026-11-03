@@ -2170,6 +2170,16 @@
     "mergeCooldown": "Uunganishaji wako wa mwisho wa sarafu uliandaliwa lakini haukutumwa, hivyo unaofuata unasubiri dakika {{min}}. Malipo hayaathiriki.",
     "notMatured": "Bado hakuna sarafu za kutosha za kutumia. Sarafu unazopokea na chenji zinaweza kutumiwa takriban dakika 10 baada ya kufika.",
     "belowMinFee": "Salio lako la kutumia liko chini ya ada ya chini ya mtandao, hivyo hakuna kinachoweza kutumwa au kuunganishwa sasa.",
-    "badRecipient": "Hiyo si anwani halali ya ZKas iliyolindwa."
+    "badRecipient": "Hiyo si anwani halali ya ZKas iliyolindwa.",
+    "alreadyClaimed": "Baadhi ya sarafu hizi zimeshatumika. Subiri salio lisasishwe, kisha jaribu tena.",
+    "refused": "Mtandao umekataa malipo haya. Hakuna kilichotumwa.",
+    "browserStarting": "Pochi katika kivinjari hiki bado inaanza. Jaribu tena baada ya muda mfupi.",
+    "browserSlow": "Malipo yalichukua muda mrefu mno kuandaliwa katika kivinjari hiki. Angalia Historia kabla ya kujaribu tena.",
+    "browserStopped": "Pochi katika kivinjari hiki ilisimamishwa au kubadilishwa kabla malipo hayajatoka. Hakuna kilichotumwa.",
+    "browserOutdated": "Injini ya pochi ya kivinjari hiki imepitwa na wakati. Pakia ukurasa upya.",
+    "browserUnknown": "Muunganisho ulikatika wakati wa kutuma, kwa hiyo haijulikani kama malipo yametoka. Angalia Historia baada ya dakika moja. Sarafu zake zinashikiliwa kwa sasa, kwa hiyo kujaribu tena hakuwezi kulipa mara mbili.",
+    "browserNoWallet": "Hakuna pochi katika kivinjari hiki.",
+    "browserStorage": "Kivinjari hiki hakikuhifadhi mpangilio.",
+    "browserClearnet": "Kuendesha katika kivinjari hiki kunahitaji ufikiaji wa clearnet, ambao umezimwa katika hali ya Tor."
   }
 }

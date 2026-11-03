@@ -2170,6 +2170,16 @@
     "mergeCooldown": "Penggabungan koin terakhir Anda disiapkan tetapi tidak pernah dikirim, jadi berikutnya menunggu {{min}} mnt. Pembayaran tidak terpengaruh.",
     "notMatured": "Belum cukup koin yang bisa dibelanjakan. Koin yang diterima dan kembalian bisa dibelanjakan sekitar 10 menit setelah tiba.",
     "belowMinFee": "Saldo yang bisa dibelanjakan di bawah biaya jaringan minimum, jadi saat ini tidak ada yang bisa dikirim atau digabungkan.",
-    "badRecipient": "Itu bukan alamat terlindung ZKas yang valid."
+    "badRecipient": "Itu bukan alamat terlindung ZKas yang valid.",
+    "alreadyClaimed": "Sebagian koin ini sudah terpakai. Tunggu sebentar hingga saldo diperbarui, lalu coba lagi.",
+    "refused": "Jaringan menolak pembayaran ini. Tidak ada yang dikirim.",
+    "browserStarting": "Dompet di browser ini masih dimulai. Coba lagi sebentar lagi.",
+    "browserSlow": "Pembayaran terlalu lama disiapkan di browser ini. Periksa Riwayat sebelum mencoba lagi.",
+    "browserStopped": "Dompet di browser ini dihentikan atau diganti sebelum pembayaran terkirim. Tidak ada yang dikirim.",
+    "browserOutdated": "Mesin dompet browser ini sudah usang. Muat ulang halaman.",
+    "browserUnknown": "Koneksi terputus saat mengirim, jadi tidak diketahui apakah pembayaran terkirim. Periksa Riwayat dalam semenit. Koinnya ditahan sementara, jadi mencoba lagi tidak bisa membayar dua kali.",
+    "browserNoWallet": "Tidak ada dompet di browser ini.",
+    "browserStorage": "Browser ini tidak menyimpan pengaturan.",
+    "browserClearnet": "Jalankan di browser ini memerlukan akses clearnet, yang mati dalam mode Tor."
   }
 }

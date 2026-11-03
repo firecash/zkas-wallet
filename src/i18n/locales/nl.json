@@ -2170,6 +2170,16 @@
     "mergeCooldown": "Je laatste muntsamenvoeging is voorbereid maar nooit verzonden, dus de volgende wacht {{min}} min. Betalingen worden niet geraakt.",
     "notMatured": "Nog niet genoeg besteedbare munten. Ontvangen munten en wisselgeld zijn ongeveer 10 minuten na aankomst besteedbaar.",
     "belowMinFee": "Je besteedbare saldo ligt onder de minimale netwerkvergoeding, dus er kan nu niets verzonden of samengevoegd worden.",
-    "badRecipient": "Dat is geen geldig afgeschermd ZKas-adres."
+    "badRecipient": "Dat is geen geldig afgeschermd ZKas-adres.",
+    "alreadyClaimed": "Sommige van deze munten zijn al uitgegeven. Wacht even tot het saldo is bijgewerkt en probeer het opnieuw.",
+    "refused": "Het netwerk weigerde deze betaling. Er is niets verzonden.",
+    "browserStarting": "De wallet in deze browser start nog. Probeer het zo opnieuw.",
+    "browserSlow": "De betaling deed er in deze browser te lang over. Controleer de geschiedenis voor je het opnieuw probeert.",
+    "browserStopped": "De wallet in deze browser werd gestopt of gewisseld voordat de betaling vertrok. Er is niets verzonden.",
+    "browserOutdated": "De wallet-engine van deze browser is verouderd. Laad de pagina opnieuw.",
+    "browserUnknown": "De verbinding viel weg tijdens het verzenden, dus het is onbekend of de betaling is vertrokken. Kijk over een minuut in de geschiedenis. De munten worden intussen vastgehouden, dus opnieuw proberen kan niet dubbel betalen.",
+    "browserNoWallet": "Er is geen wallet in deze browser.",
+    "browserStorage": "Deze browser heeft de instelling niet opgeslagen.",
+    "browserClearnet": "Uitvoeren in deze browser heeft clearnet nodig, en dat staat uit in Tor-modus."
   }
 }

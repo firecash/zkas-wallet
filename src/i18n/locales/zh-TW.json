@@ -2170,6 +2170,16 @@
     "mergeCooldown": "上一次合併幣已準備好但從未送出，因此下一次需等待 {{min}} 分鐘。付款不受影響。",
     "notMatured": "可花費的幣還不夠。收到的幣和找零在到帳約 10 分鐘後才能花費。",
     "belowMinFee": "可花費餘額低於最低網路手續費，目前無法送出或合併。",
-    "badRecipient": "這不是有效的 ZKas 屏蔽地址。"
+    "badRecipient": "這不是有效的 ZKas 屏蔽地址。",
+    "alreadyClaimed": "其中部分幣已被花費。請稍等餘額更新後再試。",
+    "refused": "網路拒絕了這筆付款。沒有送出任何內容。",
+    "browserStarting": "此瀏覽器中的錢包仍在啟動。請稍後再試。",
+    "browserSlow": "此瀏覽器中準備付款耗時過長。重試前請先查看歷史紀錄。",
+    "browserStopped": "付款送出前，此瀏覽器中的錢包已被停止或切換。沒有送出任何內容。",
+    "browserOutdated": "此瀏覽器的錢包引擎已過時。請重新載入頁面。",
+    "browserUnknown": "送出時連線中斷，無法確定付款是否已送出。請一分鐘後查看歷史紀錄。在此期間相關的幣會被保留，因此重試不會重複付款。",
+    "browserNoWallet": "此瀏覽器中沒有錢包。",
+    "browserStorage": "此瀏覽器未儲存該設定。",
+    "browserClearnet": "在此瀏覽器中執行需要明網連線，而 Tor 模式下已關閉。"
   }
 }

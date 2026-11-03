@@ -212,6 +212,16 @@
     "mergeCooldown": "Your last coin merge was prepared but never sent, so the next one waits {{min}} min. Payments are not affected.",
     "notMatured": "Not enough spendable coins yet. Coins you receive, and change, can be spent about 10 minutes after they arrive.",
     "belowMinFee": "Your spendable balance is below the minimum network fee, so nothing can be sent or merged right now.",
-    "badRecipient": "That is not a valid ZKas shielded address."
+    "badRecipient": "That is not a valid ZKas shielded address.",
+    "alreadyClaimed": "Some of these coins were already spent. Wait a moment for the balance to update, then try again.",
+    "refused": "The network refused this payment. Nothing was sent.",
+    "browserStarting": "The wallet in this browser is still starting. Try again in a moment.",
+    "browserSlow": "The payment took too long to prepare in this browser. Check History before trying again.",
+    "browserStopped": "The wallet in this browser was stopped or switched before the payment went out. Nothing was sent.",
+    "browserOutdated": "This browser's wallet engine is out of date. Reload the page.",
+    "browserUnknown": "The connection dropped while sending, so it is not known whether the payment went out. Check History in a minute. Its coins are held back meanwhile, so trying again cannot pay twice.",
+    "browserNoWallet": "There is no wallet in this browser.",
+    "browserStorage": "This browser would not store the setting.",
+    "browserClearnet": "Run in this browser needs clearnet access, which is off in Tor mode."
   }
 }

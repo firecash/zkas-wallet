@@ -2170,6 +2170,16 @@
     "mergeCooldown": "上一次合并币已准备好但从未发送，因此下一次需等待 {{min}} 分钟。付款不受影响。",
     "notMatured": "可花费的币还不够。收到的币和找零在到账约 10 分钟后才能花费。",
     "belowMinFee": "可花费余额低于最低网络手续费，目前无法发送或合并。",
-    "badRecipient": "这不是有效的 ZKas 屏蔽地址。"
+    "badRecipient": "这不是有效的 ZKas 屏蔽地址。",
+    "alreadyClaimed": "其中部分币已被花费。请稍等余额更新后再试。",
+    "refused": "网络拒绝了这笔付款。没有发送任何内容。",
+    "browserStarting": "此浏览器中的钱包仍在启动。请稍后再试。",
+    "browserSlow": "此浏览器中准备付款耗时过长。重试前请先查看历史记录。",
+    "browserStopped": "付款发出前，此浏览器中的钱包已被停止或切换。没有发送任何内容。",
+    "browserOutdated": "此浏览器的钱包引擎已过时。请重新加载页面。",
+    "browserUnknown": "发送时连接中断，无法确定付款是否已发出。请一分钟后查看历史记录。在此期间相关的币会被保留，因此重试不会重复付款。",
+    "browserNoWallet": "此浏览器中没有钱包。",
+    "browserStorage": "此浏览器未保存该设置。",
+    "browserClearnet": "在此浏览器中运行需要明网访问，而 Tor 模式下已关闭。"
   }
 }

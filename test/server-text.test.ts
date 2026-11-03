@@ -14,6 +14,12 @@ describe("server messages", () => {
     expect(serverText("recipient is not a shielded Orchard address")).toMatch(/not a valid ZKas shielded address/);
     expect(serverText("wallet has not established a matured anchor yet (scanned DAA 5); wait for initial sync")).toMatch(/Still syncing/);
   });
+  it("translates the in-browser wallet's and the node's refusals", () => {
+    expect(serverText("The wallet is still starting in this browser; try again in a moment.")).toMatch(/still starting/);
+    expect(serverText("node: Rejected transaction ab12: invalid shielded transaction: nullifier already claimed (double spend)")).toMatch(/already spent/);
+    expect(serverText("The network refused the payment (502). Nothing was sent.")).toMatch(/refused this payment/);
+    expect(serverText("The connection dropped while this payment was being sent, so it is not known whether it went out. Check History")).toMatch(/cannot pay twice/);
+  });
   it("leaves anything else as the service said it", () => {
     const raw = "failed to prepare payment: something specific";
     expect(serverText(raw)).toBeNull();

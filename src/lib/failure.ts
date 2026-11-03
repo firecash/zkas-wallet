@@ -32,5 +32,17 @@ export function serverText(raw: string): string | null {
   if (m.includes("insufficient matured funds") || m.includes("must be ~10 min old")) return i18n.t("serverError.notMatured");
   if (m.includes("minimum network fee")) return i18n.t("serverError.belowMinFee");
   if (m.includes("not a shielded orchard address") || m.includes("invalid recipient address")) return i18n.t("serverError.badRecipient");
+  // The node's own refusal, as the browser's gateway and the wallet service pass it on.
+  if (m.includes("nullifier already claimed")) return i18n.t("serverError.alreadyClaimed");
+  if (m.includes("rejected transaction") || m.includes("network refused the payment") || m.includes("would not accept this payment")) return i18n.t("serverError.refused");
+  // The in-browser wallet's messages: its worker has no translations, so they are said here.
+  if (m.includes("still starting in this browser")) return i18n.t("serverError.browserStarting");
+  if (m.includes("took too long to prepare in this browser")) return i18n.t("serverError.browserSlow");
+  if (m.includes("was stopped or switched before the payment was sent")) return i18n.t("serverError.browserStopped");
+  if (m.includes("wallet engine is out of date")) return i18n.t("serverError.browserOutdated");
+  if (m.includes("not known whether it went out")) return i18n.t("serverError.browserUnknown");
+  if (m.includes("there is no wallet in this browser")) return i18n.t("serverError.browserNoWallet");
+  if (m.includes("refused to store the setting")) return i18n.t("serverError.browserStorage");
+  if (m.includes("needs clearnet access")) return i18n.t("serverError.browserClearnet");
   return null;
 }

@@ -2170,6 +2170,16 @@
     "mergeCooldown": "Son para birleştirmeniz hazırlandı ama gönderilmedi, bu yüzden sonraki {{min}} dk bekliyor. Ödemeler etkilenmez.",
     "notMatured": "Henüz yeterli harcanabilir para yok. Gelen paralar ve para üstü, gelişten yaklaşık 10 dakika sonra harcanabilir.",
     "belowMinFee": "Harcanabilir bakiyeniz asgari ağ ücretinin altında, bu yüzden şu anda hiçbir şey gönderilemez veya birleştirilemez.",
-    "badRecipient": "Bu geçerli bir ZKas korumalı adresi değil."
+    "badRecipient": "Bu geçerli bir ZKas korumalı adresi değil.",
+    "alreadyClaimed": "Bu paraların bir kısmı zaten harcandı. Bakiyenin güncellenmesini bekleyip tekrar deneyin.",
+    "refused": "Ağ bu ödemeyi reddetti. Hiçbir şey gönderilmedi.",
+    "browserStarting": "Bu tarayıcıdaki cüzdan hâlâ başlıyor. Birazdan tekrar deneyin.",
+    "browserSlow": "Ödemenin bu tarayıcıda hazırlanması çok uzun sürdü. Tekrar denemeden önce geçmişe bakın.",
+    "browserStopped": "Bu tarayıcıdaki cüzdan ödeme çıkmadan durduruldu ya da değiştirildi. Hiçbir şey gönderilmedi.",
+    "browserOutdated": "Bu tarayıcının cüzdan motoru eski. Sayfayı yenileyin.",
+    "browserUnknown": "Gönderirken bağlantı koptu, ödemenin çıkıp çıkmadığı bilinmiyor. Bir dakika sonra geçmişe bakın. Paraları bu arada bekletiliyor, yani tekrar denemek iki kez ödeyemez.",
+    "browserNoWallet": "Bu tarayıcıda cüzdan yok.",
+    "browserStorage": "Bu tarayıcı ayarı kaydetmedi.",
+    "browserClearnet": "Bu tarayıcıda çalıştırmak için clearnet erişimi gerekir; Tor modunda kapalıdır."
   }
 }

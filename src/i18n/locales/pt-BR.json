@@ -2185,6 +2185,16 @@
     "mergeCooldown": "Sua última junção de moedas foi preparada mas nunca enviada, então a próxima espera {{min}} min. Os pagamentos não são afetados.",
     "notMatured": "Ainda não há moedas disponíveis suficientes. Moedas recebidas e troco podem ser gastos cerca de 10 minutos após chegarem.",
     "belowMinFee": "Seu saldo disponível está abaixo da taxa mínima da rede, então nada pode ser enviado ou juntado agora.",
-    "badRecipient": "Esse não é um endereço blindado ZKas válido."
+    "badRecipient": "Esse não é um endereço blindado ZKas válido.",
+    "alreadyClaimed": "Algumas dessas moedas já foram gastas. Aguarde o saldo atualizar e tente de novo.",
+    "refused": "A rede recusou este pagamento. Nada foi enviado.",
+    "browserStarting": "A carteira deste navegador ainda está iniciando. Tente de novo em instantes.",
+    "browserSlow": "O pagamento demorou demais para ser preparado neste navegador. Confira o histórico antes de tentar de novo.",
+    "browserStopped": "A carteira deste navegador foi parada ou trocada antes de o pagamento sair. Nada foi enviado.",
+    "browserOutdated": "O motor da carteira deste navegador está desatualizado. Recarregue a página.",
+    "browserUnknown": "A conexão caiu durante o envio, então não se sabe se o pagamento saiu. Confira o histórico em um minuto. As moedas dele ficam retidas enquanto isso, então tentar de novo não pode pagar duas vezes.",
+    "browserNoWallet": "Não há carteira neste navegador.",
+    "browserStorage": "Este navegador não salvou a configuração.",
+    "browserClearnet": "Executar neste navegador precisa de acesso à clearnet, que fica desligado no modo Tor."
   }
 }

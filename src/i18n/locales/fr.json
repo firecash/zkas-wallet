@@ -2185,6 +2185,16 @@
     "mergeCooldown": "Votre dernier regroupement de pièces a été préparé mais jamais envoyé ; le suivant attend donc {{min}} min. Les paiements ne sont pas concernés.",
     "notMatured": "Pas encore assez de pièces disponibles. Les pièces reçues et la monnaie rendue sont utilisables environ 10 minutes après leur arrivée.",
     "belowMinFee": "Votre solde disponible est inférieur aux frais réseau minimum ; rien ne peut être envoyé ni regroupé pour l'instant.",
-    "badRecipient": "Ce n'est pas une adresse ZKas protégée valide."
+    "badRecipient": "Ce n'est pas une adresse ZKas protégée valide.",
+    "alreadyClaimed": "Certaines de ces pièces ont déjà été dépensées. Attendez que le solde se mette à jour, puis réessayez.",
+    "refused": "Le réseau a refusé ce paiement. Rien n'a été envoyé.",
+    "browserStarting": "Le portefeuille de ce navigateur démarre encore. Réessayez dans un instant.",
+    "browserSlow": "Le paiement a mis trop de temps à se préparer dans ce navigateur. Vérifiez l'historique avant de réessayer.",
+    "browserStopped": "Le portefeuille de ce navigateur a été arrêté ou changé avant l'envoi du paiement. Rien n'a été envoyé.",
+    "browserOutdated": "Le moteur de portefeuille de ce navigateur est obsolète. Rechargez la page.",
+    "browserUnknown": "La connexion a été coupée pendant l'envoi : on ne sait pas si le paiement est parti. Vérifiez l'historique dans une minute. Ses pièces restent retenues en attendant, donc réessayer ne peut pas payer deux fois.",
+    "browserNoWallet": "Il n'y a aucun portefeuille dans ce navigateur.",
+    "browserStorage": "Ce navigateur n'a pas enregistré le réglage.",
+    "browserClearnet": "Exécuter dans ce navigateur nécessite un accès clearnet, désactivé en mode Tor."
   }
 }

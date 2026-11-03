@@ -2200,6 +2200,16 @@
     "mergeCooldown": "Ostatnie łączenie monet przygotowano, ale nie wysłano, więc następne czeka {{min}} min. Nie dotyczy to płatności.",
     "notMatured": "Za mało monet do wydania. Otrzymane monety i reszta są dostępne około 10 minut po nadejściu.",
     "belowMinFee": "Saldo do wydania jest poniżej minimalnej opłaty sieciowej, więc teraz nie można nic wysłać ani połączyć.",
-    "badRecipient": "To nie jest prawidłowy chroniony adres ZKas."
+    "badRecipient": "To nie jest prawidłowy chroniony adres ZKas.",
+    "alreadyClaimed": "Część tych monet została już wydana. Poczekaj chwilę, aż saldo się zaktualizuje, i spróbuj ponownie.",
+    "refused": "Sieć odrzuciła tę płatność. Nic nie wysłano.",
+    "browserStarting": "Portfel w tej przeglądarce wciąż się uruchamia. Spróbuj za chwilę.",
+    "browserSlow": "Przygotowanie płatności w tej przeglądarce trwało zbyt długo. Sprawdź historię, zanim spróbujesz ponownie.",
+    "browserStopped": "Portfel w tej przeglądarce został zatrzymany lub zmieniony przed wysłaniem płatności. Nic nie wysłano.",
+    "browserOutdated": "Silnik portfela w tej przeglądarce jest nieaktualny. Odśwież stronę.",
+    "browserUnknown": "Połączenie zerwało się podczas wysyłania, więc nie wiadomo, czy płatność wyszła. Sprawdź historię za minutę. Jej monety są w tym czasie wstrzymane, więc ponowna próba nie zapłaci dwa razy.",
+    "browserNoWallet": "W tej przeglądarce nie ma portfela.",
+    "browserStorage": "Ta przeglądarka nie zapisała ustawienia.",
+    "browserClearnet": "Uruchamianie w przeglądarce wymaga dostępu do clearnetu, który jest wyłączony w trybie Tor."
   }
 }
