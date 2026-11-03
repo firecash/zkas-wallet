@@ -170,7 +170,10 @@
     "verboseHint": "Meer details van de engine op het apparaat. Zet aan als een portemonnee niet opent of verzenden mislukt; kies dan Engine-logs tonen.",
     "showLogs": "Toon engine logs",
     "copy": "Kopiëren",
-    "noLogs": "Nog geen logs — de engine draait mogelijk niet."
+    "noLogs": "Nog geen logs — de engine draait mogelijk niet.",
+    "sumStalled": "vastgelopen",
+    "sumUpToDate": "bijgewerkt",
+    "sumBehind": "{{lag}} achter · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Netwerkprivacy",

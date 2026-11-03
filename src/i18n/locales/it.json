@@ -170,7 +170,10 @@
     "verboseHint": "Più dettagli dal motore del dispositivo. Attiva quando il portafoglio non si apre o un invio fallisce, poi Mostra log motore.",
     "showLogs": "Mostra log motore",
     "copy": "Copia",
-    "noLogs": "Ancora nessun log: il motore potrebbe non essere in esecuzione."
+    "noLogs": "Ancora nessun log: il motore potrebbe non essere in esecuzione.",
+    "sumStalled": "bloccato",
+    "sumUpToDate": "aggiornato",
+    "sumBehind": "{{lag}} indietro · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Privacy di rete",

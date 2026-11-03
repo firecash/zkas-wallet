@@ -170,7 +170,10 @@
     "verboseHint": "Butiran lanjut dari enjin peranti. Hidupkan bila dompet tersekat semasa dibuka atau penghantaran gagal, kemudian Tunjukkan log enjin.",
     "showLogs": "Tunjuk log enjin",
     "copy": "Salin",
-    "noLogs": "Tiada log lagi — enjin mungkin tidak berjalan."
+    "noLogs": "Tiada log lagi — enjin mungkin tidak berjalan.",
+    "sumStalled": "tersekat",
+    "sumUpToDate": "terkini",
+    "sumBehind": "ketinggalan {{lag}} · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Privasi rangkaian",

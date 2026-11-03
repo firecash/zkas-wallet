@@ -170,7 +170,10 @@
     "verboseHint": "More detail from the on-device engine. Turn on when a wallet is stuck opening or a send fails, then Show engine logs.",
     "showLogs": "Show engine logs",
     "copy": "Copy",
-    "noLogs": "No logs yet — the engine may not be running."
+    "noLogs": "No logs yet — the engine may not be running.",
+    "sumStalled": "stalled",
+    "sumUpToDate": "up to date",
+    "sumBehind": "{{lag}} behind · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Network privacy",

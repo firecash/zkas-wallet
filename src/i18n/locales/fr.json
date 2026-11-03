@@ -160,7 +160,10 @@
     "verboseHint": "Plus de détails du moteur local. Activez quand un portefeuille bloque à l'ouverture ou qu'un envoi échoue, puis Voir les logs moteur.",
     "showLogs": "Afficher les logs",
     "copy": "Copier",
-    "noLogs": "Aucun journal — le moteur ne tourne peut-être pas."
+    "noLogs": "Aucun journal — le moteur ne tourne peut-être pas.",
+    "sumStalled": "bloqué",
+    "sumUpToDate": "à jour",
+    "sumBehind": "{{lag}} de retard · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Confidentialité réseau",

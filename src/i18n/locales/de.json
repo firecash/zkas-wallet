@@ -170,7 +170,10 @@
     "verboseHint": "Mehr Details von der lokalen Engine. Einschalten, wenn ein Wallet beim Öffnen hängt oder ein Senden fehlschlägt, dann Engine-Logs anzeigen.",
     "showLogs": "Engine-Protokolle anzeigen",
     "copy": "Kopieren",
-    "noLogs": "Noch keine Logs – die Engine läuft vielleicht nicht."
+    "noLogs": "Noch keine Logs – die Engine läuft vielleicht nicht.",
+    "sumStalled": "hängt",
+    "sumUpToDate": "aktuell",
+    "sumBehind": "{{lag}} zurück · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Netzwerk-Privatsphäre",

@@ -170,7 +170,10 @@
     "verboseHint": "Detail lebih dari engine perangkat. Aktifkan saat dompet macet dibuka atau kirim gagal, lalu Tampilkan log engine.",
     "showLogs": "Tampilkan log engine",
     "copy": "Salin",
-    "noLogs": "Belum ada log — engine mungkin tidak berjalan."
+    "noLogs": "Belum ada log — engine mungkin tidak berjalan.",
+    "sumStalled": "macet",
+    "sumUpToDate": "terkini",
+    "sumBehind": "tertinggal {{lag}} · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Privasi jaringan",

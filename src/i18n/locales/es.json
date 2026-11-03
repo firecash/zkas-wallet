@@ -326,7 +326,10 @@
     "verboseHint": "Más detalle del motor local. Actívalo si la billetera no abre o falla un envío, luego ve a Mostrar registros del motor.",
     "showLogs": "Mostrar registros del motor",
     "copy": "Copiar",
-    "noLogs": "Aún sin registros — el motor puede no estar funcionando."
+    "noLogs": "Aún sin registros — el motor puede no estar funcionando.",
+    "sumStalled": "detenido",
+    "sumUpToDate": "al día",
+    "sumBehind": "{{lag}} por detrás · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Privacidad de red",

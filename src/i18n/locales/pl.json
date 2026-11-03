@@ -170,7 +170,10 @@
     "verboseHint": "Więcej szczegółów z silnika na urządzeniu. Włącz, gdy portfel nie chce się otworzyć lub wysyłka się nie udaje, a następnie wyświetl logi silnika.",
     "showLogs": "Pokaż logi silnika",
     "copy": "Kopiuj",
-    "noLogs": "Brak logów — silnik może nie działać."
+    "noLogs": "Brak logów — silnik może nie działać.",
+    "sumStalled": "wstrzymane",
+    "sumUpToDate": "aktualne",
+    "sumBehind": "{{lag}} w tyle · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Prywatność sieci",

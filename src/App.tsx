@@ -2457,7 +2457,8 @@ function ConnectionButton() {
     await switchWalletd(address, "add", bearer, (connected) => walletdProfiles.save(name.trim() || address.replace(/^https?:\/\//, "").split(/[/?]/)[0] || t("connectionButton.labelMyWalletd"), connected, bearer));
   };
 
-  const serviceLabel = desktop ? t("connectionButton.chainSource") : t("connectionButton.walletService");
+  // In browser or phone mode no wallet service is involved: the chip names the connection.
+  const serviceLabel = desktop ? t("connectionButton.chainSource") : embeddedChosen() || browserModeChosen() ? t("connectionButton.eyebrow") : t("connectionButton.walletService");
   return (
     <>
       <button className="connection-button" onClick={() => { setOpen(true); void refresh(); }} aria-label={t("connectionButton.connectionAria", { label })} title={t("connectionButton.connectionAria", { label })}>
@@ -2501,7 +2502,7 @@ function ConnectionButton() {
                 </>
               )}
               <button className={`connection-option ${onion ? "active" : ""}`} disabled={busy !== null} onClick={() => void connectTor()}>
-                <span><b>{t("connectionButton.overTor")}</b><small>{desktop ? t("connectionButton.torDescDesktop") : t("connectionButton.torDescMobile")}</small></span><span>{busy === "tor" ? t("connectionButton.connecting") : onion ? t("connectionButton.connected") : t("connectionButton.use")}</span>
+                <span><b>{t("connectionButton.overTor")}</b><small>{isNative() ? t("connectionButton.torDescMobile") : t("connectionButton.torDescDesktop")}</small></span><span>{busy === "tor" ? t("connectionButton.connecting") : onion ? t("connectionButton.connected") : t("connectionButton.use")}</span>
               </button>
               {desktop && (
                 <>
@@ -6251,9 +6252,12 @@ function Receive({ status }: { status: Status }) {
         </Collapsible>
       )}
 
-      <p className="muted small" style={{ marginTop: 18 }}>
-        <Trans i18nKey="receive.seedMoved" components={{ b: <b /> }} />
-      </p>
+      {/* Only where it is true: the note says the seed sits behind the app lock. */}
+      {isLockEnabled() && (
+        <p className="muted small" style={{ marginTop: 18 }}>
+          <Trans i18nKey="receive.seedMoved" components={{ b: <b /> }} />
+        </p>
+      )}
     </div>
   );
 }
@@ -8356,10 +8360,10 @@ function DebugLogsCard({ status }: { status: Status | null }) {
   const summary = !status
     ? t("debugLogsCard.normal")
     : rate.stalled
-      ? "stalled"
+      ? t("debugLogsCard.sumStalled")
       : rate.lag === 0 && status.synced
-        ? "up to date"
-        : `${fmtCount(rate.lag)} behind · ${fmtRate(rate.blocksPerSec)}`;
+        ? t("debugLogsCard.sumUpToDate")
+        : t("debugLogsCard.sumBehind", { lag: fmtCount(rate.lag), rate: fmtRate(rate.blocksPerSec) });
 
   const report = () => rows.map(([k, v]) => `${k.padEnd(24)} ${v}`).join("\n");
   const toggle = async (v: boolean) => {
@@ -8603,7 +8607,7 @@ function NetworkPrivacyCard() {
           <span><b>{t("networkPrivacyCard.publicTitle")}</b><small>{t("networkPrivacyCard.publicHint")}</small></span><span>{tag("public")}</span>
         </button>
         <button className={"connection-option" + (current === "tor" ? " active" : "")} disabled={!!busy} onClick={useTor}>
-          <span><b>{t("networkPrivacyCard.torTitle")}</b><small>{t("networkPrivacyCard.torHint")}</small></span><span>{tag("tor")}</span>
+          <span><b>{t("networkPrivacyCard.torTitle")}</b><small>{isNative() ? t("networkPrivacyCard.torHint") : t("connectionButton.torDescDesktop")}</small></span><span>{tag("tor")}</span>
         </button>
         <button className={"connection-option" + (current === "custom" ? " active" : "")} disabled={!!busy} onClick={() => { setShowCustom((v) => !v); setErr(""); }}>
           <span><b>{t("networkPrivacyCard.customTitle")}</b><small>{t("networkPrivacyCard.customHint")}</small></span><span>{current === "custom" ? t("networkPrivacyCard.on") : showCustom ? "▲" : "▾"}</span>

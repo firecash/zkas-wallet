@@ -118,7 +118,7 @@ export function FirstRunConnect({ onDone }: { onDone: () => void }) {
           </button>
 
           <button className="connection-option" disabled={!!busy} onClick={() => void connectTor()}>
-            <span><b>{t("firstRunConnect.torTitle")}</b><small>{t("firstRunConnect.torDesc")}</small></span>
+            <span><b>{t("firstRunConnect.torTitle")}</b><small>{isNative() ? t("firstRunConnect.torDesc") : t("connectionButton.torDescDesktop")}</small></span>
             <span>{busy === "tor" ? t("firstRunConnect.connecting") : t("firstRunConnect.use")}</span>
           </button>
 

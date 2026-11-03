@@ -238,7 +238,10 @@
     "verboseHint": "来自设备引擎的更多细节。钱包打开卡住或发送失败时开启，然后查看引擎日志。",
     "showLogs": "显示引擎日志",
     "copy": "复制",
-    "noLogs": "暂无日志——引擎可能未运行。"
+    "noLogs": "暂无日志——引擎可能未运行。",
+    "sumStalled": "已停滞",
+    "sumUpToDate": "已是最新",
+    "sumBehind": "落后 {{lag}} · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "网络隐私",

@@ -160,7 +160,10 @@
     "verboseHint": "Thêm chi tiết từ engine. Bật khi ví mở bị kẹt hoặc gửi lỗi, rồi xem nhật ký engine.",
     "showLogs": "Hiện nhật ký engine",
     "copy": "Sao chép",
-    "noLogs": "Chưa có nhật ký — engine có thể chưa chạy."
+    "noLogs": "Chưa có nhật ký — engine có thể chưa chạy.",
+    "sumStalled": "đứng yên",
+    "sumUpToDate": "đã cập nhật",
+    "sumBehind": "chậm {{lag}} · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Quyền riêng tư mạng",

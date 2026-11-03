@@ -283,7 +283,10 @@
     "verboseHint": "裝置端引擎的更多細節。錢包卡住或發送失敗時開啟，然後點「顯示引擎紀錄」。",
     "showLogs": "顯示引擎記錄",
     "copy": "複製",
-    "noLogs": "尚無紀錄——引擎可能未執行。"
+    "noLogs": "尚無紀錄——引擎可能未執行。",
+    "sumStalled": "已停滯",
+    "sumUpToDate": "已是最新",
+    "sumBehind": "落後 {{lag}} · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "網路隱私",

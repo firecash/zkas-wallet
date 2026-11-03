@@ -170,7 +170,10 @@
     "verboseHint": "Mais detalhes do motor no dispositivo. Ative quando a carteira travar ao abrir ou um envio falhar, depois veja os logs do motor.",
     "showLogs": "Mostrar logs do motor",
     "copy": "Copiar",
-    "noLogs": "Ainda sem logs — o motor pode não estar rodando."
+    "noLogs": "Ainda sem logs — o motor pode não estar rodando.",
+    "sumStalled": "parado",
+    "sumUpToDate": "em dia",
+    "sumBehind": "{{lag}} atrás · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Privacidade da rede",

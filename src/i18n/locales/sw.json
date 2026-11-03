@@ -238,7 +238,10 @@
     "verboseHint": "Maelezo zaidi kutoka kwa injini ya kifaa. Washa wakati mkoba unakwama kufunguka au kutuma kunashindwa, kisha Onyesha kumbukumbu za injini.",
     "showLogs": "Onyesha kumbukumbu za injini",
     "copy": "Nakili",
-    "noLogs": "Hakuna kumbukumbu bado — injini inaweza isiwe inafanya kazi."
+    "noLogs": "Hakuna kumbukumbu bado — injini inaweza isiwe inafanya kazi.",
+    "sumStalled": "imekwama",
+    "sumUpToDate": "imesasishwa",
+    "sumBehind": "nyuma {{lag}} · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Faragha ya mtandao",

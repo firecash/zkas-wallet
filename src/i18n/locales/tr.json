@@ -160,7 +160,10 @@
     "verboseHint": "Cihaz motorundan daha fazla detay. Cüzdan açılırken takılırsa veya gönderme başarısız olursa açın, ardından Motor günlüklerini gösterin.",
     "showLogs": "Motor kayıtlarını göster",
     "copy": "Kopyala",
-    "noLogs": "Henüz günlük yok — motor çalışmıyor olabilir."
+    "noLogs": "Henüz günlük yok — motor çalışmıyor olabilir.",
+    "sumStalled": "durdu",
+    "sumUpToDate": "güncel",
+    "sumBehind": "{{lag}} geride · {{rate}}"
   },
   "networkPrivacyCard": {
     "title": "Ağ gizliliği",
