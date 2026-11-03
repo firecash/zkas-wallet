@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">Son eşitlenen ZKAS bakiyesi</string>
+    <string name="shortcut_receive_short">Al</string>
+    <string name="shortcut_receive_long">ZKAS ödemesi iste</string>
+    <string name="shortcut_explore_short">Gezgin</string>
+    <string name="shortcut_explore_long">ZKAS gezginini aç</string>
+    <string name="notif_sync_channel">Cüzdan eşitleme</string>
+    <string name="notif_sync_channel_desc">Cüzdan bu telefonda eşitlenirken gösterilir</string>
+    <string name="notif_sync_text">Cüzdanınız bu telefonda eşitleniyor…</string>
+    <string name="notif_pay_channel">Ödemeler</string>
+    <string name="notif_pay_channel_desc">Arka plan eşitlemesinin gördüğü gelen ZKas ödemeleri</string>
+    <string name="notif_pay_title">ZKas ödemesi alındı</string>
+    <string name="notif_pay_hidden">Cüzdanınıza bir ödeme geldi.</string>
+    <string name="notif_pay_amount">Cüzdanınıza %1$s ZKAS geldi.</string>
+    <string name="widget_open_to_sync">Eşitlemek için açın</string>
+    <string name="widget_bg_on">Arka plan eşitleme açık</string>
+    <string name="widget_tap_open">Cüzdanı açmak için dokunun</string>
+</resources>

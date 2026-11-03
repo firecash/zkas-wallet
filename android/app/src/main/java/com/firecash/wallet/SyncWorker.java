@@ -165,8 +165,8 @@ public class SyncWorker extends Worker {
         Context ctx = getApplicationContext();
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel ch = new NotificationChannel(
-                EngineForegroundService.CHANNEL, "Wallet sync", NotificationManager.IMPORTANCE_LOW);
-            ch.setDescription("Shown while the wallet is syncing on this phone");
+                EngineForegroundService.CHANNEL, ctx.getString(R.string.notif_sync_channel), NotificationManager.IMPORTANCE_LOW);
+            ch.setDescription(ctx.getString(R.string.notif_sync_channel_desc));
             ch.setShowBadge(false);
             ctx.getSystemService(NotificationManager.class).createNotificationChannel(ch);
         }
@@ -175,7 +175,7 @@ public class SyncWorker extends Worker {
         Notification n = new NotificationCompat.Builder(ctx, EngineForegroundService.CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_zkas)
             .setContentTitle("ZKas")
-            .setContentText(EngineForegroundService.DEFAULT_TEXT)
+            .setContentText(ctx.getString(R.string.notif_sync_text))
             .setContentIntent(tap)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -297,21 +297,21 @@ public class SyncWorker extends Worker {
     private void notifyPayment(String amountZkas) {
         Context ctx = getApplicationContext();
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel ch = new NotificationChannel(CHANNEL, "Payments", NotificationManager.IMPORTANCE_DEFAULT);
-            ch.setDescription("Incoming ZKas payments seen by background sync");
+            NotificationChannel ch = new NotificationChannel(CHANNEL, ctx.getString(R.string.notif_pay_channel), NotificationManager.IMPORTANCE_DEFAULT);
+            ch.setDescription(ctx.getString(R.string.notif_pay_channel_desc));
             ctx.getSystemService(NotificationManager.class).createNotificationChannel(ch);
         }
         Intent open = new Intent(ctx, MainActivity.class);
         PendingIntent tap = PendingIntent.getActivity(ctx, 0, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_zkas)
-            .setContentTitle("ZKas payment received")
+            .setContentTitle(ctx.getString(R.string.notif_pay_title))
             // Hidden means hidden, including here. This notification lands on a lock
             // screen while the app is closed, which is the single place the eye toggle is
             // most meant to protect; the arrival is still announced, the figure is not.
             .setContentText(hideAmounts()
-                ? "A payment arrived in your wallet."
-                : amountZkas + " ZKAS arrived in your wallet.")
+                ? ctx.getString(R.string.notif_pay_hidden)
+                : ctx.getString(R.string.notif_pay_amount, amountZkas))
             .setContentIntent(tap)
             .setAutoCancel(true);
         try {

@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">Ostatnio zsynchronizowane saldo ZKAS</string>
+    <string name="shortcut_receive_short">Odbierz</string>
+    <string name="shortcut_receive_long">Poproś o płatność ZKAS</string>
+    <string name="shortcut_explore_short">Eksplorator</string>
+    <string name="shortcut_explore_long">Otwórz eksplorator ZKAS</string>
+    <string name="notif_sync_channel">Synchronizacja portfela</string>
+    <string name="notif_sync_channel_desc">Widoczne podczas synchronizacji portfela na tym telefonie</string>
+    <string name="notif_sync_text">Synchronizowanie portfela na tym telefonie…</string>
+    <string name="notif_pay_channel">Płatności</string>
+    <string name="notif_pay_channel_desc">Przychodzące płatności ZKas wykryte przez synchronizację w tle</string>
+    <string name="notif_pay_title">Otrzymano płatność ZKas</string>
+    <string name="notif_pay_hidden">Do Twojego portfela wpłynęła płatność.</string>
+    <string name="notif_pay_amount">Do Twojego portfela wpłynęło %1$s ZKAS.</string>
+    <string name="widget_open_to_sync">Otwórz, aby zsynchronizować</string>
+    <string name="widget_bg_on">Synchronizacja w tle włączona</string>
+    <string name="widget_tap_open">Dotknij, aby otworzyć portfel</string>
+</resources>

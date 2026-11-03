@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">آخری ہم آہنگ شدہ ZKAS بیلنس</string>
+    <string name="shortcut_receive_short">وصول کریں</string>
+    <string name="shortcut_receive_long">ZKAS ادائیگی کی درخواست</string>
+    <string name="shortcut_explore_short">ایکسپلورر</string>
+    <string name="shortcut_explore_long">ZKAS ایکسپلورر کھولیں</string>
+    <string name="notif_sync_channel">والیٹ ہم آہنگی</string>
+    <string name="notif_sync_channel_desc">اس فون پر والیٹ ہم آہنگ ہوتے وقت دکھایا جاتا ہے</string>
+    <string name="notif_sync_text">آپ کا والیٹ اس فون پر ہم آہنگ ہو رہا ہے…</string>
+    <string name="notif_pay_channel">ادائیگیاں</string>
+    <string name="notif_pay_channel_desc">پس منظر ہم آہنگی میں دیکھی گئی آنے والی ZKas ادائیگیاں</string>
+    <string name="notif_pay_title">ZKas ادائیگی موصول ہوئی</string>
+    <string name="notif_pay_hidden">آپ کے والیٹ میں ایک ادائیگی آئی۔</string>
+    <string name="notif_pay_amount">آپ کے والیٹ میں %1$s ZKAS آئے۔</string>
+    <string name="widget_open_to_sync">ہم آہنگی کے لیے کھولیں</string>
+    <string name="widget_bg_on">پس منظر ہم آہنگی آن ہے</string>
+    <string name="widget_tap_open">والیٹ کھولنے کے لیے ٹیپ کریں</string>
+</resources>

@@ -39,14 +39,14 @@ public class WalletWidget extends AppWidgetProvider {
         // app showed `••••••` while this showed the figure. The widget stays, so somebody who
         // added it still sees their wallet is there; the number is what goes.
         boolean hidden = prefs.getBoolean("hideAmounts", false);
-        String balance = "Open to sync";
+        String balance = context.getString(R.string.widget_open_to_sync);
         try {
             if (sompi != null) balance = hidden ? "•••••• ZKAS" : format(new BigInteger(sompi)) + " ZKAS";
         } catch (NumberFormatException ignored) {
             // A corrupt preference must never crash the launcher/widget host.
         }
         views.setTextViewText(R.id.widget_balance, balance);
-        views.setTextViewText(R.id.widget_state, prefs.getBoolean("enabled", false) ? "Background sync on" : "Tap to open wallet");
+        views.setTextViewText(R.id.widget_state, prefs.getBoolean("enabled", false) ? context.getString(R.string.widget_bg_on) : context.getString(R.string.widget_tap_open));
         Intent open = new Intent(context, MainActivity.class);
         PendingIntent pending = PendingIntent.getActivity(context, 11, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.widget_root, pending);

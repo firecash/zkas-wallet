@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">Último saldo ZKAS sincronizado</string>
+    <string name="shortcut_receive_short">Recibir</string>
+    <string name="shortcut_receive_long">Solicitar pago en ZKAS</string>
+    <string name="shortcut_explore_short">Explorador</string>
+    <string name="shortcut_explore_long">Abrir el explorador de ZKAS</string>
+    <string name="notif_sync_channel">Sincronización de la billetera</string>
+    <string name="notif_sync_channel_desc">Se muestra mientras la billetera se sincroniza en este teléfono</string>
+    <string name="notif_sync_text">Sincronizando tu billetera en este teléfono…</string>
+    <string name="notif_pay_channel">Pagos</string>
+    <string name="notif_pay_channel_desc">Pagos ZKas entrantes detectados por la sincronización en segundo plano</string>
+    <string name="notif_pay_title">Pago ZKas recibido</string>
+    <string name="notif_pay_hidden">Llegó un pago a tu billetera.</string>
+    <string name="notif_pay_amount">Llegaron %1$s ZKAS a tu billetera.</string>
+    <string name="widget_open_to_sync">Abrir para sincronizar</string>
+    <string name="widget_bg_on">Sincronización en segundo plano activada</string>
+    <string name="widget_tap_open">Toca para abrir la billetera</string>
+</resources>

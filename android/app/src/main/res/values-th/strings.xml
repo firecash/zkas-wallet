@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">ยอด ZKAS ที่ซิงก์ล่าสุด</string>
+    <string name="shortcut_receive_short">รับ</string>
+    <string name="shortcut_receive_long">ขอรับชำระเป็น ZKAS</string>
+    <string name="shortcut_explore_short">เอ็กซ์พลอเรอร์</string>
+    <string name="shortcut_explore_long">เปิดเอ็กซ์พลอเรอร์ ZKAS</string>
+    <string name="notif_sync_channel">ซิงก์กระเป๋า</string>
+    <string name="notif_sync_channel_desc">แสดงขณะกระเป๋ากำลังซิงก์บนโทรศัพท์เครื่องนี้</string>
+    <string name="notif_sync_text">กำลังซิงก์กระเป๋าของคุณบนโทรศัพท์เครื่องนี้…</string>
+    <string name="notif_pay_channel">การชำระเงิน</string>
+    <string name="notif_pay_channel_desc">การชำระ ZKas ขาเข้าที่การซิงก์เบื้องหลังพบ</string>
+    <string name="notif_pay_title">ได้รับการชำระ ZKas</string>
+    <string name="notif_pay_hidden">มีการชำระเงินเข้ากระเป๋าของคุณ</string>
+    <string name="notif_pay_amount">%1$s ZKAS เข้ากระเป๋าของคุณแล้ว</string>
+    <string name="widget_open_to_sync">เปิดเพื่อซิงก์</string>
+    <string name="widget_bg_on">ซิงก์เบื้องหลังเปิดอยู่</string>
+    <string name="widget_tap_open">แตะเพื่อเปิดกระเป๋า</string>
+</resources>

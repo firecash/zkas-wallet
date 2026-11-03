@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">সর্বশেষ সিঙ্ক করা ZKAS ব্যালান্স</string>
+    <string name="shortcut_receive_short">গ্রহণ করুন</string>
+    <string name="shortcut_receive_long">ZKAS অর্থপ্রদানের অনুরোধ</string>
+    <string name="shortcut_explore_short">এক্সপ্লোরার</string>
+    <string name="shortcut_explore_long">ZKAS এক্সপ্লোরার খুলুন</string>
+    <string name="notif_sync_channel">ওয়ালেট সিঙ্ক</string>
+    <string name="notif_sync_channel_desc">এই ফোনে ওয়ালেট সিঙ্ক হওয়ার সময় দেখানো হয়</string>
+    <string name="notif_sync_text">আপনার ওয়ালেট এই ফোনে সিঙ্ক হচ্ছে…</string>
+    <string name="notif_pay_channel">অর্থপ্রদান</string>
+    <string name="notif_pay_channel_desc">ব্যাকগ্রাউন্ড সিঙ্কে দেখা আগত ZKas অর্থপ্রদান</string>
+    <string name="notif_pay_title">ZKas অর্থপ্রদান পাওয়া গেছে</string>
+    <string name="notif_pay_hidden">আপনার ওয়ালেটে একটি অর্থপ্রদান এসেছে।</string>
+    <string name="notif_pay_amount">আপনার ওয়ালেটে %1$s ZKAS এসেছে।</string>
+    <string name="widget_open_to_sync">সিঙ্ক করতে খুলুন</string>
+    <string name="widget_bg_on">ব্যাকগ্রাউন্ড সিঙ্ক চালু</string>
+    <string name="widget_tap_open">ওয়ালেট খুলতে ট্যাপ করুন</string>
+</resources>

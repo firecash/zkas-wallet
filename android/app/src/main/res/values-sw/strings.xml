@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">Salio la ZKAS lililosawazishwa mwisho</string>
+    <string name="shortcut_receive_short">Pokea</string>
+    <string name="shortcut_receive_long">Omba malipo ya ZKAS</string>
+    <string name="shortcut_explore_short">Kivinjari cha mnyororo</string>
+    <string name="shortcut_explore_long">Fungua kivinjari cha ZKAS</string>
+    <string name="notif_sync_channel">Usawazishaji wa pochi</string>
+    <string name="notif_sync_channel_desc">Huonyeshwa pochi inaposawazishwa kwenye simu hii</string>
+    <string name="notif_sync_text">Inasawazisha pochi yako kwenye simu hii…</string>
+    <string name="notif_pay_channel">Malipo</string>
+    <string name="notif_pay_channel_desc">Malipo ya ZKas yanayoingia yaliyoonwa na usawazishaji wa chinichini</string>
+    <string name="notif_pay_title">Malipo ya ZKas yamepokelewa</string>
+    <string name="notif_pay_hidden">Malipo yamefika kwenye pochi yako.</string>
+    <string name="notif_pay_amount">ZKAS %1$s zimefika kwenye pochi yako.</string>
+    <string name="widget_open_to_sync">Fungua ili kusawazisha</string>
+    <string name="widget_bg_on">Usawazishaji wa chinichini umewashwa</string>
+    <string name="widget_tap_open">Gusa ili kufungua pochi</string>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">最後に同期したZKAS残高</string>
+    <string name="shortcut_receive_short">受け取る</string>
+    <string name="shortcut_receive_long">ZKASの支払いを依頼</string>
+    <string name="shortcut_explore_short">エクスプローラー</string>
+    <string name="shortcut_explore_long">ZKASエクスプローラーを開く</string>
+    <string name="notif_sync_channel">ウォレットの同期</string>
+    <string name="notif_sync_channel_desc">このスマホでウォレットを同期している間に表示されます</string>
+    <string name="notif_sync_text">このスマホでウォレットを同期しています…</string>
+    <string name="notif_pay_channel">支払い</string>
+    <string name="notif_pay_channel_desc">バックグラウンド同期で見つかったZKasの入金</string>
+    <string name="notif_pay_title">ZKasの入金がありました</string>
+    <string name="notif_pay_hidden">ウォレットに入金がありました。</string>
+    <string name="notif_pay_amount">ウォレットに%1$s ZKASが入金されました。</string>
+    <string name="widget_open_to_sync">開いて同期</string>
+    <string name="widget_bg_on">バックグラウンド同期オン</string>
+    <string name="widget_tap_open">タップしてウォレットを開く</string>
+</resources>

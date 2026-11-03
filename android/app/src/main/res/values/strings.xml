@@ -12,4 +12,16 @@
     <string name="shortcut_receive_long">Request ZKAS payment</string>
     <string name="shortcut_explore_short">Explorer</string>
     <string name="shortcut_explore_long">Open ZKAS explorer</string>
+    <!-- Notifications and the home-screen widget: shown in the phone's language (values-*). -->
+    <string name="notif_sync_channel">Wallet sync</string>
+    <string name="notif_sync_channel_desc">Shown while the wallet is syncing on this phone</string>
+    <string name="notif_sync_text">Syncing your wallet on this phone…</string>
+    <string name="notif_pay_channel">Payments</string>
+    <string name="notif_pay_channel_desc">Incoming ZKas payments seen by background sync</string>
+    <string name="notif_pay_title">ZKas payment received</string>
+    <string name="notif_pay_hidden">A payment arrived in your wallet.</string>
+    <string name="notif_pay_amount">%1$s ZKAS arrived in your wallet.</string>
+    <string name="widget_open_to_sync">Open to sync</string>
+    <string name="widget_bg_on">Background sync on</string>
+    <string name="widget_tap_open">Tap to open wallet</string>
 </resources>

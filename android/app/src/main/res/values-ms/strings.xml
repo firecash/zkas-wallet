@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">Baki ZKAS terakhir yang disegerakkan</string>
+    <string name="shortcut_receive_short">Terima</string>
+    <string name="shortcut_receive_long">Minta pembayaran ZKAS</string>
+    <string name="shortcut_explore_short">Penjelajah</string>
+    <string name="shortcut_explore_long">Buka penjelajah ZKAS</string>
+    <string name="notif_sync_channel">Penyegerakan dompet</string>
+    <string name="notif_sync_channel_desc">Dipaparkan semasa dompet disegerakkan pada telefon ini</string>
+    <string name="notif_sync_text">Menyegerakkan dompet anda pada telefon ini…</string>
+    <string name="notif_pay_channel">Pembayaran</string>
+    <string name="notif_pay_channel_desc">Pembayaran ZKas masuk yang dilihat oleh penyegerakan latar belakang</string>
+    <string name="notif_pay_title">Pembayaran ZKas diterima</string>
+    <string name="notif_pay_hidden">Satu pembayaran tiba dalam dompet anda.</string>
+    <string name="notif_pay_amount">%1$s ZKAS tiba dalam dompet anda.</string>
+    <string name="widget_open_to_sync">Buka untuk segerakkan</string>
+    <string name="widget_bg_on">Penyegerakan latar belakang hidup</string>
+    <string name="widget_tap_open">Ketik untuk membuka dompet</string>
+</resources>

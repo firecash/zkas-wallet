@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">آخرین موجودی همگام‌شدهٔ ZKAS</string>
+    <string name="shortcut_receive_short">دریافت</string>
+    <string name="shortcut_receive_long">درخواست پرداخت ZKAS</string>
+    <string name="shortcut_explore_short">کاوشگر</string>
+    <string name="shortcut_explore_long">باز کردن کاوشگر ZKAS</string>
+    <string name="notif_sync_channel">همگام‌سازی کیف پول</string>
+    <string name="notif_sync_channel_desc">هنگام همگام‌سازی کیف پول روی این گوشی نشان داده می‌شود</string>
+    <string name="notif_sync_text">کیف پول شما روی این گوشی همگام می‌شود…</string>
+    <string name="notif_pay_channel">پرداخت‌ها</string>
+    <string name="notif_pay_channel_desc">پرداخت‌های ورودی ZKas که همگام‌سازی پس‌زمینه دیده است</string>
+    <string name="notif_pay_title">پرداخت ZKas دریافت شد</string>
+    <string name="notif_pay_hidden">یک پرداخت به کیف پول شما رسید.</string>
+    <string name="notif_pay_amount">%1$s ZKAS به کیف پول شما رسید.</string>
+    <string name="widget_open_to_sync">برای همگام‌سازی باز کنید</string>
+    <string name="widget_bg_on">همگام‌سازی پس‌زمینه روشن است</string>
+    <string name="widget_tap_open">برای باز کردن کیف پول بزنید</string>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">Laatst gesynchroniseerd ZKAS-saldo</string>
+    <string name="shortcut_receive_short">Ontvangen</string>
+    <string name="shortcut_receive_long">ZKAS-betaling aanvragen</string>
+    <string name="shortcut_explore_short">Explorer</string>
+    <string name="shortcut_explore_long">ZKAS-explorer openen</string>
+    <string name="notif_sync_channel">Wallet-synchronisatie</string>
+    <string name="notif_sync_channel_desc">Getoond terwijl de wallet op deze telefoon synchroniseert</string>
+    <string name="notif_sync_text">Je wallet wordt op deze telefoon gesynchroniseerd…</string>
+    <string name="notif_pay_channel">Betalingen</string>
+    <string name="notif_pay_channel_desc">Inkomende ZKas-betalingen gezien door synchronisatie op de achtergrond</string>
+    <string name="notif_pay_title">ZKas-betaling ontvangen</string>
+    <string name="notif_pay_hidden">Er is een betaling in je wallet aangekomen.</string>
+    <string name="notif_pay_amount">Er is %1$s ZKAS in je wallet aangekomen.</string>
+    <string name="widget_open_to_sync">Openen om te synchroniseren</string>
+    <string name="widget_bg_on">Achtergrondsynchronisatie aan</string>
+    <string name="widget_tap_open">Tik om de wallet te openen</string>
+</resources>

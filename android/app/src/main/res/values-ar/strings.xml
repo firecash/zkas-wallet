@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">آخر رصيد ZKAS متزامن</string>
+    <string name="shortcut_receive_short">استلام</string>
+    <string name="shortcut_receive_long">طلب دفعة ZKAS</string>
+    <string name="shortcut_explore_short">المستكشف</string>
+    <string name="shortcut_explore_long">فتح مستكشف ZKAS</string>
+    <string name="notif_sync_channel">مزامنة المحفظة</string>
+    <string name="notif_sync_channel_desc">تظهر أثناء مزامنة المحفظة على هذا الهاتف</string>
+    <string name="notif_sync_text">تتم مزامنة محفظتك على هذا الهاتف…</string>
+    <string name="notif_pay_channel">المدفوعات</string>
+    <string name="notif_pay_channel_desc">مدفوعات ZKas الواردة التي رصدتها المزامنة في الخلفية</string>
+    <string name="notif_pay_title">تم استلام دفعة ZKas</string>
+    <string name="notif_pay_hidden">وصلت دفعة إلى محفظتك.</string>
+    <string name="notif_pay_amount">وصل %1$s ZKAS إلى محفظتك.</string>
+    <string name="widget_open_to_sync">افتح للمزامنة</string>
+    <string name="widget_bg_on">المزامنة في الخلفية مفعّلة</string>
+    <string name="widget_tap_open">اضغط لفتح المحفظة</string>
+</resources>

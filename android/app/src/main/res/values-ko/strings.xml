@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">마지막으로 동기화한 ZKAS 잔액</string>
+    <string name="shortcut_receive_short">받기</string>
+    <string name="shortcut_receive_long">ZKAS 결제 요청</string>
+    <string name="shortcut_explore_short">탐색기</string>
+    <string name="shortcut_explore_long">ZKAS 탐색기 열기</string>
+    <string name="notif_sync_channel">지갑 동기화</string>
+    <string name="notif_sync_channel_desc">이 휴대폰에서 지갑을 동기화하는 동안 표시됩니다</string>
+    <string name="notif_sync_text">이 휴대폰에서 지갑을 동기화하는 중…</string>
+    <string name="notif_pay_channel">결제</string>
+    <string name="notif_pay_channel_desc">백그라운드 동기화가 확인한 ZKas 입금</string>
+    <string name="notif_pay_title">ZKas 입금 도착</string>
+    <string name="notif_pay_hidden">지갑에 결제가 도착했습니다.</string>
+    <string name="notif_pay_amount">지갑에 %1$s ZKAS가 도착했습니다.</string>
+    <string name="widget_open_to_sync">열어서 동기화</string>
+    <string name="widget_bg_on">백그라운드 동기화 켜짐</string>
+    <string name="widget_tap_open">탭하여 지갑 열기</string>
+</resources>

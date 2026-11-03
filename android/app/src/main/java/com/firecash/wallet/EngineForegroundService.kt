@@ -63,7 +63,7 @@ class EngineForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val text = intent?.getStringExtra(EXTRA_TEXT) ?: DEFAULT_TEXT
+        val text = intent?.getStringExtra(EXTRA_TEXT) ?: getString(R.string.notif_sync_text)
         ensureChannel()
         val notification = build(text)
         // `startForeground` CAN THROW, and an uncaught throw in a Service kills the app.
@@ -105,8 +105,9 @@ class EngineForegroundService : Service() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = getSystemService(NotificationManager::class.java)
         if (nm.getNotificationChannel(CHANNEL) != null) return
-        val ch = NotificationChannel(CHANNEL, "Wallet sync", NotificationManager.IMPORTANCE_LOW)
-        ch.description = "Shown while the wallet is syncing on this phone"
+        // In the phone's language (res/values-*): these were English on every phone.
+        val ch = NotificationChannel(CHANNEL, getString(R.string.notif_sync_channel), NotificationManager.IMPORTANCE_LOW)
+        ch.description = getString(R.string.notif_sync_channel_desc)
         ch.setShowBadge(false)
         nm.createNotificationChannel(ch)
     }
@@ -131,7 +132,6 @@ class EngineForegroundService : Service() {
         const val CHANNEL = "engine_sync"
         const val NOTIFICATION_ID = 4201
         const val EXTRA_TEXT = "text"
-        const val DEFAULT_TEXT = "Syncing your wallet on this phone…"
 
         /** True while this service holds a foreground notification. */
         @Volatile
@@ -145,9 +145,10 @@ class EngineForegroundService : Service() {
          * `startForegroundService` + `onStartCommand` + `startForeground` for a service
          * that was already running.
          */
-        fun start(ctx: Context, text: String = DEFAULT_TEXT) {
+        fun start(ctx: Context, text: String? = null) {
             if (running) return
-            val i = Intent(ctx, EngineForegroundService::class.java).putExtra(EXTRA_TEXT, text)
+            val i = Intent(ctx, EngineForegroundService::class.java)
+            if (text != null) i.putExtra(EXTRA_TEXT, text)
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i) else ctx.startService(i)
             } catch (_: Throwable) {

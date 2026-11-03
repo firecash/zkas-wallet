@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">Số dư ZKAS đồng bộ gần nhất</string>
+    <string name="shortcut_receive_short">Nhận</string>
+    <string name="shortcut_receive_long">Yêu cầu thanh toán ZKAS</string>
+    <string name="shortcut_explore_short">Trình khám phá</string>
+    <string name="shortcut_explore_long">Mở trình khám phá ZKAS</string>
+    <string name="notif_sync_channel">Đồng bộ ví</string>
+    <string name="notif_sync_channel_desc">Hiển thị khi ví đang đồng bộ trên điện thoại này</string>
+    <string name="notif_sync_text">Đang đồng bộ ví của bạn trên điện thoại này…</string>
+    <string name="notif_pay_channel">Thanh toán</string>
+    <string name="notif_pay_channel_desc">Các khoản ZKas đến do đồng bộ nền phát hiện</string>
+    <string name="notif_pay_title">Đã nhận thanh toán ZKas</string>
+    <string name="notif_pay_hidden">Một khoản thanh toán đã đến ví của bạn.</string>
+    <string name="notif_pay_amount">%1$s ZKAS đã đến ví của bạn.</string>
+    <string name="widget_open_to_sync">Mở để đồng bộ</string>
+    <string name="widget_bg_on">Đồng bộ nền đang bật</string>
+    <string name="widget_tap_open">Chạm để mở ví</string>
+</resources>

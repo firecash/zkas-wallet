@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">Dernier solde ZKAS synchronisé</string>
+    <string name="shortcut_receive_short">Recevoir</string>
+    <string name="shortcut_receive_long">Demander un paiement ZKAS</string>
+    <string name="shortcut_explore_short">Explorateur</string>
+    <string name="shortcut_explore_long">Ouvrir l\'explorateur ZKAS</string>
+    <string name="notif_sync_channel">Synchronisation du portefeuille</string>
+    <string name="notif_sync_channel_desc">Affichée pendant la synchronisation du portefeuille sur ce téléphone</string>
+    <string name="notif_sync_text">Synchronisation de votre portefeuille sur ce téléphone…</string>
+    <string name="notif_pay_channel">Paiements</string>
+    <string name="notif_pay_channel_desc">Paiements ZKas entrants vus par la synchronisation en arrière-plan</string>
+    <string name="notif_pay_title">Paiement ZKas reçu</string>
+    <string name="notif_pay_hidden">Un paiement est arrivé dans votre portefeuille.</string>
+    <string name="notif_pay_amount">%1$s ZKAS sont arrivés dans votre portefeuille.</string>
+    <string name="widget_open_to_sync">Ouvrir pour synchroniser</string>
+    <string name="widget_bg_on">Synchronisation en arrière-plan activée</string>
+    <string name="widget_tap_open">Touchez pour ouvrir le portefeuille</string>
+</resources>

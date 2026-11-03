@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">Последний синхронизированный баланс ZKAS</string>
+    <string name="shortcut_receive_short">Получить</string>
+    <string name="shortcut_receive_long">Запросить платёж в ZKAS</string>
+    <string name="shortcut_explore_short">Обозреватель</string>
+    <string name="shortcut_explore_long">Открыть обозреватель ZKAS</string>
+    <string name="notif_sync_channel">Синхронизация кошелька</string>
+    <string name="notif_sync_channel_desc">Показывается, пока кошелёк синхронизируется на этом телефоне</string>
+    <string name="notif_sync_text">Кошелёк синхронизируется на этом телефоне…</string>
+    <string name="notif_pay_channel">Платежи</string>
+    <string name="notif_pay_channel_desc">Входящие платежи ZKas, замеченные фоновой синхронизацией</string>
+    <string name="notif_pay_title">Получен платёж ZKas</string>
+    <string name="notif_pay_hidden">В кошелёк поступил платёж.</string>
+    <string name="notif_pay_amount">В кошелёк поступило %1$s ZKAS.</string>
+    <string name="widget_open_to_sync">Откройте для синхронизации</string>
+    <string name="widget_bg_on">Фоновая синхронизация включена</string>
+    <string name="widget_tap_open">Нажмите, чтобы открыть кошелёк</string>
+</resources>

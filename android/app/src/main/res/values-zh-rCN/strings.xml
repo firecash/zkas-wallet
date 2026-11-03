@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">最近同步的 ZKAS 余额</string>
+    <string name="shortcut_receive_short">收款</string>
+    <string name="shortcut_receive_long">请求 ZKAS 付款</string>
+    <string name="shortcut_explore_short">浏览器</string>
+    <string name="shortcut_explore_long">打开 ZKAS 浏览器</string>
+    <string name="notif_sync_channel">钱包同步</string>
+    <string name="notif_sync_channel_desc">钱包在此手机上同步时显示</string>
+    <string name="notif_sync_text">正在此手机上同步您的钱包…</string>
+    <string name="notif_pay_channel">付款</string>
+    <string name="notif_pay_channel_desc">后台同步发现的 ZKas 入账</string>
+    <string name="notif_pay_title">收到 ZKas 付款</string>
+    <string name="notif_pay_hidden">有一笔付款到达您的钱包。</string>
+    <string name="notif_pay_amount">%1$s ZKAS 已到达您的钱包。</string>
+    <string name="widget_open_to_sync">打开以同步</string>
+    <string name="widget_bg_on">后台同步已开启</string>
+    <string name="widget_tap_open">点按以打开钱包</string>
+</resources>

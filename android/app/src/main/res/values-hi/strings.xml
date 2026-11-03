@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_description">अंतिम सिंक किया गया ZKAS बैलेंस</string>
+    <string name="shortcut_receive_short">प्राप्त करें</string>
+    <string name="shortcut_receive_long">ZKAS भुगतान का अनुरोध</string>
+    <string name="shortcut_explore_short">एक्सप्लोरर</string>
+    <string name="shortcut_explore_long">ZKAS एक्सप्लोरर खोलें</string>
+    <string name="notif_sync_channel">वॉलेट सिंक</string>
+    <string name="notif_sync_channel_desc">इस फ़ोन पर वॉलेट सिंक होते समय दिखता है</string>
+    <string name="notif_sync_text">आपका वॉलेट इस फ़ोन पर सिंक हो रहा है…</string>
+    <string name="notif_pay_channel">भुगतान</string>
+    <string name="notif_pay_channel_desc">बैकग्राउंड सिंक द्वारा देखे गए आने वाले ZKas भुगतान</string>
+    <string name="notif_pay_title">ZKas भुगतान प्राप्त हुआ</string>
+    <string name="notif_pay_hidden">आपके वॉलेट में एक भुगतान आया।</string>
+    <string name="notif_pay_amount">आपके वॉलेट में %1$s ZKAS आए।</string>
+    <string name="widget_open_to_sync">सिंक करने के लिए खोलें</string>
+    <string name="widget_bg_on">बैकग्राउंड सिंक चालू</string>
+    <string name="widget_tap_open">वॉलेट खोलने के लिए टैप करें</string>
+</resources>
