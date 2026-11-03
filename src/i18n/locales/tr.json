@@ -645,7 +645,13 @@
     "chatOpen": "genel oda",
     "chatUnread": "{{n}} yeni",
     "receivedToastHidden": "Bir ödeme geldi",
-    "receivedNotifBodyHidden": "Cüzdanınıza bir ödeme geldi."
+    "receivedNotifBodyHidden": "Cüzdanınıza bir ödeme geldi.",
+    "notesManage_zero": "{{count}} · yönet",
+    "notesManage_one": "{{count}} · yönet",
+    "notesManage_two": "{{count}} · yönet",
+    "notesManage_few": "{{count}} · yönet",
+    "notesManage_many": "{{count}} · yönet",
+    "notesManage_other": "{{count}} · yönet"
   },
   "hostedNotice": {
     "browserWallet": "Tarayıcı cüzdanı. <b><a>Daha güvenli uygulamayı alın</a></b>."

@@ -137,7 +137,9 @@
     "truncated": "Wyświetlane są {{shown}} najnowsze z {{total}} transakcji.",
     "loadOlder": "Wczytaj starsze transakcje",
     "loadingOlder": "Wczytywanie…",
-    "arrivingRow": "W drodze · {{amount}} ZKAS — potwierdzone, pojawi się tu za kilka minut"
+    "arrivingRow": "W drodze · {{amount}} ZKAS — potwierdzone, pojawi się tu za kilka minut",
+    "held_few": "{{count}} transakcje wychodzące w locie — {{amount}} ZKAS tymczasowo wstrzymane do potwierdzenia (automatyczny zwrot w ~1h, jeśli nie dojdą).",
+    "held_many": "{{count}} transakcji wychodzących w locie — {{amount}} ZKAS tymczasowo wstrzymane do potwierdzenia (automatyczny zwrot w ~1h, jeśli nie dojdą)."
   },
   "vaultSetting": {
     "title": "Bezpieczeństwo i kopia",
@@ -347,11 +349,15 @@
     "viewOnExplorer": "Zobacz w eksploratorze",
     "explorerNote": "Eksplorator pokazuje tylko, że zaszła chroniona transakcja — nigdy jej szczegółów.",
     "close": "Zamknij",
-    "provePayment": "Udowodnij płatność"
+    "provePayment": "Udowodnij płatność",
+    "confirmations_few": "{{count}} potwierdzenia",
+    "confirmations_many": "{{count}} potwierdzeń"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} portfel",
-    "wallets_other": "{{count}} portfele"
+    "wallets_other": "{{count}} portfele",
+    "wallets_few": "{{count}} portfele",
+    "wallets_many": "{{count}} portfeli"
   },
   "accessTokenSetting": {
     "title": "Pokaż pole tokena dostępu",
@@ -614,7 +620,9 @@
     "confs_one": "{{count}} potw.",
     "confs_other": "{{count}} potw.",
     "confNotSeen": "niewidoczne w łańcuchu",
-    "confSending": "wysyłanie…"
+    "confSending": "wysyłanie…",
+    "confs_few": "{{count}} potw.",
+    "confs_many": "{{count}} potw."
   },
   "app": {
     "receivedNotifTitle": "Otrzymano ZKAS",
@@ -645,7 +653,13 @@
     "chatOpen": "pokój globalny",
     "chatUnread": "{{n}} nowe",
     "receivedToastHidden": "Otrzymano płatność",
-    "receivedNotifBodyHidden": "Otrzymano płatność w twoim portfelu."
+    "receivedNotifBodyHidden": "Otrzymano płatność w twoim portfelu.",
+    "notesManage_zero": "{{count}} · zarządzaj",
+    "notesManage_one": "{{count}} · zarządzaj",
+    "notesManage_two": "{{count}} · zarządzaj",
+    "notesManage_few": "{{count}} · zarządzaj",
+    "notesManage_many": "{{count}} · zarządzaj",
+    "notesManage_other": "{{count}} · zarządzaj"
   },
   "hostedNotice": {
     "browserWallet": "Portfel przeglądarkowy. <b><a>Pobierz bezpieczniejszą aplikację</a></b>."
@@ -750,7 +764,9 @@
     "scanningFromDays_other": "Skanowanie od DAA {{from}} — około {{count}} dni łańcucha.",
     "scanningWhole": "Skanowanie całego łańcucha. Znajduje wszystko i trwa najdłużej.",
     "cancel": "Anuluj",
-    "agree": "Zgadzam się i odzyskuję"
+    "agree": "Zgadzam się i odzyskuję",
+    "scanningFromDays_few": "Skanowanie od DAA {{from}} — około {{count}} dni łańcucha.",
+    "scanningFromDays_many": "Skanowanie od DAA {{from}} — około {{count}} dni łańcucha."
   },
   "balanceHero": {
     "showBalance": "Pokaż saldo",
@@ -930,7 +946,11 @@
     "proving": "Budowanie dowodu…",
     "addNotes": "Dodaj monety",
     "combine": "Połącz",
-    "cancel": "Anuluj"
+    "cancel": "Anuluj",
+    "split_few": "Twoje saldo jest podzielone na <b>{{count}}</b> monety — części, z których się składa. Im mniej, tym taniej wysłać; im więcej, tym więcej razy pod rząd możesz zapłacić.",
+    "split_many": "Twoje saldo jest podzielone na <b>{{count}}</b> monet — części, z których się składa. Im mniej, tym taniej wysłać; im więcej, tym więcej razy pod rząd możesz zapłacić.",
+    "merged_few": "Scalono {{notes}} monet w {{round}} z około {{count}} przebiegów",
+    "merged_many": "Scalono {{notes}} monet w {{round}} z około {{count}} przebiegów"
   },
   "fmtEta": {
     "underMinute": "mniej niż minuta",
@@ -1019,7 +1039,13 @@
       "node_unverifiable": "Węzeł nie może jeszcze potwierdzić zapisanej pozycji. Postęp zostaje; zaraz kolejna próba.",
       "checkpoint_io": "Nie udało się odczytać zapisanego postępu na tym urządzeniu. Zaraz kolejna próba."
     },
-    "downloadingChain": "Pobieranie danych łańcucha… {{pct}}%"
+    "downloadingChain": "Pobieranie danych łańcucha… {{pct}}%",
+    "aboutMinutes_few": "około {{count}} minut",
+    "aboutMinutes_many": "około {{count}} minut",
+    "aboutHours_few": "około {{count}} godzin",
+    "aboutHours_many": "około {{count}} godzin",
+    "behindDetail_few": "Możesz już wysłać — wszystko potrzebne do płatności jest widoczne. Portfel wciąż czyta najnowsze {{n}} bloki, więc to, co w nich przyszło, nie jest jeszcze policzone.",
+    "behindDetail_many": "Możesz już wysłać — wszystko potrzebne do płatności jest widoczne. Portfel wciąż czyta najnowszych {{n}} bloków, więc to, co w nich przyszło, nie jest jeszcze policzone."
   },
   "desktopServices": {
     "desktopOnly": "Ta opcja jest dostępna w aplikacji desktopowej."
@@ -1106,7 +1132,9 @@
   "confirmations": {
     "confirmed": "potwierdzone",
     "confs_one": "{{count}} potw.",
-    "confs_other": "{{count}} potw."
+    "confs_other": "{{count}} potw.",
+    "confs_few": "{{count}} potw.",
+    "confs_many": "{{count}} potw."
   },
   "version": {
     "android": "Android",
@@ -1195,7 +1223,9 @@
     "txInfo_one": "{{count}} akcja orchard · dowód halo2 zweryfikowany · przekazano",
     "txInfo_other": "{{count}} akcje orchard · dowód halo2 zweryfikowany · przekazano",
     "blockTag": "⬢ {{blue}} · {{txs}} tx",
-    "blockInfo": "zaakceptowany blok"
+    "blockInfo": "zaakceptowany blok",
+    "txInfo_few": "{{count}} akcje orchard · dowód halo2 zweryfikowany · przekazano",
+    "txInfo_many": "{{count}} akcji orchard · dowód halo2 zweryfikowany · przekazano"
   },
   "services": {
     "catAll": "Wszystko",
@@ -1236,7 +1266,9 @@
     "paid_other": "Zapłacono {{payees}} odbiorcom w {{count}} transakcjach.",
     "custodial": "Wysyłka zbiorcza wymaga samodzielnego hostowania walletd z ziarnem tego portfela. Ta aplikacja nie prześle Twojego ziarna, aby to umożliwić.",
     "partial": "Opłacono {{done}} z {{total}} odbiorców, potem zatrzymano na wierszu {{line}}: {{error}}. Usuń opłacone wiersze przed ponowną próbą.",
-    "decimalComma": "Wiersz {{line}}: użyj kropki dla części dziesiętnej (1.5, nie 1,5). Przecinki oddzielają adres, kwotę i notatkę."
+    "decimalComma": "Wiersz {{line}}: użyj kropki dla części dziesiętnej (1.5, nie 1,5). Przecinki oddzielają adres, kwotę i notatkę.",
+    "paid_few": "Zapłacono {{payees}} odbiorcom w {{count}} transakcjach.",
+    "paid_many": "Zapłacono {{payees}} odbiorcom w {{count}} transakcjach."
   },
   "walletMaintenance": {
     "title": "Monety",
@@ -1607,7 +1639,9 @@
     "trayNote": "Zamknięcie okna pozostawia aktywne usługi węzła lub kopania w zasobniku, ale natychmiast blokuje silnik wydawania. Użyj „Zakończ i zatrzymaj usługi” w zasobniku, aby zatrzymać wszystkie procesy.",
     "modeLocal": "lokalny",
     "modeCustom": "własny",
-    "modeRemote": "zdalny"
+    "modeRemote": "zdalny",
+    "walletUrls_few": "URLe portfela",
+    "walletUrls_many": "URLe portfela"
   },
   "explorer": {
     "now": "teraz",
@@ -1932,7 +1966,9 @@
     "confirmations_other": "{{count}} potwierdzeń",
     "verifyNote": "Dowód jest sprawdzany względem transakcji w łańcuchu: ujawniony odbiorca i kwota muszą odtworzyć zobowiązanie zapisane w bloku.",
     "undetermined": "Nie można sprawdzić tego dowodu.",
-    "undeterminedWhy": "Usługa portfela nie udzieliła odpowiedzi, więc nic nie wiadomo o tej płatności. Spróbuj za chwilę — to nie dowód, że dowód jest fałszywy."
+    "undeterminedWhy": "Usługa portfela nie udzieliła odpowiedzi, więc nic nie wiadomo o tej płatności. Spróbuj za chwilę — to nie dowód, że dowód jest fałszywy.",
+    "confirmations_few": "{{count}} potwierdzenia",
+    "confirmations_many": "{{count}} potwierdzeń"
   },
   "chat": {
     "nameSkip": "Anonimowo",

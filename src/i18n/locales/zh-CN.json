@@ -645,7 +645,13 @@
     "chatOpen": "全球房间",
     "chatUnread": "{{n}} 条新",
     "receivedToastHidden": "收到一笔支付",
-    "receivedNotifBodyHidden": "您的钱包收到了一笔支付。"
+    "receivedNotifBodyHidden": "您的钱包收到了一笔支付。",
+    "notesManage_zero": "{{count}} · 管理",
+    "notesManage_one": "{{count}} · 管理",
+    "notesManage_two": "{{count}} · 管理",
+    "notesManage_few": "{{count}} · 管理",
+    "notesManage_many": "{{count}} · 管理",
+    "notesManage_other": "{{count}} · 管理"
   },
   "hostedNotice": {
     "browserWallet": "浏览器钱包。<b><a>下载更安全的 App</a></b>。"

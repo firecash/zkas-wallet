@@ -49,7 +49,8 @@
     "truncated": "Exibindo as {{shown}} transações mais recentes de {{total}}.",
     "loadOlder": "Carregar transações mais antigas",
     "loadingOlder": "Carregando…",
-    "arrivingRow": "Chegando · {{amount}} ZKAS — confirmado, aparece aqui em alguns minutos"
+    "arrivingRow": "Chegando · {{amount}} ZKAS — confirmado, aparece aqui em alguns minutos",
+    "held_many": "{{count}} transações enviadas em trânsito — {{amount}} ZKAS retidos até confirmar (devolvidos em ~1h se não confirmarem)."
   },
   "send": {
     "scanAria": "Escanear QR",
@@ -388,11 +389,13 @@
     "privateLabel": "Rótulo privado",
     "labelPlaceholder": "Pedido, cliente, finalidade…",
     "labelSaved": "Salvo neste dispositivo",
-    "provePayment": "Provar pagamento"
+    "provePayment": "Provar pagamento",
+    "confirmations_many": "{{count}} confirmações"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} carteira",
-    "wallets_other": "{{count}} carteiras"
+    "wallets_other": "{{count}} carteiras",
+    "wallets_many": "{{count}} carteiras"
   },
   "accessTokenSetting": {
     "title": "Mostrar campo token de acesso",
@@ -574,7 +577,8 @@
     "confs_one": "{{count}} conf",
     "confs_other": "{{count}} confs",
     "confNotSeen": "não visto na cadeia",
-    "confSending": "enviando…"
+    "confSending": "enviando…",
+    "confs_many": "{{count}} confs"
   },
   "app": {
     "receivedNotifTitle": "ZKAS recebido",
@@ -605,7 +609,13 @@
     "chatOpen": "sala global",
     "chatUnread": "{{n}} novo",
     "receivedToastHidden": "Um pagamento chegou",
-    "receivedNotifBodyHidden": "Um pagamento chegou na sua carteira."
+    "receivedNotifBodyHidden": "Um pagamento chegou na sua carteira.",
+    "notesManage_zero": "{{count}} · gerenciar",
+    "notesManage_one": "{{count}} · gerenciar",
+    "notesManage_two": "{{count}} · gerenciar",
+    "notesManage_few": "{{count}} · gerenciar",
+    "notesManage_many": "{{count}} · gerenciar",
+    "notesManage_other": "{{count}} · gerenciar"
   },
   "hostedNotice": {
     "browserWallet": "Carteira no navegador. <b><a>Baixe o app mais seguro</a></b>."
@@ -741,7 +751,8 @@
     "scanningFromDays_other": "Escaneando do DAA {{from}} — cerca de {{count}} dias da blockchain.",
     "scanningWhole": "Escaneando toda a blockchain. Isso encontra tudo, mas leva mais tempo.",
     "cancel": "Cancelar",
-    "agree": "Aceitar e recuperar"
+    "agree": "Aceitar e recuperar",
+    "scanningFromDays_many": "Escaneando do DAA {{from}} — cerca de {{count}} dias da blockchain."
   },
   "consolidateDialog": {
     "errEnterSeed": "Insira a semente de 64 caracteres desta carteira para assinar neste dispositivo.",
@@ -769,7 +780,9 @@
     "proving": "Gerando prova…",
     "addNotes": "Adicionar moedas",
     "combine": "Combinar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "split_many": "Seu saldo está dividido em <b>{{count}}</b> moedas — as partes que o compõem. Menos moedas são mais baratas de enviar; mais moedas permitem pagar algumas vezes seguidas.",
+    "merged_many": "Unidas {{notes}} moedas em {{round}} de cerca de {{count}} passadas"
   },
   "fmtEta": {
     "underMinute": "menos de um minuto restante",
@@ -977,7 +990,10 @@
       "node_unverifiable": "O nó ainda não consegue confirmar a posição salva. O progresso é mantido; tenta de novo em breve.",
       "checkpoint_io": "Não foi possível ler o progresso salvo neste dispositivo. Tenta de novo em breve."
     },
-    "downloadingChain": "Baixando dados da cadeia… {{pct}}%"
+    "downloadingChain": "Baixando dados da cadeia… {{pct}}%",
+    "aboutMinutes_many": "cerca de {{count}} minutos",
+    "aboutHours_many": "cerca de {{count}} horas",
+    "behindDetail_many": "Você já pode enviar — tudo que um pagamento precisa já está visível. A carteira ainda está lendo os {{n}} blocos mais novos, então o que chegou neles ainda não foi contado."
   },
   "desktopServices": {
     "desktopOnly": "Este controle está disponível no app para desktop."
@@ -1064,7 +1080,8 @@
   "confirmations": {
     "confirmed": "confirmado",
     "confs_one": "{{count}} conf",
-    "confs_other": "{{count}} confs"
+    "confs_other": "{{count}} confs",
+    "confs_many": "{{count}} confs"
   },
   "version": {
     "android": "Android",
@@ -1117,7 +1134,8 @@
     "ambientPeers": "pares: retransmitindo ✓",
     "txInfo_one": "{{count}} ação orchard · prova halo2 verificada · retransmitida",
     "txInfo_other": "{{count}} ações Orchard · prova Halo 2 verificada · retransmitida",
-    "blockTag": "⬢ {{blue}} · {{txs}} tx"
+    "blockTag": "⬢ {{blue}} · {{txs}} tx",
+    "txInfo_many": "{{count}} ações Orchard · prova Halo 2 verificada · retransmitida"
   },
   "services": {
     "catAll": "Tudo",
@@ -1158,7 +1176,8 @@
     "paid_other": "{{payees}} destinatários pagos em {{count}} transações.",
     "custodial": "Envio em lote precisa de um walletd próprio que tenha a semente desta carteira. Este app não enviará sua semente para ativá-lo.",
     "partial": "Pagos {{done}} de {{total}} destinatários; parou na linha {{line}}: {{error}}. Remova as linhas pagas antes de tentar de novo.",
-    "decimalComma": "Linha {{line}}: use ponto para decimais (1.5, não 1,5). Vírgulas separam endereço, valor e nota."
+    "decimalComma": "Linha {{line}}: use ponto para decimais (1.5, não 1,5). Vírgulas separam endereço, valor e nota.",
+    "paid_many": "{{payees}} destinatários pagos em {{count}} transações."
   },
   "walletMaintenance": {
     "title": "Moedas",
@@ -1556,7 +1575,8 @@
     "trayNote": "Fechar a janela mantém serviços de nó ou mineração ativos na bandeja, mas bloqueia o motor de gastos. Use “Sair e parar serviços” na bandeja para encerrar todos os processos.",
     "modeLocal": "local",
     "modeCustom": "personalizado",
-    "modeRemote": "remoto"
+    "modeRemote": "remoto",
+    "walletUrls_many": "URLs da carteira"
   },
   "explorer": {
     "now": "agora",
@@ -1932,7 +1952,8 @@
     "confirmations_other": "{{count}} confirmações",
     "verifyNote": "A prova é verificada contra a transação na cadeia: o destinatário e o valor revelados devem reproduzir o compromisso registrado no bloco.",
     "undetermined": "Não foi possível verificar esta prova.",
-    "undeterminedWhy": "O serviço de carteira não respondeu, então nada se sabe sobre este pagamento. Tente novamente em instantes — isso não é evidência de que a prova seja falsa."
+    "undeterminedWhy": "O serviço de carteira não respondeu, então nada se sabe sobre este pagamento. Tente novamente em instantes — isso não é evidência de que a prova seja falsa.",
+    "confirmations_many": "{{count}} confirmações"
   },
   "backgroundPermission": {
     "title": "Deixar a carteira sincronizar em segundo plano?",

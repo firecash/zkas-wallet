@@ -49,7 +49,8 @@
     "truncated": "Affichage des {{shown}} transactions les plus récentes sur {{total}}.",
     "loadOlder": "Charger les transactions plus anciennes",
     "loadingOlder": "Chargement…",
-    "arrivingRow": "En arrivée · {{amount}} ZKAS — confirmé, listé ici dans quelques minutes"
+    "arrivingRow": "En arrivée · {{amount}} ZKAS — confirmé, listé ici dans quelques minutes",
+    "held_many": "{{count}} envois en cours — {{amount}} ZKAS temporairement retenus jusqu'à confirmation (retour automatique sous ~1h si échec)."
   },
   "send": {
     "scanAria": "Scanner un QR",
@@ -388,11 +389,13 @@
     "privateLabel": "Libellé privé",
     "labelPlaceholder": "Commande, client, motif…",
     "labelSaved": "Enregistré sur l’appareil",
-    "provePayment": "Prouver le paiement"
+    "provePayment": "Prouver le paiement",
+    "confirmations_many": "{{count}} confirmations"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} portefeuille",
-    "wallets_other": "{{count}} portefeuilles"
+    "wallets_other": "{{count}} portefeuilles",
+    "wallets_many": "{{count}} portefeuilles"
   },
   "accessTokenSetting": {
     "title": "Afficher le champ jeton d’accès",
@@ -574,7 +577,8 @@
     "confs_one": "{{count}} conf",
     "confs_other": "{{count}} confs",
     "confNotSeen": "non vu sur la chaîne",
-    "confSending": "envoi…"
+    "confSending": "envoi…",
+    "confs_many": "{{count}} confs"
   },
   "app": {
     "receivedNotifTitle": "ZKAS reçus",
@@ -605,7 +609,13 @@
     "chatOpen": "salon global",
     "chatUnread": "{{n}} nouveau",
     "receivedToastHidden": "Paiement reçu",
-    "receivedNotifBodyHidden": "Un paiement est arrivé dans votre portefeuille."
+    "receivedNotifBodyHidden": "Un paiement est arrivé dans votre portefeuille.",
+    "notesManage_zero": "{{count}} · gérer",
+    "notesManage_one": "{{count}} · gérer",
+    "notesManage_two": "{{count}} · gérer",
+    "notesManage_few": "{{count}} · gérer",
+    "notesManage_many": "{{count}} · gérer",
+    "notesManage_other": "{{count}} · gérer"
   },
   "hostedNotice": {
     "browserWallet": "Portefeuille navigateur. <b><a>Obtenez l'app plus sûre</a></b>."
@@ -741,7 +751,8 @@
     "scanningFromDays_other": "Scan depuis DAA {{from}} — environ {{count}} jours de chaîne.",
     "scanningWhole": "Scan de toute la chaîne. Cela trouve tout, et prend le plus de temps.",
     "cancel": "Annuler",
-    "agree": "Accepter et récupérer"
+    "agree": "Accepter et récupérer",
+    "scanningFromDays_many": "Scan depuis DAA {{from}} — environ {{count}} jours de chaîne."
   },
   "iosInstallNotice": {
     "installedCopy": "Un portefeuille dans Safari ? Il n'est pas partagé avec cette copie — restaurez-le ici depuis sa phrase de récupération.",
@@ -778,7 +789,9 @@
     "proving": "Construction de la preuve…",
     "addNotes": "Ajouter des notes",
     "combine": "Combiner",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "split_many": "Votre solde est divisé en <b>{{count}}</b> pièces — les morceaux qui le composent. Moins il y en a, moins c’est cher à envoyer ; plus il y en a, plus vous pouvez payer plusieurs fois de suite.",
+    "merged_many": "{{notes}} pièces fusionnées en {{round}} d’environ {{count}} passes"
   },
   "fmtEta": {
     "underMinute": "moins d'une minute restante",
@@ -985,7 +998,10 @@
       "node_unverifiable": "Le nœud ne peut pas encore confirmer la position enregistrée. La progression est gardée ; nouvel essai bientôt.",
       "checkpoint_io": "La progression enregistrée n’a pas pu être lue sur cet appareil. Nouvel essai bientôt."
     },
-    "downloadingChain": "Téléchargement des données de la chaîne… {{pct}} %"
+    "downloadingChain": "Téléchargement des données de la chaîne… {{pct}} %",
+    "aboutMinutes_many": "environ {{count}} minutes",
+    "aboutHours_many": "environ {{count}} heures",
+    "behindDetail_many": "Vous pouvez envoyer maintenant — tout ce qu'il faut est déjà visible. Le portefeuille lit encore les {{n}} blocs les plus récents, donc ce qui y est arrivé n'est pas encore compté."
   },
   "desktopServices": {
     "desktopOnly": "Cette option est disponible dans l'appli de bureau."
@@ -1106,7 +1122,8 @@
   "confirmations": {
     "confirmed": "confirmé",
     "confs_one": "{{count}} conf",
-    "confs_other": "{{count}} confs"
+    "confs_other": "{{count}} confs",
+    "confs_many": "{{count}} confs"
   },
   "version": {
     "android": "Android",
@@ -1195,7 +1212,8 @@
     "txInfo_one": "{{count}} action orchard · preuve halo2 vérifiée · relayée",
     "txInfo_other": "{{count}} actions orchard · preuve halo2 vérifiée · relayées",
     "blockTag": "⬢ {{blue}} · {{txs}} tx",
-    "blockInfo": "bloc accepté"
+    "blockInfo": "bloc accepté",
+    "txInfo_many": "{{count}} actions orchard · preuve halo2 vérifiée · relayées"
   },
   "services": {
     "catAll": "Tout",
@@ -1236,7 +1254,8 @@
     "paid_other": "{{payees}} destinataires payés en {{count}} transactions.",
     "custodial": "L'envoi groupé nécessite un walletd auto-hébergé détenant la phrase de récupération de ce portefeuille. Cette app ne la téléversera pas pour l'activer.",
     "partial": "{{done}} destinataires sur {{total}} payés, puis arrêt à la ligne {{line}} : {{error}}. Retirez les lignes payées avant de réessayer.",
-    "decimalComma": "Ligne {{line}} : utilisez un point pour les décimales (1.5, pas 1,5). Les virgules séparent l'adresse, le montant et la note."
+    "decimalComma": "Ligne {{line}} : utilisez un point pour les décimales (1.5, pas 1,5). Les virgules séparent l'adresse, le montant et la note.",
+    "paid_many": "{{payees}} destinataires payés en {{count}} transactions."
   },
   "walletMaintenance": {
     "title": "Notes",
@@ -1607,7 +1626,8 @@
     "urlPreferred": "{{url}} · préférée",
     "pairPhone": "Associer un téléphone",
     "pairNote": "Scannez ceci dans l'appli ZKas — aucun jeton à saisir.",
-    "pairingAlt": "Code d'appairage pour l'appli ZKas"
+    "pairingAlt": "Code d'appairage pour l'appli ZKas",
+    "walletUrls_many": "URL du portefeuille"
   },
   "explorer": {
     "now": "maintenant",
@@ -1932,7 +1952,8 @@
     "confirmations_other": "{{count}} confirmations",
     "verifyNote": "La preuve est vérifiée par rapport à la transaction sur la chaîne : le destinataire et le montant divulgués doivent reproduire l’engagement enregistré par le bloc.",
     "undetermined": "Cette preuve n'a pas pu être vérifiée.",
-    "undeterminedWhy": "Le service de portefeuille n'a pas répondu, donc rien n'est connu sur ce paiement. Réessayez dans un instant — cela ne signifie pas que la preuve est fausse."
+    "undeterminedWhy": "Le service de portefeuille n'a pas répondu, donc rien n'est connu sur ce paiement. Réessayez dans un instant — cela ne signifie pas que la preuve est fausse.",
+    "confirmations_many": "{{count}} confirmations"
   },
   "backgroundPermission": {
     "title": "Synchroniser le portefeuille en arrière-plan ?",

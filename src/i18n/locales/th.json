@@ -619,7 +619,13 @@
     "chatOpen": "ห้องรวม",
     "chatUnread": "{{n}} ใหม่",
     "receivedToastHidden": "มีการชำระเงินเข้า",
-    "receivedNotifBodyHidden": "มีการชำระเงินเข้าในกระเป๋าของคุณ"
+    "receivedNotifBodyHidden": "มีการชำระเงินเข้าในกระเป๋าของคุณ",
+    "notesManage_zero": "{{count}} · จัดการ",
+    "notesManage_one": "{{count}} · จัดการ",
+    "notesManage_two": "{{count}} · จัดการ",
+    "notesManage_few": "{{count}} · จัดการ",
+    "notesManage_many": "{{count}} · จัดการ",
+    "notesManage_other": "{{count}} · จัดการ"
   },
   "hostedNotice": {
     "browserWallet": "กระเป๋าเว็บ <b><a>ดาวน์โหลดแอปที่ปลอดภัยกว่า</a></b>"

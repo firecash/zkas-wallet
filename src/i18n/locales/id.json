@@ -605,7 +605,13 @@
     "chatOpen": "ruang global",
     "chatUnread": "{{n}} baru",
     "receivedToastHidden": "Pembayaran masuk",
-    "receivedNotifBodyHidden": "Pembayaran masuk ke dompet Anda."
+    "receivedNotifBodyHidden": "Pembayaran masuk ke dompet Anda.",
+    "notesManage_zero": "{{count}} · kelola",
+    "notesManage_one": "{{count}} · kelola",
+    "notesManage_two": "{{count}} · kelola",
+    "notesManage_few": "{{count}} · kelola",
+    "notesManage_many": "{{count}} · kelola",
+    "notesManage_other": "{{count}} · kelola"
   },
   "hostedNotice": {
     "browserWallet": "Dompet browser. <b><a>Dapatkan aplikasi lebih aman</a></b>."

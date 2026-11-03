@@ -605,7 +605,13 @@
     "chatOpen": "chumba cha wote",
     "chatUnread": "{{n}} mpya",
     "receivedToastHidden": "Malipo yamefika",
-    "receivedNotifBodyHidden": "Malipo yamefika kwenye pochi yako."
+    "receivedNotifBodyHidden": "Malipo yamefika kwenye pochi yako.",
+    "notesManage_zero": "{{count}} · dhibiti",
+    "notesManage_one": "{{count}} · dhibiti",
+    "notesManage_two": "{{count}} · dhibiti",
+    "notesManage_few": "{{count}} · dhibiti",
+    "notesManage_many": "{{count}} · dhibiti",
+    "notesManage_other": "{{count}} · dhibiti"
   },
   "hostedNotice": {
     "browserWallet": "Mkoba wa kivinjari. <b><a>Pata programu salama zaidi</a></b>."

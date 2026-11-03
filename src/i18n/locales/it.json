@@ -49,7 +49,8 @@
     "truncated": "Vengono mostrate le {{shown}} transazioni più recenti su {{total}}.",
     "loadOlder": "Carica transazioni precedenti",
     "loadingOlder": "Caricamento…",
-    "arrivingRow": "In arrivo · {{amount}} ZKAS — confermati, elencati qui tra pochi minuti"
+    "arrivingRow": "In arrivo · {{amount}} ZKAS — confermati, elencati qui tra pochi minuti",
+    "held_many": "{{count}} transazioni in uscita in volo — {{amount}} ZKAS trattenuti fino a conferma (riaccreditati in ~1 ora se non confermati)."
   },
   "send": {
     "needSeed": "Questo dispositivo non ha ancora la chiave del portafoglio. Inserisci la frase di recupero per abilitare l'invio.",
@@ -419,7 +420,8 @@
     "viewOnExplorer": "Vedi su esploratore",
     "explorerNote": "L'explorer mostra solo che una transazione schermata è avvenuta — mai i dettagli.",
     "close": "Chiudi",
-    "provePayment": "Prova pagamento"
+    "provePayment": "Prova pagamento",
+    "confirmations_many": "{{count}} conferme"
   },
   "settingsPane": {
     "viewOnlyWallet": "Portafoglio solo osservazione",
@@ -490,7 +492,8 @@
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} portafoglio",
-    "wallets_other": "{{count}} portafogli"
+    "wallets_other": "{{count}} portafogli",
+    "wallets_many": "{{count}} portafogli"
   },
   "accessTokenSetting": {
     "title": "Mostra campo token di accesso",
@@ -574,7 +577,8 @@
     "confs_one": "{{count}} conf",
     "confs_other": "{{count}} conf",
     "confNotSeen": "non visto on-chain",
-    "confSending": "invio…"
+    "confSending": "invio…",
+    "confs_many": "{{count}} conf"
   },
   "app": {
     "receivedNotifTitle": "ZKAS ricevuti",
@@ -605,7 +609,13 @@
     "chatOpen": "stanza globale",
     "chatUnread": "{{n}} nuovi",
     "receivedToastHidden": "Pagamento arrivato",
-    "receivedNotifBodyHidden": "Un pagamento è arrivato nel tuo portafoglio."
+    "receivedNotifBodyHidden": "Un pagamento è arrivato nel tuo portafoglio.",
+    "notesManage_zero": "{{count}} · gestisci",
+    "notesManage_one": "{{count}} · gestisci",
+    "notesManage_two": "{{count}} · gestisci",
+    "notesManage_few": "{{count}} · gestisci",
+    "notesManage_many": "{{count}} · gestisci",
+    "notesManage_other": "{{count}} · gestisci"
   },
   "hostedNotice": {
     "browserWallet": "Portafoglio browser. <b><a>Scarica l'app più sicura</a></b>."
@@ -750,7 +760,8 @@
     "scanningFromDays_other": "Scansione da DAA {{from}} — circa {{count}} giorni di catena.",
     "scanningWhole": "Scansione dell'intera catena. Trova tutto, ma richiede più tempo.",
     "cancel": "Annulla",
-    "agree": "Accetta e recupera"
+    "agree": "Accetta e recupera",
+    "scanningFromDays_many": "Scansione da DAA {{from}} — circa {{count}} giorni di catena."
   },
   "consolidateDialog": {
     "errEnterSeed": "Inserisci il seed di recupero a 64 caratteri di questo portafoglio per firmare su questo dispositivo.",
@@ -778,7 +789,9 @@
     "proving": "Generazione prova…",
     "addNotes": "Aggiungi monete",
     "combine": "Combina",
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "split_many": "Il tuo saldo è diviso in <b>{{count}}</b> monete — i pezzi che lo compongono. Meno pezzi costano meno da inviare; più pezzi permettono più pagamenti di fila.",
+    "merged_many": "Unite {{notes}} monete in {{round}} di circa {{count}} passaggi"
   },
   "fmtEta": {
     "underMinute": "meno di un minuto rimasto",
@@ -985,7 +998,10 @@
       "node_unverifiable": "Il nodo non può ancora confermare la posizione salvata. I progressi restano; riprova a breve.",
       "checkpoint_io": "Non è stato possibile leggere i progressi salvati su questo dispositivo. Riprova a breve."
     },
-    "downloadingChain": "Download dei dati della catena… {{pct}}%"
+    "downloadingChain": "Download dei dati della catena… {{pct}}%",
+    "aboutMinutes_many": "circa {{count}} minuti",
+    "aboutHours_many": "circa {{count}} ore",
+    "behindDetail_many": "Puoi già inviare: tutto il necessario è visibile. Il wallet sta ancora leggendo i nuovi {{n}} blocchi, quindi quanto arrivato lì non è ancora conteggiato."
   },
   "desktopServices": {
     "desktopOnly": "Questo controllo è disponibile nell'app desktop."
@@ -1072,7 +1088,8 @@
   "confirmations": {
     "confirmed": "confermato",
     "confs_one": "{{count}} conf",
-    "confs_other": "{{count}} conf"
+    "confs_other": "{{count}} conf",
+    "confs_many": "{{count}} conf"
   },
   "version": {
     "android": "Android",
@@ -1195,7 +1212,8 @@
     "txInfo_one": "{{count}} azione orchard · prova halo2 verificata · relayata",
     "txInfo_other": "{{count}} azioni orchard · prova halo2 verificata · relayate",
     "blockTag": "⬢ {{blue}} · {{txs}} tx",
-    "blockInfo": "blocco accettato"
+    "blockInfo": "blocco accettato",
+    "txInfo_many": "{{count}} azioni orchard · prova halo2 verificata · relayate"
   },
   "mining": {
     "startMining": "Avvia mining",
@@ -1396,7 +1414,8 @@
     "paid_other": "Pagati {{payees}} destinatari in {{count}} transazioni.",
     "custodial": "L'invio batch richiede un walletd self-hosted che detenga il seed di questo portafoglio. Questa app non caricherà il tuo seed per abilitarlo.",
     "partial": "Pagati {{done}} destinatari su {{total}}, poi interrotto alla riga {{line}}: {{error}}. Rimuovi le righe pagate prima di riprovare.",
-    "decimalComma": "Riga {{line}}: usa il punto per i decimali (1.5, non 1,5). Le virgole separano indirizzo, importo e nota."
+    "decimalComma": "Riga {{line}}: usa il punto per i decimali (1.5, non 1,5). Le virgole separano indirizzo, importo e nota.",
+    "paid_many": "Pagati {{payees}} destinatari in {{count}} transazioni."
   },
   "endpointField": {
     "hint": "IP e porta di un nodo qualsiasi — non deve essere su questo computer. Es. 203.0.113.5:16110",
@@ -1607,7 +1626,8 @@
     "trayNote": "Chiudere la finestra mantiene nodo o mining attivi nella tray, ma blocca subito il motore di spesa. Usa “Esci e ferma servizi” nella tray per fermare ogni processo figlio.",
     "modeLocal": "locale",
     "modeCustom": "personalizzato",
-    "modeRemote": "remoto"
+    "modeRemote": "remoto",
+    "walletUrls_many": "URL portafoglio"
   },
   "explorer": {
     "now": "adesso",
@@ -1932,7 +1952,8 @@
     "confirmations_other": "{{count}} conferme",
     "verifyNote": "La prova è verificata sulla transazione in catena: il destinatario e l'importo rivelati devono riprodurre l'impegno registrato nel blocco.",
     "undetermined": "Questa prova non può essere verificata.",
-    "undeterminedWhy": "Il servizio portafoglio non ha dato risposta, quindi non si sa nulla di questo pagamento. Riprova tra poco — non è indizio che la prova sia falsa."
+    "undeterminedWhy": "Il servizio portafoglio non ha dato risposta, quindi non si sa nulla di questo pagamento. Riprova tra poco — non è indizio che la prova sia falsa.",
+    "confirmations_many": "{{count}} conferme"
   },
   "chat": {
     "nameSkip": "Invia come anonimo",

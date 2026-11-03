@@ -605,7 +605,13 @@
     "chatOpen": "phòng chung",
     "chatUnread": "{{n}} mới",
     "receivedToastHidden": "Đã nhận thanh toán",
-    "receivedNotifBodyHidden": "Một thanh toán đã đến ví của bạn."
+    "receivedNotifBodyHidden": "Một thanh toán đã đến ví của bạn.",
+    "notesManage_zero": "{{count}} · quản lý",
+    "notesManage_one": "{{count}} · quản lý",
+    "notesManage_two": "{{count}} · quản lý",
+    "notesManage_few": "{{count}} · quản lý",
+    "notesManage_many": "{{count}} · quản lý",
+    "notesManage_other": "{{count}} · quản lý"
   },
   "hostedNotice": {
     "browserWallet": "Ví trình duyệt. <b><a>Tải ứng dụng an toàn hơn</a></b>."

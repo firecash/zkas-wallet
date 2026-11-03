@@ -503,7 +503,13 @@
     "chatOpen": "グローバルルーム",
     "chatUnread": "{{n}}件の新着",
     "receivedToastHidden": "支払いが届きました",
-    "receivedNotifBodyHidden": "ウォレットに支払いが届きました。"
+    "receivedNotifBodyHidden": "ウォレットに支払いが届きました。",
+    "notesManage_zero": "{{count}} · 管理",
+    "notesManage_one": "{{count}} · 管理",
+    "notesManage_two": "{{count}} · 管理",
+    "notesManage_few": "{{count}} · 管理",
+    "notesManage_many": "{{count}} · 管理",
+    "notesManage_other": "{{count}} · 管理"
   },
   "hostedNotice": {
     "browserWallet": "ブラウザウォレットです。<b><a>安全なアプリを入手</a></b>。"

@@ -645,7 +645,13 @@
     "chatOpen": "গ্লোবাল রুম​",
     "chatUnread": "{{n}} নতুন​",
     "receivedToastHidden": "পেমেন্ট এসেছে",
-    "receivedNotifBodyHidden": "আপনার ওয়ালেটে একটি পেমেন্ট এসেছে।"
+    "receivedNotifBodyHidden": "আপনার ওয়ালেটে একটি পেমেন্ট এসেছে।",
+    "notesManage_zero": "{{count}} · ব্যবস্থাপনা",
+    "notesManage_one": "{{count}} · ব্যবস্থাপনা",
+    "notesManage_two": "{{count}} · ব্যবস্থাপনা",
+    "notesManage_few": "{{count}} · ব্যবস্থাপনা",
+    "notesManage_many": "{{count}} · ব্যবস্থাপনা",
+    "notesManage_other": "{{count}} · ব্যবস্থাপনা"
   },
   "hostedNotice": {
     "browserWallet": "ব্রাউজার ওয়ালেট। <b><a>আরও নিরাপদ অ্যাপ নিন</a></b>।"

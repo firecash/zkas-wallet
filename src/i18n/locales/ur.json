@@ -605,7 +605,13 @@
     "chatOpen": "عالمی کمرہ",
     "chatUnread": "{{n}} نیا",
     "receivedToastHidden": "ادائیگی آگئی",
-    "receivedNotifBodyHidden": "آپ کے والٹ میں ادائیگی آگئی۔"
+    "receivedNotifBodyHidden": "آپ کے والٹ میں ادائیگی آگئی۔",
+    "notesManage_zero": "{{count}} · منظم کریں",
+    "notesManage_one": "{{count}} · منظم کریں",
+    "notesManage_two": "{{count}} · منظم کریں",
+    "notesManage_few": "{{count}} · منظم کریں",
+    "notesManage_many": "{{count}} · منظم کریں",
+    "notesManage_other": "{{count}} · منظم کریں"
   },
   "hostedNotice": {
     "browserWallet": "براؤزر والٹ۔ <b><a>محفوظ ایپ حاصل کریں</a></b>۔"

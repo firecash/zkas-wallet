@@ -645,7 +645,13 @@
     "chatOpen": "اتاق عمومی",
     "chatUnread": "{{n}} جدید",
     "receivedToastHidden": "پرداختی دریافت شد",
-    "receivedNotifBodyHidden": "پرداختی به کیف پول شما رسید."
+    "receivedNotifBodyHidden": "پرداختی به کیف پول شما رسید.",
+    "notesManage_zero": "{{count}} · مدیریت",
+    "notesManage_one": "{{count}} · مدیریت",
+    "notesManage_two": "{{count}} · مدیریت",
+    "notesManage_few": "{{count}} · مدیریت",
+    "notesManage_many": "{{count}} · مدیریت",
+    "notesManage_other": "{{count}} · مدیریت"
   },
   "hostedNotice": {
     "browserWallet": "کیف پول مرورگر. <b><a>برنامه امن‌تر را دریافت کنید</a></b>."

@@ -565,7 +565,13 @@
     "chatOpen": "Globaler Raum",
     "chatUnread": "{{n}} neu",
     "receivedToastHidden": "Zahlung eingegangen",
-    "receivedNotifBodyHidden": "Eine Zahlung ist in deinem Wallet eingegangen."
+    "receivedNotifBodyHidden": "Eine Zahlung ist in deinem Wallet eingegangen.",
+    "notesManage_zero": "{{count}} · verwalten",
+    "notesManage_one": "{{count}} · verwalten",
+    "notesManage_two": "{{count}} · verwalten",
+    "notesManage_few": "{{count}} · verwalten",
+    "notesManage_many": "{{count}} · verwalten",
+    "notesManage_other": "{{count}} · verwalten"
   },
   "hostedNotice": {
     "browserWallet": "Browser-Wallet. <b><a>Hol dir die sicherere App</a></b>."

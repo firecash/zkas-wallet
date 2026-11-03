@@ -605,7 +605,13 @@
     "chatOpen": "全球聊天室",
     "chatUnread": "{{n}} 則新訊息",
     "receivedToastHidden": "收到一筆付款",
-    "receivedNotifBodyHidden": "你的錢包收到一筆付款。"
+    "receivedNotifBodyHidden": "你的錢包收到一筆付款。",
+    "notesManage_zero": "{{count}} · 管理",
+    "notesManage_one": "{{count}} · 管理",
+    "notesManage_two": "{{count}} · 管理",
+    "notesManage_few": "{{count}} · 管理",
+    "notesManage_many": "{{count}} · 管理",
+    "notesManage_other": "{{count}} · 管理"
   },
   "hostedNotice": {
     "browserWallet": "瀏覽器錢包。<b><a>下載更安全的應用程式</a></b>。"

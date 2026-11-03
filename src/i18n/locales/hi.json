@@ -645,7 +645,13 @@
     "chatOpen": "ग्लोबल रूम",
     "chatUnread": "{{n}} नया",
     "receivedToastHidden": "भुगतान आया",
-    "receivedNotifBodyHidden": "आपके वॉलेट में एक भुगतान आया।"
+    "receivedNotifBodyHidden": "आपके वॉलेट में एक भुगतान आया।",
+    "notesManage_zero": "{{count}} · प्रबंधित करें",
+    "notesManage_one": "{{count}} · प्रबंधित करें",
+    "notesManage_two": "{{count}} · प्रबंधित करें",
+    "notesManage_few": "{{count}} · प्रबंधित करें",
+    "notesManage_many": "{{count}} · प्रबंधित करें",
+    "notesManage_other": "{{count}} · प्रबंधित करें"
   },
   "hostedNotice": {
     "browserWallet": "ब्राउज़र वॉलेट। <b><a>सुरक्षित ऐप पाएँ</a></b>।"

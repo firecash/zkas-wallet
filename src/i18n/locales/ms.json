@@ -645,7 +645,13 @@
     "chatOpen": "bilik global",
     "chatUnread": "{{n}} baharu",
     "receivedToastHidden": "Bayaran tiba",
-    "receivedNotifBodyHidden": "Bayaran tiba dalam dompet anda."
+    "receivedNotifBodyHidden": "Bayaran tiba dalam dompet anda.",
+    "notesManage_zero": "{{count}} · urus",
+    "notesManage_one": "{{count}} · urus",
+    "notesManage_two": "{{count}} · urus",
+    "notesManage_few": "{{count}} · urus",
+    "notesManage_many": "{{count}} · urus",
+    "notesManage_other": "{{count}} · urus"
   },
   "hostedNotice": {
     "browserWallet": "Dompet pelayar. <b><a>Dapatkan aplikasi lebih selamat</a></b>."

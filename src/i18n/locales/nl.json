@@ -605,7 +605,13 @@
     "chatOpen": "globale ruimte",
     "chatUnread": "{{n}} nieuw",
     "receivedToastHidden": "Betaling ontvangen",
-    "receivedNotifBodyHidden": "Er is een betaling in je wallet ontvangen."
+    "receivedNotifBodyHidden": "Er is een betaling in je wallet ontvangen.",
+    "notesManage_zero": "{{count}} · beheren",
+    "notesManage_one": "{{count}} · beheren",
+    "notesManage_two": "{{count}} · beheren",
+    "notesManage_few": "{{count}} · beheren",
+    "notesManage_many": "{{count}} · beheren",
+    "notesManage_other": "{{count}} · beheren"
   },
   "hostedNotice": {
     "browserWallet": "Browser-portemonnee. <b><a>Download de veiligere app</a></b>."

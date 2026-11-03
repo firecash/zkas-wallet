@@ -49,7 +49,11 @@
     "truncated": "يتم عرض أحدث {{shown}} من {{total}} معاملة.",
     "loadOlder": "تحميل معاملات أقدم",
     "loadingOlder": "جارٍ التحميل…",
-    "arrivingRow": "قيد الوصول · {{amount}} ZKAS — مؤكدة، تظهر هنا خلال دقائق"
+    "arrivingRow": "قيد الوصول · {{amount}} ZKAS — مؤكدة، تظهر هنا خلال دقائق",
+    "held_zero": "{{count}} معاملات صادرة قيد التنفيذ — {{amount}} ZKAS محتجزة مؤقتًا حتى تأكيدها (تُعاد تلقائيًا خلال ~1 ساعة إذا لم تُؤكد).",
+    "held_two": "{{count}} معاملات صادرة قيد التنفيذ — {{amount}} ZKAS محتجزة مؤقتًا حتى تأكيدها (تُعاد تلقائيًا خلال ~1 ساعة إذا لم تُؤكد).",
+    "held_few": "{{count}} معاملات صادرة قيد التنفيذ — {{amount}} ZKAS محتجزة مؤقتًا حتى تأكيدها (تُعاد تلقائيًا خلال ~1 ساعة إذا لم تُؤكد).",
+    "held_many": "{{count}} معاملة صادرة قيد التنفيذ — {{amount}} ZKAS محتجزة مؤقتًا حتى تأكيدها (تُعاد تلقائيًا خلال ~1 ساعة إذا لم تُؤكد)."
   },
   "send": {
     "needSeed": "هذا الجهاز لا يحمل مفتاح هذه المحفظة بعد. أدخل عبارة الاسترداد مرة واحدة لتفعيل الإرسال.",
@@ -419,7 +423,11 @@
     "close": "إغلاق",
     "daa": "DAA {{daa}}",
     "zkasAmount": "{{amount}} ZKAS",
-    "provePayment": "إثبات الدفع"
+    "provePayment": "إثبات الدفع",
+    "confirmations_zero": "{{count}} تأكيد",
+    "confirmations_two": "{{count}} تأكيدات",
+    "confirmations_few": "{{count}} تأكيدات",
+    "confirmations_many": "{{count}} تأكيدًا"
   },
   "settingsPane": {
     "viewOnlyWallet": "محفظة مراقبة فقط",
@@ -588,7 +596,11 @@
     "confs_one": "{{count}} تأكيد",
     "confs_other": "{{count}} تأكيد",
     "confNotSeen": "غير ظاهر على السلسلة",
-    "confSending": "جارٍ الإرسال…"
+    "confSending": "جارٍ الإرسال…",
+    "confs_zero": "{{count}} تأكيد",
+    "confs_two": "{{count}} تأكيد",
+    "confs_few": "{{count}} تأكيد",
+    "confs_many": "{{count}} تأكيد"
   },
   "app": {
     "receivedNotifTitle": "تم استلام ZKAS",
@@ -619,7 +631,13 @@
     "chatOpen": "الغرفة العامة",
     "chatUnread": "{{n}} جديد",
     "receivedToastHidden": "وصل دفع",
-    "receivedNotifBodyHidden": "وصل دفع إلى محفظتك."
+    "receivedNotifBodyHidden": "وصل دفع إلى محفظتك.",
+    "notesManage_zero": "{{count}} · إدارة",
+    "notesManage_one": "{{count}} · إدارة",
+    "notesManage_two": "{{count}} · إدارة",
+    "notesManage_few": "{{count}} · إدارة",
+    "notesManage_many": "{{count}} · إدارة",
+    "notesManage_other": "{{count}} · إدارة"
   },
   "hostedNotice": {
     "browserWallet": "محفظة متصفح. <b><a>احصل على التطبيق الأكثر أمانًا</a></b>."
@@ -631,7 +649,11 @@
   },
   "walletCountLabel": {
     "wallets_one": "محفظة {{count}}",
-    "wallets_other": "{{count}} محافظ"
+    "wallets_other": "{{count}} محافظ",
+    "wallets_zero": "{{count}} محفظة",
+    "wallets_two": "{{count}} محافظ",
+    "wallets_few": "{{count}} محافظ",
+    "wallets_many": "{{count}} محفظة"
   },
   "accessTokenSetting": {
     "title": "إظهار حقل رمز الوصول",
@@ -750,7 +772,11 @@
     "scanningFromDays_other": "الفحص من DAA {{from}} — حوالي {{count}} يومًا من السلسلة.",
     "scanningWhole": "فحص السلسلة بأكملها. يعثر على كل شيء ويستغرق أطول وقت.",
     "cancel": "إلغاء",
-    "agree": "موافقة واستعادة"
+    "agree": "موافقة واستعادة",
+    "scanningFromDays_zero": "الفحص من DAA {{from}} — حوالي {{count}} يومًا من السلسلة.",
+    "scanningFromDays_two": "الفحص من DAA {{from}} — حوالي {{count}} يومًا من السلسلة.",
+    "scanningFromDays_few": "الفحص من DAA {{from}} — حوالي {{count}} أيام من السلسلة.",
+    "scanningFromDays_many": "الفحص من DAA {{from}} — حوالي {{count}} يومًا من السلسلة."
   },
   "consolidateDialog": {
     "errEnterSeed": "أدخل بذرة استرداد هذه المحفظة المكونة من 64 حرفًا للتوقيع على هذا الجهاز.",
@@ -778,7 +804,15 @@
     "proving": "بناء الإثبات…",
     "addNotes": "إضافة عملات",
     "combine": "دمج",
-    "cancel": "إلغاء"
+    "cancel": "إلغاء",
+    "split_zero": "رصيدك مقسم إلى <b>{{count}}</b> عملة — الأجزاء المكونة له. كلما قلّت كان الإرسال أرخص؛ وكثرتها تتيح الدفع مرات متتالية.‏",
+    "split_two": "رصيدك مقسم إلى <b>{{count}}</b> عملة — الأجزاء المكونة له. كلما قلّت كان الإرسال أرخص؛ وكثرتها تتيح الدفع مرات متتالية.‏",
+    "split_few": "رصيدك مقسم إلى <b>{{count}}</b> عملة — الأجزاء المكونة له. كلما قلّت كان الإرسال أرخص؛ وكثرتها تتيح الدفع مرات متتالية.‏",
+    "split_many": "رصيدك مقسم إلى <b>{{count}}</b> عملة — الأجزاء المكونة له. كلما قلّت كان الإرسال أرخص؛ وكثرتها تتيح الدفع مرات متتالية.‏",
+    "merged_zero": "دُمجت {{notes}} عملة في {{round}} من {{count}} تمريرات تقريبًا",
+    "merged_two": "دُمجت {{notes}} عملة في {{round}} من {{count}} تمريرات تقريبًا",
+    "merged_few": "دُمجت {{notes}} عملة في {{round}} من {{count}} تمريرات تقريبًا",
+    "merged_many": "دُمجت {{notes}} عملة في {{round}} من {{count}} تمريرة تقريبًا"
   },
   "fmtEta": {
     "underMinute": "أقل من دقيقة متبقية",
@@ -985,7 +1019,19 @@
       "node_unverifiable": "لا تستطيع العقدة تأكيد الموضع المحفوظ بعد. التقدم محفوظ؛ إعادة المحاولة قريبًا.",
       "checkpoint_io": "تعذّرت قراءة التقدم المحفوظ على هذا الجهاز. إعادة المحاولة قريبًا."
     },
-    "downloadingChain": "جارٍ تنزيل بيانات السلسلة… {{pct}}٪"
+    "downloadingChain": "جارٍ تنزيل بيانات السلسلة… {{pct}}٪",
+    "aboutMinutes_zero": "حوالي {{count}} دقائق",
+    "aboutMinutes_two": "حوالي {{count}} دقائق",
+    "aboutMinutes_few": "حوالي {{count}} دقائق",
+    "aboutMinutes_many": "حوالي {{count}} دقيقة",
+    "aboutHours_zero": "حوالي {{count}} ساعات",
+    "aboutHours_two": "حوالي {{count}} ساعات",
+    "aboutHours_few": "حوالي {{count}} ساعات",
+    "aboutHours_many": "حوالي {{count}} ساعة",
+    "behindDetail_zero": "يمكنك الإرسال الآن — كل ما تحتاجه الدفعة موجود. المحفظة تقرأ أحدث {{n}} كتلة، لذا ما وصل فيها لم يُحتسب بعد.",
+    "behindDetail_two": "يمكنك الإرسال الآن — كل ما تحتاجه الدفعة موجود. المحفظة تقرأ أحدث {{n}} كتلة، لذا ما وصل فيها لم يُحتسب بعد.",
+    "behindDetail_few": "يمكنك الإرسال الآن — كل ما تحتاجه الدفعة موجود. المحفظة تقرأ أحدث {{n}} كتلة، لذا ما وصل فيها لم يُحتسب بعد.",
+    "behindDetail_many": "يمكنك الإرسال الآن — كل ما تحتاجه الدفعة موجود. المحفظة تقرأ أحدث {{n}} كتلة، لذا ما وصل فيها لم يُحتسب بعد."
   },
   "desktopServices": {
     "desktopOnly": "هذا الخيار متاح في تطبيق سطح المكتب."
@@ -1152,7 +1198,11 @@
     "txInfo_one": "{{count}} إجراء orchard · تم التحقق من إثبات halo2 · تم الترحيل",
     "txInfo_other": "{{count}} إجراءات orchard · تم التحقق من إثبات halo2 · تم الترحيل",
     "blockTag": "⬢ {{blue}} · {{txs}} معاملة",
-    "blockInfo": "كتلة مقبولة"
+    "blockInfo": "كتلة مقبولة",
+    "txInfo_zero": "{{count}} إجراءات orchard · تم التحقق من إثبات halo2 · تم الترحيل",
+    "txInfo_two": "{{count}} إجراءات orchard · تم التحقق من إثبات halo2 · تم الترحيل",
+    "txInfo_few": "{{count}} إجراءات orchard · تم التحقق من إثبات halo2 · تم الترحيل",
+    "txInfo_many": "{{count}} إجراء orchard · تم التحقق من إثبات halo2 · تم الترحيل"
   },
   "exportfile": {
     "shared": "{{filename}} جاهز للحفظ أو الإرسال.",
@@ -1162,7 +1212,11 @@
   "confirmations": {
     "confirmed": "مؤكد",
     "confs_one": "{{count}} تأكيد",
-    "confs_other": "{{count}} تأكيد"
+    "confs_other": "{{count}} تأكيد",
+    "confs_zero": "{{count}} تأكيد",
+    "confs_two": "{{count}} تأكيد",
+    "confs_few": "{{count}} تأكيد",
+    "confs_many": "{{count}} تأكيد"
   },
   "version": {
     "android": "أندرويد",
@@ -1236,7 +1290,11 @@
     "paid_other": "تم الدفع إلى {{payees}} مستلم في {{count}} معاملات.",
     "custodial": "يتطلب الإرسال المجمّع walletd مستضافاً ذاتياً يحفظ عبارة استرداد هذه المحفظة. لن يرفع هذا التطبيق عبارة استردادك لتفعيل الميزة.",
     "partial": "تم الدفع لـ {{done}} من {{total}} مستلمين، ثم توقف عند السطر {{line}}: {{error}}. احذف الأسطر المدفوعة قبل المحاولة مجددًا.",
-    "decimalComma": "السطر {{line}}: استخدم النقطة للكسور العشرية (1.5 وليس 1,5). الفواصل تفصل العنوان والمبلغ والملاحظة."
+    "decimalComma": "السطر {{line}}: استخدم النقطة للكسور العشرية (1.5 وليس 1,5). الفواصل تفصل العنوان والمبلغ والملاحظة.",
+    "paid_zero": "تم الدفع إلى {{payees}} مستلم في {{count}} معاملات.",
+    "paid_two": "تم الدفع إلى {{payees}} مستلم في {{count}} معاملات.",
+    "paid_few": "تم الدفع إلى {{payees}} مستلم في {{count}} معاملات.",
+    "paid_many": "تم الدفع إلى {{payees}} مستلم في {{count}} معاملة."
   },
   "walletMaintenance": {
     "title": "عملات",
@@ -1607,7 +1665,11 @@
     "urlPreferred": "{{url}} · مفضل",
     "pairPhone": "إقران هاتف",
     "pairNote": "امسح هذا في تطبيق محفظة ZKas — لا حاجة لكتابة رموز.",
-    "pairingAlt": "رمز الإقران لتطبيق محفظة ZKas"
+    "pairingAlt": "رمز الإقران لتطبيق محفظة ZKas",
+    "walletUrls_zero": "روابط المحفظة",
+    "walletUrls_two": "روابط المحفظة",
+    "walletUrls_few": "روابط المحفظة",
+    "walletUrls_many": "روابط المحفظة"
   },
   "explorer": {
     "now": "الآن",
@@ -1932,7 +1994,11 @@
     "confirmations_other": "{{count}} تأكيدات",
     "verifyNote": "يُفحص الإثبات مقابل المعاملة على السلسلة: يجب أن يُنتج المستلم والمبلغ المُفصح عنهما الالتزام الذي سجلته الكتلة.",
     "undetermined": "تعذر التحقق من هذا الإثبات.",
-    "undeterminedWhy": "لم تقدم خدمة المحفظة إجابة، لذا لا يُعرف شيء عن هذه الدفعة. حاول مجددًا بعد قليل — هذا ليس دليلاً على أن الإثبات خاطئ."
+    "undeterminedWhy": "لم تقدم خدمة المحفظة إجابة، لذا لا يُعرف شيء عن هذه الدفعة. حاول مجددًا بعد قليل — هذا ليس دليلاً على أن الإثبات خاطئ.",
+    "confirmations_zero": "{{count}} تأكيد",
+    "confirmations_two": "{{count}} تأكيدات",
+    "confirmations_few": "{{count}} تأكيدات",
+    "confirmations_many": "{{count}} تأكيدًا"
   },
   "backgroundPermission": {
     "title": "السماح بالمزامنة في الخلفية؟",

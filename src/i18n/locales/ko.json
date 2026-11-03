@@ -605,7 +605,13 @@
     "chatOpen": "전체방",
     "chatUnread": "{{n}}개 새 메시지",
     "receivedToastHidden": "결제 도착",
-    "receivedNotifBodyHidden": "지갑에 결제가 도착했습니다."
+    "receivedNotifBodyHidden": "지갑에 결제가 도착했습니다.",
+    "notesManage_zero": "{{count}} · 관리",
+    "notesManage_one": "{{count}} · 관리",
+    "notesManage_two": "{{count}} · 관리",
+    "notesManage_few": "{{count}} · 관리",
+    "notesManage_many": "{{count}} · 관리",
+    "notesManage_other": "{{count}} · 관리"
   },
   "hostedNotice": {
     "browserWallet": "브라우저 지갑입니다. <b><a>더 안전한 앱 받기</a></b>."

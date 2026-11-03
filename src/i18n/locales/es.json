@@ -49,7 +49,8 @@
     "truncated": "Mostrando las {{shown}} transacciones más recientes de {{total}}.",
     "loadOlder": "Cargar transacciones anteriores",
     "loadingOlder": "Cargando…",
-    "arrivingRow": "Entrante · {{amount}} ZKAS — confirmado, aparecerá aquí en unos minutos"
+    "arrivingRow": "Entrante · {{amount}} ZKAS — confirmado, aparecerá aquí en unos minutos",
+    "held_many": "{{count}} transacciones salientes en curso — {{amount}} ZKAS retenidos temporalmente hasta que se confirmen (se devuelven automáticamente en ~1 hora si nunca se confirman)."
   },
   "send": {
     "scanAria": "Escanear QR",
@@ -455,11 +456,13 @@
     "privateLabel": "Etiqueta privada",
     "labelPlaceholder": "Pedido, cliente, propósito…",
     "labelSaved": "Guardado en este dispositivo",
-    "provePayment": "Probar pago"
+    "provePayment": "Probar pago",
+    "confirmations_many": "{{count}} confirmaciones"
   },
   "walletCountLabel": {
     "wallets_one": "{{count}} cartera",
-    "wallets_other": "{{count}} carteras"
+    "wallets_other": "{{count}} carteras",
+    "wallets_many": "{{count}} carteras"
   },
   "accessTokenSetting": {
     "title": "Mostrar campo de token de acceso",
@@ -574,7 +577,8 @@
     "confs_one": "{{count}} conf",
     "confs_other": "{{count}} confs",
     "confNotSeen": "no visto en cadena",
-    "confSending": "enviando…"
+    "confSending": "enviando…",
+    "confs_many": "{{count}} confs"
   },
   "app": {
     "receivedNotifTitle": "ZKAS recibido",
@@ -605,7 +609,13 @@
     "chatOpen": "sala global​",
     "chatUnread": "{{n}} nuevo​",
     "receivedToastHidden": "Llegó un pago",
-    "receivedNotifBodyHidden": "Llegó un pago a tu billetera."
+    "receivedNotifBodyHidden": "Llegó un pago a tu billetera.",
+    "notesManage_zero": "{{count}} · administrar",
+    "notesManage_one": "{{count}} · administrar",
+    "notesManage_two": "{{count}} · administrar",
+    "notesManage_few": "{{count}} · administrar",
+    "notesManage_many": "{{count}} · administrar",
+    "notesManage_other": "{{count}} · administrar"
   },
   "hostedNotice": {
     "browserWallet": "Billetera web. <b><a>Consigue la app más segura</a></b>."
@@ -750,7 +760,8 @@
     "scanningFromDays_other": "Escaneando desde DAA {{from}} — aprox. {{count}} días de cadena.",
     "scanningWhole": "Escaneando toda la cadena. Encuentra todo, pero es lo más lento.",
     "cancel": "Cancelar",
-    "agree": "Aceptar y recuperar"
+    "agree": "Aceptar y recuperar",
+    "scanningFromDays_many": "Escaneando desde DAA {{from}} — aprox. {{count}} días de cadena."
   },
   "consolidateDialog": {
     "errEnterSeed": "Ingresa la semilla de 64 caracteres de esta billetera para firmar en este dispositivo.",
@@ -778,7 +789,9 @@
     "proving": "Creando prueba…",
     "addNotes": "Añadir notas",
     "combine": "Combinar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "split_many": "Tu saldo está dividido en <b>{{count}}</b> monedas — las piezas que lo componen. Menos son más baratas de enviar; más te permiten pagar unas pocas veces seguidas.",
+    "merged_many": "Se fusionaron {{notes}} monedas en {{round}} de aproximadamente {{count}} pasadas"
   },
   "fmtEta": {
     "underMinute": "menos de un minuto",
@@ -985,7 +998,10 @@
       "node_unverifiable": "El nodo aún no puede confirmar la posición guardada. Se conserva el progreso; reintenta en breve.",
       "checkpoint_io": "No se pudo leer el progreso guardado en este dispositivo. Reintenta en breve."
     },
-    "downloadingChain": "Descargando datos de la cadena… {{pct}}%"
+    "downloadingChain": "Descargando datos de la cadena… {{pct}}%",
+    "aboutMinutes_many": "alrededor de {{count}} minutos",
+    "aboutHours_many": "alrededor de {{count}} horas",
+    "behindDetail_many": "Ya puedes enviar — todo lo necesario está visible. La billetera aún lee los {{n}} bloques más nuevos, así que lo que llegó en ellos aún no se cuenta."
   },
   "desktopServices": {
     "desktopOnly": "Este control está disponible en la app de escritorio."
@@ -1106,7 +1122,8 @@
   "confirmations": {
     "confirmed": "confirmado",
     "confs_one": "{{count}} conf",
-    "confs_other": "{{count}} confs"
+    "confs_other": "{{count}} confs",
+    "confs_many": "{{count}} confs"
   },
   "version": {
     "android": "Android",
@@ -1159,7 +1176,8 @@
     "ambientPeers": "pares: retransmitiendo ✓",
     "txInfo_one": "{{count}} acción orchard · prueba halo2 verificada · retransmitida",
     "txInfo_other": "{{count}} acciones orchard · prueba halo2 verificada · retransmitidas",
-    "blockTag": "⬢ {{blue}} · {{txs}} tx"
+    "blockTag": "⬢ {{blue}} · {{txs}} tx",
+    "txInfo_many": "{{count}} acciones orchard · prueba halo2 verificada · retransmitidas"
   },
   "services": {
     "catAll": "Todos",
@@ -1200,7 +1218,8 @@
     "paid_other": "Se pagó a {{payees}} destinatarios en {{count}} transacciones.",
     "custodial": "El envío en lote necesita un walletd propio con la semilla de esta billetera. Esta app no subirá tu semilla para habilitarlo.",
     "partial": "Se pagó a {{done}} de {{total}} destinatarios y se detuvo en la línea {{line}}: {{error}}. Quita las líneas pagadas antes de volver a intentarlo.",
-    "decimalComma": "Línea {{line}}: usa punto para los decimales (1.5, no 1,5). Las comas separan dirección, importe y nota."
+    "decimalComma": "Línea {{line}}: usa punto para los decimales (1.5, no 1,5). Las comas separan dirección, importe y nota.",
+    "paid_many": "Se pagó a {{payees}} destinatarios en {{count}} transacciones."
   },
   "walletMaintenance": {
     "title": "Notas",
@@ -1607,7 +1626,8 @@
     "trayNote": "Cerrar la ventana mantiene activos los servicios de nodo o minería en la bandeja, pero bloquea de inmediato el motor de gasto. Usa “Salir y detener servicios” en la bandeja para detener todos los subprocesos.",
     "modeLocal": "local",
     "modeCustom": "personalizado",
-    "modeRemote": "remoto"
+    "modeRemote": "remoto",
+    "walletUrls_many": "URLs de wallet"
   },
   "explorer": {
     "now": "ahora",
@@ -1932,7 +1952,8 @@
     "confirmations_other": "{{count}} confirmaciones",
     "verifyNote": "La prueba se verifica contra la transacción en la cadena: el destinatario y el monto revelados deben reproducir el compromiso que registró el bloque.",
     "undetermined": "No se pudo verificar esta prueba.",
-    "undeterminedWhy": "El servicio de billetera no respondió, así que no se sabe nada de este pago. Intenta de nuevo en un momento; esto no prueba que la prueba sea falsa."
+    "undeterminedWhy": "El servicio de billetera no respondió, así que no se sabe nada de este pago. Intenta de nuevo en un momento; esto no prueba que la prueba sea falsa.",
+    "confirmations_many": "{{count}} confirmaciones"
   },
   "chat": {
     "nameSkip": "Anónimo",
