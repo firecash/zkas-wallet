@@ -656,7 +656,10 @@ export async function sendNonCustodial(
       //
       // This is the daemon the architecture already refuses to trust — "the guard against a
       // malicious prover" — so its arithmetic gets checked for sign before it is used.
-      if (chunkAmount < 0n || chunkFee < 0n || remaining < 0n) {
+      // A chunk that pays nothing would be signed and sent as a fee-only transaction, and the
+      // loop could repeat it up to MAX_CHUNKS times: the service never builds one (a partial
+      // chunk needs capacity > 0), and this device does not take its word for it.
+      if (chunkAmount <= 0n || chunkFee < 0n || remaining < 0n) {
         throw new Error(i18n.t("noncustodial.amountChanged"));
       }
       // A daemon that pays less than asked must account for every missing sompi
