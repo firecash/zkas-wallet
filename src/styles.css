@@ -3850,7 +3850,11 @@ input#tx-label { min-height: 44px; }
 .history-arriving .status-dot { flex: none; }
 
 /* Phones: the chip shares the top line with the wallet and language chips, and its value
-   ("This browser", "Public service") was cut off. The icon gives way first. */
+   ("This browser", "Public service") was cut off. The icon gives way first, then the chevron
+   (the whole chip is the button): in German, Russian and French the value was still cut at
+   360 px ("Dieser Bro…") with only the icon gone. */
 @media (max-width: 420px) {
   .wallet-topline .connection-button > svg:first-child { display: none; }
+  .wallet-topline .connection-button > svg:last-child { display: none; }
+  .wallet-topline .connection-button { gap: 0; padding-inline: 10px; }
 }
