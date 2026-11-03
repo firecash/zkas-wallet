@@ -49,6 +49,7 @@ describe("a background balance baseline belongs to one wallet", () => {
     expect(widget).toMatch(/baselineToken\.equals\(prefs\.getString\("token", ""\)\)/);
     // Falls back to the existing "Open to sync" copy rather than inventing a state.
     expect(widget).toContain("sompi = null;");
-    expect(widget).toContain('String balance = "Open to sync";');
+    expect(widget).toContain("String balance = context.getString(R.string.widget_open_to_sync);");
+    expect(readFileSync("android/app/src/main/res/values/strings.xml", "utf8")).toMatch(/name="widget_open_to_sync">Open to sync</);
   });
 });

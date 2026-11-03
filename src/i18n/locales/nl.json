@@ -2181,5 +2181,9 @@
     "browserNoWallet": "Er is geen wallet in deze browser.",
     "browserStorage": "Deze browser heeft de instelling niet opgeslagen.",
     "browserClearnet": "Uitvoeren in deze browser heeft clearnet nodig, en dat staat uit in Tor-modus."
+  },
+  "tray": {
+    "open": "ZKas Wallet openen",
+    "quit": "Afsluiten en diensten stoppen"
   }
 }

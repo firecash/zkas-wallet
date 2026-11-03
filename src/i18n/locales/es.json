@@ -2196,5 +2196,9 @@
     "browserNoWallet": "No hay ninguna billetera en este navegador.",
     "browserStorage": "Este navegador no guardó el ajuste.",
     "browserClearnet": "Ejecutar en este navegador necesita acceso a clearnet, que está desactivado en modo Tor."
+  },
+  "tray": {
+    "open": "Abrir ZKas Wallet",
+    "quit": "Salir y detener servicios"
   }
 }

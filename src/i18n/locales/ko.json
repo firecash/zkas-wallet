@@ -2181,5 +2181,9 @@
     "browserNoWallet": "이 브라우저에는 지갑이 없습니다.",
     "browserStorage": "이 브라우저가 설정을 저장하지 않았습니다.",
     "browserClearnet": "이 브라우저에서 실행하려면 클리어넷 접속이 필요한데, Tor 모드에서는 꺼져 있습니다."
+  },
+  "tray": {
+    "open": "ZKas Wallet 열기",
+    "quit": "종료하고 서비스 중지"
   }
 }

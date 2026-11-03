@@ -8,6 +8,7 @@
 // `lib/privacy` is the one import here on purpose: it imports nothing itself,
 // so the "desktop.ts imports nothing from api.ts, therefore cannot cycle"
 // property that api.ts relies on still holds.
+import i18n from "./i18n";
 import { clearnetAllowed } from "./lib/privacy";
 import { readLocal, removeLocal, writeLocal } from "./lib/safestore";
 
@@ -52,6 +53,16 @@ export async function setDesktopFastSync(on: boolean, url: string): Promise<Desk
 /** True when running inside the Tauri desktop shell. */
 export function isDesktop(): boolean {
   return "__TAURI_INTERNALS__" in globalThis;
+}
+
+/** The tray menu in the app's language. Its labels are written in the desktop shell, outside
+ *  these translations, so they read English whatever language was chosen; sent at start and
+ *  again on every language change. */
+export function syncTrayLabels(): void {
+  if (!isDesktop()) return;
+  const send = () => void invoke("set_tray_labels", { open: i18n.t("tray.open"), quit: i18n.t("tray.quit") }).catch(() => undefined);
+  send();
+  i18n.on("languageChanged", send);
 }
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {

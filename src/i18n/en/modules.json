@@ -223,5 +223,9 @@
     "browserNoWallet": "There is no wallet in this browser.",
     "browserStorage": "This browser would not store the setting.",
     "browserClearnet": "Run in this browser needs clearnet access, which is off in Tor mode."
+  },
+  "tray": {
+    "open": "Open ZKas Wallet",
+    "quit": "Quit and stop services"
   }
 }

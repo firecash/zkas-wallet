@@ -2181,5 +2181,9 @@
     "browserNoWallet": "このブラウザにウォレットはありません。",
     "browserStorage": "このブラウザは設定を保存しませんでした。",
     "browserClearnet": "このブラウザで実行するにはクリアネット接続が必要ですが、Torモードではオフです。"
+  },
+  "tray": {
+    "open": "ZKas Walletを開く",
+    "quit": "終了してサービスを停止"
   }
 }

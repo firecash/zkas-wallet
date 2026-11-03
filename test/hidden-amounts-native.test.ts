@@ -32,12 +32,19 @@ describe("hidden balances stay hidden on the lock screen and the home screen", (
   it("the notification omits the figure but still announces the arrival", () => {
     // Anchor on the PAYMENT notification: the first setContentText in this file belongs to
     // the foreground-service notice, which carries no amount at all.
-    const i = worker.indexOf('ZKAS arrived in your wallet.');
-    expect(i).toBeGreaterThan(0);
-    expect(worker.slice(i - 420, i + 60)).toContain("hideAmounts()");
-    // Still tells the user something arrived — hiding must not mean silence.
-    expect(worker).toMatch(/A payment arrived in your wallet\./);
-    expect(worker).toMatch(/amountZkas \+ " ZKAS arrived in your wallet\."/);
+    // The texts are string resources (shown in the phone's language): the hidden branch takes the
+    // one without the amount, the other formats it in.
+    expect(worker).toMatch(/hideAmounts\(\)\s*\?\s*ctx\.getString\(R\.string\.notif_pay_hidden\)\s*:\s*ctx\.getString\(R\.string\.notif_pay_amount, amountZkas\)/);
+    // Still tells the user something arrived — hiding must not mean silence — and never carries
+    // a figure, in any language.
+    const res = (lang: string) => readFileSync(`android/app/src/main/res/values${lang}/strings.xml`, "utf8");
+    expect(res("")).toMatch(/name="notif_pay_hidden">A payment arrived in your wallet\.</);
+    for (const lang of ["", "-de", "-ru", "-ja", "-ar"]) {
+      const hidden = res(lang).match(/name="notif_pay_hidden">([^<]*)</)?.[1] ?? "";
+      expect(hidden.length, lang).toBeGreaterThan(5);
+      expect(hidden, lang).not.toMatch(/%|\d/);
+      expect(res(lang), lang).toMatch(/name="notif_pay_amount">[^<]*%1\$s/);
+    }
   });
 
   it("the widget masks the balance but keeps the widget", () => {

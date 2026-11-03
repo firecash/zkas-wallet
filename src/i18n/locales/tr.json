@@ -2181,5 +2181,9 @@
     "browserNoWallet": "Bu tarayıcıda cüzdan yok.",
     "browserStorage": "Bu tarayıcı ayarı kaydetmedi.",
     "browserClearnet": "Bu tarayıcıda çalıştırmak için clearnet erişimi gerekir; Tor modunda kapalıdır."
+  },
+  "tray": {
+    "open": "ZKas Wallet'ı aç",
+    "quit": "Çık ve hizmetleri durdur"
   }
 }

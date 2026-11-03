@@ -2181,5 +2181,9 @@
     "browserNoWallet": "Tidak ada dompet di browser ini.",
     "browserStorage": "Browser ini tidak menyimpan pengaturan.",
     "browserClearnet": "Jalankan di browser ini memerlukan akses clearnet, yang mati dalam mode Tor."
+  },
+  "tray": {
+    "open": "Buka ZKas Wallet",
+    "quit": "Keluar dan hentikan layanan"
   }
 }

@@ -2181,5 +2181,9 @@
     "browserNoWallet": "此瀏覽器中沒有錢包。",
     "browserStorage": "此瀏覽器未儲存該設定。",
     "browserClearnet": "在此瀏覽器中執行需要明網連線，而 Tor 模式下已關閉。"
+  },
+  "tray": {
+    "open": "開啟 ZKas Wallet",
+    "quit": "結束並停止服務"
   }
 }

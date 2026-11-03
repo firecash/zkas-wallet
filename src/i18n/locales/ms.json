@@ -2181,5 +2181,9 @@
     "browserNoWallet": "Tiada dompet dalam pelayar ini.",
     "browserStorage": "Pelayar ini tidak menyimpan tetapan.",
     "browserClearnet": "Jalankan dalam pelayar ini memerlukan akses clearnet, yang dimatikan dalam mod Tor."
+  },
+  "tray": {
+    "open": "Buka ZKas Wallet",
+    "quit": "Keluar dan hentikan perkhidmatan"
   }
 }

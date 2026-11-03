@@ -2181,5 +2181,9 @@
     "browserNoWallet": "Hakuna pochi katika kivinjari hiki.",
     "browserStorage": "Kivinjari hiki hakikuhifadhi mpangilio.",
     "browserClearnet": "Kuendesha katika kivinjari hiki kunahitaji ufikiaji wa clearnet, ambao umezimwa katika hali ya Tor."
+  },
+  "tray": {
+    "open": "Fungua ZKas Wallet",
+    "quit": "Ondoka na usimamishe huduma"
   }
 }

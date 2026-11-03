@@ -60,7 +60,7 @@ import { applyStoredTheme } from "./theme";
 // applies the stored/browser language before the first render. The instance itself is
 // for the class-based Boundary and the pre-React boot guard, which cannot use hooks.
 import i18n from "./i18n";
-import { initDesktop, isDesktop, vaultStatus } from "./desktop";
+import { initDesktop, isDesktop, syncTrayLabels, vaultStatus } from "./desktop";
 import { FirstRunNode, needsNodeChoice, markNodeChoiceMade } from "./FirstRunNode";
 import { FirstRunConnect } from "./FirstRunConnect";
 import { WhatsNew, shouldShowWhatsNew } from "./WhatsNew";
@@ -575,6 +575,7 @@ async function boot() {
     }
   }
 
+  syncTrayLabels();
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <ToastHost>

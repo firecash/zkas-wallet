@@ -2032,6 +2032,32 @@ async fn set_node_source(
     Ok(config_of(&mut e))
 }
 
+/// The tray menu's items, renamed in the user's language by [`set_tray_labels`].
+#[cfg(desktop)]
+struct TrayLabels {
+    open: MenuItem<tauri::Wry>,
+    quit: MenuItem<tauri::Wry>,
+}
+
+/// The tray menu in the app's language: the labels are written in Rust, outside the web app's
+/// translations, so the menu said "Open ZKas Wallet" / "Quit and stop services" in English
+/// whatever language was chosen. The web app sends its translations at start and on a change.
+#[tauri::command]
+fn set_tray_labels(app: tauri::AppHandle, open: String, quit: String) {
+    #[cfg(desktop)]
+    if let Some(t) = app.try_state::<TrayLabels>() {
+        let clean = |s: &str| s.trim().chars().take(80).collect::<String>();
+        if !open.trim().is_empty() {
+            let _ = t.open.set_text(clean(&open));
+        }
+        if !quit.trim().is_empty() {
+            let _ = t.quit.set_text(clean(&quit));
+        }
+    }
+    #[cfg(not(desktop))]
+    let _ = (app, open, quit);
+}
+
 /// Settings -> Fast sync. Restarts the wallet engine with the new choice; a start that does not
 /// come up restores the previous choice and its running engine (as `set_node_source` does).
 #[tauri::command]
@@ -4219,6 +4245,8 @@ pub fn run() {
                 let quit =
                     MenuItem::with_id(app, "quit", "Quit and stop services", true, None::<&str>)?;
                 let menu = Menu::with_items(app, &[&open, &quit])?;
+                // Kept so the web app can say these in the user's language (set_tray_labels).
+                app.manage(TrayLabels { open: open.clone(), quit: quit.clone() });
                 let mut tray = TrayIconBuilder::new()
                     .tooltip("ZKas Wallet")
                     .menu(&menu)
@@ -4313,6 +4341,7 @@ pub fn run() {
             wallet_api_request,
             set_node_source,
             set_fast_sync,
+            set_tray_labels,
             control_config,
             install_local_components,
             node_status,

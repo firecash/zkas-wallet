@@ -2181,5 +2181,9 @@
     "browserNoWallet": "Không có ví nào trong trình duyệt này.",
     "browserStorage": "Trình duyệt này không lưu cài đặt.",
     "browserClearnet": "Chạy trong trình duyệt này cần truy cập clearnet, vốn bị tắt ở chế độ Tor."
+  },
+  "tray": {
+    "open": "Mở ZKas Wallet",
+    "quit": "Thoát và dừng dịch vụ"
   }
 }
