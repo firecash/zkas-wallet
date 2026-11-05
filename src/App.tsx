@@ -7387,7 +7387,11 @@ function Send({
           {/* "Catching up" is right while the wallet is still scanning, and wrong when this
                 device simply cannot sign for the network the daemon is on — that never
                 resolves by waiting. See signerCanSign. */}
-            {signerCanSign(status?.network) ? t("send.catchingUp") : t("send.networkNotSignable", { network: status?.network ?? "" })}
+            {/* Synced but not spend-ready is NOT catching up: it said "still catching up" for two
+                minutes on a wallet shown "Up to date" (browser mode, 3 Nov). */}
+            {signerCanSign(status?.network)
+              ? (status?.synced && status?.spend_ready === false && !status?.warming ? t("send.gettingReady") : t("send.catchingUp"))
+              : t("send.networkNotSignable", { network: status?.network ?? "" })}
         </div>
       )}
       {status?.synced && status?.warming && (

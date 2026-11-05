@@ -127,7 +127,8 @@
     "feeExceedsAmount": "La comisión que fijaste ({{fee}} ZKAS) es mayor que el monto que estás enviando ({{amount}} ZKAS). Revísala antes de confirmar.",
     "networkNotSignable": "Esta billetera solo puede firmar pagos en mainnet, y el servicio de billetera está en {{network}}. Aquí puedes recibir, pero no enviar.",
     "feeSummaryExact": "+ {{fee}} de comisión = {{total}} en total",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Tu billetera está al día; preparando tus monedas para gastarlas. Tarda unos segundos."
   },
   "sign": {
     "title": "Firmar mensaje",
@@ -1202,7 +1203,7 @@
   },
   "batchSend": {
     "title": "Envío por lote",
-    "intro": "Un destinatario por línea: <code>dirección, monto, memo opcional</code>. walletd agrupa destinatarios en la menor cantidad de pruebas posible.",
+    "intro": "Un destinatario por línea: <code>dirección, importe, nota opcional</code>. Usa punto para los decimales. En este navegador salen juntos en el menor número de transacciones posible; en otros modos cada línea se paga por separado.",
     "placeholder": "zkas:…, 1.25, Factura 1042\nzkas:…, 0.5",
     "recipients": "{{n}} destinatarios",
     "totalZkas": "{{amount}} ZKAS",

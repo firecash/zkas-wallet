@@ -74,7 +74,8 @@
     "feeExceedsAmount": "The fee you set ({{fee}} ZKAS) is more than the amount you are sending ({{amount}} ZKAS). Check it before confirming.",
     "networkNotSignable": "This wallet can only sign payments on mainnet, and the wallet service is on {{network}}. You can receive here, but not send.",
     "feeSummaryExact": "+ {{fee}} fee = {{total}} total",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Your wallet is up to date; getting your coins ready to spend. This takes a few seconds."
   },
   "sign": {
     "title": "Sign message",

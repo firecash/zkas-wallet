@@ -126,7 +126,8 @@
     "feeExceedsAmount": "Belirlediğiniz ücret ({{fee}} ZKAS), gönderdiğiniz miktardan ({{amount}} ZKAS) daha yüksek. Onaylamadan önce kontrol edin.",
     "networkNotSignable": "Bu cüzdan yalnızca mainnet ödemelerini imzalayabilir, cüzdan hizmeti ise {{network}} üzerinde. Burada alabilirsiniz ama gönderemezsiniz.",
     "feeSummaryExact": "+ {{fee}} ücret = toplam {{total}}",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Cüzdanınız güncel; paralarınız harcamaya hazırlanıyor. Birkaç saniye sürer."
   },
   "sign": {
     "title": "Mesaj imzala",
@@ -1158,7 +1159,7 @@
   },
   "batchSend": {
     "title": "Toplu gönderim",
-    "intro": "Her satıra bir alıcı: <code>adres, miktar, isteğe bağlı not</code>. walletd, alıcıları konsensüsün izin verdiği kadar az kanıta paketler.",
+    "intro": "Satır başına bir alıcı: <code>adres, tutar, isteğe bağlı not</code>. Ondalık için nokta kullanın. Bu tarayıcıda hepsi mümkün olan en az işlemde birlikte gider; diğer modlarda her satır ayrı ödenir.",
     "placeholder": "zkas:…, 1.25, Fatura 1042\nzkas:…, 0.5",
     "recipients": "{{n}} alıcı",
     "totalZkas": "{{amount}} ZKAS",

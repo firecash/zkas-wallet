@@ -74,7 +74,8 @@
     "feeExceedsAmount": "你设置的手续费（{{fee}} ZKAS）高于你要发送的金额（{{amount}} ZKAS）。请在确认前核对。",
     "networkNotSignable": "此钱包只能为主网付款签名，而钱包服务在 {{network}} 上。你可以在这里接收，但无法发送。",
     "feeSummaryExact": "+ 手续费 {{fee}} = 共 {{total}}",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "钱包已是最新；正在准备可用于支付的币，需要几秒钟。"
   },
   "sign": {
     "title": "签名消息",
@@ -1226,7 +1227,7 @@
   },
   "batchSend": {
     "title": "批量发送",
-    "intro": "每行一个收款人：<code>地址, 金额, 可选备注</code>。walletd 会将收款人打包成尽可能少的证明。",
+    "intro": "每行一位收款人：<code>地址, 金额, 可选备注</code>。小数请用点号。在此浏览器中会合并为尽可能少的交易一起发送；其他模式下每行单独付款。",
     "placeholder": "zkas:…, 1.25, 发票1042\nzkas:…, 0.5",
     "recipients": "{{n}} 位接收者",
     "totalZkas": "{{amount}} ZKAS",

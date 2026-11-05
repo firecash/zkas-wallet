@@ -5,6 +5,7 @@ export const __wbg_engine_free: (a: number, b: number) => void;
 export const address_of_fvk: (a: number, b: number, c: number) => void;
 export const engine_adopt_receipt: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: bigint) => void;
 export const engine_anchor_debug: (a: number, b: number) => void;
+export const engine_build_spend_index_step: (a: number, b: number) => number;
 export const engine_checkpoint: (a: number, b: number) => void;
 export const engine_history: (a: number, b: number, c: number, d: number) => void;
 export const engine_ingest_page: (a: number, b: number, c: number, d: number) => void;

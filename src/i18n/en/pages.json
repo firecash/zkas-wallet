@@ -69,7 +69,7 @@
   },
   "batchSend": {
     "title": "Batch send",
-    "intro": "One recipient per line: <code>address, amount, optional memo</code>. walletd packs recipients into as few proofs as consensus allows.",
+    "intro": "One recipient per line: <code>address, amount, optional memo</code>. Use a dot for decimals. In this browser they go out together in as few transactions as possible; elsewhere each line is paid as its own payment.",
     "placeholder": "zkas:…, 1.25, Invoice 1042\nzkas:…, 0.5",
     "recipients": "{{n}} recipients",
     "totalZkas": "{{amount}} ZKAS",

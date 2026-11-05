@@ -276,6 +276,15 @@ export class Engine {
    * [`Engine::ingest_page`] up to and including block `stop_hex` (the whole page when absent).
    */
   ingest_page_until(bytes: Uint8Array, stop_hex: string): string;
+  /**
+   * Build (or extend) the wallet's spend index, the subtree cache, for at most `budget_ms`;
+   * returns true once it covers the anchor. With it a payment's witnesses are O(tree depth)
+   * lookups: without it the first payment after time away rebuilt every coin's witness
+   * over every leaf since (69 s of proving in the browser after two days away, 3 Nov). One
+   * hash per leaf, resumable, so it runs in slices between tip polls and never holds the
+   * worker for long. A wallet with no coins has nothing to index.
+   */
+  build_spend_index_step(budget_ms: number): boolean;
   low(): string;
   /**
    * A new wallet watching `fvk_hex`, starting at a manifest segment boundary (`from` of the
@@ -394,6 +403,7 @@ export interface InitOutput {
   readonly address_of_fvk: (a: number, b: number, c: number) => void;
   readonly engine_adopt_receipt: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: bigint) => void;
   readonly engine_anchor_debug: (a: number, b: number) => void;
+  readonly engine_build_spend_index_step: (a: number, b: number) => number;
   readonly engine_checkpoint: (a: number, b: number) => void;
   readonly engine_history: (a: number, b: number, c: number, d: number) => void;
   readonly engine_ingest_page: (a: number, b: number, c: number, d: number) => void;

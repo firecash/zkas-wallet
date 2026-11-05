@@ -126,7 +126,8 @@
     "feeExceedsAmount": "Phí bạn đặt ({{fee}} ZKAS) lớn hơn số lượng bạn đang gửi ({{amount}} ZKAS). Hãy kiểm tra trước khi xác nhận.",
     "networkNotSignable": "Ví này chỉ có thể ký các khoản thanh toán trên mainnet, còn dịch vụ ví đang ở {{network}}. Bạn có thể nhận ở đây, nhưng không thể gửi.",
     "feeSummaryExact": "+ phí {{fee}} = tổng {{total}}",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Ví của bạn đã cập nhật; đang chuẩn bị xu để chi tiêu. Mất vài giây."
   },
   "sign": {
     "title": "Ký tin nhắn",
@@ -1183,7 +1184,7 @@
   },
   "batchSend": {
     "title": "Gửi hàng loạt",
-    "intro": "Mỗi dòng một người nhận: <code>địa chỉ, số lượng, ghi chú (tùy chọn)</code>. walletd gộp người nhận vào ít bằng chứng nhất có thể.",
+    "intro": "Mỗi dòng một người nhận: <code>địa chỉ, số tiền, ghi chú tùy chọn</code>. Dùng dấu chấm cho phần thập phân. Trong trình duyệt này tất cả được gửi cùng nhau trong ít giao dịch nhất có thể; ở chế độ khác mỗi dòng được trả riêng.",
     "placeholder": "zkas:…, 1.25, Hóa đơn 1042\nzkas:…, 0.5",
     "recipients": "{{n}} người nhận",
     "totalZkas": "{{amount}} ZKAS",

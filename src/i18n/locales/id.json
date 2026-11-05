@@ -126,7 +126,8 @@
     "feeExceedsAmount": "Biaya yang kamu tetapkan ({{fee}} ZKAS) lebih besar daripada jumlah yang kamu kirim ({{amount}} ZKAS). Periksa dulu sebelum mengonfirmasi.",
     "networkNotSignable": "Dompet ini hanya bisa menandatangani pembayaran di mainnet, sedangkan layanan dompet ada di {{network}}. Kamu bisa menerima di sini, tapi tidak bisa mengirim.",
     "feeSummaryExact": "+ biaya {{fee}} = total {{total}}",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Dompet Anda sudah terbaru; koin Anda sedang disiapkan untuk dibelanjakan. Butuh beberapa detik."
   },
   "sign": {
     "title": "Tanda tangani pesan",
@@ -1226,7 +1227,7 @@
   },
   "batchSend": {
     "title": "Kirim massal",
-    "intro": "Satu penerima per baris: <code>alamat, jumlah, memo opsional</code>. walletd mengemas penerima ke dalam bukti seminimal mungkin.",
+    "intro": "Satu penerima per baris: <code>alamat, jumlah, catatan opsional</code>. Gunakan titik untuk desimal. Di browser ini semuanya dikirim bersama dalam transaksi sesedikit mungkin; di mode lain setiap baris dibayar sendiri.",
     "placeholder": "zkas:…, 1.25, Invoice 1042\nzkas:…, 0.5",
     "recipients": "{{n}} penerima",
     "totalZkas": "{{amount}} ZKAS",

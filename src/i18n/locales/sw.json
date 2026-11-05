@@ -126,7 +126,8 @@
     "feeExceedsAmount": "Ada uliyoweka ({{fee}} ZKAS) ni kubwa kuliko kiasi unachotuma ({{amount}} ZKAS). Iangalie kabla ya kuthibitisha.",
     "networkNotSignable": "Pochi hii inaweza kutia saini malipo ya mainnet tu, lakini huduma ya pochi iko kwenye {{network}}. Unaweza kupokea hapa, lakini si kutuma.",
     "feeSummaryExact": "+ ada {{fee}} = jumla {{total}}",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Pochi yako iko sawa; sarafu zako zinaandaliwa kutumiwa. Inachukua sekunde chache."
   },
   "sign": {
     "title": "Saini ujumbe",
@@ -1226,7 +1227,7 @@
   },
   "batchSend": {
     "title": "Tuma kwa wingi",
-    "intro": "Mpokeaji mmoja kwa mstari: <code>anwani, kiasi, kumbukumbu ya hiari</code>. walletd hufunga wapokeaji kwenye uthibitisho machache iwezekanavyo.",
+    "intro": "Mpokeaji mmoja kwa kila mstari: <code>anwani, kiasi, maelezo ya hiari</code>. Tumia nukta kwa desimali. Katika kivinjari hiki zote hutumwa pamoja kwa miamala michache iwezekanavyo; katika hali nyingine kila mstari hulipwa peke yake.",
     "placeholder": "zkas:…, 1.25, Ankra 1042\nzkas:…, 0.5",
     "recipients": "{{n}} wapokeaji",
     "totalZkas": "{{amount}} ZKAS",

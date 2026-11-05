@@ -1124,7 +1124,7 @@
   },
   "batchSend": {
     "title": "一括送信",
-    "intro": "1行につき1受取人: <code>アドレス, 金額, メモ(任意)</code>。walletdがコンセンサス上限まで受取人をまとめます。",
+    "intro": "1行に1人の受取人：<code>アドレス, 金額, 任意のメモ</code>。小数点にはピリオドを使ってください。このブラウザではまとめてできるだけ少ない取引で送られます。他のモードでは1行ずつ別の支払いになります。",
     "placeholder": "zkas:…, 1.25, 請求書1042\nzkas:…, 0.5",
     "recipients": "{{n}}件の受取人",
     "totalZkas": "合計 {{amount}} ZKAS",
@@ -1880,7 +1880,8 @@
     "feeExceedsAmount": "設定した手数料（{{fee}} ZKAS）が送金する金額（{{amount}} ZKAS）を上回っています。確定する前に確認してください。",
     "networkNotSignable": "このウォレットはメインネットの支払いにしか署名できませんが、ウォレットサービスは {{network}} にあります。ここでは受け取りはできますが、送信はできません。",
     "feeSummaryExact": "+ 手数料 {{fee}} = 合計 {{total}}",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "ウォレットは最新です。コインを支払いに使えるよう準備しています。数秒かかります。"
   },
   "sign": {
     "title": "メッセージに署名",

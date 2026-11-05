@@ -74,7 +74,8 @@
     "feeExceedsAmount": "Ustawiona opłata ({{fee}} ZKAS) jest większa niż wysyłana kwota ({{amount}} ZKAS). Sprawdź to przed zatwierdzeniem.",
     "networkNotSignable": "Ten portfel potrafi podpisywać płatności tylko w mainnecie, a usługa portfela działa na {{network}}. Tutaj możesz odbierać, ale nie wysyłać.",
     "feeSummaryExact": "+ {{fee}} opłaty = {{total}} razem",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Portfel jest aktualny; przygotowuję monety do wydania. To potrwa kilka sekund."
   },
   "sign": {
     "title": "Podpisz wiadomość",
@@ -1250,7 +1251,7 @@
   },
   "batchSend": {
     "title": "Wysyłka grupowa",
-    "intro": "Jeden odbiorca na linię: <code>adres, kwota, opcjonalna notatka</code>. walletd pakuje odbiorców w jak najmniejszą liczbę dowodów.",
+    "intro": "Jeden odbiorca w wierszu: <code>adres, kwota, opcjonalna notatka</code>. Część dziesiętną pisz po kropce. W tej przeglądarce wychodzą razem w jak najmniejszej liczbie transakcji; w innych trybach każdy wiersz to osobna płatność.",
     "placeholder": "zkas:…, 1.25, Faktura 1042\nzkas:…, 0.5",
     "recipients": "{{n}} odbiorców",
     "totalZkas": "{{amount}} ZKAS",

@@ -19,6 +19,8 @@ export interface EngineLike {
   history?(limit: number, offset: number): string;
   /** Returns why the anchor was not taken ("ahead" / "below_base"), or nothing when it was. */
   set_anchor?(boundaryJson: string): string | undefined | void;
+  /** Build the spend index (subtree cache) for at most `budgetMs`; true once it covers the anchor. */
+  build_spend_index_step?(budgetMs: number): boolean;
   /** Counts only: tree, base, anchor, leaves the oldest unmatured coin still needs. */
   anchor_debug?(): string;
   set_mempool?(payloadsJson: string): void;
@@ -138,6 +140,8 @@ export const STREAMS = 4;
 export const STREAM_STOP_BEFORE_TIP = 3_000;
 /** At most this much (DAA) per stream at once: bounds the pages held while earlier ones ingest. */
 export const STREAM_MAX_DAA = 25_000;
+/** Worker time per tip round spent building the spend index. */
+const SPEND_INDEX_STEP_MS = 2_000;
 /** During a gateway catch-up, save at most this often (a reload resumes from here). */
 const GATEWAY_SAVE_MS = 15_000;
 
@@ -706,6 +710,11 @@ export async function runSync(d: SyncDeps): Promise<void> {
           /* no mempool preview this round */
         }),
     ]);
+    // The spend index (subtree cache) is built a slice per round (~1 s of worker time at most),
+    // one hash per leaf since the wallet last ran. Done in one go inside the anchor it held the
+    // worker ~2 minutes with the wallet unable to spend; without it the first payment after time
+    // away proved for ~70 s. A payment made before it is ready takes the batch path.
+    live.build_spend_index_step?.(SPEND_INDEX_STEP_MS);
     const saved = await saving;
     await settleVerify();
     if (!everSynced) {

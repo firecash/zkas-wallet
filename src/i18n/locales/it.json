@@ -127,7 +127,8 @@
     "feeExceedsAmount": "La commissione impostata ({{fee}} ZKAS) è superiore all'importo che stai inviando ({{amount}} ZKAS). Controllala prima di confermare.",
     "networkNotSignable": "Questo portafoglio può firmare pagamenti solo su mainnet, mentre il servizio portafoglio è su {{network}}. Qui puoi ricevere, ma non inviare.",
     "feeSummaryExact": "+ {{fee}} di commissione = {{total}} in totale",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Il wallet è aggiornato; sto preparando le monete per spenderle. Ci vogliono pochi secondi."
   },
   "sign": {
     "title": "Firma messaggio",
@@ -1398,7 +1399,7 @@
   },
   "batchSend": {
     "title": "Invio multiplo",
-    "intro": "Un destinatario per riga: <code>indirizzo, importo, memo opzionale</code>. walletd raggruppa i destinatari nel minor numero di prove consentito dal consenso.",
+    "intro": "Un destinatario per riga: <code>indirizzo, importo, nota facoltativa</code>. Usa il punto per i decimali. In questo browser partono insieme nel minor numero di transazioni possibile; altrove ogni riga è pagata come pagamento a sé.",
     "placeholder": "zkas:…, 1.25, Fattura 1042\nzkas:…, 0.5",
     "recipients": "{{n}} destinatari",
     "totalZkas": "{{amount}} ZKAS",

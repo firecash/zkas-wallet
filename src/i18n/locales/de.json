@@ -126,7 +126,8 @@
     "feeExceedsAmount": "Die eingestellte Gebühr ({{fee}} ZKAS) ist höher als der Betrag, den du sendest ({{amount}} ZKAS). Prüfe das, bevor du bestätigst.",
     "networkNotSignable": "Diese Wallet kann Zahlungen nur im Mainnet signieren, der Wallet-Dienst läuft aber auf {{network}}. Empfangen ist hier möglich, Senden nicht.",
     "feeSummaryExact": "+ {{fee}} Gebühr = {{total}} gesamt",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Deine Wallet ist aktuell; deine Münzen werden zum Ausgeben vorbereitet. Das dauert ein paar Sekunden."
   },
   "sign": {
     "title": "Nachricht signieren",
@@ -1189,7 +1190,7 @@
   },
   "batchSend": {
     "title": "Stapelversand",
-    "intro": "Ein Empfänger pro Zeile: <code>Adresse, Betrag, optionale Notiz</code>. walletd packt Empfänger in so wenige Proofs wie möglich.",
+    "intro": "Ein Empfänger pro Zeile: <code>Adresse, Betrag, optionale Notiz</code>. Dezimalstellen mit Punkt. In diesem Browser gehen sie gemeinsam in möglichst wenigen Transaktionen raus; sonst wird jede Zeile als eigene Zahlung bezahlt.",
     "placeholder": "zkas:…, 1.25, Rechnung 1042\nzkas:…, 0.5",
     "recipients": "{{n}} Empfänger",
     "totalZkas": "{{amount}} ZKAS",

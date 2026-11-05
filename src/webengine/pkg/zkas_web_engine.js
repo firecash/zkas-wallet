@@ -1070,6 +1070,20 @@ export class Engine {
         }
     }
     /**
+     * Build (or extend) the wallet's spend index, the subtree cache, for at most `budget_ms`;
+     * returns true once it covers the anchor. With it a payment's witnesses are O(tree depth)
+     * lookups: without it the first payment after time away rebuilt every coin's witness
+     * over every leaf since (69 s of proving in the browser after two days away, 3 Nov). One
+     * hash per leaf, resumable, so it runs in slices between tip polls and never holds the
+     * worker for long. A wallet with no coins has nothing to index.
+     * @param {number} budget_ms
+     * @returns {boolean}
+     */
+    build_spend_index_step(budget_ms) {
+        const ret = wasm.engine_build_spend_index_step(this.__wbg_ptr, budget_ms);
+        return ret !== 0;
+    }
+    /**
      * @returns {string}
      */
     low() {

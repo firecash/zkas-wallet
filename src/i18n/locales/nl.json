@@ -126,7 +126,8 @@
     "feeExceedsAmount": "De netwerkkosten die je hebt ingesteld ({{fee}} ZKAS) zijn hoger dan het bedrag dat je verzendt ({{amount}} ZKAS). Controleer dit voordat je bevestigt.",
     "networkNotSignable": "Deze wallet kan alleen betalingen op mainnet ondertekenen, en de walletservice staat op {{network}}. Je kunt hier ontvangen, maar niet verzenden.",
     "feeSummaryExact": "+ {{fee}} kosten = {{total}} totaal",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Je wallet is bijgewerkt; je munten worden klaargezet om te besteden. Dit duurt een paar seconden."
   },
   "sign": {
     "title": "Bericht ondertekenen",
@@ -1226,7 +1227,7 @@
   },
   "batchSend": {
     "title": "Batch verzenden",
-    "intro": "Eén ontvanger per regel: <code>adres, bedrag, optionele memo</code>. walletd verpakt ontvangers in zo min mogelijk bewijzen als consensus toestaat.",
+    "intro": "Eén ontvanger per regel: <code>adres, bedrag, optionele notitie</code>. Gebruik een punt voor decimalen. In deze browser gaan ze samen in zo weinig mogelijk transacties; elders wordt elke regel als eigen betaling betaald.",
     "placeholder": "zkas:…, 1.25, Factuur 1042\nzkas:…, 0.5",
     "recipients": "{{n}} ontvangers",
     "totalZkas": "{{amount}} ZKAS",

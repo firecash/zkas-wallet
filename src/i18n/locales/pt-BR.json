@@ -127,7 +127,8 @@
     "feeExceedsAmount": "A taxa que você definiu ({{fee}} ZKAS) é maior que o valor que está enviando ({{amount}} ZKAS). Confira antes de confirmar.",
     "networkNotSignable": "Esta carteira só assina pagamentos na mainnet, e o serviço de carteira está em {{network}}. Você pode receber aqui, mas não enviar.",
     "feeSummaryExact": "+ {{fee}} de taxa = {{total}} no total",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Sua carteira está em dia; preparando suas moedas para gastar. Leva alguns segundos."
   },
   "sign": {
     "title": "Assinar mensagem",
@@ -1160,7 +1161,7 @@
   },
   "batchSend": {
     "title": "Envio em lote",
-    "intro": "Um destinatário por linha: <code>endereço, valor, memo opcional</code>. walletd agrupa destinatários no menor número de provas que o consenso permite.",
+    "intro": "Um destinatário por linha: <code>endereço, valor, nota opcional</code>. Use ponto para decimais. Neste navegador eles saem juntos no menor número possível de transações; nos outros modos cada linha é paga separadamente.",
     "placeholder": "zkas:…, 1.25, Fatura 1042\nzkas:…, 0.5",
     "recipients": "{{n}} destinatários",
     "totalZkas": "{{amount}} ZKAS",

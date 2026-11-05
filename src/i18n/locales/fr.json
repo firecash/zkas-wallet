@@ -127,7 +127,8 @@
     "feeExceedsAmount": "Les frais que vous avez fixés ({{fee}} ZKAS) dépassent le montant que vous envoyez ({{amount}} ZKAS). Vérifiez-les avant de confirmer.",
     "networkNotSignable": "Ce portefeuille ne peut signer des paiements que sur le mainnet, or le service de portefeuille est sur {{network}}. Vous pouvez recevoir ici, mais pas envoyer.",
     "feeSummaryExact": "+ {{fee}} de frais = {{total}} au total",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "Votre portefeuille est à jour ; préparation de vos pièces pour la dépense. Cela prend quelques secondes."
   },
   "sign": {
     "title": "Signer un message",
@@ -1238,7 +1239,7 @@
   },
   "batchSend": {
     "title": "Envoi groupé",
-    "intro": "Un destinataire par ligne : <code>adresse, montant, mémo (optionnel)</code>. walletd regroupe les destinataires en un minimum de preuves.",
+    "intro": "Un destinataire par ligne : <code>adresse, montant, note facultative</code>. Utilisez un point pour les décimales. Dans ce navigateur, ils partent ensemble en aussi peu de transactions que possible ; ailleurs, chaque ligne est payée séparément.",
     "placeholder": "zkas:…, 1.25, Facture 1042\nzkas:…, 0.5",
     "recipients": "{{n}} destinataires",
     "totalZkas": "{{amount}} ZKAS",

@@ -126,7 +126,8 @@
     "feeExceedsAmount": "설정한 수수료({{fee}} ZKAS)가 보내려는 금액({{amount}} ZKAS)보다 많습니다. 확인 전에 다시 살펴보세요.",
     "networkNotSignable": "이 지갑은 메인넷 결제만 서명할 수 있지만, 지갑 서비스는 {{network}}에 있습니다. 여기서 받을 수는 있으나 보낼 수는 없습니다.",
     "feeSummaryExact": "+ 수수료 {{fee}} = 합계 {{total}}",
-    "feeExact": "{{fee}} ZKAS"
+    "feeExact": "{{fee}} ZKAS",
+    "gettingReady": "지갑이 최신 상태입니다. 코인을 사용할 수 있도록 준비하는 중입니다. 몇 초 걸립니다."
   },
   "sign": {
     "title": "메시지 서명",
@@ -1226,7 +1227,7 @@
   },
   "batchSend": {
     "title": "일괄 보내기",
-    "intro": "한 줄에 한 명: <code>주소, 금액, 메모(선택)</code>. walletd가 합의 허용 범위 내에서 최소 증명으로 묶습니다.",
+    "intro": "한 줄에 수신자 한 명: <code>주소, 금액, 선택 메모</code>. 소수점은 마침표로 쓰세요. 이 브라우저에서는 가능한 한 적은 거래로 함께 보내고, 다른 모드에서는 줄마다 따로 결제합니다.",
     "placeholder": "zkas:…, 1.25, 청구서 1042\nzkas:…, 0.5",
     "recipients": "{{n}}명",
     "totalZkas": "{{amount}} ZKAS",
