@@ -365,6 +365,11 @@ export interface PreparedAhead {
   /// Null while the proof is still running.
   finishedAt: number | null;
   promise: Promise<PrepareResp>;
+  /// The request id this prepare was made under, and whether it reused one remembered after an
+  /// unknown outcome. A payment that adopts this prepare MUST carry the same id: the daemon
+  /// records a broadcast under the id of the prepare that built it.
+  rid: string;
+  retry: boolean;
 }
 
 /// Answered longer ago than this, a prepared session is too close to the daemon's
@@ -485,7 +490,7 @@ export function prepareAhead(
   allowMultipleTransactions = false,
 ): PreparedAhead {
   const owed = amountToSompi(amountFc);
-  const { rid } = requestIdFor(prepareKey(to, owed, fee, memo, allowMultipleTransactions));
+  const { rid, retry } = requestIdFor(prepareKey(to, owed, fee, memo, allowMultipleTransactions));
   const promise = (async () => {
     const fvk = await fvkHex(seedHex);
     return prepareWaitingForIndex(
@@ -494,7 +499,7 @@ export function prepareAhead(
       () => undefined,
     );
   })();
-  const ahead: PreparedAhead = { key: prepareKey(to, owed, fee, memo, allowMultipleTransactions), startedAt: Date.now(), finishedAt: null, promise };
+  const ahead: PreparedAhead = { key: prepareKey(to, owed, fee, memo, allowMultipleTransactions), startedAt: Date.now(), finishedAt: null, promise, rid, retry };
   // Nobody may be listening if the user backs out; an unhandled rejection is not
   // an error here. The send that adopts the promise re-awaits it and gets it.
   promise.then(
@@ -548,17 +553,21 @@ export async function sendNonCustodial(
   let owed = amountToSompi(amountFc);
   const totalSompi = owed;
   const intent = prepareKey(to, totalSompi, fee, memo, allowMultipleTransactions);
-  const { rid, retry } = requestIdFor(intent);
+  // Adopt a prepare started at the Confirm screen only for THIS exact payment
+  // and only while its session is comfortably inside the daemon's expiry.
+  const adopted = ahead && prepareAheadUsable(ahead, to, amountFc, fee, memo, allowMultipleTransactions) ? ahead.promise : null;
+  // An adopted prepare's id, not a second fresh one. Drawing a new id here while broadcasting the
+  // transaction the early prepare built under ITS id meant that after an unknown outcome the app
+  // remembered an id walletd had never seen: the retry prepared a new payment from the wallet's
+  // other coins instead of being told "already sent" (e2e 5 Nov: ids cbca93d2… then 01fd9bc1…),
+  // so a payment whose answer was lost was paid twice — on the normal Confirm path.
+  const { rid, retry } = adopted && ahead ? { rid: ahead.rid, retry: ahead.retry } : requestIdFor(intent);
   // An unknown submit outcome: keep the id against this payment, and against the remainder the
   // app then offers (see rememberUnknownSubmit). `owed` is this transaction's amount.
   const noteUnknown = (chunk: number) => {
     rememberUnknownSubmit(intent, rid);
     if (chunk > 0) rememberUnknownSubmit(prepareKey(to, owed, fee, memo, allowMultipleTransactions), chunkRid(rid, chunk));
   };
-  // Adopt a prepare started at the Confirm screen only for THIS exact payment
-  // and only while its session is comfortably inside the daemon's expiry.
-  const adopted = ahead && prepareAheadUsable(ahead, to, amountFc, fee, memo, allowMultipleTransactions) ? ahead.promise : null;
-
   // The fee ceiling the on-device signer enforces per transaction. A custom fee is
   // a floor the daemon may raise to the byte-priced relay minimum, so the ceiling
   // is whichever is larger — the user's figure or the standing cap.

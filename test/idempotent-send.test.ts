@@ -11,7 +11,7 @@ const { prepare, submit, fvkHex, verifyAndSignPayment } = vi.hoisted(() => ({
 vi.mock("../src/api", () => ({ api: { prepare, submit } }));
 vi.mock("../src/signer", () => ({ fvkHex, verifyAndSignPayment }));
 
-import { sendNonCustodial, SubmitUnknownError } from "../src/noncustodial";
+import { prepareAhead, sendNonCustodial, SubmitUnknownError } from "../src/noncustodial";
 
 const prep = (session: string) => ({
   session, bundle_hex: "aa", disclosure: {}, spend_auth: [{ index: 0 }],
@@ -44,6 +44,29 @@ describe("idempotent sends", () => {
     expect(r.txid).toBe("tx-original");
     expect(r.amount_sompi).toBe(500000000);
     expect(submit).toHaveBeenCalledTimes(1); // only the first, lost, broadcast
+  });
+
+  it("a payment that adopts the Confirm screen's early prepare keeps THAT prepare's id for its retry", async () => {
+    // The app's normal path: the Confirm screen starts the prepare, Confirm & send adopts it.
+    // The adopting send drew a second fresh id and remembered that one after an unknown
+    // outcome, so the retry carried an id walletd had never recorded and paid again.
+    const seed = "ab".repeat(32);
+    prepare.mockResolvedValueOnce(prep("s1"));
+    const ahead = prepareAhead(seed, "zkas:dest", 5);
+    await ahead.promise;
+    submit.mockRejectedValueOnce(Object.assign(new Error("unreachable"), { unreachable: true }));
+    await expect(sendNonCustodial(seed, "mainnet", "zkas:dest", 5, undefined, undefined, undefined, false, ahead)).rejects.toBeInstanceOf(SubmitUnknownError);
+    const broadcastId = prepare.mock.calls[0][6];
+
+    // Retry through the Confirm screen again: its early prepare, then the send.
+    prepare.mockRejectedValueOnce(alreadySent("tx-original")).mockRejectedValueOnce(alreadySent("tx-original"));
+    const ahead2 = prepareAhead(seed, "zkas:dest", 5);
+    await ahead2.promise.catch(() => undefined);
+    const r = await sendNonCustodial(seed, "mainnet", "zkas:dest", 5, undefined, undefined, undefined, false, ahead2);
+    expect(prepare.mock.calls[1][6]).toBe(broadcastId);
+    expect(prepare.mock.calls[2][6]).toBe(broadcastId);
+    expect(r.txid).toBe("tx-original");
+    expect(submit).toHaveBeenCalledTimes(1);
   });
 
   it("a fresh payment never accepts an 'already sent' claim", async () => {
