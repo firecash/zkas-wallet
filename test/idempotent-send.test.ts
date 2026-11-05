@@ -69,6 +69,33 @@ describe("idempotent sends", () => {
     expect(submit).toHaveBeenCalledTimes(1);
   });
 
+  it("walletd's 'outcome unknown' and a proxy's 5xx page are unknown outcomes, and the retry reuses the id", async () => {
+    const seed = "ab".repeat(32);
+    for (const failure of [
+      Object.assign(new Error("not known whether it went out"), { httpStatus: 504, outcomeUnknown: true }),
+      Object.assign(new Error("Invalid response (502)"), { httpStatus: 502, notWalletd: true }),
+    ]) {
+      localStorage.clear();
+      prepare.mockReset();
+      submit.mockReset();
+      prepare.mockResolvedValueOnce(prep("s1"));
+      submit.mockRejectedValueOnce(failure);
+      await expect(sendNonCustodial(seed, "mainnet", "zkas:dest", 5)).rejects.toBeInstanceOf(SubmitUnknownError);
+      const firstId = prepare.mock.calls[0][6];
+      prepare.mockRejectedValueOnce(alreadySent("tx-original"));
+      const r = await sendNonCustodial(seed, "mainnet", "zkas:dest", 5);
+      expect(prepare.mock.calls[1][6]).toBe(firstId);
+      expect(r.txid).toBe("tx-original");
+    }
+  });
+
+  it("a proxy's 4xx page never reached walletd and stays a plain failure", async () => {
+    prepare.mockResolvedValueOnce(prep("s1"));
+    submit.mockRejectedValueOnce(Object.assign(new Error("Invalid response (413)"), { httpStatus: 413, notWalletd: true }));
+    const e = await sendNonCustodial("ab".repeat(32), "mainnet", "zkas:dest", 5).catch((x) => x);
+    expect(e).not.toBeInstanceOf(SubmitUnknownError);
+  });
+
   it("a fresh payment never accepts an 'already sent' claim", async () => {
     prepare.mockRejectedValueOnce(alreadySent("tx-made-up"));
     await expect(sendNonCustodial("ab".repeat(32), "mainnet", "zkas:dest", 5)).rejects.toThrow();

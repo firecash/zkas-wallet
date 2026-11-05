@@ -21,14 +21,18 @@ describe("a submit with no answer is unknown, not failed", () => {
     expect(e).toBeInstanceOf(Error);
   });
 
-  it("is raised for a timeout and for an unreachable daemon, and only there", () => {
+  it("is raised for a timeout, an unreachable daemon, a declared unknown outcome and a proxy page", () => {
     const src = readFileSync("src/noncustodial.ts", "utf8");
     const i = src.indexOf("res = await api.submit(");
     expect(i).toBeGreaterThan(0);
-    const around = src.slice(i - 400, i + 500);
+    // The whole catch of the submit call (it grew with the unknown-outcome conditions).
+    const around = src.slice(i - 400, i + 800);
     expect(around).toContain("timedOut");
     expect(around).toContain("unreachable");
     expect(around).toContain("SubmitUnknownError");
+    // ...and for walletd declaring the outcome unknown, and for a proxy's 5xx page.
+    expect(around).toContain("outcomeUnknown");
+    expect(around).toContain("notWalletd");
     // A daemon that ANSWERED with an error is a real refusal and must pass through
     // unchanged, because the daemon knows whether it broadcast.
     expect(around).toContain("throw e;");

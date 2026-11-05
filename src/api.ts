@@ -852,7 +852,9 @@ async function reqInner<T>(method: string, path: string, body: unknown, timeoutM
     try {
       data = JSON.parse(text);
     } catch {
-      throw new Error(i18n.t("api.invalidResponse", { status }));
+      // `notWalletd`: walletd answers JSON, always — something between (a proxy) answered instead,
+      // and for a broadcast that says nothing about whether walletd had already sent it.
+      throw Object.assign(new Error(i18n.t("api.invalidResponse", { status })), { httpStatus: status, notWalletd: true });
     }
   } else if (status >= 200 && status < 300 && status !== 204) {
     // A 2xx with NO BODY is a broken response, not an empty object.
@@ -867,7 +869,7 @@ async function reqInner<T>(method: string, path: string, body: unknown, timeoutM
     // Reproduced against a daemon answering 200 with an empty body; every endpoint this
     // app calls returns JSON, so there is no legitimate empty 2xx. 204 is excluded
     // because that status means "no content" by definition.
-    throw new Error(i18n.t("api.invalidResponse", { status }));
+    throw Object.assign(new Error(i18n.t("api.invalidResponse", { status })), { httpStatus: status, notWalletd: true });
   }
   // 401/403 is an AUTH failure, and the remedy has nothing to do with reachability.
   // WalletdUnauthorizedError already exists for exactly this, with a note that generic
@@ -892,6 +894,9 @@ async function reqInner<T>(method: string, path: string, body: unknown, timeoutM
       httpStatus: status,
       // walletd's answer to a retried payment it already broadcast (idempotent sends).
       alreadySent: data.already_sent,
+      // walletd could not tell whether a broadcast went out (the node's connection failed while
+      // receiving it). The caller must treat it as in flight, never as a failure.
+      outcomeUnknown: data.outcome_unknown === true,
     });
   }
   return data as T;

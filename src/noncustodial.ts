@@ -724,14 +724,20 @@ export async function sendNonCustodial(
       const submitSpan = diagSpan("send", "submit", { part: chunk + 1 });
       // A submit that never got an answer is NOT a failed send — it is an unknown one.
       // Only this one call broadcasts, so this is the only place the distinction exists.
+      // Also unknown: walletd saying so (its node connection failed mid-broadcast), and a reply
+      // that is not walletd's — a proxy's 5xx page (nginx giving up on a slow broadcast) or an
+      // empty 2xx. Both were reported as a plain failure, so the request id was not kept and a
+      // retry built a new payment from other coins while the first may have gone out. A proxy's
+      // 4xx (a body it refused, say) never reached walletd and stays a failure.
       let res;
       try {
         res = await api.submit(prep.session, sigs);
         submitSpan.end({ outcome: "accepted" });
       } catch (e) {
         submitSpan.end({ outcome: "failed", err: (e as Error)?.name }, { lvl: "warn" });
-        const marked = e as { timedOut?: boolean; unreachable?: boolean };
-        if (marked?.timedOut || marked?.unreachable) {
+        const marked = e as { timedOut?: boolean; unreachable?: boolean; outcomeUnknown?: boolean; notWalletd?: boolean; httpStatus?: number };
+        const proxyAnswered = !!marked?.notWalletd && ((marked.httpStatus ?? 0) >= 500 || (marked.httpStatus ?? 0) < 300);
+        if (marked?.timedOut || marked?.unreachable || marked?.outcomeUnknown || proxyAnswered) {
           noteUnknown(chunk);
           throw new SubmitUnknownError(i18n.t("send.submitOutcomeUnknown"));
         }
