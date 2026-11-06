@@ -169,9 +169,11 @@ describe("browser sync loop", () => {
     t.d.shouldStop = () => synced >= 2;
     await runSync(t.d);
     const first = events.indexOf("synced");
-    // This fixture saves twice while catching up (two segments, then the files' end). The tip
-    // save used to finish before "synced" too (three); now it starts right after it.
-    expect(events.slice(0, first).filter((e) => e === "save-done").length).toBe(2);
+    // This fixture holds no note, so nothing of its own changes while it catches up: the only
+    // save before "synced" is the one at the files' end (it used to save after every other
+    // segment as well, which wrote the whole leaf stream again each time). The tip save
+    // used to finish before "synced" too; now it starts right after it.
+    expect(events.slice(0, first).filter((e) => e === "save-done").length).toBe(1);
     expect(events[first + 1]).toBe("save-start");
   });
 

@@ -118,7 +118,21 @@ export const ANCHOR_DEPTH_DAA = 1_000;
 export const SEGMENT_READ_AHEAD = 2;
 
 /** Checkpoint every this many segments while catching up. */
-const SAVE_EVERY_SEGMENTS = 2;
+// A checkpoint is written when the wallet's OWN state changed (a note found, a spend
+// parked) or, failing that, every SAVE_EVERY_SEGMENTS segments: it carries every leaf since
+// the wallet's oldest note, so writing it after every segment of chain cost hundreds of MB
+// of IndexedDB per day of chain restored for a wallet holding one old note.
+const SAVE_EVERY_SEGMENTS = 20;
+
+/** What a save must capture: the wallet's own state, not its position in the chain. */
+function privateState(eng: EngineLike): string {
+  try {
+    const st = JSON.parse(eng.status());
+    return [st.notes, st.balance_sompi, st.pending_out_sompi, st.pending_change_sompi].join("|");
+  } catch {
+    return "";
+  }
+}
 /** Below this gap (DAA) a resumed wallet skips the chain-file manifest: no segment is worth it. */
 export const MANIFEST_MIN_GAP = 20_000;
 /** A cached anchor younger than this is used on resume (it is still deep and final). */
@@ -400,6 +414,8 @@ export async function runSync(d: SyncDeps): Promise<void> {
     }
   };
   let sinceSave = 0;
+  let savedState = privateState(eng);
+  const signedTo = new Map<string, unknown>();
   for (let i = 0; i < pending.length; i++) {
     const s = pending[i];
     if (d.shouldStop()) return;
@@ -430,8 +446,11 @@ export async function runSync(d: SyncDeps): Promise<void> {
       throw e;
     }
     phase("segment", { index: s.index, kb: Math.round(bytes.length / 1024), download_ms: Math.round(performance.now() - (started.get(i) ?? tWait)) - ms(tIngest), waited_ms: waited, ingest_ms: ms(tIngest) });
-    if (++sinceSave >= SAVE_EVERY_SEGMENTS) {
+    signedTo.set(s.to.block, s.to);
+    const now = privateState(eng);
+    if (now !== savedState || ++sinceSave >= SAVE_EVERY_SEGMENTS) {
       sinceSave = 0;
+      savedState = now;
       await d.save(eng.checkpoint());
     }
     report("files");
@@ -631,9 +650,15 @@ export async function runSync(d: SyncDeps): Promise<void> {
       const mine = eng.tip_frontier();
       if (mine) {
         const m = JSON.parse(mine);
+        const same = (o: { block?: string; size?: number | string; leaf?: string; ommers?: string[] }) =>
+          o.block === m.block && Number(o.size) === Number(m.size) && o.leaf === m.leaf && JSON.stringify(o.ommers) === JSON.stringify(m.ommers);
+        // The signed segment boundary at this block, when the wallet ingested one, is the
+        // authority: a node that disagrees with it is the wrong party, and the wallet's data
+        // must not be discarded on its word.
+        const signed = signedTo.get(m.block) as Parameters<typeof same>[0] | undefined;
         verifyJob = get(`${d.gateway}/tree?block=${eng.low()}`)
           .then((r) => r.json())
-          .then((node) => node.block === m.block && node.size === m.size && node.leaf === m.leaf && JSON.stringify(node.ommers) === JSON.stringify(m.ommers));
+          .then((node) => same(node) || (!!signed && same(signed)));
         verifyJob.catch(() => undefined);
         // A wallet resumed from its own checkpoint was checked when it last reached the tip:
         // its check runs while it is shown up to date, and a mismatch still stops it a moment
