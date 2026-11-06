@@ -65,7 +65,7 @@ public class MainActivity extends BridgeActivity {
     java.util.Map<String, Object> f = new java.util.HashMap<>();
     f.put("level", level);
     f.put("released", release);
-    f.put("freed_leaves", freed);
+    f.put("freed_bytes", freed);
     DiagStore.emit("perf", "trim", release ? "warn" : "info", f);
   }
 
@@ -102,7 +102,7 @@ public class MainActivity extends BridgeActivity {
     super.onLowMemory();
     long freed = EngineControl.releaseMemory();
     java.util.Map<String, Object> f = new java.util.HashMap<>();
-    f.put("freed_leaves", freed);
+    f.put("freed_bytes", freed);
     DiagStore.emit("perf", "low_memory", "warn", f);
   }
 
