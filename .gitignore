@@ -48,3 +48,4 @@ android/app/src/main/jniLibs/
 /ios/ZkasEngine/ZkasEngine.xcframework/
 /ios/ZkasEngine/Sources/*.swift
 !/ios/ZkasEngine/Sources/.gitkeep
+/ios/ZkasEngine/MANIFEST
