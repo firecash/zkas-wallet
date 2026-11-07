@@ -63,6 +63,92 @@ daemon's host shows the live breakdown.
 
 ---
 
+## Every feature of the reference wallet, and the call behind it
+
+The light wallet in this repo (web at `wallet.zkas.info`, Android, Windows/macOS/Linux
+desktop) is built on the same public surface this document describes. This table is the
+full inventory from `src/`; anything in it can be reproduced in your product with the
+listed call. Device-only features need no daemon at all.
+
+### Wallet and keys
+
+| Feature | How it is built | Your call |
+|---|---|---|
+| Create wallet | 12-word phrase on the device, account 0 (`src/accounts.ts`) | signer `new_wallet_mnemonic`, `account_seed_hex(phrase, 0)` |
+| Add account | next ZIP-32 index under the same phrase; each account is its own wallet token on the daemon | `account_seed_hex(phrase, n)`, then `/watch` with a fresh token |
+| Restore | phrase or 64-hex seed, plus the birthday; accounts 1..n re-created from the backup's `accountList` | `is_valid_mnemonic`, `/watch { fvk_hex, birthday }` |
+| Encrypted backup file | `SeedBackup` JSON: `{ magic, version, kind: "device-seed", network, birthday, accounts, accountList, saltB64, ivB64, ciphertextB64, createdUnix }`; PBKDF2-SHA256 → AES-256-GCM over the phrase or seed (`src/backup.ts`) | your own, or the same document |
+| App lock | one device-wide passphrase sealing every wallet's secret (PBKDF2-SHA256 600k → AES-256-GCM), cleartext only in memory while unlocked (`src/applock.ts`) | device only |
+| Viewing key export | `fvk_hex(seed)` shown as text and QR, for a watch-only copy elsewhere | signer only |
+| Watch-only wallet | register a viewing key with no seed on the device | `/watch` |
+
+### Receiving
+
+| Feature | How it is built | Your call |
+|---|---|---|
+| Address + QR | the account's address; a wallet has unlimited diversified ones | `address_from_seed` / `GET /api/wallet/address?index=N` |
+| Request an amount | a payment link `zkas:<address>?amount=<ZKAS decimal>&memo=<text>&label=<text>` as QR and copyable text; `memo` and `label` are sanitised before display | emit the same link |
+| Scan a link / QR | `parsePaymentUri` (`src/lib/utils.ts`): bare address or address`?amount&memo&label`; a `web+zkas:` prefix is unwrapped (registered protocol handler on the web); Android handles `zkas:`, `firecash:` and `zkas-wallet:` intents | parse the same grammar |
+| Incoming payment notice | balance polling on `/api/status`; Android: a WorkManager wake every ~15 min calls `/api/status` and posts a notification when the balance grew (`src/bgsync.ts`, `SyncWorker.java`) | poll `/api/status` or page `/api/wallet/deposits` |
+| Home-screen widget (Android) | shows the last balance the app saw; reads nothing itself | device only |
+| Memo on received payments | 512-byte UTF-8 Orchard memo field, decrypted by the scan | `history` rows / journal `memo` |
+
+### Sending
+
+| Feature | How it is built | Your call |
+|---|---|---|
+| Send | prepare → verify on device → sign → submit, chunked for fragmented wallets, one request id per payment (`src/noncustodial.ts`) | the drop-in client or `@zkas/sdk` `send()` |
+| Memo on a send | up to 512 bytes UTF-8, encrypted to the recipient | `memo` on `/prepare` or `/send` |
+| Send to many | one bundle paying several recipients; custodial daemons only (the app offers it when the daemon holds the seed). The non-custodial prepare pays one recipient per payment | `/api/wallet/send_many` |
+| Fee | read from the bundle on device, refused above the ceiling; the daemon's fee follows the relay minimum for the spend count | `maxFeeSompi` |
+| Pending list and reconciliation | local record of each send (`src/localtx.ts`) reconciled against `history` and `/requests/<id>`; a lost answer is "possibly paid", never "failed" | same |
+| Consolidate | merge many small notes into few, so later sends fit one transaction | `/api/wallet/consolidate` |
+| Private sends (opt-in setting) | the send carries no sender-recoverable ciphertext: nobody with the viewing key, including a hosted daemon, can ever read where it went; it does not survive a restore and cannot be proven | `POST /api/wallet/settings { private_sends: true }` |
+| Spendability gate | Send enabled on `spend_ready`, catching-up shown from `blocks_behind` | `/api/status` |
+
+### History, proofs and records
+
+| Feature | How it is built | Your call |
+|---|---|---|
+| History | newest first, received rows with `credits[]` (address index, amount, memo), sent rows with recipient when recoverable | `GET /api/wallet/history?limit=&offset=` |
+| CSV export | columns `kind, amount_zkas, fee_zkas, time_utc, daa_score, counterparty, memo, private_label, txid` | your own, from `history` |
+| Private labels and contacts | per-wallet, device-only; the only place an address gets a name on a shielded chain (`src/contacts.ts`) | device only |
+| Payment proof | `GET /api/wallet/proof?txid=` returns `{ proofs: [{ v, txid, daa, action_index, recipient, value, rseed, memo? }] }`; shared as JSON (memo optional); anyone verifies with `POST /api/proof/verify` (no token), the daemon recomputes the commitment from the chain | same two calls |
+| Message signing | `POST /api/wallet/sign { message }` → `{ address, message, signature, note }`; `POST /api/verify` (no wallet) → `{ valid, reason }`. The signature discloses the viewing key: ownership and note detection, never spend authority | same |
+| Rescan | from a given DAA score, when a restore used the wrong birthday | `POST /api/wallet/rescan` |
+
+### Sync and services
+
+| Feature | How it is built | Your call |
+|---|---|---|
+| Hosted / self-hosted / on device / browser | see the four modes above; the app switches between them in Settings | `baseUrl` |
+| Pairing with your own daemon | one string carries address, access token and wallet token: `zkas+http://192.168.1.20:8501#token=<access>&wallet=<wallet>&net=mainnet` (secrets in the fragment; `zkas+https` for TLS). The desktop app and `zkas-walletd --serve-public` print it as a QR (`src/pairing.ts`) | emit or parse the same string |
+| Carry a scan between services | `POST /api/wallet/scan-receipt` export → `{ receipt, bytes, notes, scannedDaa, anchorLeaves, lowBlock }`, then import on the new daemon → `{ adopted, notes, scannedDaa }`. Holds the wallet's notes and witnesses only, no nullifiers or keys; every note is checked against the named anchor (`src/scanreceipt.ts`) | same |
+| Fast sync | chain files (above); Android *Fast sync* setting with a custom address | `--chain-files` / engine setting |
+| Tor | the hosted daemon's onion; Android via Orbot's SOCKS (`socks` argument to the engine) | same |
+| Warm-up | after opening, the daemon pre-builds witness caches so the first send is fast; `warming` in status | `POST /api/wallet/warm` |
+| Status polling | one call, 1 Hz while open | `GET /api/status` |
+| Background sync (Android, opt-in) | WorkManager periodic `/api/status`, no key material involved | your scheduler |
+| Memory pressure (Android) | `onTrimMemory` → engine `releaseMemory()` | same |
+| Keep the daemon honest | the app treats a 5xx HTML page, a timeout on `/submit` and `outcome_unknown` alike: possibly paid | same |
+
+### Beyond the wallet
+
+| Feature | How it is built | Your call |
+|---|---|---|
+| Explorer (in-app) | `https://wallet.zkas.info/chain` API; the desktop can run a local explorer | public, no token |
+| Price | `https://mining-pool.zkas.info/api/otc/price` | public |
+| Mining (desktop) | solo or pool, stratum port setting, against the desktop-managed node | the node's gRPC / stratum |
+| Node runner (desktop) | downloads and runs the ZKas node (`zkas.info/downloads/node/<ver>/…`), optionally the Kaspa node and the merged-mining bridge | your own process management |
+| Chat | Nostr relay at `wss://zkas.info/chat-relay`; identity derived from the wallet's own seed by a separate WASM (`chat-identity` in the signer repo, NIP-06); NIP-17 private messages in NIP-59 gift wraps, NIP-25 reactions, NIP-51 mute lists, NIP-56 reports. No payment key ever touches it | any Nostr client against the same relay |
+| Languages | 25 locales under `src/i18n/locales` | your own |
+| Diagnostics | redacted log bundle (`src/diag/`) for crash reports; the engine's own `logs()` on Android | device only |
+
+Everything above is reachable in the shipped apps today except where marked desktop-only
+or Android-only; the web wallet has no background sync, widget, node or mining.
+
+---
+
 ## Keys: recovery phrase or raw seed
 
 The official wallet creates a **12-word recovery phrase** (BIP-39, English word list,
