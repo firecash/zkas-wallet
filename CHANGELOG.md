@@ -4,7 +4,9 @@ Entries describe what changed for the person using the wallet. Where a fix was
 caused by an earlier change in this same list, it says so — the sequence is
 more useful than the tidy version.
 
-## Unreleased
+## 1.0.52-rc29 — 2026-11-07
+
+Engine: zkas-rusty `312c6fb` (the zkas-v1.0.14 wallet daemon).
 
 - **Desktop installs node zkas-v1.0.14** (Linux x86_64, Windows x86_64, macOS Apple Silicon and Intel) from zkas.info/downloads/node/1.0.14/, verified against its SHA-256. No consensus change; the node gains TCP keepalive on gRPC client connections, and the bundled wallet daemon is this week's.
 

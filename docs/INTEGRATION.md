@@ -432,7 +432,7 @@ Merchants: the **payment gateway** ([`zkas-payment-gateway`](https://zkas.info/c
 issues per-invoice addresses, watches the wallet for you and fires signed webhooks;
 WooCommerce plugin included. Fulfil only on `confirmed` or `overpaid`.
 
-These need a daemon from `main` of **6 November 2026 or later** (`credits[].index`, the
+These need **zkas-v1.0.14 or later** (`credits[].index`, the
 journal, `/requests/<id>`, exact-amount fields); the hosted daemon has run it since 7 Nov.
 
 ---
