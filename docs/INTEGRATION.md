@@ -30,6 +30,32 @@ The REST API and the send flow are identical in all four; what differs is who ca
 | **On device (Android, desktop)** | the same daemon as a library in your process: `zkas-walletd-mobile`, or the `zkas_walletd` crate in a Tauri/desktop shell | nobody but the device | any node's gRPC (`host:port`, optionally over a SOCKS proxy), chain files for fast sync | the strongest privacy; our Android *Run on this phone* and the desktop app |
 | **In the browser** | a WASM engine (`zkas-wallet-engine`) in a Web Worker; source in this repo at `src/webengine/` | nobody but the browser | signed chain files (`https://zkas.info/shielded-chain` or the CDN) and a small read-only gateway (`https://zkas.info/chain-gateway`: `/tree?block=`, `/tree?below=`, `/blocks?after=`) | a web wallet that must not hand even a viewing key to a server; not packaged as a library yet |
 
+### Chain files: the sync source every mode can use
+
+A *chain file* is one 12-hour segment of the shielded chain (43,200 DAA scores), holding the
+compact records a wallet needs (note commitments, nullifiers, ciphertexts), about 8 MB each
+at today's volume, with a signed `manifest.json` listing every segment's hash and the tree
+frontier at its end. A reader verifies each file against the manifest's signature and the
+node before trusting it, so a stale or tampered file can cost time, never correctness.
+
+| Source | Address | Role |
+|---|---|---|
+| Cloudflare R2 (public bucket) | `https://pub-ae5ed92258b2437e985b69ab9947ef60.r2.dev` | primary; what the apps and the daemon default to |
+| zkas.info | `https://zkas.info/shielded-chain` | fallback mirror |
+| Your own export | a local directory from `chain_export` (in `zkas-rusty`), run against your archival node | for an exchange or a hosted daemon that must not depend on a CDN |
+
+The daemon's default (`PUBLIC_CHAIN_FILES`) is the two public addresses in that order.
+
+| Mode | How it uses them |
+|---|---|
+| Self-hosted daemon | `--chain-files DIR,URL[,URL]`; the first start builds the shared tree from them and a restore takes minutes instead of hours. With `--shared-leaf-store`, downloaded segments are kept in `<wallet-dir>/chainfiles-cache/` so each is fetched once |
+| On-device engine | the app's *Fast sync* setting (on by default, the CDN as default address; `chain_files_url` overrides it) |
+| In the browser | always: the engine syncs from the files and only asks the `chain-gateway` for what files cannot give (the live tree state near the tip and the last pages) |
+| Hosted | the daemon reads its own local export |
+
+A wallet far below the oldest published segment is not sent to the files for nothing; it
+reads from the node until the files reach it.
+
 Memory and disk of a daemon serving many wallets (hosted or exchange) were measured on
 7 November 2026: about 1.2 GB RSS with the shared tree at the tip and a few MB per
 resident wallet; checkpoints of a few MB per wallet. `GET /api/admin/memory` on the
