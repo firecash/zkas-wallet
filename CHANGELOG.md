@@ -6,6 +6,8 @@ more useful than the tidy version.
 
 ## Unreleased
 
+- **Desktop installs node zkas-v1.0.14** (Linux x86_64, Windows x86_64, macOS Apple Silicon and Intel) from zkas.info/downloads/node/1.0.14/, verified against its SHA-256. No consensus change; the node gains TCP keepalive on gRPC client connections, and the bundled wallet daemon is this week's.
+
 - **iOS: the on-device engine ships.** `ZkasEngine.xcframework` is now published for every engine version at `zkas.info/downloads/ios/engine/<version>/`, built from Linux without Xcode; `scripts/fetch-ios-engine.sh` installs it so `ios/App` builds with "Run on this phone" like Android. On iOS the engine serves loopback only and HTTPS goes through the system's Security framework.
 
 Everything below is on `main` and in no build yet.

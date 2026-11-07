@@ -22,7 +22,7 @@ const MAX_LOG_LINES: usize = 2_000;
 const HEALTHY_RUN: Duration = Duration::from_secs(60);
 const MAX_RESTART_DELAY: u64 = 30;
 const MAX_RESTART_ATTEMPTS: u32 = 5;
-pub const ZKAS_RELEASE: &str = "zkas-v1.0.13";
+pub const ZKAS_RELEASE: &str = "zkas-v1.0.14";
 pub const BRIDGE_RELEASE: &str = "v1.0.12";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -1269,7 +1269,7 @@ fn file_sha256(path: &Path) -> Result<String, String> {
 // serves and is verified after download (see `install_archive`), so a wrong one fails the install
 // closed rather than running an unverified binary.
 //
-//  * The NODE is zkas-v1.0.13 on Linux x86_64, Windows x86_64 and macOS (arm64 and x86_64); each
+//  * The NODE is zkas-v1.0.14 on Linux x86_64, Windows x86_64 and macOS (arm64 and x86_64); each
 //    archive holds bin/<binaries>. Windows and macOS node builds were lost with the GitHub account
 //    and are back from 1.0.13.
 //  * The BRIDGE is v1.0.12, not v1.0.11. v1.0.11 predates the ZKM1 fork: it submits work the node
@@ -1281,49 +1281,49 @@ fn file_sha256(path: &Path) -> Result<String, String> {
 
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    // zkas-rusty tag zkas-v1.0.13 (7d892c81): the mainnet security-fork rules (DAA 6,983,500),
+    // zkas-rusty tag zkas-v1.0.14 (6c2450a9): the mainnet security-fork rules (DAA 6,983,500),
     // the post-v1.0.11 node-kill fixes and the v1.0.13 walletd/p2p fixes. v1.0.10 predated the
     // fork and could not follow mainnet past it.
     Ok(ArchiveSpec {
         component: "zkas-v1.0.13-linux-x64",
-        url: "https://zkas.info/downloads/node/1.0.13/zkas-zkas-v1.0.13-linux-amd64.zip",
-        sha256: "8e84dcdfc5be395fbd1c88ba877cbff63de5f9a23d4629116f45732888e24247",
+        url: "https://zkas.info/downloads/node/1.0.14/zkas-zkas-v1.0.14-linux-amd64.zip",
+        sha256: "433b3a5a71d06e92c2ae029ec87f06f3963a63f45f5320da991d59507b725c2a",
     })
 }
 
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    // zkas-rusty tag zkas-v1.0.13 (7d892c81): the mainnet security-fork rules (DAA 6,983,500),
+    // zkas-rusty tag zkas-v1.0.14 (6c2450a9): the mainnet security-fork rules (DAA 6,983,500),
     // the post-v1.0.11 node-kill fixes and the v1.0.13 walletd/p2p fixes. v1.0.10 predated the
     // fork and could not follow mainnet past it.
     Ok(ArchiveSpec {
         component: "zkas-v1.0.13-windows-x64",
-        url: "https://zkas.info/downloads/node/1.0.13/zkas-zkas-v1.0.13-win64.zip",
-        sha256: "bb4dea9613d90e0ed2d44d2c28b852c6373c2d6ac80ef51d47b6c1ac17f63948",
+        url: "https://zkas.info/downloads/node/1.0.14/zkas-zkas-v1.0.14-win64.zip",
+        sha256: "e4018b207af2033e9e61ee4c0a29338f9c6381a38e3ba4d2cc52a4be41564d77",
     })
 }
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    // zkas-rusty tag zkas-v1.0.13 (7d892c81): the mainnet security-fork rules (DAA 6,983,500),
+    // zkas-rusty tag zkas-v1.0.14 (6c2450a9): the mainnet security-fork rules (DAA 6,983,500),
     // the post-v1.0.11 node-kill fixes and the v1.0.13 walletd/p2p fixes. v1.0.10 predated the
     // fork and could not follow mainnet past it.
     Ok(ArchiveSpec {
         component: "zkas-v1.0.13-macos-arm64",
-        url: "https://zkas.info/downloads/node/1.0.13/zkas-zkas-v1.0.13-osx-arm64.zip",
-        sha256: "dbc6623f32309eaab66d6cbd05d20fc130e0f52fbb125f2963cec5d223be91dc",
+        url: "https://zkas.info/downloads/node/1.0.14/zkas-zkas-v1.0.14-osx-arm64.zip",
+        sha256: "180ed2a19c3ffd09fdcc09b64c3b4f9f014e7555702bba3c866d04eb82f98078",
     })
 }
 
 #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
 fn zkas_archive() -> Result<ArchiveSpec, String> {
-    // zkas-rusty tag zkas-v1.0.13 (7d892c81): the mainnet security-fork rules (DAA 6,983,500),
+    // zkas-rusty tag zkas-v1.0.14 (6c2450a9): the mainnet security-fork rules (DAA 6,983,500),
     // the post-v1.0.11 node-kill fixes and the v1.0.13 walletd/p2p fixes. v1.0.10 predated the
     // fork and could not follow mainnet past it.
     Ok(ArchiveSpec {
         component: "zkas-v1.0.13-macos-x64",
-        url: "https://zkas.info/downloads/node/1.0.13/zkas-zkas-v1.0.13-osx-x86_64.zip",
-        sha256: "99cffcfd3dbcdc4a80abc5d1cf50e09e7e2df6edbad7134e95fbb8458ebd11d1",
+        url: "https://zkas.info/downloads/node/1.0.14/zkas-zkas-v1.0.14-osx-x86_64.zip",
+        sha256: "f37b4370740fdd3e9f026c0395f46807cc1aead31aec96ec0201bc077a362264",
     })
 }
 
