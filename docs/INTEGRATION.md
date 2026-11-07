@@ -27,7 +27,7 @@ The REST API and the send flow are identical in all four; what differs is who ca
 |---|---|---|---|---|
 | **Hosted** | ours: `https://wallet.zkas.info/daemon` (Tor: `plqu6zzg5u6lkofv76m3pnnxzbaus6pgs4thced4wejdroi7z7exd6qd.onion`, port 80). Watch-only tokens; custodial endpoints are not for third parties | our server (balance, history, send destinations are visible to it; it cannot spend) | its own node and chain files | zero setup; a web page or an app that cannot ship a native library |
 | **Self-hosted** | `zkas-walletd` on your server or next to your node (`--listen 127.0.0.1:8501`, a TLS proxy or `--serve-public` with a pairing QR) | you | your node, plus `--chain-files` for fast restores | exchanges, merchants, pools, power users; see the exchange section of `WALLETD.md` for the launch configuration |
-| **On device (Android, desktop)** | the same daemon as a library in your process: `zkas-walletd-mobile`, or the `zkas_walletd` crate in a Tauri/desktop shell | nobody but the device | any node's gRPC (`host:port`, optionally over a SOCKS proxy), chain files for fast sync | the strongest privacy; our Android *Run on this phone* and the desktop app |
+| **On device (Android, iOS, desktop)** | the same daemon as a library in your process: `zkas-walletd-mobile`, or the `zkas_walletd` crate in a Tauri/desktop shell | nobody but the device | any node's gRPC (`host:port`, optionally over a SOCKS proxy), chain files for fast sync | the strongest privacy; our Android *Run on this phone* and the desktop app |
 | **In the browser** | a WASM engine (`zkas-wallet-engine`) in a Web Worker; source in this repo at `src/webengine/` | nobody but the browser | signed chain files (`https://zkas.info/shielded-chain` or the CDN) and a small read-only gateway (`https://zkas.info/chain-gateway`: `/tree?block=`, `/tree?below=`, `/blocks?after=`) | a web wallet that must not hand even a viewing key to a server; not packaged as a library yet |
 
 ### Chain files: the sync source every mode can use
@@ -363,7 +363,7 @@ val client = ZKasClient(baseUrl = "http://127.0.0.1:$port", network = "mainnet")
 |---|---|
 | Android | `scripts/build-engine.sh` builds `arm64-v8a`, `armeabi-v7a`, `x86_64` into `jniLibs` and generates the Kotlin bindings. Nothing is published; you build it into your app, against the `zkas-rusty` commit in `ENGINE_PIN` |
 | Desktop | the Tauri shell embeds the same `zkas_walletd` lib crate |
-| iOS | no engine artifact today; use a hosted daemon with the published `zkas-mobile` signer |
+| iOS | `ZkasEngine.xcframework` (device arm64, simulator arm64 + x86_64) plus the generated Swift, published at `https://zkas.info/downloads/ios/engine/<version>/` with a `MANIFEST` of revisions and SHA-256s; `scripts/fetch-ios-engine.sh` installs it into `ios/ZkasEngine`, which `ios/App`'s Podfile links. Built on Linux without Xcode (`walletd-mobile/README.md`). Loopback only, no TLS self-hosting |
 
 > **Two mobile libraries, do not mix them up.** `zkas-walletd-mobile` is the *whole daemon*
 > (scans, proves, serves REST on loopback; you build it). `zkas-mobile` (`mobile/`) is the
@@ -454,7 +454,7 @@ journal, `/requests/<id>`, exact-amount fields); the hosted daemon has run it si
 
 | Tier | You get | You add |
 |---|---|---|
-| **On device** | nothing trusts a service; no server holds even the viewing key | embed `zkas-walletd-mobile` (Android) or the `zkas_walletd` crate (desktop); talk to it on loopback |
+| **On device** | nothing trusts a service; no server holds even the viewing key | embed `zkas-walletd-mobile` (Android AAR you build, iOS `ZkasEngine.xcframework`) or the `zkas_walletd` crate (desktop); talk to it on loopback |
 | **Non-custodial spend** (the quickstart) | private send, seed on device, daemon hosted or yours | `verify_and_sign_payment` via the SDK, the drop-in, or the published `zkas-mobile` |
 | **Watch-only** | balance and history, including where the wallet sent | register the viewing key with `/watch`; no signer |
 | **Receive** | show a `zkas:` address | signer only; no daemon |

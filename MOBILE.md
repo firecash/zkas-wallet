@@ -2,7 +2,7 @@
 
 The ZKas wallet ships as a native **Android** app that wraps the same static SPA serving
 [wallet.zkas.info](https://wallet.zkas.info), via [**Capacitor**](https://capacitorjs.com/).
-One codebase, three targets (web, Android, iOS); the iOS project builds but is not published.
+One codebase, three targets (web, Android, iOS); the iOS project builds with the published on-device engine (`scripts/fetch-ios-engine.sh`, see `ios/ZkasEngine/README.md`) but is not distributed, as there is no Apple developer account.
 
 **The app is non-custodial in every mode.** The seed is generated on the device, in
 WebAssembly, and is never sent anywhere. It offers two wallet services:

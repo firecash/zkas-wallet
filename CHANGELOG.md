@@ -6,6 +6,8 @@ more useful than the tidy version.
 
 ## Unreleased
 
+- **iOS: the on-device engine ships.** `ZkasEngine.xcframework` is now published for every engine version at `zkas.info/downloads/ios/engine/<version>/`, built from Linux without Xcode; `scripts/fetch-ios-engine.sh` installs it so `ios/App` builds with "Run on this phone" like Android. On iOS the engine serves loopback only and HTTPS goes through the system's Security framework.
+
 Everything below is on `main` and in no build yet.
 
 - **A retry after a lost answer can no longer pay twice.** The Confirm screen prepares the
