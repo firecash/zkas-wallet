@@ -4,6 +4,36 @@ Entries describe what changed for the person using the wallet. Where a fix was
 caused by an earlier change in this same list, it says so — the sequence is
 more useful than the tidy version.
 
+## Unreleased
+
+Everything below is on `main` and in no build yet.
+
+- **A retry after a lost answer can no longer pay twice.** The Confirm screen prepares the
+  payment early under one request id, and the send path drew a second one for itself; walletd
+  had recorded the broadcast under the first. After "no answer from the server", the retry
+  therefore asked under an id the server had never seen, was handed a new payment from other
+  coins, and paid again. The retry now reuses the id the payment was actually sent under and is
+  answered "already sent".
+- **"Outcome unknown" is reported as unknown, not as a failure.** The server's 504
+  `outcome_unknown` and a proxy's 5xx page during a slow broadcast both used to read as "failed",
+  which dropped the request id and let a retry build a new payment. Both now keep the id and say
+  the payment may have gone out; a 4xx page before the server is still a plain failure.
+- **Browser mode: spendable the moment the wallet is up to date.** A wallet back after two
+  days showed "Up to date" with nothing spendable for about two minutes; the new web engine
+  makes it spendable at once, with the first payment proving in about 32 s at worst and later
+  ones in about 5 s. The Send screen no longer says "still catching up" on a synced wallet.
+- **Browser mode writes far less.** The checkpoint (every leaf since the wallet's oldest note)
+  was saved after every second segment of a restore, hundreds of MB of browser storage per day of
+  chain for a wallet holding one old note. It is saved when the wallet's own state changed (a
+  note found, a spend parked) or every 20 segments, and at the end as before.
+- **Browser mode trusts the signed chain files over a disagreeing node.** The tip check used to
+  discard the wallet's data and rebuild when the node's tree disagreed with the wallet's; when a
+  signed segment boundary the wallet ingested at that block matches the wallet, the node is the
+  wrong party and nothing is discarded.
+- **Android: the low-memory diagnostic reports bytes freed.** The engine now really releases
+  its page cache and witness caches on a memory warning (it used to free nothing); the
+  diagnostic field is `freed_bytes`.
+
 ## 1.0.52
 
 Fixes a wallet that stopped making progress and never recovered, and sending
